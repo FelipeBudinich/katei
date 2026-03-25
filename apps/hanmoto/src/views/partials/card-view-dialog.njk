@@ -1,0 +1,39 @@
+<dialog
+  class="sheet-dialog"
+  data-board-target="viewDialog"
+  data-action="click->board#backdropCloseViewDialog cancel->board#closeViewDialog"
+>
+  <div class="sheet-panel">
+    <div class="dialog-handle mx-auto h-1.5 w-16 rounded-full lg:hidden"></div>
+
+    <div class="dialog-header-row mt-4">
+      <div class="min-w-0 space-y-2">
+        <div class="space-y-2" data-board-target="viewCardPrioritySection">
+          <dd class="text-sm leading-6 text-strong" data-board-target="viewCardPriority"></dd>
+        </div>
+        <h2 class="font-serif text-3xl text-strong" data-board-target="viewCardTitle">Card title</h2>
+      </div>
+
+      <button
+        type="button"
+        class="touch-button-secondary"
+        data-view-dialog-initial-focus
+        data-action="board#closeViewDialog"
+      >
+        Close
+      </button>
+    </div>
+
+    <dl class="mt-6 space-y-4">
+      <div class="space-y-2">
+        <dt class="field-label text-sm font-semibold">Description</dt>
+        <dd class="text-sm leading-6 text-muted whitespace-pre-wrap" data-board-target="viewCardDescription"></dd>
+      </div>
+
+      <div class="space-y-2">
+        <dt class="field-label text-sm font-semibold">Updated</dt>
+        <dd class="text-sm leading-6 text-muted" data-board-target="viewCardUpdated"></dd>
+      </div>
+    </dl>
+  </div>
+</dialog>

@@ -1,0 +1,23 @@
+{
+  "name": "@hanmoto/app",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -k -n app \"npm:dev:server\"",
+    "dev:server": "nodemon -L --watch src --watch public/js --watch styles --watch ../../packages/brand/src --ext js,njk,css --exec \"npm run build:css && node src/server.js\"",
+    "build": "npm run build:css",
+    "build:css": "tailwindcss -i ./styles/app.css -o ./public/assets/app.css",
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "@hotwired/stimulus": "^3.2.2",
+    "express": "^5.1.0",
+    "nunjucks": "^3.2.4"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.1.4",
+    "concurrently": "^9.1.2",
+    "nodemon": "^3.1.10",
+    "tailwindcss": "^4.1.4"
+  }
+}

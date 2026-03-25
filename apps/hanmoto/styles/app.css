@@ -1,0 +1,43 @@
+@import "tailwindcss";
+@import "../../../packages/brand/src/theme.css";
+@import "../../../packages/brand/src/components.css";
+
+@source "../src/views/**/*.njk";
+@source "../public/js/**/*.js";
+@source "../../../packages/brand/src/**/*.css";
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+
+  body {
+    font-family: var(--font-sans);
+  }
+
+  button,
+  [role="button"],
+  summary {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+}
+
+@layer components {
+  .board-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@layer utilities {
+  .space-y-3 {
+    :where(& > :not(:last-child)) {
+      --tw-space-y-reverse: 0;
+      margin-block-start: calc(var(--space-column-card-gap) * var(--tw-space-y-reverse));
+      margin-block-end: calc(var(--space-column-card-gap) * calc(1 - var(--tw-space-y-reverse)));
+    }
+  }
+}

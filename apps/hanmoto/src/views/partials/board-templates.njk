@@ -1,0 +1,10 @@
+<template id="column-panel-template">
+  {% set column = { "id": "__COLUMN_ID__", "title": "Column", "cardIds": [] } %}
+  {% include "partials/column-panel.njk" %}
+</template>
+
+<template id="card-item-template">
+  {% set card = { "id": "__CARD_ID__", "title": "Card title", "description": "", "updatedAt": "" } %}
+  {% set columnId = "__COLUMN_ID__" %}
+  {% include "partials/card-item.njk" %}
+</template>

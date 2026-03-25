@@ -1,0 +1,14 @@
+{
+  "name": "hanmoto-monorepo",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w apps/hanmoto",
+    "build": "npm run build -w apps/hanmoto",
+    "prestart": "npm run build -w apps/hanmoto",
+    "start": "node apps/hanmoto/src/server.js"
+  }
+}

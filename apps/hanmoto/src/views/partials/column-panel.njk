@@ -1,0 +1,21 @@
+<section class="column-panel" data-column-id="{{ column.id }}">
+  <header class="column-panel-header">
+    <h2 class="font-serif text-2xl text-strong" data-column-field="title">{{ column.title }}</h2>
+    <div class="count-chip px-3 py-1 text-sm font-medium" aria-label="{{ column.cardIds.length }} cards">
+      <span data-column-field="count">{{ column.cardIds.length }}</span>
+      <span class="count-chip-icon" aria-hidden="true"></span>
+    </div>
+  </header>
+
+  <div class="column-panel-body"{% if not column.cardIds.length %} hidden{% endif %}>
+    <div class="space-y-3" data-column-cards>
+      {% if column.cardIds.length %}
+        {% for cardId in column.cardIds %}
+          {% set card = board.cards[cardId] %}
+          {% set columnId = column.id %}
+          {% include "partials/card-item.njk" %}
+        {% endfor %}
+      {% endif %}
+    </div>
+  </div>
+</section>

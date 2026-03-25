@@ -1,0 +1,111 @@
+:root {
+  --radius-xs: 0.05rem;
+  --radius-sm: 0.075rem;
+  --radius-md: 0.1rem;
+  --radius-lg: 0.14rem;
+  --radius-xl: 0.17rem;
+  --radius-2xl: 0.2rem;
+  --radius-column-base: var(--radius-2xl);
+  --radius-column-bottom: max(
+    calc(var(--radius-column-base) * 4),
+    calc(var(--space-column-card-gap) + var(--radius-column-base))
+  );
+  --space-column-card-gap: 0.3rem;
+  --inner-radius: calc(var(--radius-column-bottom) - var(--space-column-card-gap));
+  --size-column-header-height: 4rem;
+
+  --ref-brand: hsla(10, 94%, 45%, 1);
+  --ref-ink: hsla(70, 6%, 25%, 1);
+  --ref-neutral-warm: hsla(24, 10%, 51%, 1);
+  --ref-surface-warm: hsla(20, 19%, 81%, 1);
+  --ref-surface-cool: hsla(196, 13%, 66%, 1);
+  --ref-white: hsla(0, 0%, 100%, 1);
+  --ref-black: hsla(0, 0%, 0%, 1);
+
+  --color-bg-canvas: var(--ref-white);
+  --color-bg-canvas-glow: hsla(0, 0%, 100%, 0.72);
+  --color-bg-canvas-wash: hsla(20, 19%, 92%, 1);
+  --color-bg-surface: hsla(20, 19%, 88%, 1);
+  --color-bg-column: hsla(0, 0%, 100%, 0.5);
+  --color-bg-elevated: hsla(0, 0%, 100%, 0.84);
+  --color-bg-elevated-strong: hsla(0, 0%, 100%, 0.96);
+  --color-bg-header-glass: hsla(0, 0%, 100%, 0.7);
+  --color-bg-badge: var(--color-bg-muted-strong);
+  --color-bg-muted: hsla(20, 19%, 95%, 0.94);
+  --color-bg-muted-strong: hsla(196, 13%, 66%, 0.22);
+  --color-bg-inverse: var(--ref-ink);
+
+  --color-text-strong: var(--ref-ink);
+  --color-text-muted: var(--ref-neutral-warm);
+  --color-text-subtle: hsla(24, 10%, 42%, 1);
+  --color-text-inverse: var(--ref-white);
+  --color-text-accent: var(--ref-brand);
+
+  --color-border-subtle: hsla(196, 13%, 66%, 0.45);
+  --color-border-strong: hsla(24, 10%, 51%, 0.72);
+  --color-border-emphasis: hsla(70, 6%, 25%, 0.2);
+
+  --color-action-primary: var(--ref-brand);
+  --color-action-primary-hover: hsla(10, 94%, 38%, 1);
+  --color-action-primary-text: var(--ref-white);
+
+  --color-action-secondary: var(--ref-white);
+  --color-action-secondary-hover: hsla(20, 19%, 94%, 1);
+  --color-action-secondary-text: var(--ref-ink);
+  --color-action-secondary-border: hsla(196, 13%, 66%, 0.72);
+
+  --color-focus-ring: hsla(10, 94%, 45%, 0.35);
+  --color-focus-border: hsla(10, 94%, 45%, 0.62);
+
+  --color-danger: var(--ref-brand);
+  --color-danger-hover: hsla(10, 94%, 38%, 1);
+  --color-danger-surface: hsla(10, 94%, 45%, 0.08);
+  --color-danger-surface-hover: hsla(10, 94%, 45%, 0.14);
+  --color-danger-border: hsla(10, 94%, 45%, 0.28);
+
+  --color-overlay: hsla(0, 0%, 0%, 0.45);
+  --color-shadow-soft: hsla(0, 0%, 0%, 0.1);
+
+  --font-sans-family: "Poppins", sans-serif;
+  --font-serif-family: "Poppins", sans-serif;
+  --shadow-paper: 0 12px 40px hsla(70, 6%, 25%, 0.12);
+  --shadow-float: 0 18px 35px hsla(10, 94%, 45%, 0.18);
+  --shadow-glass-header: 0 4px 30px var(--color-shadow-soft);
+}
+
+@theme inline {
+  --font-sans: var(--font-sans-family);
+  --font-serif: var(--font-serif-family);
+
+  --color-canvas: var(--color-bg-canvas);
+  --color-surface: var(--color-bg-surface);
+  --color-elevated: var(--color-bg-elevated);
+  --color-muted-surface: var(--color-bg-muted);
+  --color-surface-tint: var(--color-bg-muted-strong);
+  --color-inverse-surface: var(--color-bg-inverse);
+
+  --color-strong: var(--color-text-strong);
+  --color-muted: var(--color-text-muted);
+  --color-subtle: var(--color-text-subtle);
+  --color-inverse-text: var(--color-text-inverse);
+  --color-accent: var(--color-text-accent);
+
+  --color-primary: var(--color-action-primary);
+  --color-primary-hover: var(--color-action-primary-hover);
+  --color-primary-text: var(--color-action-primary-text);
+
+  --color-secondary: var(--color-action-secondary);
+  --color-secondary-hover: var(--color-action-secondary-hover);
+  --color-secondary-text: var(--color-action-secondary-text);
+  --color-secondary-border: var(--color-action-secondary-border);
+
+  --color-focus: var(--color-focus-border);
+
+  --color-danger-tone: var(--color-danger);
+  --color-danger-hover-tone: var(--color-danger-hover);
+  --color-danger-surface-tone: var(--color-danger-surface);
+  --color-danger-surface-hover-tone: var(--color-danger-surface-hover);
+  --color-danger-border-tone: var(--color-danger-border);
+
+  --color-handle: var(--color-bg-muted-strong);
+}
