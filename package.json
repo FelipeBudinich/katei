@@ -7,10 +7,10 @@
   ],
   "scripts": {
     "dev": "npm run dev -w apps/hanmoto",
+    "start:hanmoto": "npm run start -w apps/hanmoto",
     "build:hanmoto:css": "npm run build:css -w apps/hanmoto",
+    "build:hanmoto": "npm run build:hanmoto:css",
     "prepare:subtree:hanmoto": "npm run build:hanmoto:css",
-    "build": "npm run build:hanmoto:css",
-    "prestart": "npm run build:hanmoto:css",
-    "start": "node apps/hanmoto/src/server.js"
+    "build": "npm run build:hanmoto:css"
   }
 }

@@ -2,6 +2,9 @@
   "name": "@hanmoto/app",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "concurrently -k -n app \"npm:dev:server\"",
     "dev:server": "nodemon -L --watch src --watch public/js --watch styles --watch ../../packages/brand/src --ext js,njk,css --exec \"npm run build:css && node src/server.js\"",

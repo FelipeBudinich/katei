@@ -16,9 +16,16 @@ Development:
 npm run dev
 ```
 
-Production-style start:
+Local app start from the monorepo root:
 
 ```bash
+npm run start:hanmoto
+```
+
+App-local runtime start from the deployable subtree:
+
+```bash
+cd apps/hanmoto
 npm start
 ```
 
@@ -28,6 +35,12 @@ The app renders at [http://localhost:3000](http://localhost:3000) by default, an
 
 - `apps/hanmoto`: the Express app, templates, browser modules, and built assets
 - `packages/brand`: shared design tokens and reusable component classes
+
+## Deploy Ownership Boundary
+
+- the monorepo root is orchestration only for local workspace helpers
+- `apps/hanmoto` is the Heroku deployable unit and future subtree split prefix
+- Heroku runtime artifacts now live inside `apps/hanmoto`, including its `package.json` runtime metadata and `Procfile`
 
 ## Hanmoto Subtree Prebuild Contract
 
@@ -53,15 +66,25 @@ apps/hanmoto/public/assets/app.css
 
 Use this sequence from the monorepo root to verify the friction point is resolved before adding any automation:
 
+`git subtree split` operates on committed history, so run the split after the boundary change and the prebuilt CSS artifact are committed.
+
 ```bash
+test ! -f Procfile
+test -f apps/hanmoto/Procfile
+rg -n '"start"|"engines"|"node"' apps/hanmoto/package.json
 npm run prepare:subtree:hanmoto
 git subtree split --prefix=apps/hanmoto --branch subtree/hanmoto
+git show subtree/hanmoto:Procfile
+git show subtree/hanmoto:package.json | sed -n '1,20p'
 git ls-tree -r --name-only subtree/hanmoto | grep '^public/assets/app.css$'
 git show subtree/hanmoto:public/assets/app.css | head
 ```
 
 Expected result:
 
+- the monorepo root has no `Procfile`
+- `apps/hanmoto/Procfile` exists and the split subtree includes it
+- `apps/hanmoto/package.json` remains the authoritative runtime manifest with `start` and `engines.node`
 - the CSS build succeeds in full monorepo context
 - the subtree contains `public/assets/app.css`
 - the subtree does not need to rebuild Tailwind from shared monorepo sources
