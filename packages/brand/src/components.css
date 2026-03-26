@@ -54,12 +54,25 @@
 
   .card-item {
     @apply grid overflow-hidden shadow-sm;
+    --card-priority-accent: transparent;
     border: 0;
     border-top-left-radius: var(--radius-2xl);
     border-top-right-radius: var(--radius-2xl);
     border-bottom-left-radius: var(--inner-radius);
     border-bottom-right-radius: var(--inner-radius);
     background-color: transparent;
+  }
+
+  .card-item[data-priority="urgent"] {
+    --card-priority-accent: var(--ref-brand);
+  }
+
+  .card-item[data-priority="important"] {
+    --card-priority-accent: var(--ref-accent-yellow);
+  }
+
+  .card-item[data-priority="when_possible"] {
+    --card-priority-accent: var(--ref-accent-green);
   }
 
   .top-bar-title-row {
@@ -72,6 +85,7 @@
 
   .card-item-toolbar {
     @apply grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-4 pb-3 pt-4;
+    border-bottom: 0.2rem solid var(--card-priority-accent, transparent);
   }
 
   .card-item-title {

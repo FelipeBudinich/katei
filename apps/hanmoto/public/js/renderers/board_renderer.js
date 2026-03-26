@@ -68,6 +68,12 @@ function createCardElement({ board, card, columnId, templates }) {
   cardNode.dataset.cardId = card.id;
   cardNode.dataset.columnId = columnId;
 
+  if (card.priority) {
+    cardNode.dataset.priority = card.priority;
+  } else {
+    delete cardNode.dataset.priority;
+  }
+
   const titleElement = cardNode.querySelector('[data-card-field="title"]');
   if (titleElement) {
     titleElement.textContent = card.title;
