@@ -524,6 +524,12 @@
   .card-item[data-priority="when_possible"] {
     --card-priority-accent: var(--ref-accent-green);
   }
+  .card-item[data-column-id="done"] {
+    --card-priority-accent: var(--color-text-muted);
+  }
+  .card-item[data-column-id="archived"] {
+    --card-priority-accent: var(--color-border-subtle);
+  }
   .top-bar-title-row {
     display: grid;
     grid-template-columns: minmax(0,1fr) auto;

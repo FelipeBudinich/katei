@@ -76,6 +76,14 @@
     --card-priority-accent: var(--ref-accent-green);
   }
 
+  .card-item[data-column-id="done"] {
+    --card-priority-accent: var(--color-text-muted);
+  }
+
+  .card-item[data-column-id="archived"] {
+    --card-priority-accent: var(--color-border-subtle);
+  }
+
   .top-bar-title-row {
     @apply grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3;
   }
