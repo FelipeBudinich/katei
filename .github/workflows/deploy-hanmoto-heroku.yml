@@ -77,5 +77,5 @@ jobs:
 
       - name: Deploy subtree to Heroku
         run: |
-          git push https://git.heroku.com/${{ vars.HEROKU_APP_NAME }}.git \
+          git push https://git.heroku.com/katei.git \
             ${{ steps.split.outputs.sha }}:main --force
