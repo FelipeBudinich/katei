@@ -8,7 +8,7 @@
   </header>
 
   <div class="column-panel-body"{% if not column.cardIds.length %} hidden{% endif %}>
-    <div class="space-y-3" data-column-cards>
+    <div class="column-card-list space-y-3" data-column-cards>
       {% if column.cardIds.length %}
         {% for cardId in column.cardIds %}
           {% set card = board.cards[cardId] %}

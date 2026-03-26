@@ -352,11 +352,6 @@
       display: none;
     }
   }
-  .lg\:grid-cols-4 {
-    @media (width >= 64rem) {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-  }
   .lg\:px-8 {
     @media (width >= 64rem) {
       padding-inline: calc(var(--spacing) * 8);
@@ -847,6 +842,25 @@
     align-self: start;
     z-index: auto;
     padding: 0.625rem 1.25rem;
+  }
+  @media (min-width: 64rem) {
+    .board-columns {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .board-columns > .column-panel[data-column-id="archived"] {
+      grid-column: 1 / -1;
+      grid-row: 2;
+    }
+    .column-panel[data-column-id="archived"] .column-card-list {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: calc(var(--space-column-card-gap) * 1.2);
+      align-items: start;
+    }
+    .column-panel[data-column-id="archived"] .column-card-list > :not(:last-child) {
+      margin-block-start: 0;
+      margin-block-end: 0;
+    }
   }
   .sheet-dialog {
     position: fixed;
