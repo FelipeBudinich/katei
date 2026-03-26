@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "concurrently -k -n app \"npm:dev:server\"",
     "dev:server": "nodemon -L --watch src --watch public/js --watch styles --watch ../../packages/brand/src --ext js,njk,css --exec \"npm run build:css && node src/server.js\"",
-    "build": "npm run build:css",
+    "build": "node -e \"console.log('No app-local build step. Prebuild public/assets/app.css from the monorepo before subtree deploy.')\"",
     "build:css": "tailwindcss -i ./styles/app.css -o ./public/assets/app.css",
     "start": "node src/server.js"
   },
