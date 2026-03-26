@@ -41,7 +41,10 @@ export function createEmptyWorkspace() {
     version: WORKSPACE_VERSION,
     workspaceId: WORKSPACE_ID,
     ui: {
-      activeBoardId: board.id
+      activeBoardId: board.id,
+      collapsedColumnsByBoard: {
+        [board.id]: createCollapsedColumns()
+      }
     },
     boardOrder: [board.id],
     boards: {
@@ -93,6 +96,13 @@ export function validateWorkspaceShape(value) {
     return false;
   }
 
+  if (
+    value.ui.collapsedColumnsByBoard != null &&
+    !isValidCollapsedColumnsByBoard(value.ui.collapsedColumnsByBoard, value.boards)
+  ) {
+    return false;
+  }
+
   if (!Array.isArray(value.boardOrder) || value.boardOrder.length < 1) {
     return false;
   }
@@ -128,6 +138,8 @@ export function createBoard(workspace, input) {
   nextWorkspace.boards[board.id] = board;
   nextWorkspace.boardOrder = [...nextWorkspace.boardOrder, board.id];
   nextWorkspace.ui.activeBoardId = board.id;
+  ensureCollapsedColumnsByBoard(nextWorkspace);
+  nextWorkspace.ui.collapsedColumnsByBoard[board.id] = createCollapsedColumns();
 
   return nextWorkspace;
 }
@@ -156,6 +168,8 @@ export function deleteBoard(workspace, boardId) {
 
   nextWorkspace.boardOrder = nextWorkspace.boardOrder.filter((currentBoardId) => currentBoardId !== boardId);
   delete nextWorkspace.boards[boardId];
+  ensureCollapsedColumnsByBoard(nextWorkspace);
+  delete nextWorkspace.ui.collapsedColumnsByBoard[boardId];
 
   if (nextWorkspace.ui.activeBoardId === boardId) {
     const nextBoardId =
@@ -170,6 +184,18 @@ export function setActiveBoard(workspace, boardId) {
   const nextWorkspace = cloneWorkspace(workspace);
   assertValidBoardId(boardId, nextWorkspace.boards);
   nextWorkspace.ui.activeBoardId = boardId;
+  return nextWorkspace;
+}
+
+export function setColumnCollapsed(workspace, boardId, columnId, isCollapsed) {
+  assertValidColumnId(columnId);
+
+  const nextWorkspace = cloneWorkspace(workspace);
+  getBoard(nextWorkspace, boardId);
+  ensureCollapsedColumnsByBoard(nextWorkspace);
+  nextWorkspace.ui.collapsedColumnsByBoard[boardId] = getCollapsedColumnsForBoard(nextWorkspace, boardId);
+  nextWorkspace.ui.collapsedColumnsByBoard[boardId][columnId] = Boolean(isCollapsed);
+
   return nextWorkspace;
 }
 
@@ -322,6 +348,27 @@ export function getActiveBoard(workspace) {
   return getBoard(workspace, workspace.ui.activeBoardId);
 }
 
+export function getCollapsedColumnsForBoard(workspace, boardId) {
+  const storedState = workspace?.ui?.collapsedColumnsByBoard?.[boardId] ?? {};
+  const collapsedColumns = createCollapsedColumns();
+
+  for (const columnId of COLUMN_ORDER) {
+    collapsedColumns[columnId] = Boolean(storedState[columnId]);
+  }
+
+  return collapsedColumns;
+}
+
+export function createCollapsedColumns() {
+  const collapsedColumns = {};
+
+  for (const columnId of COLUMN_ORDER) {
+    collapsedColumns[columnId] = false;
+  }
+
+  return collapsedColumns;
+}
+
 function createTimestamp() {
   return new Date().toISOString();
 }
@@ -464,4 +511,38 @@ function getCard(board, cardId) {
 
 function hasOwn(value, key) {
   return Boolean(value && Object.prototype.hasOwnProperty.call(value, key));
+}
+
+function ensureCollapsedColumnsByBoard(workspace) {
+  if (!workspace.ui.collapsedColumnsByBoard || typeof workspace.ui.collapsedColumnsByBoard !== 'object') {
+    workspace.ui.collapsedColumnsByBoard = {};
+  }
+}
+
+function isValidCollapsedColumnsByBoard(value, boards) {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  for (const boardId of Object.keys(value)) {
+    if (!boards[boardId] || !isValidCollapsedColumns(value[boardId])) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function isValidCollapsedColumns(value) {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  for (const columnId of COLUMN_ORDER) {
+    if (value[columnId] != null && typeof value[columnId] !== 'boolean') {
+      return false;
+    }
+  }
+
+  return true;
 }

@@ -2,6 +2,7 @@ import { Controller } from '/vendor/stimulus/stimulus.js';
 import {
   findColumnIdByCardId,
   getActiveBoard,
+  getCollapsedColumnsForBoard,
   getColumnTitle,
   PRIORITY_LABELS
 } from '../domain/workspace.js';
@@ -61,6 +62,28 @@ export default class extends Controller {
       workspace: this.workspace,
       triggerElement: event?.currentTarget ?? null
     });
+  }
+
+  async toggleColumn(event) {
+    const board = this.activeBoard;
+
+    if (!board) {
+      return;
+    }
+
+    const columnId = event.currentTarget.dataset.columnId;
+
+    if (!columnId) {
+      return;
+    }
+
+    const collapsedColumns = getCollapsedColumnsForBoard(this.workspace, board.id);
+    const nextCollapsedState = !collapsedColumns[columnId];
+
+    await this.runAction(
+      () => this.service.setColumnCollapsed(board.id, columnId, nextCollapsedState),
+      `${getColumnTitle(columnId)} ${nextCollapsedState ? 'collapsed' : 'expanded'}.`
+    );
   }
 
   openCreateBoard() {
@@ -282,6 +305,7 @@ export default class extends Controller {
 
     renderBoardState({
       board: this.activeBoard,
+      collapsedColumns: getCollapsedColumnsForBoard(this.workspace, this.activeBoard.id),
       regions: {
         boardTitle: this.boardTitleTarget,
         desktopColumns: this.desktopColumnsTarget

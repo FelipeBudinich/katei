@@ -5,21 +5,23 @@ const timestampFormatter = new Intl.DateTimeFormat(undefined, {
   timeStyle: 'short'
 });
 
-export function renderBoardState({ board, regions, templates }) {
+export function renderBoardState({ board, collapsedColumns = {}, regions, templates }) {
   if (regions.boardTitle) {
     regions.boardTitle.textContent = board.title;
   }
 
   replaceRegionChildren(
     regions.desktopColumns,
-    board.columnOrder.map((columnId) => createColumnPanel({ board, columnId, templates }))
+    board.columnOrder.map((columnId) => createColumnPanel({ board, columnId, collapsedColumns, templates }))
   );
 }
 
-function createColumnPanel({ board, columnId, templates }) {
+function createColumnPanel({ board, columnId, collapsedColumns, templates }) {
   const column = board.columns[columnId];
   const columnNode = cloneTemplate(templates.columnTemplate);
+  const isCollapsed = Boolean(collapsedColumns[columnId]);
   columnNode.dataset.columnId = column.id;
+  columnNode.dataset.collapsed = String(isCollapsed);
 
   const titleElement = columnNode.querySelector('[data-column-field="title"]');
   if (titleElement) {
@@ -36,9 +38,21 @@ function createColumnPanel({ board, columnId, templates }) {
     countChipElement.setAttribute('aria-label', `${column.cardIds.length} cards`);
   }
 
+  const toggleElement = columnNode.querySelector('[data-column-toggle]');
   const bodyElement = columnNode.querySelector('.column-panel-body');
+
+  if (toggleElement) {
+    toggleElement.dataset.columnId = column.id;
+    toggleElement.setAttribute('aria-expanded', String(!isCollapsed));
+  }
+
   if (bodyElement) {
-    bodyElement.hidden = column.cardIds.length === 0;
+    bodyElement.id = `column-panel-body-${column.id}`;
+    bodyElement.hidden = isCollapsed || column.cardIds.length === 0;
+
+    if (toggleElement) {
+      toggleElement.setAttribute('aria-controls', bodyElement.id);
+    }
   }
 
   const cardsContainer = columnNode.querySelector('[data-column-cards]');

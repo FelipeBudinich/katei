@@ -1,13 +1,25 @@
-<section class="column-panel" data-column-id="{{ column.id }}">
+{% set isCollapsed = collapsedColumns and collapsedColumns[column.id] %}
+<section class="column-panel" data-column-id="{{ column.id }}" data-collapsed="{{ 'true' if isCollapsed else 'false' }}">
   <header class="column-panel-header">
-    <h2 class="font-serif text-2xl text-strong" data-column-field="title">{{ column.title }}</h2>
-    <div class="count-chip px-3 py-1 text-sm font-medium" aria-label="{{ column.cardIds.length }} cards">
-      <span data-column-field="count">{{ column.cardIds.length }}</span>
-      <span class="count-chip-icon" aria-hidden="true"></span>
-    </div>
+    <button
+      type="button"
+      class="column-header-toggle"
+      data-column-toggle
+      data-column-id="{{ column.id }}"
+      data-action="workspace#toggleColumn"
+      aria-expanded="{{ 'false' if isCollapsed else 'true' }}"
+      aria-controls="column-panel-body-{{ column.id }}"
+    >
+      <span class="column-header-toggle-title font-serif text-2xl text-strong" data-column-field="title">{{ column.title }}</span>
+      <span class="count-chip px-3 py-1 text-sm font-medium" aria-label="{{ column.cardIds.length }} cards">
+        <span data-column-field="count">{{ column.cardIds.length }}</span>
+        <span class="count-chip-icon" aria-hidden="true"></span>
+      </span>
+      <span class="column-header-chevron" aria-hidden="true">▾</span>
+    </button>
   </header>
 
-  <div class="column-panel-body"{% if not column.cardIds.length %} hidden{% endif %}>
+  <div id="column-panel-body-{{ column.id }}" class="column-panel-body"{% if isCollapsed or not column.cardIds.length %} hidden{% endif %}>
     <div class="column-card-list space-y-3" data-column-cards>
       {% if column.cardIds.length %}
         {% for cardId in column.cardIds %}

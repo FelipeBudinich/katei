@@ -1,0 +1,7 @@
+interface:
+  display_name: "Monorepo File Tree"
+  short_description: "Generate root and app file tree docs"
+  default_prompt: "Use $monorepo-filetree to regenerate monorepo-filetree.md, each apps/*/doc/filetree.md, and the root AGENTS.md file tree guidance."
+
+policy:
+  allow_implicit_invocation: false

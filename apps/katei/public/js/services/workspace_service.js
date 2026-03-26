@@ -6,6 +6,7 @@ import {
   moveCard,
   renameBoard,
   resetBoard,
+  setColumnCollapsed,
   setActiveBoard,
   updateCard
 } from '../domain/workspace.js';
@@ -33,6 +34,10 @@ export class WorkspaceService {
 
   async setActiveBoard(boardId) {
     return this.#applyMutation((workspace) => setActiveBoard(workspace, boardId));
+  }
+
+  async setColumnCollapsed(boardId, columnId, isCollapsed) {
+    return this.#applyMutation((workspace) => setColumnCollapsed(workspace, boardId, columnId, isCollapsed));
   }
 
   async resetBoard(boardId) {
