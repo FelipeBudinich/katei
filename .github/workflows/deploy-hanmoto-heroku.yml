@@ -10,6 +10,8 @@ on:
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/deploy-hanmoto-heroku.yml"
+      - "!apps/hanmoto/**/*.md"
+      - "!packages/brand/**/*.md"
   workflow_dispatch:
 
 concurrency:
@@ -19,20 +21,18 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
 
     steps:
       - name: Checkout full history
-        uses: actions/checkout@v6
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v5
         with:
           node-version: "24"
-          cache: npm
+          cache: "npm"
           cache-dependency-path: package-lock.json
 
       - name: Install monorepo dependencies
@@ -43,6 +43,18 @@ jobs:
 
       - name: Verify generated CSS exists
         run: test -f apps/hanmoto/public/assets/app.css
+
+      - name: Select target app
+        run: |
+          echo "HEROKU_APP_NAME=${{ secrets.HEROKU_KATEI_APP_PROD }}" >> "$GITHUB_ENV"
+
+      - name: Validate deploy secrets
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+        run: |
+          test -n "$HEROKU_APP_NAME" || { echo "Missing HEROKU_APP_NAME"; exit 1; }
+          test -n "$HEROKU_API_KEY" || { echo "Missing HEROKU_API_KEY"; exit 1; }
+          echo "Deploying branch '${GITHUB_REF_NAME}' to app '${HEROKU_APP_NAME}'"
 
       - name: Create temporary deploy commit
         id: prep
@@ -63,19 +75,32 @@ jobs:
         run: |
           echo "sha=$(git subtree split --prefix=apps/hanmoto ${{ steps.prep.outputs.ref }})" >> "$GITHUB_OUTPUT"
 
-      - name: Configure Heroku auth
+      - name: Prepare deploy directory
         run: |
-          cat > ~/.netrc <<EOF
-          machine api.heroku.com
-            login ${{ secrets.HEROKU_EMAIL }}
-            password ${{ secrets.HEROKU_API_KEY }}
-          machine git.heroku.com
-            login ${{ secrets.HEROKU_EMAIL }}
-            password ${{ secrets.HEROKU_API_KEY }}
-          EOF
-          chmod 600 ~/.netrc
+          rm -rf deploy-hanmoto
+          mkdir -p deploy-hanmoto
+          git archive ${{ steps.split.outputs.sha }} | tar -x -C deploy-hanmoto
 
-      - name: Deploy subtree to Heroku
+      - name: Verify Heroku git remote
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
         run: |
-          git push https://git.heroku.com/katei.git \
-            ${{ steps.split.outputs.sha }}:main --force
+          cd deploy-hanmoto
+          git init
+          git remote add heroku "https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git"
+          git ls-remote heroku >/dev/null
+
+      - name: Deploy to Heroku
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+        run: |
+          cd deploy-hanmoto
+          git init
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add .
+          git commit -m "Deploy Hanmoto from ${GITHUB_SHA}"
+          git branch -M main
+          git remote remove heroku || true
+          git remote add heroku "https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git"
+          git push heroku main:main --force
