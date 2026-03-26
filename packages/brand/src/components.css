@@ -38,13 +38,13 @@
 
   .column-panel-header,
   .card-item-toolbar {
-    background-color: var(--color-bg-header-glass);
     -webkit-backdrop-filter: blur(4.5px);
     backdrop-filter: blur(4.5px);
   }
 
   .column-panel-header {
     @apply grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-4;
+    background-color: var(--color-bg-header-glass);
     border-bottom: 0.25rem solid currentColor;
     height: var(--size-column-header-height);
   }
@@ -86,6 +86,12 @@
 
   .card-item-toolbar {
     @apply grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-4 pb-3 pt-4;
+    background-color: var(--color-bg-header-glass);
+    background-color: color-mix(
+      in srgb,
+      var(--color-bg-header-glass) 70%,
+      var(--card-priority-accent, transparent) 30%
+    );
     border-bottom: 0.2rem solid var(--card-priority-accent, transparent);
   }
 
