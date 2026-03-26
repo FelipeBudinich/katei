@@ -1,5 +1,5 @@
 import { Controller } from '/vendor/stimulus/stimulus.js';
-import { findColumnIdByCardId, PRIORITY_LABELS } from '../domain/board.js';
+import { findColumnIdByCardId, getColumnTitle, PRIORITY_LABELS } from '../domain/board.js';
 import { LocalBoardRepository } from '../repositories/local_board_repository.js';
 import { renderBoardState } from '../renderers/board_renderer.js';
 import { BoardService } from '../services/board_service.js';
@@ -168,12 +168,17 @@ export default class extends Controller {
   }
 
   async moveCardTo(event) {
-    const { cardId, sourceColumnId, targetColumnId } = event.currentTarget.dataset;
+    try {
+      const { cardId, sourceColumnId, targetColumnId } = event.currentTarget.dataset;
 
-    await this.runAction(
-      () => this.service.moveCard(cardId, sourceColumnId, targetColumnId),
-      `Moved card to ${getColumnTitle(targetColumnId)}.`
-    );
+      await this.runAction(
+        () => this.service.moveCard(cardId, sourceColumnId, targetColumnId),
+        `Moved card to ${getColumnTitle(targetColumnId)}.`
+      );
+    } catch (error) {
+      console.error('Failed to move card.', error);
+      this.announce('Unable to move card.');
+    }
   }
 
   async resetBoard(event) {
