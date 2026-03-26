@@ -127,9 +127,9 @@ export function setActiveColumn(board, columnId) {
   return nextBoard;
 }
 
-export function createCard(board, input) {
+export function createCard(board, input, columnId = 'backlog') {
   const nextBoard = cloneBoard(board);
-  const columnId = 'backlog';
+  assertValidColumnId(columnId);
   const title = normalizeRequiredTitle(input?.title);
   const priority = normalizePriority(input?.priority ?? DEFAULT_PRIORITY);
   const timestamp = createTimestamp();

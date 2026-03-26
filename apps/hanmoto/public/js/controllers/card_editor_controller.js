@@ -7,6 +7,8 @@ export default class extends Controller {
     'heading',
     'modeInput',
     'cardIdInput',
+    'sourceColumnIdInput',
+    'targetColumnIdInput',
     'prioritySection',
     'priorityInput',
     'priorityOption',
@@ -24,10 +26,14 @@ export default class extends Controller {
     const isEditMode = mode === 'edit';
     const nextColumnId = columnId ?? 'backlog';
     const nextCardId = card?.id ?? '';
+    const sourceColumnId = isEditMode ? nextColumnId : '';
+    const targetColumnId = nextColumnId;
 
     this.formTarget.reset();
     this.modeInputTarget.value = mode;
     this.cardIdInputTarget.value = nextCardId;
+    this.sourceColumnIdInputTarget.value = sourceColumnId;
+    this.targetColumnIdInputTarget.value = targetColumnId;
     this.priorityInputTarget.value = card?.priority ?? 'important';
     this.titleInputTarget.value = card?.title ?? '';
     this.descriptionInputTarget.value = card?.description ?? '';
@@ -36,7 +42,8 @@ export default class extends Controller {
     this.syncEditActions({
       isEditMode,
       cardId: nextCardId,
-      columnId: nextColumnId
+      sourceColumnId,
+      targetColumnId
     });
 
     if (!this.dialogTarget.open) {
@@ -70,6 +77,17 @@ export default class extends Controller {
     this.syncPriorityOptions();
   }
 
+  selectColumn(event) {
+    event.preventDefault();
+    this.targetColumnIdInputTarget.value = event.currentTarget.dataset.targetColumnId ?? this.targetColumnIdInputTarget.value;
+    this.syncEditActions({
+      isEditMode: this.modeInputTarget.value === 'edit',
+      cardId: this.cardIdInputTarget.value,
+      sourceColumnId: this.sourceColumnIdInputTarget.value,
+      targetColumnId: this.targetColumnIdInputTarget.value
+    });
+  }
+
   submit(event) {
     event.preventDefault();
 
@@ -79,6 +97,8 @@ export default class extends Controller {
       detail: {
         mode: formData.get('mode'),
         cardId: formData.get('cardId'),
+        sourceColumnId: formData.get('sourceColumnId'),
+        targetColumnId: formData.get('targetColumnId'),
         input: {
           title: formData.get('title'),
           description: formData.get('description'),
@@ -110,31 +130,32 @@ export default class extends Controller {
     }
   }
 
-  syncEditActions({ isEditMode, cardId, columnId }) {
-    const shouldShowPrioritySection = !isEditMode || (columnId !== 'done' && columnId !== 'archived');
+  syncEditActions({ isEditMode, cardId, sourceColumnId, targetColumnId }) {
+    const shouldShowPrioritySection = targetColumnId !== 'done' && targetColumnId !== 'archived';
 
     this.prioritySectionTarget.hidden = !shouldShowPrioritySection;
-    this.editActionsTarget.hidden = !isEditMode;
-    this.deleteActionsTarget.hidden = !isEditMode || columnId !== 'archived';
+    this.editActionsTarget.hidden = false;
+    this.deleteActionsTarget.hidden = !isEditMode || sourceColumnId !== 'archived';
     this.deleteActionRegionTarget.replaceChildren();
 
-    if (isEditMode && columnId === 'archived') {
+    if (isEditMode && sourceColumnId === 'archived') {
       const deleteButton = this.deleteButtonTemplateTarget.content.firstElementChild.cloneNode(true);
       deleteButton.dataset.cardId = cardId;
       this.deleteActionRegionTarget.append(deleteButton);
     }
 
     for (const button of this.moveOptionTargets) {
-      const isCurrentColumn = button.dataset.targetColumnId === columnId;
+      const isSelectedColumn = button.dataset.targetColumnId === targetColumnId;
+      const isCurrentColumn = button.dataset.targetColumnId === sourceColumnId;
       const isArchivedOption = button.dataset.targetColumnId === 'archived';
-      const canShowArchivedOption = columnId === 'done' || columnId === 'archived';
+      const canShowArchivedOption = sourceColumnId === 'done' || sourceColumnId === 'archived';
       const columnTitle = button.dataset.columnTitle ?? '';
-      button.dataset.cardId = cardId;
-      button.dataset.sourceColumnId = columnId;
-      button.hidden = !isEditMode || (isArchivedOption && !canShowArchivedOption);
-      button.disabled = !isEditMode || isCurrentColumn;
-      button.setAttribute('aria-disabled', String(!isEditMode || isCurrentColumn));
-      button.textContent = isCurrentColumn ? `${columnTitle} (Current)` : columnTitle;
+      button.hidden = isArchivedOption && !canShowArchivedOption;
+      button.disabled = isSelectedColumn;
+      button.setAttribute('aria-disabled', String(isSelectedColumn));
+      button.textContent = isSelectedColumn
+        ? `${columnTitle} (${isCurrentColumn ? 'Current' : 'Selected'})`
+        : columnTitle;
     }
   }
 }

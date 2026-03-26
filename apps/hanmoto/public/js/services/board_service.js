@@ -15,12 +15,24 @@ export class BoardService {
     return this.repository.loadBoard();
   }
 
-  async createCard(input) {
-    return this.#applyMutation((board) => createCard(board, input));
+  async createCard(input, targetColumnId = 'backlog') {
+    return this.#applyMutation((board) => createCard(board, input, targetColumnId));
   }
 
   async updateCard(cardId, updates) {
     return this.#applyMutation((board) => updateCard(board, cardId, updates));
+  }
+
+  async saveCard(cardId, updates, sourceColumnId, targetColumnId) {
+    return this.#applyMutation((board) => {
+      let nextBoard = updateCard(board, cardId, updates);
+
+      if (sourceColumnId && targetColumnId && sourceColumnId !== targetColumnId) {
+        nextBoard = moveCard(nextBoard, cardId, sourceColumnId, targetColumnId);
+      }
+
+      return nextBoard;
+    });
   }
 
   async deleteCard(cardId) {

@@ -17,6 +17,8 @@
     <form class="mt-6 space-y-4" data-card-editor-target="form" data-action="submit->card-editor#submit">
       <input type="hidden" name="mode" value="create" data-card-editor-target="modeInput">
       <input type="hidden" name="cardId" value="" data-card-editor-target="cardIdInput">
+      <input type="hidden" name="sourceColumnId" value="" data-card-editor-target="sourceColumnIdInput">
+      <input type="hidden" name="targetColumnId" value="backlog" data-card-editor-target="targetColumnIdInput">
       <input type="hidden" name="priority" value="important" data-card-editor-target="priorityInput">
 
       <label class="block space-y-2">
@@ -67,15 +69,15 @@
           <div class="action-wrap-grid mt-3" data-card-move-options>
             {% for targetColumn in columnDefinitions %}
               <button
-                type="button"
-                class="touch-button-secondary"
-                data-card-editor-target="moveOption"
-                data-column-title="{{ targetColumn.title }}"
-                data-target-column-id="{{ targetColumn.id }}"
-                data-action="card-editor#closeForAction board#moveCardTo"
-              >
-                {{ targetColumn.title }}
-              </button>
+              type="button"
+              class="touch-button-secondary"
+              data-card-editor-target="moveOption"
+              data-column-title="{{ targetColumn.title }}"
+              data-target-column-id="{{ targetColumn.id }}"
+              data-action="card-editor#selectColumn"
+            >
+              {{ targetColumn.title }}
+            </button>
             {% endfor %}
           </div>
         </div>

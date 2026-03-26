@@ -137,14 +137,17 @@ export default class extends Controller {
   }
 
   async handleEditorSave(event) {
-    const { mode, cardId, input } = event.detail;
+    const { mode, cardId, sourceColumnId, targetColumnId, input } = event.detail;
 
     if (mode === 'edit') {
-      await this.runAction(() => this.service.updateCard(cardId, input), 'Card updated.');
+      await this.runAction(
+        () => this.service.saveCard(cardId, input, sourceColumnId, targetColumnId),
+        'Card updated.'
+      );
       return;
     }
 
-    await this.runAction(() => this.service.createCard(input), 'Card created.');
+    await this.runAction(() => this.service.createCard(input, targetColumnId), 'Card created.');
   }
 
   async deleteCard(event) {
