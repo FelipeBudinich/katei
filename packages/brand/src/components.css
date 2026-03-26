@@ -72,7 +72,7 @@
     --card-priority-accent: var(--ref-accent-yellow);
   }
 
-  .card-item[data-priority="when_possible"] {
+  .card-item[data-priority="normal"] {
     --card-priority-accent: var(--ref-accent-green);
   }
 
@@ -245,7 +245,7 @@
     --priority-dot-color: var(--ref-accent-yellow);
   }
 
-  .priority-dot[data-priority-id="when_possible"] {
+  .priority-dot[data-priority-id="normal"] {
     --priority-dot-color: var(--ref-accent-green);
   }
 

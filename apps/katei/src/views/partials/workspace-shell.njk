@@ -1,0 +1,27 @@
+{% set activeBoard = workspace.boards[workspace.ui.activeBoardId] %}
+{% set board = activeBoard %}
+
+<main
+  class="mx-auto grid min-h-screen w-full max-w-7xl content-start gap-4 px-4 pb-10 pt-4 sm:px-6 lg:px-8"
+  data-controller="workspace"
+  data-action="
+    card-editor:save->workspace#handleCardEditorSave
+    board-editor:save->workspace#handleBoardEditorSave
+    board-options:switch-board->workspace#handleBoardSwitch
+    board-options:create-board->workspace#openCreateBoard
+    board-options:rename-board->workspace#openRenameBoard
+    board-options:delete-board->workspace#confirmDeleteBoard
+    board-options:reset-board->workspace#confirmResetBoard
+  "
+>
+  {% include "partials/board-shell.njk" %}
+
+  <div class="sr-only" aria-live="polite" data-workspace-target="announcer"></div>
+
+  {% include "partials/card-editor-sheet.njk" %}
+  {% include "partials/card-view-dialog.njk" %}
+  {% include "partials/board-options-dialog.njk" %}
+  {% include "partials/board-editor-sheet.njk" %}
+  {% include "partials/confirm-dialog.njk" %}
+  {% include "partials/board-templates.njk" %}
+</main>

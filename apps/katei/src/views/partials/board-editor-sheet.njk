@@ -1,0 +1,44 @@
+<dialog
+  class="sheet-dialog"
+  data-controller="board-editor"
+  data-board-editor-target="dialog"
+  data-action="
+    workspace:open-board-editor@window->board-editor#openFromEvent
+    click->board-editor#backdropClose
+    cancel->board-editor#close
+  "
+>
+  <div class="sheet-panel">
+    <div class="dialog-handle mx-auto h-1.5 w-16 rounded-full lg:hidden"></div>
+
+    <div class="dialog-header-row mt-4">
+      <div>
+        <h2 class="font-serif text-3xl text-strong" data-board-editor-target="heading">New board</h2>
+      </div>
+      <button type="button" class="touch-button-secondary" data-action="board-editor#close">Close</button>
+    </div>
+
+    <form class="mt-6 space-y-4" data-board-editor-target="form" data-action="submit->board-editor#submit">
+      <input type="hidden" name="mode" value="create" data-board-editor-target="modeInput">
+      <input type="hidden" name="boardId" value="" data-board-editor-target="boardIdInput">
+
+      <label class="block space-y-2">
+        <span class="field-label text-sm font-semibold">Board title</span>
+        <input
+          type="text"
+          name="title"
+          class="field-control"
+          placeholder="What board is this for?"
+          required
+          data-board-editor-target="titleInput"
+        >
+      </label>
+
+      <div class="dialog-actions pt-2">
+        <button type="submit" class="touch-button-primary" data-board-editor-target="submitButton">
+          Save Board
+        </button>
+      </div>
+    </form>
+  </div>
+</dialog>
