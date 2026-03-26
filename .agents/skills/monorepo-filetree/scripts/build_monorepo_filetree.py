@@ -281,8 +281,17 @@ def ensure_agents(repo_root: Path) -> WriteResult:
     return write_if_changed(agents_path, updated)
 
 
-def relative_path(path: Path, repo_root: Path) -> str:
-    return path.relative_to(repo_root).as_posix()
+def relative_path(path_value: Path | str, repo_root: Path) -> str:
+    root = repo_root.resolve()
+    path = Path(path_value)
+    if not path.is_absolute():
+        path = root / path
+    path = path.resolve()
+
+    try:
+        return path.relative_to(root).as_posix()
+    except ValueError as exc:
+        raise ValueError(f"Path {path} is outside repo root {root}") from exc
 
 
 def format_write_result(result: WriteResult, repo_root: Path) -> str:
@@ -341,7 +350,7 @@ def main() -> int:
                 print(f"partial failure: {prefix}{app_result.error}")
                 continue
             if app_result.doc_dir_created:
-                print(f"created directory: {relative_path(Path('apps') / app_result.name / 'doc', repo_root)}")
+                print(f"created directory: {relative_path(repo_root / 'apps' / app_result.name / 'doc', repo_root)}")
             if app_result.file_result is not None:
                 print(format_write_result(app_result.file_result, repo_root))
 

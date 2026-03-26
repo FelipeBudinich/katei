@@ -14,3 +14,12 @@
 - `monorepo-filetree`
   Path: `.agents/skills/monorepo-filetree/SKILL.md`
   Purpose: refresh generated monorepo and app file tree documentation, and keep root file tree guidance aligned when repository structure changes materially.
+
+## File tree documentation
+
+This repository maintains generated file tree references for navigation and agent orientation.
+
+- Root overview: `monorepo-filetree.md`
+- Per-app overviews: `apps/<app-name>/doc/filetree.md`
+
+When repository structure changes materially, update these generated documents to keep them in sync.
