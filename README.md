@@ -104,3 +104,17 @@ Persistence is abstracted behind `WorkspaceRepository`, with:
 - domain logic kept out of controllers
 - repository/service seam preserved for future storage swaps
 - templates kept fragment-friendly for future HTMX-style enhancement
+
+## Repo-local Skills
+
+Codex automation for this repository should run from the repo root so the repo-local skills under `.agents/skills/` are available in context.
+
+Each repo-local skill is self-contained in `.agents/skills/<skill-name>/` and should include:
+
+- `SKILL.md`
+- `agents/openai.yaml`
+- any supporting scripts, fixtures, or tests inside that same skill folder
+
+Available repo-local skills:
+
+- `monorepo-filetree` — refresh generated monorepo and app file tree documentation when repository structure changes materially. Path: `.agents/skills/monorepo-filetree/SKILL.md`
