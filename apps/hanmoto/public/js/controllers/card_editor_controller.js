@@ -118,15 +118,12 @@ export default class extends Controller {
 
   syncPriorityOptions() {
     const selectedPriority = this.priorityInputTarget.value;
-    const isEditMode = this.modeInputTarget.value === 'edit';
 
     for (const button of this.priorityOptionTargets) {
       const isCurrentPriority = button.dataset.priorityId === selectedPriority;
-      const priorityLabel = button.dataset.priorityLabel ?? '';
-      button.disabled = isCurrentPriority;
-      button.setAttribute('aria-disabled', String(isCurrentPriority));
+      button.disabled = false;
+      button.setAttribute('aria-disabled', 'false');
       button.setAttribute('aria-pressed', String(isCurrentPriority));
-      button.textContent = isEditMode && isCurrentPriority ? `${priorityLabel} (Current)` : priorityLabel;
     }
   }
 

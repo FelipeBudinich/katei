@@ -85,13 +85,18 @@
   }
 
   .card-item-toolbar {
-    @apply grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-4 pb-3 pt-4;
+    @apply grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 pb-3 pt-4;
+    padding-inline: 0;
     background-color: var(--color-bg-header-glass);
-    background-color: color-mix(
-      in srgb,
-      var(--color-bg-header-glass) 70%,
-      var(--card-priority-accent, transparent) 30%
-    );
+
+    @supports (color: color-mix(in srgb, red, red)) {
+      background-color: color-mix(
+        in srgb,
+        var(--color-bg-header-glass) 70%,
+        var(--card-priority-accent, transparent) 30%
+      );
+    }
+
     border-bottom: 0.2rem solid var(--card-priority-accent, transparent);
   }
 
@@ -198,6 +203,54 @@
 
   .action-region-contents {
     display: contents;
+  }
+
+  .priority-dot-group {
+    display: grid;
+    grid-auto-flow: column;
+    gap: 0.4rem;
+    align-items: center;
+    justify-content: start;
+  }
+
+  .priority-dot {
+    --priority-dot-color: var(--color-bg-muted-strong);
+    display: inline-grid;
+    inline-size: 2rem;
+    block-size: 2rem;
+    border-radius: 50%;
+    border: 0.1rem solid color-mix(in srgb, var(--priority-dot-color) 75%, black 25%);
+    background-color: var(--priority-dot-color);
+    color: var(--priority-dot-color);
+    cursor: pointer;
+    transition:
+      transform 160ms ease,
+      box-shadow 160ms ease,
+      border-color 160ms ease;
+  }
+
+  .priority-dot[data-priority-id="urgent"] {
+    --priority-dot-color: var(--ref-brand);
+  }
+
+  .priority-dot[data-priority-id="important"] {
+    --priority-dot-color: var(--ref-accent-yellow);
+  }
+
+  .priority-dot[data-priority-id="when_possible"] {
+    --priority-dot-color: var(--ref-accent-green);
+  }
+
+  .priority-dot[aria-pressed="true"] {
+    box-shadow:
+      0 0 0 0.12rem var(--color-bg-elevated-strong),
+      0 0 0 0.28rem currentColor;
+    transform: scale(1.05);
+  }
+
+  .priority-dot:focus-visible {
+    outline: 0.15rem solid var(--color-focus-ring);
+    outline-offset: 0.15rem;
   }
 
   .dialog-actions {
