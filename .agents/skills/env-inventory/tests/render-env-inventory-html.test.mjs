@@ -133,6 +133,8 @@ test("renderEnvInventoryHtml highlights config warnings, fallback groups, gaps, 
   assert.match(html, /href="\/assets\/app\.css"/);
   assert.match(html, /class="app-shell"/);
   assert.match(html, /class="top-bar"/);
+  assert.match(html, /class="top-bar-title-row env-inventory-title-row"/);
+  assert.match(html, /<a class="touch-button-secondary" href="\/">demo<\/a>/);
   assert.match(html, /Config warning:/);
   assert.match(html, /No fallback observed/);
   assert.match(html, /Fallbacks observed/);
@@ -140,6 +142,8 @@ test("renderEnvInventoryHtml highlights config warnings, fallback groups, gaps, 
   assert.match(html, /Dynamic env access/);
   assert.match(html, /apps\/demo\/docs\/env-inventory\.html/);
   assert.doesNotMatch(html, /Config found/);
+  assert.doesNotMatch(html, /Back to board/);
+  assert.doesNotMatch(html, /count-chip env-inventory-chip px-3 py-1 text-sm font-medium/);
   assert.doesNotMatch(html, /Likely required/);
   assert.doesNotMatch(html, /<style>/);
 });

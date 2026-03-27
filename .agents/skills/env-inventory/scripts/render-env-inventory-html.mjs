@@ -685,15 +685,12 @@ export function renderEnvInventoryHtml(report, { htmlOutputPath = "" } = {}) {
     <main class="mx-auto grid min-h-screen w-full max-w-7xl content-start gap-4 px-4 pb-10 pt-4 sm:px-6 lg:px-8">
       <header class="top-bar">
         <div class="min-w-0 env-inventory-header-copy">
-          <div class="top-bar-title-row">
+          <div class="top-bar-title-row env-inventory-title-row">
+            <a class="touch-button-secondary" href="/">${escapeHtml(report.app.name)}</a>
             <h1 class="font-serif text-3xl leading-tight text-strong">Env inventory report</h1>
-            <span class="count-chip env-inventory-chip px-3 py-1 text-sm font-medium">${escapeHtml(report.app.name)}</span>
           </div>
           <p class="text-sm leading-6 text-muted">Static, app-local HTML built from the machine-readable JSON source of truth.</p>
           ${renderWarningBanner(report)}
-        </div>
-        <div class="env-inventory-actions">
-          <a class="touch-button-secondary" href="/">Back to board</a>
         </div>
       </header>
 
