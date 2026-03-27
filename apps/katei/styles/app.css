@@ -64,6 +64,10 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
+  .env-inventory-variable-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .env-inventory-meta-card,
   .env-inventory-status-card {
     @apply grid px-4 py-4;
@@ -368,11 +372,6 @@
     }
   }
 
-  @media (min-width: 80rem) {
-    .env-inventory-variable-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
 }
 
 @layer utilities {
