@@ -729,6 +729,44 @@ function snippetForLine(line) {
   return String(line || "").trim().slice(0, 240);
 }
 
+function definitionSnippetForLine(line, variableName) {
+  const snippet = snippetForLine(line);
+  const escapedName = escapeRegExp(variableName);
+  const redact = (prefix, value = "") => `${prefix}${String(value).trim() ? "<redacted>" : ""}`;
+
+  let match = snippet.match(new RegExp(`^(\\s*(?:export\\s+)?${escapedName}\\s*=)(.*)$`));
+  if (match) {
+    return redact(match[1], match[2]);
+  }
+
+  match = snippet.match(new RegExp(`^(\\s*-\\s*${escapedName}\\s*=)(.*)$`));
+  if (match) {
+    return redact(match[1], match[2]);
+  }
+
+  match = snippet.match(new RegExp(`^(\\s*${escapedName}\\s*:\\s*)(.*)$`));
+  if (match) {
+    return redact(match[1], match[2]);
+  }
+
+  match = snippet.match(new RegExp(`^(\\s*ARG\\s+${escapedName}\\s*=)(.*)$`, "i"));
+  if (match) {
+    return redact(match[1], match[2]);
+  }
+
+  match = snippet.match(new RegExp(`^(\\s*ENV\\s+${escapedName}\\s*=)(.*)$`, "i"));
+  if (match) {
+    return redact(match[1], match[2]);
+  }
+
+  match = snippet.match(new RegExp(`^(\\s*ENV\\s+${escapedName}\\s+)(.*)$`, "i"));
+  if (match) {
+    return redact(match[1], match[2]);
+  }
+
+  return snippet.replace(new RegExp(`(${escapedName}=)([^"\\s]+)`), (_, prefix, value) => redact(prefix, value));
+}
+
 function shouldTrackVariableName(name) {
   return /^[A-Z][A-Z0-9_]+$/.test(String(name || ""));
 }
@@ -790,6 +828,7 @@ function scanEnvFile(relativePath, content, scope, definitions) {
       file: normalizePath(relativePath),
       line: index + 1,
       scope,
+      snippet: definitionSnippetForLine(line, match[1]),
     });
   });
 }
@@ -887,6 +926,7 @@ function scanYamlLikeFile(relativePath, content, scope, fileKind, definitions, u
           file: normalizePath(relativePath),
           line: index + 1,
           scope,
+          snippet: definitionSnippetForLine(line, match[1]),
         });
       }
       match = line.match(/^\s*-\s*([A-Z][A-Z0-9_]+)\s*=/);
@@ -896,6 +936,7 @@ function scanYamlLikeFile(relativePath, content, scope, fileKind, definitions, u
           file: normalizePath(relativePath),
           line: index + 1,
           scope,
+          snippet: definitionSnippetForLine(line, match[1]),
         });
       }
     }
@@ -911,6 +952,7 @@ function scanYamlLikeFile(relativePath, content, scope, fileKind, definitions, u
           file: normalizePath(relativePath),
           line: index + 1,
           scope,
+          snippet: definitionSnippetForLine(line, variableName),
         });
         if (hasShellDefaultFallback(assignedValue)) {
           addUsage(usages, variableName, {
@@ -977,6 +1019,7 @@ function scanDockerFile(relativePath, content, scope, definitions, usages) {
         file: normalizePath(relativePath),
         line: index + 1,
         scope,
+        snippet: definitionSnippetForLine(line, match[1]),
       });
     }
     const envPattern = /^\s*ENV\s+([A-Z][A-Z0-9_]+)(?:=|\s+)/i;
@@ -987,6 +1030,7 @@ function scanDockerFile(relativePath, content, scope, definitions, usages) {
         file: normalizePath(relativePath),
         line: index + 1,
         scope,
+        snippet: definitionSnippetForLine(line, match[1]),
       });
     }
     const refPattern = /\$\{([A-Z][A-Z0-9_]+)\}/g;
@@ -1241,7 +1285,7 @@ function buildReport({ app, configMeta, candidateFiles, definitions, usages, dyn
       name,
       secretLike: isSecretLike(name, configMeta.compiled),
       publicLike: isPublicLike(name, configMeta.compiled),
-      definitions: serializeOccurrences(definitionEntries, false),
+      definitions: serializeOccurrences(definitionEntries, true),
       usages: serializeOccurrences(usageEntries, true),
     };
   });

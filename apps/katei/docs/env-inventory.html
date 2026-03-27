@@ -175,15 +175,15 @@
             <code class="env-inventory-inline-code">.github/workflows/deploy-katei-heroku.yml:55</code>
             <span class="text-sm leading-6 text-muted">Ci · Root</span>
           </div>
-          
+          <div class="env-inventory-snippet"><code class="env-inventory-inline-code">echo &quot;HEROKU_API_KEY=&lt;redacted&gt;&quot; &gt;&gt; &quot;$GITHUB_ENV&quot;</code></div>
         </li>
       
         <li class="env-inventory-occurrence-item">
           <div class="env-inventory-occurrence-top">
-            <code class="env-inventory-inline-code">apps/katei/.env.example:4</code>
+            <code class="env-inventory-inline-code">apps/katei/.env.example:11</code>
             <span class="text-sm leading-6 text-muted">EnvFile · App</span>
           </div>
-          
+          <div class="env-inventory-snippet"><code class="env-inventory-inline-code">HEROKU_API_KEY=&lt;redacted&gt;</code></div>
         </li>
       
     </ul>
@@ -284,15 +284,15 @@
             <code class="env-inventory-inline-code">.github/workflows/deploy-katei-heroku.yml:50</code>
             <span class="text-sm leading-6 text-muted">Ci · Root</span>
           </div>
-          
+          <div class="env-inventory-snippet"><code class="env-inventory-inline-code">echo &quot;HEROKU_APP_NAME=&lt;redacted&gt;&quot; &gt;&gt; &quot;$GITHUB_ENV&quot;</code></div>
         </li>
       
         <li class="env-inventory-occurrence-item">
           <div class="env-inventory-occurrence-top">
-            <code class="env-inventory-inline-code">apps/katei/.env.example:3</code>
+            <code class="env-inventory-inline-code">apps/katei/.env.example:8</code>
             <span class="text-sm leading-6 text-muted">EnvFile · App</span>
           </div>
-          
+          <div class="env-inventory-snippet"><code class="env-inventory-inline-code">HEROKU_APP_NAME=&lt;redacted&gt;</code></div>
         </li>
       
     </ul>
@@ -398,10 +398,10 @@
       
         <li class="env-inventory-occurrence-item">
           <div class="env-inventory-occurrence-top">
-            <code class="env-inventory-inline-code">apps/katei/.env.example:1</code>
+            <code class="env-inventory-inline-code">apps/katei/.env.example:2</code>
             <span class="text-sm leading-6 text-muted">EnvFile · App</span>
           </div>
-          
+          <div class="env-inventory-snippet"><code class="env-inventory-inline-code">NODE_ENV=&lt;redacted&gt;</code></div>
         </li>
       
     </ul>
@@ -467,10 +467,10 @@
       
         <li class="env-inventory-occurrence-item">
           <div class="env-inventory-occurrence-top">
-            <code class="env-inventory-inline-code">apps/katei/.env.example:2</code>
+            <code class="env-inventory-inline-code">apps/katei/.env.example:5</code>
             <span class="text-sm leading-6 text-muted">EnvFile · App</span>
           </div>
-          
+          <div class="env-inventory-snippet"><code class="env-inventory-inline-code">PORT=&lt;redacted&gt;</code></div>
         </li>
       
     </ul>
@@ -683,13 +683,15 @@
           &quot;kind&quot;: &quot;ci&quot;,
           &quot;file&quot;: &quot;.github/workflows/deploy-katei-heroku.yml&quot;,
           &quot;line&quot;: 55,
-          &quot;scope&quot;: &quot;root&quot;
+          &quot;scope&quot;: &quot;root&quot;,
+          &quot;snippet&quot;: &quot;echo \&quot;HEROKU_API_KEY=&lt;redacted&gt;\&quot; &gt;&gt; \&quot;$GITHUB_ENV\&quot;&quot;
         },
         {
           &quot;kind&quot;: &quot;envFile&quot;,
           &quot;file&quot;: &quot;apps/katei/.env.example&quot;,
-          &quot;line&quot;: 4,
-          &quot;scope&quot;: &quot;app&quot;
+          &quot;line&quot;: 11,
+          &quot;scope&quot;: &quot;app&quot;,
+          &quot;snippet&quot;: &quot;HEROKU_API_KEY=&lt;redacted&gt;&quot;
         }
       ],
       &quot;usages&quot;: [
@@ -739,13 +741,15 @@
           &quot;kind&quot;: &quot;ci&quot;,
           &quot;file&quot;: &quot;.github/workflows/deploy-katei-heroku.yml&quot;,
           &quot;line&quot;: 50,
-          &quot;scope&quot;: &quot;root&quot;
+          &quot;scope&quot;: &quot;root&quot;,
+          &quot;snippet&quot;: &quot;echo \&quot;HEROKU_APP_NAME=&lt;redacted&gt;\&quot; &gt;&gt; \&quot;$GITHUB_ENV\&quot;&quot;
         },
         {
           &quot;kind&quot;: &quot;envFile&quot;,
           &quot;file&quot;: &quot;apps/katei/.env.example&quot;,
-          &quot;line&quot;: 3,
-          &quot;scope&quot;: &quot;app&quot;
+          &quot;line&quot;: 8,
+          &quot;scope&quot;: &quot;app&quot;,
+          &quot;snippet&quot;: &quot;HEROKU_APP_NAME=&lt;redacted&gt;&quot;
         }
       ],
       &quot;usages&quot;: [
@@ -801,8 +805,9 @@
         {
           &quot;kind&quot;: &quot;envFile&quot;,
           &quot;file&quot;: &quot;apps/katei/.env.example&quot;,
-          &quot;line&quot;: 1,
-          &quot;scope&quot;: &quot;app&quot;
+          &quot;line&quot;: 2,
+          &quot;scope&quot;: &quot;app&quot;,
+          &quot;snippet&quot;: &quot;NODE_ENV=&lt;redacted&gt;&quot;
         }
       ],
       &quot;usages&quot;: [
@@ -823,8 +828,9 @@
         {
           &quot;kind&quot;: &quot;envFile&quot;,
           &quot;file&quot;: &quot;apps/katei/.env.example&quot;,
-          &quot;line&quot;: 2,
-          &quot;scope&quot;: &quot;app&quot;
+          &quot;line&quot;: 5,
+          &quot;scope&quot;: &quot;app&quot;,
+          &quot;snippet&quot;: &quot;PORT=&lt;redacted&gt;&quot;
         }
       ],
       &quot;usages&quot;: [
@@ -846,7 +852,7 @@
   
     </main>
     
-    <script id="env-inventory-report-data" type="application/json">{"schemaVersion":"1.0","app":{"name":"katei","path":"apps/katei","outputPath":"apps/katei/doc/env-inventory.json"},"scan":{"config":{"path":".agents/env-inventory.config.json","exists":true},"roots":{"app":["apps/katei","apps/katei/doc","apps/katei/src","apps/katei/src/routes"],"package":[],"root":[".github/workflows"]},"ignoredGlobs":["**/.agents/**","**/.generated/**","**/.github/**","**/build/**","**/coverage/**","**/dist/**","**/doc/*.json","**/node_modules/**","**/public/**","**/src/public/**"]},"summary":{"totalVariables":4,"totalDefinitions":6,"totalUsages":13,"secretLikeCount":1,"publicLikeCount":0,"dynamicAccessCount":0},"variables":[{"name":"HEROKU_API_KEY","secretLike":true,"publicLike":false,"definitions":[{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":55,"scope":"root"},{"kind":"envFile","file":"apps/katei/.env.example","line":4,"scope":"app"}],"usages":[{"kind":"default","file":".github/workflows/deploy-katei-heroku.yml","line":55,"scope":"root","snippet":"echo \"HEROKU_API_KEY=${heroku_api_key:-YOUR_HEROKU_API_KEY}\" \u003e\u003e \"$GITHUB_ENV\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":61,"scope":"root","snippet":"test -n \"$HEROKU_API_KEY\" || { echo \"Missing HEROKU_API_KEY\"; exit 1; }"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":62,"scope":"root","snippet":"test \"$HEROKU_API_KEY\" != \"YOUR_HEROKU_API_KEY\" || { echo \"Replace YOUR_HEROKU_API_KEY with a real Heroku API key as a Github Repository secret\"; exit 1; }"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":94,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":107,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""}]},{"name":"HEROKU_APP_NAME","secretLike":false,"publicLike":false,"definitions":[{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":50,"scope":"root"},{"kind":"envFile","file":"apps/katei/.env.example","line":3,"scope":"app"}],"usages":[{"kind":"default","file":".github/workflows/deploy-katei-heroku.yml","line":50,"scope":"root","snippet":"echo \"HEROKU_APP_NAME=${heroku_app_name:-YOUR_HEROKU_APP_NAME}\" \u003e\u003e \"$GITHUB_ENV\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":59,"scope":"root","snippet":"test -n \"$HEROKU_APP_NAME\" || { echo \"Missing HEROKU_APP_NAME\"; exit 1; }"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":60,"scope":"root","snippet":"test \"$HEROKU_APP_NAME\" != \"YOUR_HEROKU_APP_NAME\" || { echo \"Replace YOUR_HEROKU_APP_NAME with the real Heroku app slug or set HEROKY_KATEI_APP_PROD as a Github Repository secret\"; exit 1; }"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":63,"scope":"root","snippet":"echo \"Deploying branch '${GITHUB_REF_NAME}' to app '${HEROKU_APP_NAME}'\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":94,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":107,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""}]},{"name":"NODE_ENV","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":1,"scope":"app"}],"usages":[{"kind":"default","file":"apps/katei/src/app.js","line":17,"scope":"app","snippet":"const nodeEnv = process.env.NODE_ENV || 'development';"}]},{"name":"PORT","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":2,"scope":"app"}],"usages":[{"kind":"default","file":"apps/katei/src/server.js","line":5,"scope":"app","snippet":"const port = Number(process.env.PORT) || 3000;"}]}],"dynamicAccesses":[],"scanWarnings":[]}</script>
+    <script id="env-inventory-report-data" type="application/json">{"schemaVersion":"1.0","app":{"name":"katei","path":"apps/katei","outputPath":"apps/katei/doc/env-inventory.json"},"scan":{"config":{"path":".agents/env-inventory.config.json","exists":true},"roots":{"app":["apps/katei","apps/katei/doc","apps/katei/src","apps/katei/src/routes"],"package":[],"root":[".github/workflows"]},"ignoredGlobs":["**/.agents/**","**/.generated/**","**/.github/**","**/build/**","**/coverage/**","**/dist/**","**/doc/*.json","**/node_modules/**","**/public/**","**/src/public/**"]},"summary":{"totalVariables":4,"totalDefinitions":6,"totalUsages":13,"secretLikeCount":1,"publicLikeCount":0,"dynamicAccessCount":0},"variables":[{"name":"HEROKU_API_KEY","secretLike":true,"publicLike":false,"definitions":[{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":55,"scope":"root","snippet":"echo \"HEROKU_API_KEY=\u003credacted\u003e\" \u003e\u003e \"$GITHUB_ENV\""},{"kind":"envFile","file":"apps/katei/.env.example","line":11,"scope":"app","snippet":"HEROKU_API_KEY=\u003credacted\u003e"}],"usages":[{"kind":"default","file":".github/workflows/deploy-katei-heroku.yml","line":55,"scope":"root","snippet":"echo \"HEROKU_API_KEY=${heroku_api_key:-YOUR_HEROKU_API_KEY}\" \u003e\u003e \"$GITHUB_ENV\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":61,"scope":"root","snippet":"test -n \"$HEROKU_API_KEY\" || { echo \"Missing HEROKU_API_KEY\"; exit 1; }"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":62,"scope":"root","snippet":"test \"$HEROKU_API_KEY\" != \"YOUR_HEROKU_API_KEY\" || { echo \"Replace YOUR_HEROKU_API_KEY with a real Heroku API key as a Github Repository secret\"; exit 1; }"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":94,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":107,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""}]},{"name":"HEROKU_APP_NAME","secretLike":false,"publicLike":false,"definitions":[{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":50,"scope":"root","snippet":"echo \"HEROKU_APP_NAME=\u003credacted\u003e\" \u003e\u003e \"$GITHUB_ENV\""},{"kind":"envFile","file":"apps/katei/.env.example","line":8,"scope":"app","snippet":"HEROKU_APP_NAME=\u003credacted\u003e"}],"usages":[{"kind":"default","file":".github/workflows/deploy-katei-heroku.yml","line":50,"scope":"root","snippet":"echo \"HEROKU_APP_NAME=${heroku_app_name:-YOUR_HEROKU_APP_NAME}\" \u003e\u003e \"$GITHUB_ENV\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":59,"scope":"root","snippet":"test -n \"$HEROKU_APP_NAME\" || { echo \"Missing HEROKU_APP_NAME\"; exit 1; }"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":60,"scope":"root","snippet":"test \"$HEROKU_APP_NAME\" != \"YOUR_HEROKU_APP_NAME\" || { echo \"Replace YOUR_HEROKU_APP_NAME with the real Heroku app slug or set HEROKY_KATEI_APP_PROD as a Github Repository secret\"; exit 1; }"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":63,"scope":"root","snippet":"echo \"Deploying branch '${GITHUB_REF_NAME}' to app '${HEROKU_APP_NAME}'\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":94,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":107,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""}]},{"name":"NODE_ENV","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":2,"scope":"app","snippet":"NODE_ENV=\u003credacted\u003e"}],"usages":[{"kind":"default","file":"apps/katei/src/app.js","line":17,"scope":"app","snippet":"const nodeEnv = process.env.NODE_ENV || 'development';"}]},{"name":"PORT","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":5,"scope":"app","snippet":"PORT=\u003credacted\u003e"}],"usages":[{"kind":"default","file":"apps/katei/src/server.js","line":5,"scope":"app","snippet":"const port = Number(process.env.PORT) || 3000;"}]}],"dynamicAccesses":[],"scanWarnings":[]}</script>
     <script>
       (() => {
         const report = JSON.parse(document.getElementById("env-inventory-report-data").textContent);

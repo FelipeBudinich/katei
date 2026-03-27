@@ -244,7 +244,7 @@ function renderVariableCard(variable) {
             <div class="env-inventory-section-header">
               <h4 class="font-serif text-2xl text-strong">Definitions</h4>
             </div>
-            ${renderOccurrenceList(variable.definitions)}
+            ${renderOccurrenceList(variable.definitions, { includeSnippet: true })}
           </section>
           <section>
             <div class="env-inventory-section-header">

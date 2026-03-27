@@ -53,13 +53,15 @@
           "kind": "ci",
           "file": ".github/workflows/deploy-katei-heroku.yml",
           "line": 55,
-          "scope": "root"
+          "scope": "root",
+          "snippet": "echo \"HEROKU_API_KEY=<redacted>\" >> \"$GITHUB_ENV\""
         },
         {
           "kind": "envFile",
           "file": "apps/katei/.env.example",
-          "line": 4,
-          "scope": "app"
+          "line": 11,
+          "scope": "app",
+          "snippet": "HEROKU_API_KEY=<redacted>"
         }
       ],
       "usages": [
@@ -109,13 +111,15 @@
           "kind": "ci",
           "file": ".github/workflows/deploy-katei-heroku.yml",
           "line": 50,
-          "scope": "root"
+          "scope": "root",
+          "snippet": "echo \"HEROKU_APP_NAME=<redacted>\" >> \"$GITHUB_ENV\""
         },
         {
           "kind": "envFile",
           "file": "apps/katei/.env.example",
-          "line": 3,
-          "scope": "app"
+          "line": 8,
+          "scope": "app",
+          "snippet": "HEROKU_APP_NAME=<redacted>"
         }
       ],
       "usages": [
@@ -171,8 +175,9 @@
         {
           "kind": "envFile",
           "file": "apps/katei/.env.example",
-          "line": 1,
-          "scope": "app"
+          "line": 2,
+          "scope": "app",
+          "snippet": "NODE_ENV=<redacted>"
         }
       ],
       "usages": [
@@ -193,8 +198,9 @@
         {
           "kind": "envFile",
           "file": "apps/katei/.env.example",
-          "line": 2,
-          "scope": "app"
+          "line": 5,
+          "scope": "app",
+          "snippet": "PORT=<redacted>"
         }
       ],
       "usages": [

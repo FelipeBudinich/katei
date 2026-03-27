@@ -82,9 +82,11 @@ test("generateEnvInventory reports app-local, shared-package, grounded root, def
 
   assert.equal(report.app.outputPath, "apps/app-a/doc/env-inventory.json");
   assert.ok(report.variables.some((entry) => entry.name === "APP_A_TOKEN" && entry.definitions.some((definition) => definition.kind === "envFile")));
+  assert.ok(report.variables.some((entry) => entry.name === "APP_A_TOKEN" && entry.definitions.some((definition) => definition.snippet === "APP_A_TOKEN=<redacted>")));
   assert.ok(report.variables.some((entry) => entry.name === "SHARED_TOKEN" && entry.usages.some((usage) => usage.scope === "package")));
   assert.ok(report.variables.some((entry) => entry.name === "APP_A_RUNTIME_SECRET" && entry.definitions.some((definition) => definition.kind === "ci")));
   assert.ok(report.variables.some((entry) => entry.name === "APP_A_DEPLOY_NAME" && entry.definitions.some((definition) => definition.kind === "ci")));
+  assert.ok(report.variables.some((entry) => entry.name === "APP_A_DEPLOY_NAME" && entry.definitions.some((definition) => definition.snippet === "echo \"APP_A_DEPLOY_NAME=<redacted>\" >> \"$GITHUB_ENV\"")));
   assert.ok(report.variables.some((entry) => entry.name === "APP_A_DEPLOY_NAME" && entry.usages.some((usage) => usage.kind === "default")));
   assert.ok(report.variables.some((entry) => entry.name === "COMPOSE_ONLY" && entry.definitions.some((definition) => definition.kind === "compose")));
   assert.ok(report.variables.some((entry) => entry.name === "APP_A_RUNTIME_SECRET" && entry.usages.some((usage) => usage.kind === "validation")));
