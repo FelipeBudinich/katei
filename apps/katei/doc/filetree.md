@@ -21,7 +21,10 @@ This document provides a structural overview of the `katei` app.
 ```text
 apps/katei/
 ├── doc/
+│   ├── env-inventory.json
 │   └── filetree.md
+├── docs/
+│   └── env-inventory.html
 ├── public/
 │   ├── assets/
 │   │   └── app.css

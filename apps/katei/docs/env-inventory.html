@@ -1,0 +1,1300 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Env inventory · katei</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f5f7fb;
+        --panel: #ffffff;
+        --text: #172033;
+        --muted: #5b6476;
+        --line: #d7deea;
+        --good: #0f766e;
+        --warning: #b45309;
+        --problem: #b91c1c;
+        --accent: #3554c5;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.45;
+      }
+      code, pre {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      }
+      .page {
+        max-width: 1440px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+      .page-header h1 {
+        margin: 0 0 8px;
+        font-size: 2rem;
+      }
+      .meta-grid,
+      .status-grid,
+      .split-grid,
+      .variable-grid {
+        display: grid;
+        gap: 12px;
+      }
+      .meta-grid {
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        margin-top: 16px;
+      }
+      .status-grid {
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        margin: 20px 0;
+      }
+      .split-grid {
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      }
+      .variable-grid {
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      }
+      .meta-item,
+      .status-card,
+      .panel,
+      .variable-card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        box-shadow: 0 8px 30px rgba(23, 32, 51, 0.05);
+      }
+      .meta-item,
+      .status-card,
+      .panel {
+        padding: 16px;
+      }
+      .meta-item__label,
+      .status-card__label,
+      .filter-summary,
+      .panel__header p,
+      .empty-state,
+      .occurrence-meta {
+        color: var(--muted);
+      }
+      .meta-item__label,
+      .status-card__label {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .status-card__value {
+        margin-top: 10px;
+        font-size: 1.7rem;
+        font-weight: 700;
+      }
+      .status-card--good { border-left: 5px solid var(--good); }
+      .status-card--warning { border-left: 5px solid var(--warning); }
+      .status-card--problem { border-left: 5px solid var(--problem); }
+      .warning-banner {
+        margin: 16px 0 20px;
+        padding: 14px 16px;
+        background: rgba(180, 83, 9, 0.08);
+        border: 1px solid rgba(180, 83, 9, 0.25);
+        border-radius: 12px;
+        color: var(--warning);
+      }
+      .panel__header {
+        margin-bottom: 14px;
+      }
+      .panel__header h2,
+      .variable-card h3,
+      .variable-card h4 {
+        margin: 0 0 6px;
+      }
+      .pill-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 8px;
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 8px;
+        border-radius: 999px;
+        background: rgba(23, 32, 51, 0.08);
+        font-size: 0.82rem;
+      }
+      .pill--good {
+        background: rgba(15, 118, 110, 0.12);
+        color: var(--good);
+      }
+      .pill--warning {
+        background: rgba(180, 83, 9, 0.12);
+        color: var(--warning);
+      }
+      .pill--problem {
+        background: rgba(185, 28, 28, 0.12);
+        color: var(--problem);
+      }
+      .pill--accent {
+        background: rgba(53, 84, 197, 0.12);
+        color: var(--accent);
+      }
+      .variable-card {
+        padding: 0;
+        overflow: hidden;
+      }
+      .variable-card summary {
+        list-style: none;
+        cursor: pointer;
+        padding: 16px;
+      }
+      .variable-card summary::-webkit-details-marker {
+        display: none;
+      }
+      .variable-card__summary {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      .variable-card__counts {
+        min-width: 90px;
+        display: grid;
+        gap: 4px;
+        justify-items: end;
+        font-size: 0.88rem;
+        color: var(--muted);
+      }
+      .variable-card__body {
+        border-top: 1px solid var(--line);
+        padding: 16px;
+      }
+      .variable-meta-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 12px;
+        margin-bottom: 14px;
+      }
+      .occurrence-list,
+      .simple-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: grid;
+        gap: 10px;
+      }
+      .occurrence-list li {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 10px 12px;
+      }
+      .occurrence-list__top {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: baseline;
+      }
+      .occurrence-snippet {
+        margin-top: 8px;
+      }
+      .occurrence-snippet code,
+      pre {
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+      .variable-controls {
+        position: sticky;
+        top: 0;
+        z-index: 3;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 12px;
+        padding: 14px;
+        margin-bottom: 14px;
+        background: rgba(245, 247, 251, 0.96);
+        backdrop-filter: blur(10px);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+      }
+      .variable-controls label {
+        display: grid;
+        gap: 6px;
+        font-size: 0.88rem;
+        color: var(--muted);
+      }
+      .variable-controls input,
+      .variable-controls select,
+      .variable-controls button {
+        min-height: 38px;
+        padding: 8px 10px;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+        background: var(--panel);
+        color: var(--text);
+      }
+      .variable-controls__actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: end;
+        gap: 10px;
+      }
+      .table-wrap {
+        overflow: auto;
+      }
+      .data-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .data-table th,
+      .data-table td {
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--line);
+        vertical-align: top;
+        text-align: left;
+      }
+      .data-table thead th {
+        position: sticky;
+        top: 0;
+        background: var(--panel);
+      }
+      .empty-state-cell {
+        text-align: center;
+        color: var(--muted);
+        padding: 20px;
+      }
+      details pre {
+        overflow: auto;
+        padding: 12px;
+        background: #0f172a;
+        color: #e5eefc;
+        border-radius: 12px;
+      }
+      @media (max-width: 900px) {
+        .page {
+          padding: 16px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <header class="page-header">
+        <h1>Env inventory report · katei</h1>
+        <p>Static, app-local HTML built from the machine-readable JSON source of truth.</p>
+        
+    <section class="warning-banner">
+      <strong>Config warning:</strong> Repo config file was not found. Built-in defaults were used.
+    </section>
+  
+        <div class="meta-grid">
+          <article class="meta-item">
+            <div class="meta-item__label">App root</div>
+            <div class="meta-item__value"><code>apps/katei</code></div>
+          </article>
+          <article class="meta-item">
+            <div class="meta-item__label">JSON report path</div>
+            <div class="meta-item__value"><code>apps/katei/doc/env-inventory.json</code></div>
+          </article>
+          <article class="meta-item">
+            <div class="meta-item__label">HTML report path</div>
+            <div class="meta-item__value"><code>apps/katei/docs/env-inventory.html</code></div>
+          </article>
+          <article class="meta-item">
+            <div class="meta-item__label">Config path</div>
+            <div class="meta-item__value"><code>.agents/env-inventory.config.json</code></div>
+          </article>
+          <article class="meta-item">
+            <div class="meta-item__label">Config found</div>
+            <div class="meta-item__value">no</div>
+          </article>
+        </div>
+      </header>
+
+      <section class="status-grid">
+        
+      <article class="status-card status-card--good">
+        <div class="status-card__label">Variables</div>
+        <div class="status-card__value">5</div>
+      </article>
+    
+      <article class="status-card status-card--good">
+        <div class="status-card__label">Definitions</div>
+        <div class="status-card__value">4</div>
+      </article>
+    
+      <article class="status-card status-card--good">
+        <div class="status-card__label">Usages</div>
+        <div class="status-card__value">11</div>
+      </article>
+    
+      <article class="status-card status-card--warning">
+        <div class="status-card__label">Likely required</div>
+        <div class="status-card__value">4</div>
+      </article>
+    
+      <article class="status-card status-card--good">
+        <div class="status-card__label">Fallbacks observed</div>
+        <div class="status-card__value">1</div>
+      </article>
+    
+      <article class="status-card status-card--warning">
+        <div class="status-card__label">Missing example/docs</div>
+        <div class="status-card__value">5</div>
+      </article>
+    
+      <article class="status-card status-card--good">
+        <div class="status-card__label">Secret-like</div>
+        <div class="status-card__value">1</div>
+      </article>
+    
+      <article class="status-card status-card--good">
+        <div class="status-card__label">Public-like</div>
+        <div class="status-card__value">0</div>
+      </article>
+    
+      <article class="status-card status-card--good">
+        <div class="status-card__label">Dynamic access</div>
+        <div class="status-card__value">0</div>
+      </article>
+    
+      </section>
+
+      <main class="split-grid">
+        <section class="panel">
+          <div class="panel__header">
+            <h2>Inventory model</h2>
+            <p>Required vs optional is inferred from observed fallback usage. Variables with a <code>default</code> usage are treated as optional for this report.</p>
+          </div>
+          <div class="pill-row">
+            <span class="pill pill--warning">Likely required</span>
+            <span class="pill pill--good">Fallback observed</span>
+            <span class="pill pill--problem">Secret-like</span>
+            <span class="pill pill--accent">Public-like</span>
+          </div>
+        </section>
+        
+    <section class="panel">
+      <div class="panel__header">
+        <h2>Coverage gaps</h2>
+        <p>Variables with usages but no observed <code>.env*</code> or docs/example definition.</p>
+      </div>
+      
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th scope="col">Variable</th>
+                <th scope="col">Usages</th>
+                <th scope="col">Example usage</th>
+              </tr>
+            </thead>
+            <tbody>
+              
+                <tr data-gap-row="HEROKU_API_KEY">
+                  <td><code>HEROKU_API_KEY</code></td>
+                  <td>3</td>
+                  <td><code>.github/workflows/deploy-katei-heroku.yml:56</code></td>
+                </tr>
+              
+                <tr data-gap-row="HEROKU_APP_NAME">
+                  <td><code>HEROKU_APP_NAME</code></td>
+                  <td>4</td>
+                  <td><code>.github/workflows/deploy-katei-heroku.yml:55</code></td>
+                </tr>
+              
+                <tr data-gap-row="GITHUB_OUTPUT">
+                  <td><code>GITHUB_OUTPUT</code></td>
+                  <td>2</td>
+                  <td><code>.github/workflows/deploy-katei-heroku.yml:71</code></td>
+                </tr>
+              
+                <tr data-gap-row="NODE_ENV">
+                  <td><code>NODE_ENV</code></td>
+                  <td>1</td>
+                  <td><code>apps/katei/src/app.js:24</code></td>
+                </tr>
+              
+                <tr data-gap-row="PORT">
+                  <td><code>PORT</code></td>
+                  <td>1</td>
+                  <td><code>apps/katei/src/server.js:5</code></td>
+                </tr>
+              
+            </tbody>
+          </table>
+        
+    </section>
+  
+      </main>
+
+      
+    <section class="panel">
+      <div class="panel__header">
+        <h2>No fallback observed</h2>
+        <p>Variables with usages but no observed in-code fallback/default.</p>
+      </div>
+      <div class="variable-grid" data-env-group="required">
+        
+    <details class="variable-card" data-env-variable-card="HEROKU_API_KEY" data-variable-status="required">
+      <summary>
+        <div class="variable-card__summary">
+          <div>
+            <h3>HEROKU_API_KEY</h3>
+            <div class="pill-row"><span class="pill pill--warning">Likely required</span><span class="pill pill--problem">Secret-like</span><span class="pill pill--warning">Missing example/docs</span><span class="pill">Root</span></div>
+          </div>
+          <div class="variable-card__counts">
+            <span><strong>3</strong> defs</span>
+            <span><strong>3</strong> uses</span>
+          </div>
+        </div>
+      </summary>
+      <div class="variable-card__body">
+        <div class="variable-meta-grid">
+          <div>
+            <strong>Definition kinds</strong>
+            <div>Ci</div>
+          </div>
+          <div>
+            <strong>Usage kinds</strong>
+            <div>Ci</div>
+          </div>
+          <div>
+            <strong>Primary usage</strong>
+            <div><code>.github/workflows/deploy-katei-heroku.yml:56</code></div>
+          </div>
+        </div>
+        <div class="split-grid">
+          <section>
+            <h4>Definitions</h4>
+            
+    <ul class="occurrence-list">
+      
+        <li>
+          <div class="occurrence-list__top">
+            <code>.github/workflows/deploy-katei-heroku.yml:53</code>
+            <span class="occurrence-meta">Ci · Root</span>
+          </div>
+          
+        </li>
+      
+        <li>
+          <div class="occurrence-list__top">
+            <code>.github/workflows/deploy-katei-heroku.yml:86</code>
+            <span class="occurrence-meta">Ci · Root</span>
+          </div>
+          
+        </li>
+      
+        <li>
+          <div class="occurrence-list__top">
+            <code>.github/workflows/deploy-katei-heroku.yml:95</code>
+            <span class="occurrence-meta">Ci · Root</span>
+          </div>
+          
+        </li>
+      
+    </ul>
+  
+          </section>
+          <section>
+            <h4>Usages</h4>
+            
+    <ul class="occurrence-list">
+      
+        <li>
+          <div class="occurrence-list__top">
+            <code>.github/workflows/deploy-katei-heroku.yml:56</code>
+            <span class="occurrence-meta">Ci · Root</span>
+          </div>
+          <div class="occurrence-snippet"><code>test -n &quot;$HEROKU_API_KEY&quot; || { echo &quot;Missing HEROKU_API_KEY&quot;; exit 1; }</code></div>
+        </li>
+      
+        <li>
+          <div class="occurrence-list__top">
+            <code>.github/workflows/deploy-katei-heroku.yml:90</code>
+            <span class="occurrence-meta">Ci · Root</span>
+          </div>
+          <div class="occurrence-snippet"><code>git remote add heroku &quot;https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git&quot;</code></div>
+        </li>
+      
+        <li>
+          <div class="occurrence-list__top">
+            <code>.github/workflows/deploy-katei-heroku.yml:105</code>
+            <span class="occurrence-meta">Ci · Root</span>
+          </div>
+          <div class="occurrence-snippet"><code>git remote add heroku &quot;https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git&quot;</code></div>
+        </li>
+      
+    </ul>
+  
+          </section>
+        </div>
+      </div>
+    </details>
+  
+    <details class="variable-card" data-env-variable-card="HEROKU_APP_NAME" data-variable-status="required">
+      <summary>
+        <div class="variable-card__summary">
+          <div>
+            <h3>HEROKU_APP_NAME</h3>
+            <div class="pill-row"><span class="pill pill--warning">Likely required</span><span class="pill pill--warning">Missing example/docs</span><span class="pill">Root</span></div>
+          </div>
+          <div class="variable-card__counts">
+            <span><strong>1</strong> defs</span>
+            <span><strong>4</strong> uses</span>
+          </div>
+        </div>
+      </summary>
+      <div class="variable-card__body">
+        <div class="variable-meta-grid">
+          <div>
+            <strong>Definition kinds</strong>
+            <div>Ci</div>
+          </div>
+          <div>
+            <strong>Usage kinds</strong>
+            <div>Ci</div>
+          </div>
+          <div>
+            <strong>Primary usage</strong>
+            <div><code>.github/workflows/deploy-katei-heroku.yml:55</code></div>
+          </div>
+        </div>
+        <div class="split-grid">
+          <section>
+            <h4>Definitions</h4>
+            
+    <ul class="occurrence-list">
+      
+        <li>
+          <div class="occurrence-list__top">
+            <code>.github/workflows/deploy-katei-heroku.yml:49</code>
+            <span class="occurrence-meta">Ci · Root</span>
+          </div>
+          
+        </li>
+      
+    </ul>
+  
+          </section>
+          <section>
+            <h4>Usages</h4>
+            
+    <ul class="occurrence-list">
+      
+        <li>
+          <div class="occurrence-list__top">
+            <code>.github/workflows/deploy-katei-heroku.yml:55</code>
+            <span class="occurrence-meta">Ci · Root</span>
+          </div>
+          <div class="occurrence-snippet"><code>test -n &quot;$HEROKU_APP_NAME&quot; || { echo &quot;Missing HEROKU_APP_NAME&quot;; exit 1; }</code></div>
+        </li>
+      
+        <li>
+          <div class="occurrence-list__top">
+            <code>.github/workflows/deploy-katei-heroku.yml:57</code>
+            <span class="occurrence-meta">Ci · Root</span>
+          </div>
+          <div class="occurrence-snippet"><code>echo &quot;Deploying branch &#39;${GITHUB_REF_NAME}&#39; to app &#39;${HEROKU_APP_NAME}&#39;&quot;</code></div>
+        </li>
+      
+        <li>
+          <div class="occurrence-list__top">
+            <code>.github/workflows/deploy-katei-heroku.yml:90</code>
+            <span class="occurrence-meta">Ci · Root</span>
+          </div>
+          <div class="occurrence-snippet"><code>git remote add heroku &quot;https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git&quot;</code></div>
+        </li>
+      
+        <li>
+          <div class="occurrence-list__top">
+            <code>.github/workflows/deploy-katei-heroku.yml:105</code>
+            <span class="occurrence-meta">Ci · Root</span>
+          </div>
+          <div class="occurrence-snippet"><code>git remote add heroku &quot;https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git&quot;</code></div>
+        </li>
+      
+    </ul>
+  
+          </section>
+        </div>
+      </div>
+    </details>
+  
+    <details class="variable-card" data-env-variable-card="GITHUB_OUTPUT" data-variable-status="required">
+      <summary>
+        <div class="variable-card__summary">
+          <div>
+            <h3>GITHUB_OUTPUT</h3>
+            <div class="pill-row"><span class="pill pill--warning">Likely required</span><span class="pill pill--warning">Missing example/docs</span><span class="pill">Root</span></div>
+          </div>
+          <div class="variable-card__counts">
+            <span><strong>0</strong> defs</span>
+            <span><strong>2</strong> uses</span>
+          </div>
+        </div>
+      </summary>
+      <div class="variable-card__body">
+        <div class="variable-meta-grid">
+          <div>
+            <strong>Definition kinds</strong>
+            <div>None</div>
+          </div>
+          <div>
+            <strong>Usage kinds</strong>
+            <div>Ci</div>
+          </div>
+          <div>
+            <strong>Primary usage</strong>
+            <div><code>.github/workflows/deploy-katei-heroku.yml:71</code></div>
+          </div>
+        </div>
+        <div class="split-grid">
+          <section>
+            <h4>Definitions</h4>
+            <p class="empty-state">None recorded.</p>
+          </section>
+          <section>
+            <h4>Usages</h4>
+            
+    <ul class="occurrence-list">
+      
+        <li>
+          <div class="occurrence-list__top">
+            <code>.github/workflows/deploy-katei-heroku.yml:71</code>
+            <span class="occurrence-meta">Ci · Root</span>
+          </div>
+          <div class="occurrence-snippet"><code>echo &quot;ref=$(git rev-parse HEAD)&quot; &gt;&gt; &quot;$GITHUB_OUTPUT&quot;</code></div>
+        </li>
+      
+        <li>
+          <div class="occurrence-list__top">
+            <code>.github/workflows/deploy-katei-heroku.yml:76</code>
+            <span class="occurrence-meta">Ci · Root</span>
+          </div>
+          <div class="occurrence-snippet"><code>echo &quot;sha=$(git subtree split --prefix=apps/katei ${{ steps.prep.outputs.ref }})&quot; &gt;&gt; &quot;$GITHUB_OUTPUT&quot;</code></div>
+        </li>
+      
+    </ul>
+  
+          </section>
+        </div>
+      </div>
+    </details>
+  
+    <details class="variable-card" data-env-variable-card="NODE_ENV" data-variable-status="required">
+      <summary>
+        <div class="variable-card__summary">
+          <div>
+            <h3>NODE_ENV</h3>
+            <div class="pill-row"><span class="pill pill--warning">Likely required</span><span class="pill pill--warning">Missing example/docs</span><span class="pill">App</span></div>
+          </div>
+          <div class="variable-card__counts">
+            <span><strong>0</strong> defs</span>
+            <span><strong>1</strong> uses</span>
+          </div>
+        </div>
+      </summary>
+      <div class="variable-card__body">
+        <div class="variable-meta-grid">
+          <div>
+            <strong>Definition kinds</strong>
+            <div>None</div>
+          </div>
+          <div>
+            <strong>Usage kinds</strong>
+            <div>Read</div>
+          </div>
+          <div>
+            <strong>Primary usage</strong>
+            <div><code>apps/katei/src/app.js:24</code></div>
+          </div>
+        </div>
+        <div class="split-grid">
+          <section>
+            <h4>Definitions</h4>
+            <p class="empty-state">None recorded.</p>
+          </section>
+          <section>
+            <h4>Usages</h4>
+            
+    <ul class="occurrence-list">
+      
+        <li>
+          <div class="occurrence-list__top">
+            <code>apps/katei/src/app.js:24</code>
+            <span class="occurrence-meta">Read · App</span>
+          </div>
+          <div class="occurrence-snippet"><code>noCache: process.env.NODE_ENV !== &#39;production&#39;</code></div>
+        </li>
+      
+    </ul>
+  
+          </section>
+        </div>
+      </div>
+    </details>
+  
+      </div>
+    </section>
+  
+      
+    <section class="panel">
+      <div class="panel__header">
+        <h2>Fallbacks observed</h2>
+        <p>Variables where the report found an explicit default/fallback path.</p>
+      </div>
+      <div class="variable-grid" data-env-group="optional">
+        
+    <details class="variable-card" data-env-variable-card="PORT" data-variable-status="optional">
+      <summary>
+        <div class="variable-card__summary">
+          <div>
+            <h3>PORT</h3>
+            <div class="pill-row"><span class="pill pill--good">Fallback observed</span><span class="pill pill--warning">Missing example/docs</span><span class="pill">App</span></div>
+          </div>
+          <div class="variable-card__counts">
+            <span><strong>0</strong> defs</span>
+            <span><strong>1</strong> uses</span>
+          </div>
+        </div>
+      </summary>
+      <div class="variable-card__body">
+        <div class="variable-meta-grid">
+          <div>
+            <strong>Definition kinds</strong>
+            <div>None</div>
+          </div>
+          <div>
+            <strong>Usage kinds</strong>
+            <div>Default</div>
+          </div>
+          <div>
+            <strong>Primary usage</strong>
+            <div><code>apps/katei/src/server.js:5</code></div>
+          </div>
+        </div>
+        <div class="split-grid">
+          <section>
+            <h4>Definitions</h4>
+            <p class="empty-state">None recorded.</p>
+          </section>
+          <section>
+            <h4>Usages</h4>
+            
+    <ul class="occurrence-list">
+      
+        <li>
+          <div class="occurrence-list__top">
+            <code>apps/katei/src/server.js:5</code>
+            <span class="occurrence-meta">Default · App</span>
+          </div>
+          <div class="occurrence-snippet"><code>const port = Number(process.env.PORT) || 3000;</code></div>
+        </li>
+      
+    </ul>
+  
+          </section>
+        </div>
+      </div>
+    </details>
+  
+      </div>
+    </section>
+  
+      
+    <section class="panel">
+      <div class="panel__header">
+        <h2>Dynamic env access</h2>
+        <p>These accesses could not be resolved to a concrete variable name statically.</p>
+      </div>
+      <p class="empty-state">No dynamic env access recorded.</p>
+    </section>
+  
+      
+    <section class="panel">
+      <div class="panel__header">
+        <h2>Variable explorer</h2>
+        <p>Search and filter the inventory without leaving the static report.</p>
+      </div>
+      <div id="variable-controls" class="variable-controls">
+        <label>
+          Search
+          <input id="variable-search" type="search" placeholder="Search variable names, files, snippets">
+        </label>
+        <label>
+          Status
+          <select id="variable-status">
+            <option value="">All</option>
+            <option value="required">Likely required</option>
+            <option value="optional">Fallback observed</option>
+            <option value="missing-example">Missing example/docs</option>
+            <option value="secret-like">Secret-like</option>
+            <option value="public-like">Public-like</option>
+          </select>
+        </label>
+        <label>
+          Scope
+          <select id="variable-scope">
+            <option value="">All</option>
+            <option value="app">App</option><option value="root">Root</option>
+          </select>
+        </label>
+        <div class="variable-controls__actions">
+          <button id="variable-reset" type="button">Reset</button>
+          <div id="variable-filter-summary" class="filter-summary">Showing all variables</div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th scope="col">Variable</th>
+              <th scope="col">Status</th>
+              <th scope="col">Definitions</th>
+              <th scope="col">Usages</th>
+              <th scope="col">Scopes</th>
+              <th scope="col">Example location</th>
+            </tr>
+          </thead>
+          <tbody id="variable-table-body">
+            
+                <tr>
+                  <td><code>GITHUB_OUTPUT</code></td>
+                  <td>Likely required</td>
+                  <td>0</td>
+                  <td>2</td>
+                  <td>root</td>
+                  <td><code>.github/workflows/deploy-katei-heroku.yml:71</code></td>
+                </tr>
+              
+                <tr>
+                  <td><code>HEROKU_API_KEY</code></td>
+                  <td>Likely required</td>
+                  <td>3</td>
+                  <td>3</td>
+                  <td>root</td>
+                  <td><code>.github/workflows/deploy-katei-heroku.yml:56</code></td>
+                </tr>
+              
+                <tr>
+                  <td><code>HEROKU_APP_NAME</code></td>
+                  <td>Likely required</td>
+                  <td>1</td>
+                  <td>4</td>
+                  <td>root</td>
+                  <td><code>.github/workflows/deploy-katei-heroku.yml:55</code></td>
+                </tr>
+              
+                <tr>
+                  <td><code>NODE_ENV</code></td>
+                  <td>Likely required</td>
+                  <td>0</td>
+                  <td>1</td>
+                  <td>app</td>
+                  <td><code>apps/katei/src/app.js:24</code></td>
+                </tr>
+              
+                <tr>
+                  <td><code>PORT</code></td>
+                  <td>Fallback observed</td>
+                  <td>0</td>
+                  <td>1</td>
+                  <td>app</td>
+                  <td><code>apps/katei/src/server.js:5</code></td>
+                </tr>
+              
+          </tbody>
+        </table>
+      </div>
+    </section>
+  
+      
+    <section class="panel">
+      <div class="panel__header">
+        <h2>Scan details</h2>
+        <p>Grounded scan roots and raw metadata for auditability.</p>
+      </div>
+      <div class="split-grid">
+        <section>
+          <h4>App roots</h4>
+          <ul class="simple-list"><li><code>apps/katei</code></li><li><code>apps/katei/doc</code></li><li><code>apps/katei/src</code></li><li><code>apps/katei/src/routes</code></li></ul>
+        </section>
+        <section>
+          <h4>Package roots</h4>
+          <p class="empty-state">None</p>
+        </section>
+        <section>
+          <h4>Root-level config roots</h4>
+          <ul class="simple-list"><li><code>.github/workflows</code></li></ul>
+        </section>
+      </div>
+      
+      <details>
+        <summary>Raw JSON metadata</summary>
+        <pre>{
+  &quot;schemaVersion&quot;: &quot;1.0&quot;,
+  &quot;app&quot;: {
+    &quot;name&quot;: &quot;katei&quot;,
+    &quot;path&quot;: &quot;apps/katei&quot;,
+    &quot;outputPath&quot;: &quot;apps/katei/doc/env-inventory.json&quot;
+  },
+  &quot;scan&quot;: {
+    &quot;config&quot;: {
+      &quot;path&quot;: &quot;.agents/env-inventory.config.json&quot;,
+      &quot;exists&quot;: false
+    },
+    &quot;roots&quot;: {
+      &quot;app&quot;: [
+        &quot;apps/katei&quot;,
+        &quot;apps/katei/doc&quot;,
+        &quot;apps/katei/src&quot;,
+        &quot;apps/katei/src/routes&quot;
+      ],
+      &quot;package&quot;: [],
+      &quot;root&quot;: [
+        &quot;.github/workflows&quot;
+      ]
+    },
+    &quot;ignoredGlobs&quot;: [
+      &quot;**/.generated/**&quot;,
+      &quot;**/build/**&quot;,
+      &quot;**/coverage/**&quot;,
+      &quot;**/dist/**&quot;,
+      &quot;**/doc/*.json&quot;,
+      &quot;**/node_modules/**&quot;,
+      &quot;**/public/**&quot;,
+      &quot;**/src/public/**&quot;
+    ]
+  },
+  &quot;summary&quot;: {
+    &quot;totalVariables&quot;: 5,
+    &quot;totalDefinitions&quot;: 4,
+    &quot;totalUsages&quot;: 11,
+    &quot;secretLikeCount&quot;: 1,
+    &quot;publicLikeCount&quot;: 0,
+    &quot;dynamicAccessCount&quot;: 0
+  },
+  &quot;variables&quot;: [
+    {
+      &quot;name&quot;: &quot;GITHUB_OUTPUT&quot;,
+      &quot;secretLike&quot;: false,
+      &quot;publicLike&quot;: false,
+      &quot;definitions&quot;: [],
+      &quot;usages&quot;: [
+        {
+          &quot;kind&quot;: &quot;ci&quot;,
+          &quot;file&quot;: &quot;.github/workflows/deploy-katei-heroku.yml&quot;,
+          &quot;line&quot;: 71,
+          &quot;scope&quot;: &quot;root&quot;,
+          &quot;snippet&quot;: &quot;echo \&quot;ref=$(git rev-parse HEAD)\&quot; &gt;&gt; \&quot;$GITHUB_OUTPUT\&quot;&quot;
+        },
+        {
+          &quot;kind&quot;: &quot;ci&quot;,
+          &quot;file&quot;: &quot;.github/workflows/deploy-katei-heroku.yml&quot;,
+          &quot;line&quot;: 76,
+          &quot;scope&quot;: &quot;root&quot;,
+          &quot;snippet&quot;: &quot;echo \&quot;sha=$(git subtree split --prefix=apps/katei ${{ steps.prep.outputs.ref }})\&quot; &gt;&gt; \&quot;$GITHUB_OUTPUT\&quot;&quot;
+        }
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;HEROKU_API_KEY&quot;,
+      &quot;secretLike&quot;: true,
+      &quot;publicLike&quot;: false,
+      &quot;definitions&quot;: [
+        {
+          &quot;kind&quot;: &quot;ci&quot;,
+          &quot;file&quot;: &quot;.github/workflows/deploy-katei-heroku.yml&quot;,
+          &quot;line&quot;: 53,
+          &quot;scope&quot;: &quot;root&quot;
+        },
+        {
+          &quot;kind&quot;: &quot;ci&quot;,
+          &quot;file&quot;: &quot;.github/workflows/deploy-katei-heroku.yml&quot;,
+          &quot;line&quot;: 86,
+          &quot;scope&quot;: &quot;root&quot;
+        },
+        {
+          &quot;kind&quot;: &quot;ci&quot;,
+          &quot;file&quot;: &quot;.github/workflows/deploy-katei-heroku.yml&quot;,
+          &quot;line&quot;: 95,
+          &quot;scope&quot;: &quot;root&quot;
+        }
+      ],
+      &quot;usages&quot;: [
+        {
+          &quot;kind&quot;: &quot;ci&quot;,
+          &quot;file&quot;: &quot;.github/workflows/deploy-katei-heroku.yml&quot;,
+          &quot;line&quot;: 56,
+          &quot;scope&quot;: &quot;root&quot;,
+          &quot;snippet&quot;: &quot;test -n \&quot;$HEROKU_API_KEY\&quot; || { echo \&quot;Missing HEROKU_API_KEY\&quot;; exit 1; }&quot;
+        },
+        {
+          &quot;kind&quot;: &quot;ci&quot;,
+          &quot;file&quot;: &quot;.github/workflows/deploy-katei-heroku.yml&quot;,
+          &quot;line&quot;: 90,
+          &quot;scope&quot;: &quot;root&quot;,
+          &quot;snippet&quot;: &quot;git remote add heroku \&quot;https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\&quot;&quot;
+        },
+        {
+          &quot;kind&quot;: &quot;ci&quot;,
+          &quot;file&quot;: &quot;.github/workflows/deploy-katei-heroku.yml&quot;,
+          &quot;line&quot;: 105,
+          &quot;scope&quot;: &quot;root&quot;,
+          &quot;snippet&quot;: &quot;git remote add heroku \&quot;https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\&quot;&quot;
+        }
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;HEROKU_APP_NAME&quot;,
+      &quot;secretLike&quot;: false,
+      &quot;publicLike&quot;: false,
+      &quot;definitions&quot;: [
+        {
+          &quot;kind&quot;: &quot;ci&quot;,
+          &quot;file&quot;: &quot;.github/workflows/deploy-katei-heroku.yml&quot;,
+          &quot;line&quot;: 49,
+          &quot;scope&quot;: &quot;root&quot;
+        }
+      ],
+      &quot;usages&quot;: [
+        {
+          &quot;kind&quot;: &quot;ci&quot;,
+          &quot;file&quot;: &quot;.github/workflows/deploy-katei-heroku.yml&quot;,
+          &quot;line&quot;: 55,
+          &quot;scope&quot;: &quot;root&quot;,
+          &quot;snippet&quot;: &quot;test -n \&quot;$HEROKU_APP_NAME\&quot; || { echo \&quot;Missing HEROKU_APP_NAME\&quot;; exit 1; }&quot;
+        },
+        {
+          &quot;kind&quot;: &quot;ci&quot;,
+          &quot;file&quot;: &quot;.github/workflows/deploy-katei-heroku.yml&quot;,
+          &quot;line&quot;: 57,
+          &quot;scope&quot;: &quot;root&quot;,
+          &quot;snippet&quot;: &quot;echo \&quot;Deploying branch &#39;${GITHUB_REF_NAME}&#39; to app &#39;${HEROKU_APP_NAME}&#39;\&quot;&quot;
+        },
+        {
+          &quot;kind&quot;: &quot;ci&quot;,
+          &quot;file&quot;: &quot;.github/workflows/deploy-katei-heroku.yml&quot;,
+          &quot;line&quot;: 90,
+          &quot;scope&quot;: &quot;root&quot;,
+          &quot;snippet&quot;: &quot;git remote add heroku \&quot;https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\&quot;&quot;
+        },
+        {
+          &quot;kind&quot;: &quot;ci&quot;,
+          &quot;file&quot;: &quot;.github/workflows/deploy-katei-heroku.yml&quot;,
+          &quot;line&quot;: 105,
+          &quot;scope&quot;: &quot;root&quot;,
+          &quot;snippet&quot;: &quot;git remote add heroku \&quot;https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\&quot;&quot;
+        }
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;NODE_ENV&quot;,
+      &quot;secretLike&quot;: false,
+      &quot;publicLike&quot;: false,
+      &quot;definitions&quot;: [],
+      &quot;usages&quot;: [
+        {
+          &quot;kind&quot;: &quot;read&quot;,
+          &quot;file&quot;: &quot;apps/katei/src/app.js&quot;,
+          &quot;line&quot;: 24,
+          &quot;scope&quot;: &quot;app&quot;,
+          &quot;snippet&quot;: &quot;noCache: process.env.NODE_ENV !== &#39;production&#39;&quot;
+        }
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;PORT&quot;,
+      &quot;secretLike&quot;: false,
+      &quot;publicLike&quot;: false,
+      &quot;definitions&quot;: [],
+      &quot;usages&quot;: [
+        {
+          &quot;kind&quot;: &quot;default&quot;,
+          &quot;file&quot;: &quot;apps/katei/src/server.js&quot;,
+          &quot;line&quot;: 5,
+          &quot;scope&quot;: &quot;app&quot;,
+          &quot;snippet&quot;: &quot;const port = Number(process.env.PORT) || 3000;&quot;
+        }
+      ]
+    }
+  ],
+  &quot;dynamicAccesses&quot;: [],
+  &quot;scanWarnings&quot;: []
+}</pre>
+      </details>
+    </section>
+  
+    </div>
+    
+    <script id="env-inventory-report-data" type="application/json">{"schemaVersion":"1.0","app":{"name":"katei","path":"apps/katei","outputPath":"apps/katei/doc/env-inventory.json"},"scan":{"config":{"path":".agents/env-inventory.config.json","exists":false},"roots":{"app":["apps/katei","apps/katei/doc","apps/katei/src","apps/katei/src/routes"],"package":[],"root":[".github/workflows"]},"ignoredGlobs":["**/.generated/**","**/build/**","**/coverage/**","**/dist/**","**/doc/*.json","**/node_modules/**","**/public/**","**/src/public/**"]},"summary":{"totalVariables":5,"totalDefinitions":4,"totalUsages":11,"secretLikeCount":1,"publicLikeCount":0,"dynamicAccessCount":0},"variables":[{"name":"GITHUB_OUTPUT","secretLike":false,"publicLike":false,"definitions":[],"usages":[{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":71,"scope":"root","snippet":"echo \"ref=$(git rev-parse HEAD)\" \u003e\u003e \"$GITHUB_OUTPUT\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":76,"scope":"root","snippet":"echo \"sha=$(git subtree split --prefix=apps/katei ${{ steps.prep.outputs.ref }})\" \u003e\u003e \"$GITHUB_OUTPUT\""}]},{"name":"HEROKU_API_KEY","secretLike":true,"publicLike":false,"definitions":[{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":53,"scope":"root"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":86,"scope":"root"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":95,"scope":"root"}],"usages":[{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":56,"scope":"root","snippet":"test -n \"$HEROKU_API_KEY\" || { echo \"Missing HEROKU_API_KEY\"; exit 1; }"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":90,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":105,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""}]},{"name":"HEROKU_APP_NAME","secretLike":false,"publicLike":false,"definitions":[{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":49,"scope":"root"}],"usages":[{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":55,"scope":"root","snippet":"test -n \"$HEROKU_APP_NAME\" || { echo \"Missing HEROKU_APP_NAME\"; exit 1; }"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":57,"scope":"root","snippet":"echo \"Deploying branch '${GITHUB_REF_NAME}' to app '${HEROKU_APP_NAME}'\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":90,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":105,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""}]},{"name":"NODE_ENV","secretLike":false,"publicLike":false,"definitions":[],"usages":[{"kind":"read","file":"apps/katei/src/app.js","line":24,"scope":"app","snippet":"noCache: process.env.NODE_ENV !== 'production'"}]},{"name":"PORT","secretLike":false,"publicLike":false,"definitions":[],"usages":[{"kind":"default","file":"apps/katei/src/server.js","line":5,"scope":"app","snippet":"const port = Number(process.env.PORT) || 3000;"}]}],"dynamicAccesses":[],"scanWarnings":[]}</script>
+    <script>
+      (() => {
+        const report = JSON.parse(document.getElementById("env-inventory-report-data").textContent);
+
+        function ensureArray(value) {
+          return Array.isArray(value) ? value : [];
+        }
+
+        function sortUnique(values) {
+          return Array.from(new Set(ensureArray(values).filter(Boolean).map((value) => String(value)))).sort((left, right) => left.localeCompare(right));
+        }
+
+        function derive(variable) {
+          const definitions = ensureArray(variable.definitions);
+          const usages = ensureArray(variable.usages);
+          const hasFallback = usages.some((usage) => usage.kind === "default");
+          const missingExample = usages.length > 0 && !definitions.some((definition) => definition.kind === "envFile" || definition.kind === "doc");
+          const scopes = sortUnique([
+            ...definitions.map((definition) => definition.scope),
+            ...usages.map((usage) => usage.scope),
+          ]);
+          return {
+            ...variable,
+            definitions,
+            usages,
+            scopes,
+            hasFallback,
+            likelyRequired: !hasFallback,
+            missingExample,
+            firstUsage: usages[0] || null,
+            searchBlob: [
+              variable.name,
+              ...definitions.map((definition) => definition.file),
+              ...usages.map((usage) => usage.file),
+              ...usages.map((usage) => usage.snippet || ""),
+            ].join(" ").toLowerCase(),
+          };
+        }
+
+        const variables = ensureArray(report.variables).map(derive);
+        const state = {
+          search: "",
+          status: "",
+          scope: "",
+        };
+
+        const controls = {
+          search: document.getElementById("variable-search"),
+          status: document.getElementById("variable-status"),
+          scope: document.getElementById("variable-scope"),
+          reset: document.getElementById("variable-reset"),
+          summary: document.getElementById("variable-filter-summary"),
+          body: document.getElementById("variable-table-body"),
+        };
+
+        function escapeHtml(value) {
+          return String(value ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+        }
+
+        function summarizeLocation(variable) {
+          const entry = variable.firstUsage || variable.definitions[0];
+          if (!entry) {
+            return "—";
+          }
+          return entry.file + ":" + entry.line;
+        }
+
+        function matchesStatus(variable) {
+          if (!state.status) {
+            return true;
+          }
+          if (state.status === "required") {
+            return variable.likelyRequired;
+          }
+          if (state.status === "optional") {
+            return !variable.likelyRequired;
+          }
+          if (state.status === "missing-example") {
+            return variable.missingExample;
+          }
+          if (state.status === "secret-like") {
+            return Boolean(variable.secretLike);
+          }
+          if (state.status === "public-like") {
+            return Boolean(variable.publicLike);
+          }
+          return true;
+        }
+
+        function visibleVariables() {
+          const search = state.search.trim().toLowerCase();
+          return variables
+            .filter((variable) => {
+              if (search && !variable.searchBlob.includes(search)) {
+                return false;
+              }
+              if (!matchesStatus(variable)) {
+                return false;
+              }
+              if (state.scope && !variable.scopes.includes(state.scope)) {
+                return false;
+              }
+              return true;
+            })
+            .sort((left, right) => left.name.localeCompare(right.name));
+        }
+
+        function renderTable() {
+          const visible = visibleVariables();
+          controls.summary.textContent = visible.length === variables.length
+            ? "Showing all variables"
+            : "Showing " + visible.length + " of " + variables.length + " variables";
+
+          if (!visible.length) {
+            controls.body.innerHTML = '<tr><td colspan="6" class="empty-state-cell">No variables match the current filters.</td></tr>';
+            return;
+          }
+
+          controls.body.innerHTML = visible.map((variable) => [
+            "<tr>",
+            "<td><code>" + escapeHtml(variable.name) + "</code></td>",
+            "<td>" + (variable.likelyRequired ? "Likely required" : "Fallback observed") + "</td>",
+            "<td>" + variable.definitions.length + "</td>",
+            "<td>" + variable.usages.length + "</td>",
+            "<td>" + escapeHtml(variable.scopes.join(", ") || "—") + "</td>",
+            "<td><code>" + escapeHtml(summarizeLocation(variable)) + "</code></td>",
+            "</tr>"
+          ].join("")).join("");
+        }
+
+        function updateState() {
+          state.search = controls.search.value;
+          state.status = controls.status.value;
+          state.scope = controls.scope.value;
+        }
+
+        controls.search.addEventListener("input", () => {
+          updateState();
+          renderTable();
+        });
+        controls.status.addEventListener("change", () => {
+          updateState();
+          renderTable();
+        });
+        controls.scope.addEventListener("change", () => {
+          updateState();
+          renderTable();
+        });
+        controls.reset.addEventListener("click", () => {
+          state.search = "";
+          state.status = "";
+          state.scope = "";
+          controls.search.value = "";
+          controls.status.value = "";
+          controls.scope.value = "";
+          renderTable();
+        });
+
+        renderTable();
+      })();
+    </script>
+  
+  </body>
+</html>

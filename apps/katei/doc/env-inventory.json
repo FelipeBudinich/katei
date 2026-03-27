@@ -1,0 +1,191 @@
+{
+  "schemaVersion": "1.0",
+  "app": {
+    "name": "katei",
+    "path": "apps/katei",
+    "outputPath": "apps/katei/doc/env-inventory.json"
+  },
+  "scan": {
+    "config": {
+      "path": ".agents/env-inventory.config.json",
+      "exists": false
+    },
+    "roots": {
+      "app": [
+        "apps/katei",
+        "apps/katei/doc",
+        "apps/katei/src",
+        "apps/katei/src/routes"
+      ],
+      "package": [],
+      "root": [
+        ".github/workflows"
+      ]
+    },
+    "ignoredGlobs": [
+      "**/.generated/**",
+      "**/build/**",
+      "**/coverage/**",
+      "**/dist/**",
+      "**/doc/*.json",
+      "**/node_modules/**",
+      "**/public/**",
+      "**/src/public/**"
+    ]
+  },
+  "summary": {
+    "totalVariables": 5,
+    "totalDefinitions": 4,
+    "totalUsages": 11,
+    "secretLikeCount": 1,
+    "publicLikeCount": 0,
+    "dynamicAccessCount": 0
+  },
+  "variables": [
+    {
+      "name": "GITHUB_OUTPUT",
+      "secretLike": false,
+      "publicLike": false,
+      "definitions": [],
+      "usages": [
+        {
+          "kind": "ci",
+          "file": ".github/workflows/deploy-katei-heroku.yml",
+          "line": 71,
+          "scope": "root",
+          "snippet": "echo \"ref=$(git rev-parse HEAD)\" >> \"$GITHUB_OUTPUT\""
+        },
+        {
+          "kind": "ci",
+          "file": ".github/workflows/deploy-katei-heroku.yml",
+          "line": 76,
+          "scope": "root",
+          "snippet": "echo \"sha=$(git subtree split --prefix=apps/katei ${{ steps.prep.outputs.ref }})\" >> \"$GITHUB_OUTPUT\""
+        }
+      ]
+    },
+    {
+      "name": "HEROKU_API_KEY",
+      "secretLike": true,
+      "publicLike": false,
+      "definitions": [
+        {
+          "kind": "ci",
+          "file": ".github/workflows/deploy-katei-heroku.yml",
+          "line": 53,
+          "scope": "root"
+        },
+        {
+          "kind": "ci",
+          "file": ".github/workflows/deploy-katei-heroku.yml",
+          "line": 86,
+          "scope": "root"
+        },
+        {
+          "kind": "ci",
+          "file": ".github/workflows/deploy-katei-heroku.yml",
+          "line": 95,
+          "scope": "root"
+        }
+      ],
+      "usages": [
+        {
+          "kind": "ci",
+          "file": ".github/workflows/deploy-katei-heroku.yml",
+          "line": 56,
+          "scope": "root",
+          "snippet": "test -n \"$HEROKU_API_KEY\" || { echo \"Missing HEROKU_API_KEY\"; exit 1; }"
+        },
+        {
+          "kind": "ci",
+          "file": ".github/workflows/deploy-katei-heroku.yml",
+          "line": 90,
+          "scope": "root",
+          "snippet": "git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""
+        },
+        {
+          "kind": "ci",
+          "file": ".github/workflows/deploy-katei-heroku.yml",
+          "line": 105,
+          "scope": "root",
+          "snippet": "git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""
+        }
+      ]
+    },
+    {
+      "name": "HEROKU_APP_NAME",
+      "secretLike": false,
+      "publicLike": false,
+      "definitions": [
+        {
+          "kind": "ci",
+          "file": ".github/workflows/deploy-katei-heroku.yml",
+          "line": 49,
+          "scope": "root"
+        }
+      ],
+      "usages": [
+        {
+          "kind": "ci",
+          "file": ".github/workflows/deploy-katei-heroku.yml",
+          "line": 55,
+          "scope": "root",
+          "snippet": "test -n \"$HEROKU_APP_NAME\" || { echo \"Missing HEROKU_APP_NAME\"; exit 1; }"
+        },
+        {
+          "kind": "ci",
+          "file": ".github/workflows/deploy-katei-heroku.yml",
+          "line": 57,
+          "scope": "root",
+          "snippet": "echo \"Deploying branch '${GITHUB_REF_NAME}' to app '${HEROKU_APP_NAME}'\""
+        },
+        {
+          "kind": "ci",
+          "file": ".github/workflows/deploy-katei-heroku.yml",
+          "line": 90,
+          "scope": "root",
+          "snippet": "git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""
+        },
+        {
+          "kind": "ci",
+          "file": ".github/workflows/deploy-katei-heroku.yml",
+          "line": 105,
+          "scope": "root",
+          "snippet": "git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""
+        }
+      ]
+    },
+    {
+      "name": "NODE_ENV",
+      "secretLike": false,
+      "publicLike": false,
+      "definitions": [],
+      "usages": [
+        {
+          "kind": "read",
+          "file": "apps/katei/src/app.js",
+          "line": 24,
+          "scope": "app",
+          "snippet": "noCache: process.env.NODE_ENV !== 'production'"
+        }
+      ]
+    },
+    {
+      "name": "PORT",
+      "secretLike": false,
+      "publicLike": false,
+      "definitions": [],
+      "usages": [
+        {
+          "kind": "default",
+          "file": "apps/katei/src/server.js",
+          "line": 5,
+          "scope": "app",
+          "snippet": "const port = Number(process.env.PORT) || 3000;"
+        }
+      ]
+    }
+  ],
+  "dynamicAccesses": [],
+  "scanWarnings": []
+}

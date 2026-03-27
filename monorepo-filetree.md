@@ -59,7 +59,10 @@ hanmoto-board/
 ├── apps/
 │   └── katei/
 │       ├── doc/
+│       │   ├── env-inventory.json
 │       │   └── filetree.md
+│       ├── docs/
+│       │   └── env-inventory.html
 │       ├── public/
 │       │   ├── assets/
 │       │   │   └── …
