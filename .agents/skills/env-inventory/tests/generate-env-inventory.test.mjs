@@ -84,6 +84,8 @@ test("generateEnvInventory reports app-local, shared-package, grounded root, def
   assert.ok(report.variables.some((entry) => entry.name === "APP_A_TOKEN" && entry.definitions.some((definition) => definition.kind === "envFile")));
   assert.ok(report.variables.some((entry) => entry.name === "SHARED_TOKEN" && entry.usages.some((usage) => usage.scope === "package")));
   assert.ok(report.variables.some((entry) => entry.name === "APP_A_RUNTIME_SECRET" && entry.definitions.some((definition) => definition.kind === "ci")));
+  assert.ok(report.variables.some((entry) => entry.name === "APP_A_DEPLOY_NAME" && entry.definitions.some((definition) => definition.kind === "ci")));
+  assert.ok(report.variables.some((entry) => entry.name === "APP_A_DEPLOY_NAME" && entry.usages.some((usage) => usage.kind === "default")));
   assert.ok(report.variables.some((entry) => entry.name === "COMPOSE_ONLY" && entry.definitions.some((definition) => definition.kind === "compose")));
   assert.ok(report.variables.some((entry) => entry.name === "APP_A_RUNTIME_SECRET" && entry.usages.some((usage) => usage.kind === "validation")));
   assert.ok(report.dynamicAccesses.some((entry) => entry.file === "apps/app-a/src/config/env.js"));

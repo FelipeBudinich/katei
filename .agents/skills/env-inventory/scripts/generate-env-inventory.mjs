@@ -902,14 +902,25 @@ function scanYamlLikeFile(relativePath, content, scope, fileKind, definitions, u
 
     if (fileKind === "ci" && /GITHUB_ENV/.test(line)) {
       let match;
-      const githubEnvPattern = /([A-Z][A-Z0-9_]+)=\$\{\{[^}]+\}\}/g;
+      const githubEnvPattern = /([A-Z][A-Z0-9_]+)=(\$\{\{[^}]+\}\}|\$\{[^}]+\}|[^"\s]+)/g;
       while ((match = githubEnvPattern.exec(line)) !== null) {
-        addDefinition(definitions, match[1], {
+        const variableName = match[1];
+        const assignedValue = match[2] || "";
+        addDefinition(definitions, variableName, {
           kind: "ci",
           file: normalizePath(relativePath),
           line: index + 1,
           scope,
         });
+        if (hasShellDefaultFallback(assignedValue)) {
+          addUsage(usages, variableName, {
+            kind: "default",
+            file: normalizePath(relativePath),
+            line: index + 1,
+            scope,
+            snippet,
+          });
+        }
       }
     }
 
@@ -942,6 +953,15 @@ function scanYamlLikeFile(relativePath, content, scope, fileKind, definitions, u
       });
     }
   });
+}
+
+function hasShellDefaultFallback(value) {
+  if (typeof value !== "string" || !value.startsWith("${") || value.startsWith("${{") || !value.endsWith("}")) {
+    return false;
+  }
+
+  const inner = value.slice(2, -1);
+  return inner.includes(":-") || /^[A-Za-z_][A-Za-z0-9_]*-[\s\S]+$/.test(inner);
 }
 
 function scanDockerFile(relativePath, content, scope, definitions, usages) {

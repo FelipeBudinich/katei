@@ -37,8 +37,8 @@
   },
   "summary": {
     "totalVariables": 4,
-    "totalDefinitions": 7,
-    "totalUsages": 9,
+    "totalDefinitions": 8,
+    "totalUsages": 10,
     "secretLikeCount": 1,
     "publicLikeCount": 0,
     "dynamicAccessCount": 0
@@ -104,6 +104,12 @@
       "publicLike": false,
       "definitions": [
         {
+          "kind": "ci",
+          "file": ".github/workflows/deploy-katei-heroku.yml",
+          "line": 50,
+          "scope": "root"
+        },
+        {
           "kind": "envFile",
           "file": "apps/katei/.env.example",
           "line": 3,
@@ -111,6 +117,13 @@
         }
       ],
       "usages": [
+        {
+          "kind": "default",
+          "file": ".github/workflows/deploy-katei-heroku.yml",
+          "line": 50,
+          "scope": "root",
+          "snippet": "echo \"HEROKU_APP_NAME=${heroku_app_name:-katei}\" >> \"$GITHUB_ENV\""
+        },
         {
           "kind": "ci",
           "file": ".github/workflows/deploy-katei-heroku.yml",
