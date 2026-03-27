@@ -1107,7 +1107,7 @@
     color: var(--color-text-muted);
   }
   .env-inventory-status-grid {
-    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+    grid-template-columns: minmax(0, 1fr);
   }
   .env-inventory-status-card {
     border-inline-start: 0.3rem solid var(--color-border-subtle);
@@ -1317,6 +1317,9 @@
     word-break: break-word;
   }
   @media (min-width: 48rem) {
+    .env-inventory-status-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
     .env-inventory-actions {
       justify-items: end;
     }
@@ -1336,6 +1339,9 @@
     }
   }
   @media (min-width: 64rem) {
+    .env-inventory-status-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
     .env-inventory-split-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
