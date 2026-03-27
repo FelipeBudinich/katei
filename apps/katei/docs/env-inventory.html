@@ -80,12 +80,12 @@
     
       <article class="paper-panel env-inventory-status-card env-inventory-status-card--warning">
         <div class="env-inventory-status-label">Likely required</div>
-        <div class="env-inventory-status-value">3</div>
+        <div class="env-inventory-status-value">2</div>
       </article>
     
       <article class="paper-panel env-inventory-status-card env-inventory-status-card--good">
         <div class="env-inventory-status-label">Fallbacks observed</div>
-        <div class="env-inventory-status-value">1</div>
+        <div class="env-inventory-status-value">2</div>
       </article>
     
       <article class="paper-panel env-inventory-status-card env-inventory-status-card--good">
@@ -352,12 +352,23 @@
       </div>
     </details>
   
-    <details class="paper-panel env-inventory-variable-card" data-env-variable-card="NODE_ENV" data-variable-status="required">
+      </div>
+    </section>
+  
+      
+    <section class="paper-panel env-inventory-panel">
+      <div class="env-inventory-section-header">
+        <h2 class="font-serif text-2xl text-strong">Fallbacks observed</h2>
+        <p class="text-sm leading-6 text-muted">Variables where the report found an explicit default/fallback path.</p>
+      </div>
+      <div class="env-inventory-variable-grid" data-env-group="optional">
+        
+    <details class="paper-panel env-inventory-variable-card" data-env-variable-card="NODE_ENV" data-variable-status="optional">
       <summary>
         <div class="env-inventory-variable-summary">
           <div class="env-inventory-variable-heading">
             <h3 class="font-serif text-2xl text-strong env-inventory-variable-name">NODE_ENV</h3>
-            <div class="env-inventory-chip-row mt-3"><span class="count-chip env-inventory-chip env-inventory-chip--warning">Likely required</span><span class="count-chip env-inventory-chip">App</span></div>
+            <div class="env-inventory-chip-row mt-3"><span class="count-chip env-inventory-chip env-inventory-chip--good">Fallback observed</span><span class="count-chip env-inventory-chip">App</span></div>
           </div>
           <div class="env-inventory-variable-counts">
             <span class="count-chip env-inventory-chip"><strong>1</strong>&nbsp;defs</span>
@@ -373,11 +384,11 @@
           </div>
           <div class="space-y-2">
             <p class="field-label text-sm font-semibold">Usage kinds</p>
-            <p class="text-sm leading-6 text-muted">Read</p>
+            <p class="text-sm leading-6 text-muted">Default</p>
           </div>
           <div class="space-y-2">
             <p class="field-label text-sm font-semibold">Primary usage</p>
-            <div><code class="env-inventory-inline-code">apps/katei/src/app.js:24</code></div>
+            <div><code class="env-inventory-inline-code">apps/katei/src/app.js:17</code></div>
           </div>
         </div>
         <div class="env-inventory-split-grid">
@@ -408,10 +419,10 @@
       
         <li class="env-inventory-occurrence-item">
           <div class="env-inventory-occurrence-top">
-            <code class="env-inventory-inline-code">apps/katei/src/app.js:24</code>
-            <span class="text-sm leading-6 text-muted">Read · App</span>
+            <code class="env-inventory-inline-code">apps/katei/src/app.js:17</code>
+            <span class="text-sm leading-6 text-muted">Default · App</span>
           </div>
-          <div class="env-inventory-snippet"><code class="env-inventory-inline-code">noCache: process.env.NODE_ENV !== &#39;production&#39;</code></div>
+          <div class="env-inventory-snippet"><code class="env-inventory-inline-code">const nodeEnv = process.env.NODE_ENV || &#39;development&#39;;</code></div>
         </li>
       
     </ul>
@@ -421,17 +432,6 @@
       </div>
     </details>
   
-      </div>
-    </section>
-  
-      
-    <section class="paper-panel env-inventory-panel">
-      <div class="env-inventory-section-header">
-        <h2 class="font-serif text-2xl text-strong">Fallbacks observed</h2>
-        <p class="text-sm leading-6 text-muted">Variables where the report found an explicit default/fallback path.</p>
-      </div>
-      <div class="env-inventory-variable-grid" data-env-group="optional">
-        
     <details class="paper-panel env-inventory-variable-card" data-env-variable-card="PORT" data-variable-status="optional">
       <summary>
         <div class="env-inventory-variable-summary">
@@ -581,11 +581,11 @@
               
                 <tr>
                   <td><code class="env-inventory-inline-code">NODE_ENV</code></td>
-                  <td>Likely required</td>
+                  <td>Fallback observed</td>
                   <td>1</td>
                   <td>1</td>
                   <td>app</td>
-                  <td><code class="env-inventory-inline-code">apps/katei/src/app.js:24</code></td>
+                  <td><code class="env-inventory-inline-code">apps/katei/src/app.js:17</code></td>
                 </tr>
               
                 <tr>
@@ -794,11 +794,11 @@
       ],
       &quot;usages&quot;: [
         {
-          &quot;kind&quot;: &quot;read&quot;,
+          &quot;kind&quot;: &quot;default&quot;,
           &quot;file&quot;: &quot;apps/katei/src/app.js&quot;,
-          &quot;line&quot;: 24,
+          &quot;line&quot;: 17,
           &quot;scope&quot;: &quot;app&quot;,
-          &quot;snippet&quot;: &quot;noCache: process.env.NODE_ENV !== &#39;production&#39;&quot;
+          &quot;snippet&quot;: &quot;const nodeEnv = process.env.NODE_ENV || &#39;development&#39;;&quot;
         }
       ]
     },
@@ -833,7 +833,7 @@
   
     </main>
     
-    <script id="env-inventory-report-data" type="application/json">{"schemaVersion":"1.0","app":{"name":"katei","path":"apps/katei","outputPath":"apps/katei/doc/env-inventory.json"},"scan":{"config":{"path":".agents/env-inventory.config.json","exists":true},"roots":{"app":["apps/katei","apps/katei/doc","apps/katei/src","apps/katei/src/routes"],"package":[],"root":[".github/workflows"]},"ignoredGlobs":["**/.agents/**","**/.generated/**","**/.github/**","**/build/**","**/coverage/**","**/dist/**","**/doc/*.json","**/node_modules/**","**/public/**","**/src/public/**"]},"summary":{"totalVariables":4,"totalDefinitions":8,"totalUsages":9,"secretLikeCount":1,"publicLikeCount":0,"dynamicAccessCount":0},"variables":[{"name":"HEROKU_API_KEY","secretLike":true,"publicLike":false,"definitions":[{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":53,"scope":"root"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":86,"scope":"root"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":95,"scope":"root"},{"kind":"envFile","file":"apps/katei/.env.example","line":4,"scope":"app"}],"usages":[{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":56,"scope":"root","snippet":"test -n \"$HEROKU_API_KEY\" || { echo \"Missing HEROKU_API_KEY\"; exit 1; }"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":90,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":105,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""}]},{"name":"HEROKU_APP_NAME","secretLike":false,"publicLike":false,"definitions":[{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":49,"scope":"root"},{"kind":"envFile","file":"apps/katei/.env.example","line":3,"scope":"app"}],"usages":[{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":55,"scope":"root","snippet":"test -n \"$HEROKU_APP_NAME\" || { echo \"Missing HEROKU_APP_NAME\"; exit 1; }"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":57,"scope":"root","snippet":"echo \"Deploying branch '${GITHUB_REF_NAME}' to app '${HEROKU_APP_NAME}'\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":90,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":105,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""}]},{"name":"NODE_ENV","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":1,"scope":"app"}],"usages":[{"kind":"read","file":"apps/katei/src/app.js","line":24,"scope":"app","snippet":"noCache: process.env.NODE_ENV !== 'production'"}]},{"name":"PORT","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":2,"scope":"app"}],"usages":[{"kind":"default","file":"apps/katei/src/server.js","line":5,"scope":"app","snippet":"const port = Number(process.env.PORT) || 3000;"}]}],"dynamicAccesses":[],"scanWarnings":[]}</script>
+    <script id="env-inventory-report-data" type="application/json">{"schemaVersion":"1.0","app":{"name":"katei","path":"apps/katei","outputPath":"apps/katei/doc/env-inventory.json"},"scan":{"config":{"path":".agents/env-inventory.config.json","exists":true},"roots":{"app":["apps/katei","apps/katei/doc","apps/katei/src","apps/katei/src/routes"],"package":[],"root":[".github/workflows"]},"ignoredGlobs":["**/.agents/**","**/.generated/**","**/.github/**","**/build/**","**/coverage/**","**/dist/**","**/doc/*.json","**/node_modules/**","**/public/**","**/src/public/**"]},"summary":{"totalVariables":4,"totalDefinitions":8,"totalUsages":9,"secretLikeCount":1,"publicLikeCount":0,"dynamicAccessCount":0},"variables":[{"name":"HEROKU_API_KEY","secretLike":true,"publicLike":false,"definitions":[{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":53,"scope":"root"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":86,"scope":"root"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":95,"scope":"root"},{"kind":"envFile","file":"apps/katei/.env.example","line":4,"scope":"app"}],"usages":[{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":56,"scope":"root","snippet":"test -n \"$HEROKU_API_KEY\" || { echo \"Missing HEROKU_API_KEY\"; exit 1; }"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":90,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":105,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""}]},{"name":"HEROKU_APP_NAME","secretLike":false,"publicLike":false,"definitions":[{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":49,"scope":"root"},{"kind":"envFile","file":"apps/katei/.env.example","line":3,"scope":"app"}],"usages":[{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":55,"scope":"root","snippet":"test -n \"$HEROKU_APP_NAME\" || { echo \"Missing HEROKU_APP_NAME\"; exit 1; }"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":57,"scope":"root","snippet":"echo \"Deploying branch '${GITHUB_REF_NAME}' to app '${HEROKU_APP_NAME}'\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":90,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":105,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""}]},{"name":"NODE_ENV","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":1,"scope":"app"}],"usages":[{"kind":"default","file":"apps/katei/src/app.js","line":17,"scope":"app","snippet":"const nodeEnv = process.env.NODE_ENV || 'development';"}]},{"name":"PORT","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":2,"scope":"app"}],"usages":[{"kind":"default","file":"apps/katei/src/server.js","line":5,"scope":"app","snippet":"const port = Number(process.env.PORT) || 3000;"}]}],"dynamicAccesses":[],"scanWarnings":[]}</script>
     <script>
       (() => {
         const report = JSON.parse(document.getElementById("env-inventory-report-data").textContent);

@@ -14,6 +14,7 @@ export function createApp() {
   const app = express();
   const viewsPath = path.join(__dirname, 'views');
   const stimulusDistPath = resolveStimulusDistPath();
+  const nodeEnv = process.env.NODE_ENV || 'development';
 
   app.set('view engine', 'njk');
   app.set('views', viewsPath);
@@ -21,7 +22,7 @@ export function createApp() {
   nunjucks.configure(viewsPath, {
     autoescape: true,
     express: app,
-    noCache: process.env.NODE_ENV !== 'production'
+    noCache: nodeEnv !== 'production'
   });
 
   app.use(express.json());

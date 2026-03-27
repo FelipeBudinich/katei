@@ -161,11 +161,11 @@
       ],
       "usages": [
         {
-          "kind": "read",
+          "kind": "default",
           "file": "apps/katei/src/app.js",
-          "line": 24,
+          "line": 17,
           "scope": "app",
-          "snippet": "noCache: process.env.NODE_ENV !== 'production'"
+          "snippet": "const nodeEnv = process.env.NODE_ENV || 'development';"
         }
       ]
     },
