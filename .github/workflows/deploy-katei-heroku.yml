@@ -46,7 +46,8 @@ jobs:
 
       - name: Select target app
         run: |
-          echo "HEROKU_APP_NAME=${{ secrets.HEROKU_KATEI_APP_PROD }}" >> "$GITHUB_ENV"
+          heroku_app_name="${{ secrets.HEROKU_KATEI_APP_PROD }}"
+          echo "HEROKU_APP_NAME=${heroku_app_name:-katei}" >> "$GITHUB_ENV"
 
       - name: Validate deploy secrets
         env:
