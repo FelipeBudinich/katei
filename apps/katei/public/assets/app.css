@@ -194,6 +194,9 @@
     white-space: nowrap;
     border-width: 0;
   }
+  .absolute {
+    position: absolute;
+  }
   .static {
     position: static;
   }
@@ -1308,8 +1311,16 @@
     font-weight: 600;
     color: var(--color-text-strong);
   }
-  .env-inventory-raw {
+  .env-inventory-raw-block {
+    display: grid;
+    gap: 0.75rem;
     margin-top: 0.75rem;
+  }
+  .env-inventory-raw-actions {
+    display: flex;
+    justify-content: flex-end;
+  }
+  .env-inventory-raw {
     overflow: auto;
     padding: 1rem;
     border-radius: var(--radius-2xl);

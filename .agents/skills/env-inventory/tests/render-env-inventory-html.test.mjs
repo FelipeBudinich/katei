@@ -138,6 +138,10 @@ test("renderEnvInventoryHtml highlights config warnings, fallback groups, gaps, 
   assert.match(html, /class="top-bar-title-row env-inventory-title-row"/);
   assert.match(html, /<a class="touch-button-secondary" href="\/">demo<\/a>/);
   assert.match(html, /<tbody id="variable-table-body" class="text-sm leading-6">/);
+  assert.match(html, /data-copy-raw/);
+  assert.match(html, /data-copy-target="scan-details-raw-json"/);
+  assert.match(html, /<pre id="scan-details-raw-json" class="env-inventory-raw text-sm leading-6" data-copy-source>/);
+  assert.match(html, /navigator\.clipboard\.writeText/);
   assert.match(html, /<div class="env-inventory-snippet"><code class="env-inventory-inline-code">APP_SECRET=&lt;redacted&gt;<\/code><\/div>/);
   assert.match(html, /Config warning:/);
   assert.match(html, /No fallback observed/);

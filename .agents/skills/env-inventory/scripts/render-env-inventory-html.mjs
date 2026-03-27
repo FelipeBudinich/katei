@@ -415,6 +415,27 @@ function renderExplorer(report, derived) {
   `;
 }
 
+function renderRawBlock(content, { id, label = "Copy" } = {}) {
+  const rawId = escapeHtml(id);
+  const buttonLabel = escapeHtml(label);
+  return `
+    <div class="env-inventory-raw-block">
+      <div class="env-inventory-raw-actions">
+        <button
+          type="button"
+          class="touch-button-secondary"
+          data-copy-raw
+          data-copy-target="${rawId}"
+          data-copy-label-default="${buttonLabel}"
+          data-copy-label-success="Copied"
+          data-copy-label-error="Copy unavailable"
+        >${buttonLabel}</button>
+      </div>
+      <pre id="${rawId}" class="env-inventory-raw text-sm leading-6" data-copy-source>${escapeHtml(content)}</pre>
+    </div>
+  `;
+}
+
 function renderScanDetails(report) {
   const roots = report.scan?.roots || {};
   return `
@@ -463,7 +484,7 @@ function renderScanDetails(report) {
         : ""}
       <details class="env-inventory-disclosure">
         <summary>Raw JSON metadata</summary>
-        <pre class="env-inventory-raw">${escapeHtml(JSON.stringify(report, null, 2))}</pre>
+        ${renderRawBlock(JSON.stringify(report, null, 2), { id: "scan-details-raw-json" })}
       </details>
     </section>
   `;
@@ -526,6 +547,7 @@ function renderClientScript(report) {
           summary: document.getElementById("variable-filter-summary"),
           body: document.getElementById("variable-table-body"),
         };
+        const rawCopyButtons = Array.from(document.querySelectorAll("[data-copy-raw]"));
 
         function escapeHtml(value) {
           return String(value ?? "")
@@ -542,6 +564,63 @@ function renderClientScript(report) {
             return "—";
           }
           return entry.file + ":" + entry.line;
+        }
+
+        async function copyText(text) {
+          if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+            await navigator.clipboard.writeText(text);
+            return;
+          }
+
+          const helper = document.createElement("textarea");
+          helper.value = text;
+          helper.setAttribute("readonly", "");
+          helper.style.position = "absolute";
+          helper.style.left = "-9999px";
+          document.body.appendChild(helper);
+          helper.select();
+          const succeeded = document.execCommand("copy");
+          document.body.removeChild(helper);
+          if (!succeeded) {
+            throw new Error("copy failed");
+          }
+        }
+
+        function setCopyButtonLabel(button, key) {
+          const fallbackLabels = {
+            default: "Copy",
+            success: "Copied",
+            error: "Copy unavailable",
+          };
+          const datasetKey = "copyLabel" + key.charAt(0).toUpperCase() + key.slice(1);
+          button.textContent = button.dataset[datasetKey] || fallbackLabels[key];
+        }
+
+        function bindRawCopyButtons() {
+          rawCopyButtons.forEach((button) => {
+            setCopyButtonLabel(button, "default");
+            button.addEventListener("click", async () => {
+              const targetId = button.dataset.copyTarget;
+              const target = targetId ? document.getElementById(targetId) : null;
+              const rawText = target ? target.textContent || "" : "";
+              if (!rawText) {
+                setCopyButtonLabel(button, "error");
+                window.clearTimeout(button._copyResetTimer);
+                button._copyResetTimer = window.setTimeout(() => setCopyButtonLabel(button, "default"), 1800);
+                return;
+              }
+
+              try {
+                await copyText(rawText);
+                setCopyButtonLabel(button, "success");
+              } catch {
+                setCopyButtonLabel(button, "error");
+              }
+
+              window.clearTimeout(button._copyResetTimer);
+              button._copyResetTimer = window.setTimeout(() => setCopyButtonLabel(button, "default"), 1800);
+            });
+          });
         }
 
         function matchesStatus(variable) {
@@ -635,6 +714,7 @@ function renderClientScript(report) {
           renderTable();
         });
 
+        bindRawCopyButtons();
         renderTable();
       })();
     </script>
