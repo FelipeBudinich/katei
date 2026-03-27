@@ -75,6 +75,11 @@
     @apply px-5 py-5;
   }
 
+  .paper-panel.env-inventory-panel {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .env-inventory-meta-label,
   .env-inventory-status-label {
     font-size: var(--text-xs);
