@@ -5,6 +5,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const HTML_REPORT_RELATIVE = path.join("docs", "env-inventory.html");
+const NO_FALLBACK_LABEL = "No fallback observed";
+const FALLBACK_LABEL = "Fallback observed";
+const FALLBACKS_LABEL = "Fallbacks observed";
 
 function toPosixPath(value) {
   return String(value || "").split(path.sep).join("/");
@@ -147,8 +150,8 @@ function statusCards(report, derived) {
     { label: "Variables", value: report.summary.totalVariables, mode: "good" },
     { label: "Definitions", value: report.summary.totalDefinitions, mode: "good" },
     { label: "Usages", value: report.summary.totalUsages, mode: "good" },
-    { label: "Likely required", value: derived.likelyRequiredCount, mode: "warning" },
-    { label: "Fallbacks observed", value: derived.withFallbackCount, mode: "good" },
+    { label: NO_FALLBACK_LABEL, value: derived.likelyRequiredCount, mode: "warning" },
+    { label: FALLBACKS_LABEL, value: derived.withFallbackCount, mode: "good" },
     { label: "Missing example/docs", value: derived.missingExample.length, mode: "warning" },
     { label: "Secret-like", value: report.summary.secretLikeCount, mode: "good" },
     { label: "Public-like", value: report.summary.publicLikeCount, mode: "good" },
@@ -170,8 +173,8 @@ function renderStatusCards(report, derived) {
 function renderPills(variable) {
   const pills = [];
   pills.push(variable.likelyRequired
-    ? '<span class="count-chip env-inventory-chip env-inventory-chip--warning">Likely required</span>'
-    : '<span class="count-chip env-inventory-chip env-inventory-chip--good">Fallback observed</span>');
+    ? `<span class="count-chip env-inventory-chip env-inventory-chip--warning">${NO_FALLBACK_LABEL}</span>`
+    : `<span class="count-chip env-inventory-chip env-inventory-chip--good">${FALLBACK_LABEL}</span>`);
   if (variable.secretLike) {
     pills.push('<span class="count-chip env-inventory-chip env-inventory-chip--problem">Secret-like</span>');
   }
@@ -361,8 +364,8 @@ function renderExplorer(report, derived) {
           <span class="field-label text-sm font-semibold">Status</span>
           <select id="variable-status" class="field-control">
             <option value="">All</option>
-            <option value="required">Likely required</option>
-            <option value="optional">Fallback observed</option>
+            <option value="required">${NO_FALLBACK_LABEL}</option>
+            <option value="optional">${FALLBACK_LABEL}</option>
             <option value="missing-example">Missing example/docs</option>
             <option value="secret-like">Secret-like</option>
             <option value="public-like">Public-like</option>
@@ -397,7 +400,7 @@ function renderExplorer(report, derived) {
               ? derived.variables.map((variable) => `
                 <tr>
                   <td>${renderInlineCode(variable.name)}</td>
-                  <td>${variable.likelyRequired ? "Likely required" : "Fallback observed"}</td>
+                  <td>${variable.likelyRequired ? NO_FALLBACK_LABEL : FALLBACK_LABEL}</td>
                   <td>${escapeHtml(variable.definitions.length)}</td>
                   <td>${escapeHtml(variable.usages.length)}</td>
                   <td>${escapeHtml(variable.scopes.join(", ") || "—")}</td>
@@ -595,7 +598,7 @@ function renderClientScript(report) {
           controls.body.innerHTML = visible.map((variable) => [
             "<tr>",
             "<td><code class=\\"env-inventory-inline-code\\">" + escapeHtml(variable.name) + "</code></td>",
-            "<td>" + (variable.likelyRequired ? "Likely required" : "Fallback observed") + "</td>",
+            "<td>" + (variable.likelyRequired ? ${JSON.stringify(NO_FALLBACK_LABEL)} : ${JSON.stringify(FALLBACK_LABEL)}) + "</td>",
             "<td>" + variable.definitions.length + "</td>",
             "<td>" + variable.usages.length + "</td>",
             "<td>" + escapeHtml(variable.scopes.join(", ") || "—") + "</td>",
@@ -644,7 +647,6 @@ function renderMetaCards(report, htmlPath) {
     { label: "JSON report path", value: renderInlineCode(report.app.outputPath) },
     { label: "HTML report path", value: renderInlineCode(htmlPath) },
     { label: "Config path", value: renderInlineCode(report.scan?.config?.path || ".agents/env-inventory.config.json") },
-    { label: "Config found", value: `<span class="text-sm font-medium text-strong">${escapeHtml(report.scan?.config?.exists ? "yes" : "no")}</span>` },
   ];
 
   return `
@@ -708,8 +710,8 @@ export function renderEnvInventoryHtml(report, { htmlOutputPath = "" } = {}) {
             <p class="text-sm leading-6 text-muted">Required vs optional is inferred from observed fallback usage. Variables with a ${renderInlineCode("default")} usage are treated as optional for this report.</p>
           </div>
           <div class="env-inventory-chip-row">
-            <span class="count-chip env-inventory-chip env-inventory-chip--warning">Likely required</span>
-            <span class="count-chip env-inventory-chip env-inventory-chip--good">Fallback observed</span>
+            <span class="count-chip env-inventory-chip env-inventory-chip--warning">${NO_FALLBACK_LABEL}</span>
+            <span class="count-chip env-inventory-chip env-inventory-chip--good">${FALLBACK_LABEL}</span>
             <span class="count-chip env-inventory-chip env-inventory-chip--problem">Secret-like</span>
             <span class="count-chip env-inventory-chip env-inventory-chip--accent">Public-like</span>
           </div>

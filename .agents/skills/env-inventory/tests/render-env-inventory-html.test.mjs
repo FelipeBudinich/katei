@@ -139,6 +139,8 @@ test("renderEnvInventoryHtml highlights config warnings, fallback groups, gaps, 
   assert.match(html, /Missing example\/docs/);
   assert.match(html, /Dynamic env access/);
   assert.match(html, /apps\/demo\/docs\/env-inventory\.html/);
+  assert.doesNotMatch(html, /Config found/);
+  assert.doesNotMatch(html, /Likely required/);
   assert.doesNotMatch(html, /<style>/);
 });
 

@@ -57,7 +57,7 @@
   }
 
   .env-inventory-meta-grid {
-    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .env-inventory-section-grid {
@@ -330,6 +330,10 @@
   }
 
   @media (min-width: 48rem) {
+    .env-inventory-meta-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .env-inventory-status-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
@@ -358,6 +362,10 @@
   }
 
   @media (min-width: 64rem) {
+    .env-inventory-meta-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
     .env-inventory-status-grid {
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }

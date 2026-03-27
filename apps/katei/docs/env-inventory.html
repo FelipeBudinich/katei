@@ -52,11 +52,6 @@
           <div class="text-sm leading-6 text-strong"><code class="env-inventory-inline-code">.agents/env-inventory.config.json</code></div>
         </article>
       
-        <article class="paper-panel env-inventory-meta-card">
-          <div class="env-inventory-meta-label">Config found</div>
-          <div class="text-sm leading-6 text-strong"><span class="text-sm font-medium text-strong">yes</span></div>
-        </article>
-      
     </section>
   
 
@@ -78,7 +73,7 @@
       </article>
     
       <article class="paper-panel env-inventory-status-card env-inventory-status-card--warning">
-        <div class="env-inventory-status-label">Likely required</div>
+        <div class="env-inventory-status-label">No fallback observed</div>
         <div class="env-inventory-status-value">1</div>
       </article>
     
@@ -116,7 +111,7 @@
             <p class="text-sm leading-6 text-muted">Required vs optional is inferred from observed fallback usage. Variables with a <code class="env-inventory-inline-code">default</code> usage are treated as optional for this report.</p>
           </div>
           <div class="env-inventory-chip-row">
-            <span class="count-chip env-inventory-chip env-inventory-chip--warning">Likely required</span>
+            <span class="count-chip env-inventory-chip env-inventory-chip--warning">No fallback observed</span>
             <span class="count-chip env-inventory-chip env-inventory-chip--good">Fallback observed</span>
             <span class="count-chip env-inventory-chip env-inventory-chip--problem">Secret-like</span>
             <span class="count-chip env-inventory-chip env-inventory-chip--accent">Public-like</span>
@@ -146,7 +141,7 @@
         <div class="env-inventory-variable-summary">
           <div class="env-inventory-variable-heading">
             <h3 class="font-serif text-2xl text-strong env-inventory-variable-name">HEROKU_API_KEY</h3>
-            <div class="env-inventory-chip-row mt-3"><span class="count-chip env-inventory-chip env-inventory-chip--warning">Likely required</span><span class="count-chip env-inventory-chip env-inventory-chip--problem">Secret-like</span><span class="count-chip env-inventory-chip">App</span><span class="count-chip env-inventory-chip">Root</span></div>
+            <div class="env-inventory-chip-row mt-3"><span class="count-chip env-inventory-chip env-inventory-chip--warning">No fallback observed</span><span class="count-chip env-inventory-chip env-inventory-chip--problem">Secret-like</span><span class="count-chip env-inventory-chip">App</span><span class="count-chip env-inventory-chip">Root</span></div>
           </div>
           <div class="env-inventory-variable-counts">
             <span class="count-chip env-inventory-chip"><strong>4</strong>&nbsp;defs</span>
@@ -535,7 +530,7 @@
           <span class="field-label text-sm font-semibold">Status</span>
           <select id="variable-status" class="field-control">
             <option value="">All</option>
-            <option value="required">Likely required</option>
+            <option value="required">No fallback observed</option>
             <option value="optional">Fallback observed</option>
             <option value="missing-example">Missing example/docs</option>
             <option value="secret-like">Secret-like</option>
@@ -570,7 +565,7 @@
             
                 <tr>
                   <td><code class="env-inventory-inline-code">HEROKU_API_KEY</code></td>
-                  <td>Likely required</td>
+                  <td>No fallback observed</td>
                   <td>4</td>
                   <td>3</td>
                   <td>app, root</td>
@@ -974,7 +969,7 @@
           controls.body.innerHTML = visible.map((variable) => [
             "<tr>",
             "<td><code class=\"env-inventory-inline-code\">" + escapeHtml(variable.name) + "</code></td>",
-            "<td>" + (variable.likelyRequired ? "Likely required" : "Fallback observed") + "</td>",
+            "<td>" + (variable.likelyRequired ? "No fallback observed" : "Fallback observed") + "</td>",
             "<td>" + variable.definitions.length + "</td>",
             "<td>" + variable.usages.length + "</td>",
             "<td>" + escapeHtml(variable.scopes.join(", ") || "—") + "</td>",
