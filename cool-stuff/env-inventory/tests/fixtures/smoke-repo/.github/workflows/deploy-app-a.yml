@@ -1,0 +1,22 @@
+name: Deploy app-a
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      APP_A_RUNTIME_SECRET: ${{ secrets.APP_A_RUNTIME_SECRET }}
+      HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+    steps:
+      - name: Export runtime env
+        run: |
+          echo "APP_A_RUNTIME_SECRET=${{ secrets.APP_A_RUNTIME_SECRET }}" >> "$GITHUB_ENV"
+          echo "APP_A_DEPLOY_NAME=${app_a_deploy_name:-fixture-app-a}" >> "$GITHUB_ENV"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "/tmp/tooling" >> "$GITHUB_PATH"
+          echo "deploy=ready" >> "$GITHUB_STATE"
+          test -n "$HEROKU_API_KEY"

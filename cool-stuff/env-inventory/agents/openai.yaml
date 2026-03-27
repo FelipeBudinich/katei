@@ -1,0 +1,7 @@
+interface:
+  display_name: "Env Inventory"
+  short_description: "Inventory per-app env definitions, usages, and fallbacks"
+  default_prompt: "Use $env-inventory to analyze environment variable definitions and usages for one or more apps in a repository, generate per-app JSON reports under <apps-root>/*/doc/env-inventory.json and self-contained HTML reports under <apps-root>/*/docs/env-inventory.html, and summarize app-local, shared-package, grounded root-level, secret-like, public-like, missing example coverage, and dynamic env access findings. If the repo stores apps outside /apps, pass --apps-root."
+
+policy:
+  allow_implicit_invocation: false
