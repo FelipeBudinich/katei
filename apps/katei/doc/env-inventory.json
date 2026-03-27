@@ -82,7 +82,7 @@
           "file": ".github/workflows/deploy-katei-heroku.yml",
           "line": 62,
           "scope": "root",
-          "snippet": "test \"$HEROKU_API_KEY\" != \"YOUR_HEROKU_API_KEY\" || { echo \"Replace YOUR_HEROKU_API_KEY with a real Heroku API key\"; exit 1; }"
+          "snippet": "test \"$HEROKU_API_KEY\" != \"YOUR_HEROKU_API_KEY\" || { echo \"Replace YOUR_HEROKU_API_KEY with a real Heroku API key as a Github Repository secret\"; exit 1; }"
         },
         {
           "kind": "ci",
@@ -138,7 +138,7 @@
           "file": ".github/workflows/deploy-katei-heroku.yml",
           "line": 60,
           "scope": "root",
-          "snippet": "test \"$HEROKU_APP_NAME\" != \"YOUR_HEROKU_APP_NAME\" || { echo \"Replace YOUR_HEROKU_APP_NAME with the real Heroku app slug\"; exit 1; }"
+          "snippet": "test \"$HEROKU_APP_NAME\" != \"YOUR_HEROKU_APP_NAME\" || { echo \"Replace YOUR_HEROKU_APP_NAME with the real Heroku app slug or set HEROKY_KATEI_APP_PROD as a Github Repository secret\"; exit 1; }"
         },
         {
           "kind": "ci",
