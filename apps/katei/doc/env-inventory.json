@@ -8,7 +8,7 @@
   "scan": {
     "config": {
       "path": ".agents/env-inventory.config.json",
-      "exists": false
+      "exists": true
     },
     "roots": {
       "app": [

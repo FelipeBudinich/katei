@@ -26,6 +26,339 @@
   }
 }
 
+@layer components {
+  .env-inventory-header-copy {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .env-inventory-actions {
+    display: grid;
+    gap: 0.75rem;
+    align-content: start;
+    justify-items: start;
+  }
+
+  .env-inventory-alert {
+    padding: 0.875rem 1rem;
+    border: 1px solid color-mix(in srgb, var(--ref-accent-yellow) 35%, var(--color-border-subtle));
+    border-radius: var(--radius-2xl);
+    background-color: color-mix(in srgb, var(--ref-accent-yellow) 12%, var(--color-bg-canvas));
+  }
+
+  .env-inventory-meta-grid,
+  .env-inventory-status-grid,
+  .env-inventory-section-grid,
+  .env-inventory-variable-grid,
+  .env-inventory-variable-meta,
+  .env-inventory-split-grid {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .env-inventory-meta-grid {
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  }
+
+  .env-inventory-meta-card,
+  .env-inventory-status-card {
+    @apply grid px-4 py-4;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+
+  .env-inventory-panel {
+    @apply px-5 py-5;
+  }
+
+  .env-inventory-meta-label,
+  .env-inventory-status-label {
+    font-size: var(--text-xs);
+    line-height: var(--text-xs--line-height);
+    text-transform: uppercase;
+    letter-spacing: 0.24em;
+    color: var(--color-text-muted);
+  }
+
+  .env-inventory-status-grid {
+    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  }
+
+  .env-inventory-status-card {
+    border-inline-start: 0.3rem solid var(--color-border-subtle);
+  }
+
+  .env-inventory-status-card--good {
+    border-inline-start-color: var(--ref-accent-green);
+  }
+
+  .env-inventory-status-card--warning {
+    border-inline-start-color: var(--ref-accent-yellow);
+  }
+
+  .env-inventory-status-card--problem {
+    border-inline-start-color: var(--color-danger);
+  }
+
+  .env-inventory-status-value {
+    font-size: clamp(1.7rem, 2vw + 1rem, 2.35rem);
+    line-height: 1;
+    font-weight: 600;
+    color: var(--color-text-strong);
+  }
+
+  .env-inventory-section-header {
+    display: grid;
+    gap: 0.35rem;
+    margin-bottom: 1rem;
+  }
+
+  .env-inventory-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .env-inventory-chip {
+    min-width: 0;
+  }
+
+  .env-inventory-chip code {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .env-inventory-chip--good {
+    background-color: color-mix(in srgb, var(--ref-accent-green) 14%, var(--color-bg-canvas));
+    color: var(--color-text-strong);
+  }
+
+  .env-inventory-chip--warning {
+    background-color: color-mix(in srgb, var(--ref-accent-yellow) 18%, var(--color-bg-canvas));
+    color: var(--color-text-strong);
+  }
+
+  .env-inventory-chip--problem {
+    background-color: color-mix(in srgb, var(--color-danger) 12%, var(--color-bg-canvas));
+    color: var(--color-text-strong);
+  }
+
+  .env-inventory-chip--accent {
+    background-color: color-mix(in srgb, var(--color-action-primary) 12%, var(--color-bg-canvas));
+    color: var(--color-text-strong);
+  }
+
+  .env-inventory-inline-code {
+    display: inline-block;
+    max-width: 100%;
+    padding: 0.125rem 0.45rem;
+    border-radius: var(--radius-xl);
+    background-color: var(--color-bg-muted);
+    color: var(--color-text-strong);
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    vertical-align: middle;
+  }
+
+  .env-inventory-controls {
+    position: sticky;
+    top: 1rem;
+    z-index: 3;
+    display: grid;
+    gap: 1rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-2xl);
+    background-color: color-mix(in srgb, var(--color-bg-elevated-strong) 94%, transparent);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+  }
+
+  .env-inventory-field {
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .env-inventory-control-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: end;
+  }
+
+  .env-inventory-table-wrap {
+    overflow: auto;
+  }
+
+  .env-inventory-table {
+    width: 100%;
+    min-width: 40rem;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .env-inventory-table th,
+  .env-inventory-table td {
+    padding: 0.875rem 1rem;
+    border-bottom: 1px solid var(--color-border-subtle);
+    vertical-align: top;
+    text-align: left;
+  }
+
+  .env-inventory-table thead th {
+    position: sticky;
+    top: 0;
+    background-color: var(--color-bg-elevated-strong);
+    color: var(--color-text-muted);
+    font-size: var(--text-xs);
+    line-height: var(--text-xs--line-height);
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+  }
+
+  .env-inventory-table tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .env-inventory-empty-state-cell {
+    padding: 1.25rem;
+    text-align: center;
+    color: var(--color-text-muted);
+  }
+
+  .env-inventory-variable-card {
+    overflow: hidden;
+  }
+
+  .env-inventory-variable-card summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 1.25rem;
+  }
+
+  .env-inventory-variable-card[open] summary {
+    border-bottom: 1px solid var(--color-border-subtle);
+  }
+
+  .env-inventory-variable-summary {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .env-inventory-variable-heading {
+    min-width: 0;
+  }
+
+  .env-inventory-variable-name {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .env-inventory-variable-counts {
+    display: grid;
+    gap: 0.5rem;
+    justify-items: start;
+  }
+
+  .env-inventory-variable-body {
+    display: grid;
+    gap: 1rem;
+    padding: 1.25rem;
+  }
+
+  .env-inventory-occurrence-list,
+  .env-inventory-simple-list {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .env-inventory-occurrence-item {
+    padding: 0.875rem 1rem;
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-2xl);
+    background-color: var(--color-bg-muted);
+  }
+
+  .env-inventory-occurrence-top {
+    display: grid;
+    gap: 0.35rem;
+  }
+
+  .env-inventory-snippet {
+    margin-top: 0.75rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-2xl);
+    background-color: var(--color-bg-canvas);
+    overflow: auto;
+  }
+
+  .env-inventory-disclosure {
+    margin-top: 1rem;
+  }
+
+  .env-inventory-disclosure summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--color-text-strong);
+  }
+
+  .env-inventory-raw {
+    margin-top: 0.75rem;
+    overflow: auto;
+    padding: 1rem;
+    border-radius: var(--radius-2xl);
+    background-color: var(--color-bg-inverse);
+    color: var(--color-text-inverse);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  @media (min-width: 48rem) {
+    .env-inventory-actions {
+      justify-items: end;
+    }
+
+    .env-inventory-variable-summary {
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: start;
+    }
+
+    .env-inventory-variable-counts {
+      justify-items: end;
+    }
+
+    .env-inventory-variable-meta {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .env-inventory-occurrence-top {
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: baseline;
+    }
+  }
+
+  @media (min-width: 64rem) {
+    .env-inventory-section-grid,
+    .env-inventory-split-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .env-inventory-controls {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      align-items: end;
+    }
+  }
+
+  @media (min-width: 80rem) {
+    .env-inventory-variable-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+}
+
 @layer utilities {
   .space-y-3 {
     :where(& > :not(:last-child)) {

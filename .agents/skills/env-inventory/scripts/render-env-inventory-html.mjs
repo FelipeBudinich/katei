@@ -44,6 +44,10 @@ function escapeJsonForScript(value) {
     .replace(/\u2029/g, "\\u2029");
 }
 
+function renderInlineCode(value) {
+  return `<code class="env-inventory-inline-code">${escapeHtml(value)}</code>`;
+}
+
 function titleCase(value) {
   return String(value || "")
     .split(/[-_\s]+/)
@@ -132,9 +136,9 @@ function renderWarningBanner(report) {
     return "";
   }
   return `
-    <section class="warning-banner">
-      <strong>Config warning:</strong> Repo config file was not found. Built-in defaults were used.
-    </section>
+    <div class="env-inventory-alert">
+      <p class="text-sm leading-6 text-strong"><strong>Config warning:</strong> Repo config file was not found. Built-in defaults were used.</p>
+    </div>
   `;
 }
 
@@ -155,9 +159,9 @@ function statusCards(report, derived) {
 function renderStatusCards(report, derived) {
   return statusCards(report, derived)
     .map((card) => `
-      <article class="status-card status-card--${cardState(card.value, card.mode)}">
-        <div class="status-card__label">${escapeHtml(card.label)}</div>
-        <div class="status-card__value">${escapeHtml(card.value)}</div>
+      <article class="paper-panel env-inventory-status-card env-inventory-status-card--${cardState(card.value, card.mode)}">
+        <div class="env-inventory-status-label">${escapeHtml(card.label)}</div>
+        <div class="env-inventory-status-value">${escapeHtml(card.value)}</div>
       </article>
     `)
     .join("");
@@ -166,36 +170,36 @@ function renderStatusCards(report, derived) {
 function renderPills(variable) {
   const pills = [];
   pills.push(variable.likelyRequired
-    ? '<span class="pill pill--warning">Likely required</span>'
-    : '<span class="pill pill--good">Fallback observed</span>');
+    ? '<span class="count-chip env-inventory-chip env-inventory-chip--warning">Likely required</span>'
+    : '<span class="count-chip env-inventory-chip env-inventory-chip--good">Fallback observed</span>');
   if (variable.secretLike) {
-    pills.push('<span class="pill pill--problem">Secret-like</span>');
+    pills.push('<span class="count-chip env-inventory-chip env-inventory-chip--problem">Secret-like</span>');
   }
   if (variable.publicLike) {
-    pills.push('<span class="pill pill--accent">Public-like</span>');
+    pills.push('<span class="count-chip env-inventory-chip env-inventory-chip--accent">Public-like</span>');
   }
   if (variable.missingExample) {
-    pills.push('<span class="pill pill--warning">Missing example/docs</span>');
+    pills.push('<span class="count-chip env-inventory-chip env-inventory-chip--warning">Missing example/docs</span>');
   }
   for (const scope of variable.scopes) {
-    pills.push(`<span class="pill">${escapeHtml(titleCase(scope))}</span>`);
+    pills.push(`<span class="count-chip env-inventory-chip">${escapeHtml(titleCase(scope))}</span>`);
   }
   return pills.join("");
 }
 
 function renderOccurrenceList(entries, { includeSnippet = false } = {}) {
   if (!entries.length) {
-    return '<p class="empty-state">None recorded.</p>';
+    return '<p class="text-sm leading-6 text-muted">None recorded.</p>';
   }
   return `
-    <ul class="occurrence-list">
+    <ul class="env-inventory-occurrence-list">
       ${entries.map((entry) => `
-        <li>
-          <div class="occurrence-list__top">
-            <code>${escapeHtml(summarizeOccurrence(entry))}</code>
-            <span class="occurrence-meta">${escapeHtml(titleCase(entry.kind))} · ${escapeHtml(titleCase(entry.scope))}</span>
+        <li class="env-inventory-occurrence-item">
+          <div class="env-inventory-occurrence-top">
+            ${renderInlineCode(summarizeOccurrence(entry))}
+            <span class="text-sm leading-6 text-muted">${escapeHtml(titleCase(entry.kind))} · ${escapeHtml(titleCase(entry.scope))}</span>
           </div>
-          ${includeSnippet && entry.snippet ? `<div class="occurrence-snippet"><code>${escapeHtml(entry.snippet)}</code></div>` : ""}
+          ${includeSnippet && entry.snippet ? `<div class="env-inventory-snippet">${renderInlineCode(entry.snippet)}</div>` : ""}
         </li>
       `).join("")}
     </ul>
@@ -204,41 +208,45 @@ function renderOccurrenceList(entries, { includeSnippet = false } = {}) {
 
 function renderVariableCard(variable) {
   return `
-    <details class="variable-card" data-env-variable-card="${escapeHtml(variable.name)}" data-variable-status="${variable.likelyRequired ? "required" : "optional"}">
+    <details class="paper-panel env-inventory-variable-card" data-env-variable-card="${escapeHtml(variable.name)}" data-variable-status="${variable.likelyRequired ? "required" : "optional"}">
       <summary>
-        <div class="variable-card__summary">
-          <div>
-            <h3>${escapeHtml(variable.name)}</h3>
-            <div class="pill-row">${renderPills(variable)}</div>
+        <div class="env-inventory-variable-summary">
+          <div class="env-inventory-variable-heading">
+            <h3 class="font-serif text-2xl text-strong env-inventory-variable-name">${escapeHtml(variable.name)}</h3>
+            <div class="env-inventory-chip-row mt-3">${renderPills(variable)}</div>
           </div>
-          <div class="variable-card__counts">
-            <span><strong>${variable.definitions.length}</strong> defs</span>
-            <span><strong>${variable.usages.length}</strong> uses</span>
+          <div class="env-inventory-variable-counts">
+            <span class="count-chip env-inventory-chip"><strong>${variable.definitions.length}</strong>&nbsp;defs</span>
+            <span class="count-chip env-inventory-chip"><strong>${variable.usages.length}</strong>&nbsp;uses</span>
           </div>
         </div>
       </summary>
-      <div class="variable-card__body">
-        <div class="variable-meta-grid">
-          <div>
-            <strong>Definition kinds</strong>
-            <div>${variable.definitionKinds.length ? escapeHtml(variable.definitionKinds.map(titleCase).join(", ")) : "None"}</div>
+      <div class="env-inventory-variable-body">
+        <div class="env-inventory-variable-meta">
+          <div class="space-y-2">
+            <p class="field-label text-sm font-semibold">Definition kinds</p>
+            <p class="text-sm leading-6 text-muted">${variable.definitionKinds.length ? escapeHtml(variable.definitionKinds.map(titleCase).join(", ")) : "None"}</p>
           </div>
-          <div>
-            <strong>Usage kinds</strong>
-            <div>${variable.usageKinds.length ? escapeHtml(variable.usageKinds.map(titleCase).join(", ")) : "None"}</div>
+          <div class="space-y-2">
+            <p class="field-label text-sm font-semibold">Usage kinds</p>
+            <p class="text-sm leading-6 text-muted">${variable.usageKinds.length ? escapeHtml(variable.usageKinds.map(titleCase).join(", ")) : "None"}</p>
           </div>
-          <div>
-            <strong>Primary usage</strong>
-            <div>${variable.firstUsage ? `<code>${escapeHtml(variable.firstUsage.file)}:${escapeHtml(variable.firstUsage.line)}</code>` : "None"}</div>
+          <div class="space-y-2">
+            <p class="field-label text-sm font-semibold">Primary usage</p>
+            <div>${variable.firstUsage ? renderInlineCode(`${variable.firstUsage.file}:${variable.firstUsage.line}`) : '<p class="text-sm leading-6 text-muted">None</p>'}</div>
           </div>
         </div>
-        <div class="split-grid">
+        <div class="env-inventory-split-grid">
           <section>
-            <h4>Definitions</h4>
+            <div class="env-inventory-section-header">
+              <h4 class="font-serif text-2xl text-strong">Definitions</h4>
+            </div>
             ${renderOccurrenceList(variable.definitions)}
           </section>
           <section>
-            <h4>Usages</h4>
+            <div class="env-inventory-section-header">
+              <h4 class="font-serif text-2xl text-strong">Usages</h4>
+            </div>
             ${renderOccurrenceList(variable.usages, { includeSnippet: true })}
           </section>
         </div>
@@ -252,12 +260,12 @@ function renderVariableGroup(title, description, variables, groupKey) {
     return "";
   }
   return `
-    <section class="panel">
-      <div class="panel__header">
-        <h2>${escapeHtml(title)}</h2>
-        <p>${escapeHtml(description)}</p>
+    <section class="paper-panel env-inventory-panel">
+      <div class="env-inventory-section-header">
+        <h2 class="font-serif text-2xl text-strong">${escapeHtml(title)}</h2>
+        <p class="text-sm leading-6 text-muted">${escapeHtml(description)}</p>
       </div>
-      <div class="variable-grid" data-env-group="${escapeHtml(groupKey)}">
+      <div class="env-inventory-variable-grid" data-env-group="${escapeHtml(groupKey)}">
         ${variables.map((variable) => renderVariableCard(variable)).join("")}
       </div>
     </section>
@@ -266,33 +274,35 @@ function renderVariableGroup(title, description, variables, groupKey) {
 
 function renderCoverageGaps(derived) {
   return `
-    <section class="panel">
-      <div class="panel__header">
-        <h2>Coverage gaps</h2>
-        <p>Variables with usages but no observed <code>.env*</code> or docs/example definition.</p>
+    <section class="paper-panel env-inventory-panel">
+      <div class="env-inventory-section-header">
+        <h2 class="font-serif text-2xl text-strong">Coverage gaps</h2>
+        <p class="text-sm leading-6 text-muted">Variables with usages but no observed ${renderInlineCode(".env*")} or docs/example definition.</p>
       </div>
       ${derived.missingExample.length
         ? `
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th scope="col">Variable</th>
-                <th scope="col">Usages</th>
-                <th scope="col">Example usage</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${derived.missingExample.map((variable) => `
-                <tr data-gap-row="${escapeHtml(variable.name)}">
-                  <td><code>${escapeHtml(variable.name)}</code></td>
-                  <td>${escapeHtml(variable.usages.length)}</td>
-                  <td><code>${escapeHtml(variable.firstUsage ? summarizeOccurrence(variable.firstUsage) : "—")}</code></td>
+          <div class="env-inventory-table-wrap">
+            <table class="env-inventory-table">
+              <thead>
+                <tr>
+                  <th scope="col">Variable</th>
+                  <th scope="col">Usages</th>
+                  <th scope="col">Example usage</th>
                 </tr>
-              `).join("")}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                ${derived.missingExample.map((variable) => `
+                  <tr data-gap-row="${escapeHtml(variable.name)}">
+                    <td>${renderInlineCode(variable.name)}</td>
+                    <td>${escapeHtml(variable.usages.length)}</td>
+                    <td>${renderInlineCode(variable.firstUsage ? summarizeOccurrence(variable.firstUsage) : "—")}</td>
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
+          </div>
         `
-        : '<p class="empty-state">No example or docs gaps detected from the current report.</p>'}
+        : '<p class="text-sm leading-6 text-muted">No example or docs gaps detected from the current report.</p>'}
     </section>
   `;
 }
@@ -300,54 +310,56 @@ function renderCoverageGaps(derived) {
 function renderDynamicAccesses(report) {
   const dynamicAccesses = ensureArray(report.dynamicAccesses);
   return `
-    <section class="panel">
-      <div class="panel__header">
-        <h2>Dynamic env access</h2>
-        <p>These accesses could not be resolved to a concrete variable name statically.</p>
+    <section class="paper-panel env-inventory-panel">
+      <div class="env-inventory-section-header">
+        <h2 class="font-serif text-2xl text-strong">Dynamic env access</h2>
+        <p class="text-sm leading-6 text-muted">These accesses could not be resolved to a concrete variable name statically.</p>
       </div>
       ${dynamicAccesses.length
         ? `
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th scope="col">Location</th>
-                <th scope="col">Scope</th>
-                <th scope="col">Reason</th>
-                <th scope="col">Snippet</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${dynamicAccesses.map((entry) => `
-                <tr data-dynamic-row="${escapeHtml(entry.file)}:${escapeHtml(entry.line)}">
-                  <td><code>${escapeHtml(entry.file)}:${escapeHtml(entry.line)}</code></td>
-                  <td>${escapeHtml(titleCase(entry.scope))}</td>
-                  <td>${escapeHtml(entry.reason)}</td>
-                  <td><code>${escapeHtml(entry.snippet || "")}</code></td>
+          <div class="env-inventory-table-wrap">
+            <table class="env-inventory-table">
+              <thead>
+                <tr>
+                  <th scope="col">Location</th>
+                  <th scope="col">Scope</th>
+                  <th scope="col">Reason</th>
+                  <th scope="col">Snippet</th>
                 </tr>
-              `).join("")}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                ${dynamicAccesses.map((entry) => `
+                  <tr data-dynamic-row="${escapeHtml(entry.file)}:${escapeHtml(entry.line)}">
+                    <td>${renderInlineCode(`${entry.file}:${entry.line}`)}</td>
+                    <td>${escapeHtml(titleCase(entry.scope))}</td>
+                    <td>${escapeHtml(entry.reason)}</td>
+                    <td>${renderInlineCode(entry.snippet || "")}</td>
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
+          </div>
         `
-        : '<p class="empty-state">No dynamic env access recorded.</p>'}
+        : '<p class="text-sm leading-6 text-muted">No dynamic env access recorded.</p>'}
     </section>
   `;
 }
 
 function renderExplorer(report, derived) {
   return `
-    <section class="panel">
-      <div class="panel__header">
-        <h2>Variable explorer</h2>
-        <p>Search and filter the inventory without leaving the static report.</p>
+    <section id="variable-explorer" class="paper-panel env-inventory-panel">
+      <div class="env-inventory-section-header">
+        <h2 class="font-serif text-2xl text-strong">Variable explorer</h2>
+        <p class="text-sm leading-6 text-muted">Search and filter the inventory without leaving the static report.</p>
       </div>
-      <div id="variable-controls" class="variable-controls">
-        <label>
-          Search
-          <input id="variable-search" type="search" placeholder="Search variable names, files, snippets">
+      <div id="variable-controls" class="env-inventory-controls">
+        <label class="env-inventory-field">
+          <span class="field-label text-sm font-semibold">Search</span>
+          <input id="variable-search" class="field-control" type="search" placeholder="Search variable names, files, snippets">
         </label>
-        <label>
-          Status
-          <select id="variable-status">
+        <label class="env-inventory-field">
+          <span class="field-label text-sm font-semibold">Status</span>
+          <select id="variable-status" class="field-control">
             <option value="">All</option>
             <option value="required">Likely required</option>
             <option value="optional">Fallback observed</option>
@@ -356,20 +368,20 @@ function renderExplorer(report, derived) {
             <option value="public-like">Public-like</option>
           </select>
         </label>
-        <label>
-          Scope
-          <select id="variable-scope">
+        <label class="env-inventory-field">
+          <span class="field-label text-sm font-semibold">Scope</span>
+          <select id="variable-scope" class="field-control">
             <option value="">All</option>
             ${derived.variableScopes.map((scope) => `<option value="${escapeHtml(scope)}">${escapeHtml(titleCase(scope))}</option>`).join("")}
           </select>
         </label>
-        <div class="variable-controls__actions">
-          <button id="variable-reset" type="button">Reset</button>
-          <div id="variable-filter-summary" class="filter-summary">Showing all variables</div>
+        <div class="env-inventory-control-actions">
+          <button id="variable-reset" class="touch-button-secondary" type="button">Reset</button>
+          <div id="variable-filter-summary" class="text-sm leading-6 text-muted">Showing all variables</div>
         </div>
       </div>
-      <div class="table-wrap">
-        <table class="data-table">
+      <div class="env-inventory-table-wrap">
+        <table class="env-inventory-table">
           <thead>
             <tr>
               <th scope="col">Variable</th>
@@ -384,15 +396,15 @@ function renderExplorer(report, derived) {
             ${derived.variables.length
               ? derived.variables.map((variable) => `
                 <tr>
-                  <td><code>${escapeHtml(variable.name)}</code></td>
+                  <td>${renderInlineCode(variable.name)}</td>
                   <td>${variable.likelyRequired ? "Likely required" : "Fallback observed"}</td>
                   <td>${escapeHtml(variable.definitions.length)}</td>
                   <td>${escapeHtml(variable.usages.length)}</td>
                   <td>${escapeHtml(variable.scopes.join(", ") || "—")}</td>
-                  <td><code>${escapeHtml(variable.firstUsage ? summarizeOccurrence(variable.firstUsage) : (variable.definitions[0] ? summarizeOccurrence(variable.definitions[0]) : "—"))}</code></td>
+                  <td>${renderInlineCode(variable.firstUsage ? summarizeOccurrence(variable.firstUsage) : (variable.definitions[0] ? summarizeOccurrence(variable.definitions[0]) : "—"))}</td>
                 </tr>
               `).join("")
-              : '<tr><td colspan="6" class="empty-state-cell">No variables recorded.</td></tr>'}
+              : '<tr><td colspan="6" class="env-inventory-empty-state-cell">No variables recorded.</td></tr>'}
           </tbody>
         </table>
       </div>
@@ -403,44 +415,52 @@ function renderExplorer(report, derived) {
 function renderScanDetails(report) {
   const roots = report.scan?.roots || {};
   return `
-    <section class="panel">
-      <div class="panel__header">
-        <h2>Scan details</h2>
-        <p>Grounded scan roots and raw metadata for auditability.</p>
+    <section id="scan-details" class="paper-panel env-inventory-panel">
+      <div class="env-inventory-section-header">
+        <h2 class="font-serif text-2xl text-strong">Scan details</h2>
+        <p class="text-sm leading-6 text-muted">Grounded scan roots and raw metadata for auditability.</p>
       </div>
-      <div class="split-grid">
+      <div class="env-inventory-split-grid">
         <section>
-          <h4>App roots</h4>
+          <div class="env-inventory-section-header">
+            <h4 class="font-serif text-2xl text-strong">App roots</h4>
+          </div>
           ${ensureArray(roots.app).length
-            ? `<ul class="simple-list">${ensureArray(roots.app).map((entry) => `<li><code>${escapeHtml(entry)}</code></li>`).join("")}</ul>`
-            : '<p class="empty-state">None</p>'}
+            ? `<ul class="env-inventory-simple-list">${ensureArray(roots.app).map((entry) => `<li>${renderInlineCode(entry)}</li>`).join("")}</ul>`
+            : '<p class="text-sm leading-6 text-muted">None</p>'}
         </section>
         <section>
-          <h4>Package roots</h4>
+          <div class="env-inventory-section-header">
+            <h4 class="font-serif text-2xl text-strong">Package roots</h4>
+          </div>
           ${ensureArray(roots.package).length
-            ? `<ul class="simple-list">${ensureArray(roots.package).map((entry) => `<li><code>${escapeHtml(entry)}</code></li>`).join("")}</ul>`
-            : '<p class="empty-state">None</p>'}
+            ? `<ul class="env-inventory-simple-list">${ensureArray(roots.package).map((entry) => `<li>${renderInlineCode(entry)}</li>`).join("")}</ul>`
+            : '<p class="text-sm leading-6 text-muted">None</p>'}
         </section>
         <section>
-          <h4>Root-level config roots</h4>
+          <div class="env-inventory-section-header">
+            <h4 class="font-serif text-2xl text-strong">Root-level config roots</h4>
+          </div>
           ${ensureArray(roots.root).length
-            ? `<ul class="simple-list">${ensureArray(roots.root).map((entry) => `<li><code>${escapeHtml(entry)}</code></li>`).join("")}</ul>`
-            : '<p class="empty-state">None</p>'}
+            ? `<ul class="env-inventory-simple-list">${ensureArray(roots.root).map((entry) => `<li>${renderInlineCode(entry)}</li>`).join("")}</ul>`
+            : '<p class="text-sm leading-6 text-muted">None</p>'}
         </section>
       </div>
       ${ensureArray(report.scanWarnings).length
         ? `
-          <section class="scan-warning-list">
-            <h4>Scan warnings</h4>
-            <ul class="simple-list">
+          <section class="env-inventory-scan-warnings">
+            <div class="env-inventory-section-header">
+              <h4 class="font-serif text-2xl text-strong">Scan warnings</h4>
+            </div>
+            <ul class="env-inventory-simple-list">
               ${ensureArray(report.scanWarnings).map((entry) => `<li>${escapeHtml(entry)}</li>`).join("")}
             </ul>
           </section>
         `
         : ""}
-      <details>
+      <details class="env-inventory-disclosure">
         <summary>Raw JSON metadata</summary>
-        <pre>${escapeHtml(JSON.stringify(report, null, 2))}</pre>
+        <pre class="env-inventory-raw">${escapeHtml(JSON.stringify(report, null, 2))}</pre>
       </details>
     </section>
   `;
@@ -568,18 +588,18 @@ function renderClientScript(report) {
             : "Showing " + visible.length + " of " + variables.length + " variables";
 
           if (!visible.length) {
-            controls.body.innerHTML = '<tr><td colspan="6" class="empty-state-cell">No variables match the current filters.</td></tr>';
+            controls.body.innerHTML = '<tr><td colspan="6" class="env-inventory-empty-state-cell">No variables match the current filters.</td></tr>';
             return;
           }
 
           controls.body.innerHTML = visible.map((variable) => [
             "<tr>",
-            "<td><code>" + escapeHtml(variable.name) + "</code></td>",
+            "<td><code class=\\"env-inventory-inline-code\\">" + escapeHtml(variable.name) + "</code></td>",
             "<td>" + (variable.likelyRequired ? "Likely required" : "Fallback observed") + "</td>",
             "<td>" + variable.definitions.length + "</td>",
             "<td>" + variable.usages.length + "</td>",
             "<td>" + escapeHtml(variable.scopes.join(", ") || "—") + "</td>",
-            "<td><code>" + escapeHtml(summarizeLocation(variable)) + "</code></td>",
+            "<td><code class=\\"env-inventory-inline-code\\">" + escapeHtml(summarizeLocation(variable)) + "</code></td>",
             "</tr>"
           ].join("")).join("");
         }
@@ -618,6 +638,27 @@ function renderClientScript(report) {
   `;
 }
 
+function renderMetaCards(report, htmlPath) {
+  const cards = [
+    { label: "App root", value: renderInlineCode(report.app.path) },
+    { label: "JSON report path", value: renderInlineCode(report.app.outputPath) },
+    { label: "HTML report path", value: renderInlineCode(htmlPath) },
+    { label: "Config path", value: renderInlineCode(report.scan?.config?.path || ".agents/env-inventory.config.json") },
+    { label: "Config found", value: `<span class="text-sm font-medium text-strong">${escapeHtml(report.scan?.config?.exists ? "yes" : "no")}</span>` },
+  ];
+
+  return `
+    <section class="env-inventory-meta-grid">
+      ${cards.map((card) => `
+        <article class="paper-panel env-inventory-meta-card">
+          <div class="env-inventory-meta-label">${escapeHtml(card.label)}</div>
+          <div class="text-sm leading-6 text-strong">${card.value}</div>
+        </article>
+      `).join("")}
+    </section>
+  `;
+}
+
 export function renderEnvInventoryHtml(report, { htmlOutputPath = "" } = {}) {
   const htmlPath = htmlOutputPath || normalizePath(path.join(report.app.path, HTML_REPORT_RELATIVE));
   const derived = buildDerived(report);
@@ -627,337 +668,62 @@ export function renderEnvInventoryHtml(report, { htmlOutputPath = "" } = {}) {
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>${escapeHtml(pageTitle)}</title>
-    <style>
-      :root {
-        color-scheme: light;
-        --bg: #f5f7fb;
-        --panel: #ffffff;
-        --text: #172033;
-        --muted: #5b6476;
-        --line: #d7deea;
-        --good: #0f766e;
-        --warning: #b45309;
-        --problem: #b91c1c;
-        --accent: #3554c5;
-      }
-      * { box-sizing: border-box; }
-      body {
-        margin: 0;
-        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        background: var(--bg);
-        color: var(--text);
-        line-height: 1.45;
-      }
-      code, pre {
-        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-      }
-      .page {
-        max-width: 1440px;
-        margin: 0 auto;
-        padding: 24px;
-      }
-      .page-header h1 {
-        margin: 0 0 8px;
-        font-size: 2rem;
-      }
-      .meta-grid,
-      .status-grid,
-      .split-grid,
-      .variable-grid {
-        display: grid;
-        gap: 12px;
-      }
-      .meta-grid {
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        margin-top: 16px;
-      }
-      .status-grid {
-        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-        margin: 20px 0;
-      }
-      .split-grid {
-        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      }
-      .variable-grid {
-        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      }
-      .meta-item,
-      .status-card,
-      .panel,
-      .variable-card {
-        background: var(--panel);
-        border: 1px solid var(--line);
-        border-radius: 14px;
-        box-shadow: 0 8px 30px rgba(23, 32, 51, 0.05);
-      }
-      .meta-item,
-      .status-card,
-      .panel {
-        padding: 16px;
-      }
-      .meta-item__label,
-      .status-card__label,
-      .filter-summary,
-      .panel__header p,
-      .empty-state,
-      .occurrence-meta {
-        color: var(--muted);
-      }
-      .meta-item__label,
-      .status-card__label {
-        font-size: 0.8rem;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-      }
-      .status-card__value {
-        margin-top: 10px;
-        font-size: 1.7rem;
-        font-weight: 700;
-      }
-      .status-card--good { border-left: 5px solid var(--good); }
-      .status-card--warning { border-left: 5px solid var(--warning); }
-      .status-card--problem { border-left: 5px solid var(--problem); }
-      .warning-banner {
-        margin: 16px 0 20px;
-        padding: 14px 16px;
-        background: rgba(180, 83, 9, 0.08);
-        border: 1px solid rgba(180, 83, 9, 0.25);
-        border-radius: 12px;
-        color: var(--warning);
-      }
-      .panel__header {
-        margin-bottom: 14px;
-      }
-      .panel__header h2,
-      .variable-card h3,
-      .variable-card h4 {
-        margin: 0 0 6px;
-      }
-      .pill-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        margin-top: 8px;
-      }
-      .pill {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 4px 8px;
-        border-radius: 999px;
-        background: rgba(23, 32, 51, 0.08);
-        font-size: 0.82rem;
-      }
-      .pill--good {
-        background: rgba(15, 118, 110, 0.12);
-        color: var(--good);
-      }
-      .pill--warning {
-        background: rgba(180, 83, 9, 0.12);
-        color: var(--warning);
-      }
-      .pill--problem {
-        background: rgba(185, 28, 28, 0.12);
-        color: var(--problem);
-      }
-      .pill--accent {
-        background: rgba(53, 84, 197, 0.12);
-        color: var(--accent);
-      }
-      .variable-card {
-        padding: 0;
-        overflow: hidden;
-      }
-      .variable-card summary {
-        list-style: none;
-        cursor: pointer;
-        padding: 16px;
-      }
-      .variable-card summary::-webkit-details-marker {
-        display: none;
-      }
-      .variable-card__summary {
-        display: flex;
-        justify-content: space-between;
-        gap: 12px;
-      }
-      .variable-card__counts {
-        min-width: 90px;
-        display: grid;
-        gap: 4px;
-        justify-items: end;
-        font-size: 0.88rem;
-        color: var(--muted);
-      }
-      .variable-card__body {
-        border-top: 1px solid var(--line);
-        padding: 16px;
-      }
-      .variable-meta-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-        gap: 12px;
-        margin-bottom: 14px;
-      }
-      .occurrence-list,
-      .simple-list {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-        display: grid;
-        gap: 10px;
-      }
-      .occurrence-list li {
-        border: 1px solid var(--line);
-        border-radius: 10px;
-        padding: 10px 12px;
-      }
-      .occurrence-list__top {
-        display: flex;
-        justify-content: space-between;
-        gap: 12px;
-        align-items: baseline;
-      }
-      .occurrence-snippet {
-        margin-top: 8px;
-      }
-      .occurrence-snippet code,
-      pre {
-        white-space: pre-wrap;
-        word-break: break-word;
-      }
-      .variable-controls {
-        position: sticky;
-        top: 0;
-        z-index: 3;
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-        gap: 12px;
-        padding: 14px;
-        margin-bottom: 14px;
-        background: rgba(245, 247, 251, 0.96);
-        backdrop-filter: blur(10px);
-        border: 1px solid var(--line);
-        border-radius: 12px;
-      }
-      .variable-controls label {
-        display: grid;
-        gap: 6px;
-        font-size: 0.88rem;
-        color: var(--muted);
-      }
-      .variable-controls input,
-      .variable-controls select,
-      .variable-controls button {
-        min-height: 38px;
-        padding: 8px 10px;
-        border-radius: 10px;
-        border: 1px solid var(--line);
-        background: var(--panel);
-        color: var(--text);
-      }
-      .variable-controls__actions {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: end;
-        gap: 10px;
-      }
-      .table-wrap {
-        overflow: auto;
-      }
-      .data-table {
-        width: 100%;
-        border-collapse: collapse;
-      }
-      .data-table th,
-      .data-table td {
-        padding: 10px 12px;
-        border-bottom: 1px solid var(--line);
-        vertical-align: top;
-        text-align: left;
-      }
-      .data-table thead th {
-        position: sticky;
-        top: 0;
-        background: var(--panel);
-      }
-      .empty-state-cell {
-        text-align: center;
-        color: var(--muted);
-        padding: 20px;
-      }
-      details pre {
-        overflow: auto;
-        padding: 12px;
-        background: #0f172a;
-        color: #e5eefc;
-        border-radius: 12px;
-      }
-      @media (max-width: 900px) {
-        .page {
-          padding: 16px;
-        }
-      }
-    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap"
+    >
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/assets/app.css">
   </head>
-  <body>
-    <div class="page">
-      <header class="page-header">
-        <h1>Env inventory report · ${escapeHtml(report.app.name)}</h1>
-        <p>Static, app-local HTML built from the machine-readable JSON source of truth.</p>
-        ${renderWarningBanner(report)}
-        <div class="meta-grid">
-          <article class="meta-item">
-            <div class="meta-item__label">App root</div>
-            <div class="meta-item__value"><code>${escapeHtml(report.app.path)}</code></div>
-          </article>
-          <article class="meta-item">
-            <div class="meta-item__label">JSON report path</div>
-            <div class="meta-item__value"><code>${escapeHtml(report.app.outputPath)}</code></div>
-          </article>
-          <article class="meta-item">
-            <div class="meta-item__label">HTML report path</div>
-            <div class="meta-item__value"><code>${escapeHtml(htmlPath)}</code></div>
-          </article>
-          <article class="meta-item">
-            <div class="meta-item__label">Config path</div>
-            <div class="meta-item__value"><code>${escapeHtml(report.scan?.config?.path || ".agents/env-inventory.config.json")}</code></div>
-          </article>
-          <article class="meta-item">
-            <div class="meta-item__label">Config found</div>
-            <div class="meta-item__value">${escapeHtml(report.scan?.config?.exists ? "yes" : "no")}</div>
-          </article>
+  <body class="app-shell">
+    <main class="mx-auto grid min-h-screen w-full max-w-7xl content-start gap-4 px-4 pb-10 pt-4 sm:px-6 lg:px-8">
+      <header class="top-bar">
+        <div class="min-w-0 env-inventory-header-copy">
+          <div class="top-bar-title-row">
+            <h1 class="font-serif text-3xl leading-tight text-strong">Env inventory report</h1>
+            <span class="count-chip env-inventory-chip px-3 py-1 text-sm font-medium">${escapeHtml(report.app.name)}</span>
+          </div>
+          <p class="text-sm leading-6 text-muted">Static, app-local HTML built from the machine-readable JSON source of truth.</p>
+          ${renderWarningBanner(report)}
+        </div>
+        <div class="env-inventory-actions">
+          <a class="touch-button-secondary" href="/">Back to board</a>
+          <a class="touch-button-secondary" href="#variable-explorer">Jump to explorer</a>
         </div>
       </header>
 
-      <section class="status-grid">
+      ${renderMetaCards(report, htmlPath)}
+
+      <section class="env-inventory-status-grid">
         ${renderStatusCards(report, derived)}
       </section>
 
-      <main class="split-grid">
-        <section class="panel">
-          <div class="panel__header">
-            <h2>Inventory model</h2>
-            <p>Required vs optional is inferred from observed fallback usage. Variables with a <code>default</code> usage are treated as optional for this report.</p>
+      <div class="env-inventory-section-grid">
+        <section class="paper-panel env-inventory-panel">
+          <div class="env-inventory-section-header">
+            <h2 class="font-serif text-2xl text-strong">Inventory model</h2>
+            <p class="text-sm leading-6 text-muted">Required vs optional is inferred from observed fallback usage. Variables with a ${renderInlineCode("default")} usage are treated as optional for this report.</p>
           </div>
-          <div class="pill-row">
-            <span class="pill pill--warning">Likely required</span>
-            <span class="pill pill--good">Fallback observed</span>
-            <span class="pill pill--problem">Secret-like</span>
-            <span class="pill pill--accent">Public-like</span>
+          <div class="env-inventory-chip-row">
+            <span class="count-chip env-inventory-chip env-inventory-chip--warning">Likely required</span>
+            <span class="count-chip env-inventory-chip env-inventory-chip--good">Fallback observed</span>
+            <span class="count-chip env-inventory-chip env-inventory-chip--problem">Secret-like</span>
+            <span class="count-chip env-inventory-chip env-inventory-chip--accent">Public-like</span>
           </div>
         </section>
         ${renderCoverageGaps(derived)}
-      </main>
+      </div>
 
       ${renderVariableGroup("No fallback observed", "Variables with usages but no observed in-code fallback/default.", derived.required, "required")}
       ${renderVariableGroup("Fallbacks observed", "Variables where the report found an explicit default/fallback path.", derived.optional, "optional")}
       ${renderDynamicAccesses(report)}
       ${renderExplorer(report, derived)}
       ${renderScanDetails(report)}
-    </div>
+    </main>
     ${renderClientScript(report)}
   </body>
 </html>

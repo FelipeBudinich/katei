@@ -14,6 +14,7 @@ Important conventions mirrored from the existing repo-local skills:
 - reusable implementation lives under `.agents/skills/env-inventory/`
 - generated analysis outputs live with each app under `apps/<app>/doc/`
 - generated human-facing HTML lives with each app under `apps/<app>/docs/`
+- generated HTML should load the app's normal CSS entrypoint and reuse the app shell rather than a separate docs-only stylesheet
 - the preferred app integration is a narrow explicit `/docs/env-inventory.html` route in the same router that already owns the other docs artifacts
 - the script supports a generator-style `--check` mode
 - the HTML report is the preferred human-facing inspection surface

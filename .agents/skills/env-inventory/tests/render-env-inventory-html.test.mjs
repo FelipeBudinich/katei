@@ -128,13 +128,18 @@ test("renderEnvInventoryHtml highlights config warnings, fallback groups, gaps, 
 
   const html = renderEnvInventoryHtml(report);
 
-  assert.match(html, /Env inventory report · demo/);
+  assert.match(html, /<title>Env inventory · demo<\/title>/);
+  assert.match(html, /Env inventory report/);
+  assert.match(html, /href="\/assets\/app\.css"/);
+  assert.match(html, /class="app-shell"/);
+  assert.match(html, /class="top-bar"/);
   assert.match(html, /Config warning:/);
   assert.match(html, /No fallback observed/);
   assert.match(html, /Fallbacks observed/);
   assert.match(html, /Missing example\/docs/);
   assert.match(html, /Dynamic env access/);
   assert.match(html, /apps\/demo\/docs\/env-inventory\.html/);
+  assert.doesNotMatch(html, /<style>/);
 });
 
 test("generator --html writes per-app HTML reports and no root aggregate", async () => {
@@ -190,8 +195,12 @@ test("standalone renderer reads JSON input and supports --check", async () => {
   assert.equal(renderExit, 0);
 
   const html = await fs.readFile(path.join(repoRoot, "apps", "app-a", "docs", "env-inventory.html"), "utf8");
-  assert.match(html, /Env inventory report · app-a/);
+  assert.match(html, /<title>Env inventory · app-a<\/title>/);
+  assert.match(html, /Env inventory report/);
   assert.match(html, /Variable explorer/);
+  assert.match(html, /href="\/assets\/app\.css"/);
+  assert.match(html, /class="app-shell"/);
+  assert.doesNotMatch(html, /<style>/);
 
   const cleanExit = await renderRunCli([
     "--input",

@@ -19,14 +19,15 @@ Workflow:
 
 1. Run the generator for a single app or for all direct app children under `/apps`.
 2. When the task is human inspection or review, generate the HTML report too.
-3. Verify the app exposes the generated HTML at `/docs/env-inventory.html`.
-4. Treat either of these as sufficient:
+3. Keep the generated HTML aligned with the app's real shell and CSS entrypoint instead of introducing a docs-only stylesheet.
+4. Verify the app exposes the generated HTML at `/docs/env-inventory.html`.
+5. Treat either of these as sufficient:
    - an explicit GET route for `/docs/env-inventory.html`
    - an existing `express.static` mount that already exposes `apps/<app>/docs` at `/docs`
-5. If neither exists, patch the router that already owns the app’s docs artifacts (`/docs/assets.html`, `/docs/color-swatch.html`, `/docs/specimen.html`) and prefer a narrow explicit `sendFile()` route with ENOENT fallthrough over a new broad `/docs` static mount.
-6. Review `git diff -- apps/*/doc/env-inventory.json apps/*/docs/env-inventory.html`.
-7. Summarize concrete findings from the generated reports, including where each variable is defined, where it is used, whether it looks secret/public, any missing example/docs coverage, and any dynamic env access that could not be resolved statically.
-8. Do not hand-edit generated `env-inventory.json` or `env-inventory.html`; regenerate them instead.
+6. If neither exists, patch the router that already owns the app’s docs artifacts (`/docs/assets.html`, `/docs/color-swatch.html`, `/docs/specimen.html`) and prefer a narrow explicit `sendFile()` route with ENOENT fallthrough over a new broad `/docs` static mount.
+7. Review `git diff -- apps/*/doc/env-inventory.json apps/*/docs/env-inventory.html`.
+8. Summarize concrete findings from the generated reports, including where each variable is defined, where it is used, whether it looks secret/public, any missing example/docs coverage, and any dynamic env access that could not be resolved statically.
+9. Do not hand-edit generated `env-inventory.json` or `env-inventory.html`; regenerate them instead.
 
 Validation:
 
@@ -51,6 +52,7 @@ Notes:
 - Reports are app-scoped and always written to `apps/<app-name>/doc/env-inventory.json`.
 - The preferred human-facing output is `apps/<app-name>/docs/env-inventory.html`.
 - For repo usability, the corresponding app should expose that HTML at `/docs/env-inventory.html`.
+- The generated HTML should inherit the app's normal visual system and CSS bundle rather than a standalone docs theme.
 - The JSON report remains the machine-facing source of truth for the HTML renderer.
 - Shared workspace packages are only attributed to an app when that app imports them directly or through a resolved internal workspace dependency chain.
 - Root-level definitions and usages are only attributed when they are grounded by the app's env usage set or the root file is explicitly app-scoped.
