@@ -61,22 +61,22 @@
     
       <article class="paper-panel env-inventory-status-card env-inventory-status-card--good">
         <div class="env-inventory-status-label">Definitions</div>
-        <div class="env-inventory-status-value">8</div>
+        <div class="env-inventory-status-value">6</div>
       </article>
     
       <article class="paper-panel env-inventory-status-card env-inventory-status-card--good">
         <div class="env-inventory-status-label">Usages</div>
-        <div class="env-inventory-status-value">10</div>
+        <div class="env-inventory-status-value">13</div>
       </article>
     
-      <article class="paper-panel env-inventory-status-card env-inventory-status-card--warning">
+      <article class="paper-panel env-inventory-status-card env-inventory-status-card--good">
         <div class="env-inventory-status-label">No fallback observed</div>
-        <div class="env-inventory-status-value">1</div>
+        <div class="env-inventory-status-value">0</div>
       </article>
     
       <article class="paper-panel env-inventory-status-card env-inventory-status-card--good">
         <div class="env-inventory-status-label">Fallbacks observed</div>
-        <div class="env-inventory-status-value">3</div>
+        <div class="env-inventory-status-value">4</div>
       </article>
     
       <article class="paper-panel env-inventory-status-card env-inventory-status-card--good">
@@ -126,23 +126,24 @@
       </div>
 
       
+      
     <section class="paper-panel env-inventory-panel">
       <div class="env-inventory-section-header">
-        <h2 class="font-serif text-2xl text-strong">No fallback observed</h2>
-        <p class="text-sm leading-6 text-muted">Variables with usages but no observed in-code fallback/default.</p>
+        <h2 class="font-serif text-2xl text-strong">Fallbacks observed</h2>
+        <p class="text-sm leading-6 text-muted">Variables where the report found an explicit default/fallback path.</p>
       </div>
-      <div class="env-inventory-variable-grid" data-env-group="required">
+      <div class="env-inventory-variable-grid" data-env-group="optional">
         
-    <details class="paper-panel env-inventory-variable-card" data-env-variable-card="HEROKU_API_KEY" data-variable-status="required">
+    <details class="paper-panel env-inventory-variable-card" data-env-variable-card="HEROKU_API_KEY" data-variable-status="optional">
       <summary>
         <div class="env-inventory-variable-summary">
           <div class="env-inventory-variable-heading">
             <h3 class="font-serif text-2xl text-strong env-inventory-variable-name">HEROKU_API_KEY</h3>
-            <div class="env-inventory-chip-row mt-3"><span class="count-chip env-inventory-chip env-inventory-chip--warning">No fallback observed</span><span class="count-chip env-inventory-chip env-inventory-chip--problem">Secret-like</span><span class="count-chip env-inventory-chip">App</span><span class="count-chip env-inventory-chip">Root</span></div>
+            <div class="env-inventory-chip-row mt-3"><span class="count-chip env-inventory-chip env-inventory-chip--good">Fallback observed</span><span class="count-chip env-inventory-chip env-inventory-chip--problem">Secret-like</span><span class="count-chip env-inventory-chip">App</span><span class="count-chip env-inventory-chip">Root</span></div>
           </div>
           <div class="env-inventory-variable-counts">
-            <span class="count-chip env-inventory-chip"><strong>4</strong>&nbsp;defs</span>
-            <span class="count-chip env-inventory-chip"><strong>3</strong>&nbsp;uses</span>
+            <span class="count-chip env-inventory-chip"><strong>2</strong>&nbsp;defs</span>
+            <span class="count-chip env-inventory-chip"><strong>5</strong>&nbsp;uses</span>
           </div>
         </div>
       </summary>
@@ -154,11 +155,11 @@
           </div>
           <div class="space-y-2">
             <p class="field-label text-sm font-semibold">Usage kinds</p>
-            <p class="text-sm leading-6 text-muted">Ci</p>
+            <p class="text-sm leading-6 text-muted">Ci, Default</p>
           </div>
           <div class="space-y-2">
             <p class="field-label text-sm font-semibold">Primary usage</p>
-            <div><code class="env-inventory-inline-code">.github/workflows/deploy-katei-heroku.yml:57</code></div>
+            <div><code class="env-inventory-inline-code">.github/workflows/deploy-katei-heroku.yml:55</code></div>
           </div>
         </div>
         <div class="env-inventory-split-grid">
@@ -171,23 +172,7 @@
       
         <li class="env-inventory-occurrence-item">
           <div class="env-inventory-occurrence-top">
-            <code class="env-inventory-inline-code">.github/workflows/deploy-katei-heroku.yml:54</code>
-            <span class="text-sm leading-6 text-muted">Ci · Root</span>
-          </div>
-          
-        </li>
-      
-        <li class="env-inventory-occurrence-item">
-          <div class="env-inventory-occurrence-top">
-            <code class="env-inventory-inline-code">.github/workflows/deploy-katei-heroku.yml:87</code>
-            <span class="text-sm leading-6 text-muted">Ci · Root</span>
-          </div>
-          
-        </li>
-      
-        <li class="env-inventory-occurrence-item">
-          <div class="env-inventory-occurrence-top">
-            <code class="env-inventory-inline-code">.github/workflows/deploy-katei-heroku.yml:96</code>
+            <code class="env-inventory-inline-code">.github/workflows/deploy-katei-heroku.yml:55</code>
             <span class="text-sm leading-6 text-muted">Ci · Root</span>
           </div>
           
@@ -213,7 +198,15 @@
       
         <li class="env-inventory-occurrence-item">
           <div class="env-inventory-occurrence-top">
-            <code class="env-inventory-inline-code">.github/workflows/deploy-katei-heroku.yml:57</code>
+            <code class="env-inventory-inline-code">.github/workflows/deploy-katei-heroku.yml:55</code>
+            <span class="text-sm leading-6 text-muted">Default · Root</span>
+          </div>
+          <div class="env-inventory-snippet"><code class="env-inventory-inline-code">echo &quot;HEROKU_API_KEY=${heroku_api_key:-YOUR_HEROKU_API_KEY}&quot; &gt;&gt; &quot;$GITHUB_ENV&quot;</code></div>
+        </li>
+      
+        <li class="env-inventory-occurrence-item">
+          <div class="env-inventory-occurrence-top">
+            <code class="env-inventory-inline-code">.github/workflows/deploy-katei-heroku.yml:61</code>
             <span class="text-sm leading-6 text-muted">Ci · Root</span>
           </div>
           <div class="env-inventory-snippet"><code class="env-inventory-inline-code">test -n &quot;$HEROKU_API_KEY&quot; || { echo &quot;Missing HEROKU_API_KEY&quot;; exit 1; }</code></div>
@@ -221,7 +214,15 @@
       
         <li class="env-inventory-occurrence-item">
           <div class="env-inventory-occurrence-top">
-            <code class="env-inventory-inline-code">.github/workflows/deploy-katei-heroku.yml:91</code>
+            <code class="env-inventory-inline-code">.github/workflows/deploy-katei-heroku.yml:62</code>
+            <span class="text-sm leading-6 text-muted">Ci · Root</span>
+          </div>
+          <div class="env-inventory-snippet"><code class="env-inventory-inline-code">test &quot;$HEROKU_API_KEY&quot; != &quot;YOUR_HEROKU_API_KEY&quot; || { echo &quot;Replace YOUR_HEROKU_API_KEY with a real Heroku API key&quot;; exit 1; }</code></div>
+        </li>
+      
+        <li class="env-inventory-occurrence-item">
+          <div class="env-inventory-occurrence-top">
+            <code class="env-inventory-inline-code">.github/workflows/deploy-katei-heroku.yml:94</code>
             <span class="text-sm leading-6 text-muted">Ci · Root</span>
           </div>
           <div class="env-inventory-snippet"><code class="env-inventory-inline-code">git remote add heroku &quot;https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git&quot;</code></div>
@@ -229,7 +230,7 @@
       
         <li class="env-inventory-occurrence-item">
           <div class="env-inventory-occurrence-top">
-            <code class="env-inventory-inline-code">.github/workflows/deploy-katei-heroku.yml:106</code>
+            <code class="env-inventory-inline-code">.github/workflows/deploy-katei-heroku.yml:107</code>
             <span class="text-sm leading-6 text-muted">Ci · Root</span>
           </div>
           <div class="env-inventory-snippet"><code class="env-inventory-inline-code">git remote add heroku &quot;https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git&quot;</code></div>
@@ -242,17 +243,6 @@
       </div>
     </details>
   
-      </div>
-    </section>
-  
-      
-    <section class="paper-panel env-inventory-panel">
-      <div class="env-inventory-section-header">
-        <h2 class="font-serif text-2xl text-strong">Fallbacks observed</h2>
-        <p class="text-sm leading-6 text-muted">Variables where the report found an explicit default/fallback path.</p>
-      </div>
-      <div class="env-inventory-variable-grid" data-env-group="optional">
-        
     <details class="paper-panel env-inventory-variable-card" data-env-variable-card="HEROKU_APP_NAME" data-variable-status="optional">
       <summary>
         <div class="env-inventory-variable-summary">
@@ -262,7 +252,7 @@
           </div>
           <div class="env-inventory-variable-counts">
             <span class="count-chip env-inventory-chip"><strong>2</strong>&nbsp;defs</span>
-            <span class="count-chip env-inventory-chip"><strong>5</strong>&nbsp;uses</span>
+            <span class="count-chip env-inventory-chip"><strong>6</strong>&nbsp;uses</span>
           </div>
         </div>
       </summary>
@@ -320,12 +310,12 @@
             <code class="env-inventory-inline-code">.github/workflows/deploy-katei-heroku.yml:50</code>
             <span class="text-sm leading-6 text-muted">Default · Root</span>
           </div>
-          <div class="env-inventory-snippet"><code class="env-inventory-inline-code">echo &quot;HEROKU_APP_NAME=${heroku_app_name:-katei}&quot; &gt;&gt; &quot;$GITHUB_ENV&quot;</code></div>
+          <div class="env-inventory-snippet"><code class="env-inventory-inline-code">echo &quot;HEROKU_APP_NAME=${heroku_app_name:-YOUR_HEROKU_APP_NAME}&quot; &gt;&gt; &quot;$GITHUB_ENV&quot;</code></div>
         </li>
       
         <li class="env-inventory-occurrence-item">
           <div class="env-inventory-occurrence-top">
-            <code class="env-inventory-inline-code">.github/workflows/deploy-katei-heroku.yml:56</code>
+            <code class="env-inventory-inline-code">.github/workflows/deploy-katei-heroku.yml:59</code>
             <span class="text-sm leading-6 text-muted">Ci · Root</span>
           </div>
           <div class="env-inventory-snippet"><code class="env-inventory-inline-code">test -n &quot;$HEROKU_APP_NAME&quot; || { echo &quot;Missing HEROKU_APP_NAME&quot;; exit 1; }</code></div>
@@ -333,7 +323,15 @@
       
         <li class="env-inventory-occurrence-item">
           <div class="env-inventory-occurrence-top">
-            <code class="env-inventory-inline-code">.github/workflows/deploy-katei-heroku.yml:58</code>
+            <code class="env-inventory-inline-code">.github/workflows/deploy-katei-heroku.yml:60</code>
+            <span class="text-sm leading-6 text-muted">Ci · Root</span>
+          </div>
+          <div class="env-inventory-snippet"><code class="env-inventory-inline-code">test &quot;$HEROKU_APP_NAME&quot; != &quot;YOUR_HEROKU_APP_NAME&quot; || { echo &quot;Replace YOUR_HEROKU_APP_NAME with the real Heroku app slug&quot;; exit 1; }</code></div>
+        </li>
+      
+        <li class="env-inventory-occurrence-item">
+          <div class="env-inventory-occurrence-top">
+            <code class="env-inventory-inline-code">.github/workflows/deploy-katei-heroku.yml:63</code>
             <span class="text-sm leading-6 text-muted">Ci · Root</span>
           </div>
           <div class="env-inventory-snippet"><code class="env-inventory-inline-code">echo &quot;Deploying branch &#39;${GITHUB_REF_NAME}&#39; to app &#39;${HEROKU_APP_NAME}&#39;&quot;</code></div>
@@ -341,7 +339,7 @@
       
         <li class="env-inventory-occurrence-item">
           <div class="env-inventory-occurrence-top">
-            <code class="env-inventory-inline-code">.github/workflows/deploy-katei-heroku.yml:91</code>
+            <code class="env-inventory-inline-code">.github/workflows/deploy-katei-heroku.yml:94</code>
             <span class="text-sm leading-6 text-muted">Ci · Root</span>
           </div>
           <div class="env-inventory-snippet"><code class="env-inventory-inline-code">git remote add heroku &quot;https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git&quot;</code></div>
@@ -349,7 +347,7 @@
       
         <li class="env-inventory-occurrence-item">
           <div class="env-inventory-occurrence-top">
-            <code class="env-inventory-inline-code">.github/workflows/deploy-katei-heroku.yml:106</code>
+            <code class="env-inventory-inline-code">.github/workflows/deploy-katei-heroku.yml:107</code>
             <span class="text-sm leading-6 text-muted">Ci · Root</span>
           </div>
           <div class="env-inventory-snippet"><code class="env-inventory-inline-code">git remote add heroku &quot;https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git&quot;</code></div>
@@ -562,18 +560,18 @@
             
                 <tr>
                   <td><code class="env-inventory-inline-code">HEROKU_API_KEY</code></td>
-                  <td>No fallback observed</td>
-                  <td>4</td>
-                  <td>3</td>
+                  <td>Fallback observed</td>
+                  <td>2</td>
+                  <td>5</td>
                   <td>app, root</td>
-                  <td><code class="env-inventory-inline-code">.github/workflows/deploy-katei-heroku.yml:57</code></td>
+                  <td><code class="env-inventory-inline-code">.github/workflows/deploy-katei-heroku.yml:55</code></td>
                 </tr>
               
                 <tr>
                   <td><code class="env-inventory-inline-code">HEROKU_APP_NAME</code></td>
                   <td>Fallback observed</td>
                   <td>2</td>
-                  <td>5</td>
+                  <td>6</td>
                   <td>app, root</td>
                   <td><code class="env-inventory-inline-code">.github/workflows/deploy-katei-heroku.yml:50</code></td>
                 </tr>
@@ -669,8 +667,8 @@
   },
   &quot;summary&quot;: {
     &quot;totalVariables&quot;: 4,
-    &quot;totalDefinitions&quot;: 8,
-    &quot;totalUsages&quot;: 10,
+    &quot;totalDefinitions&quot;: 6,
+    &quot;totalUsages&quot;: 13,
     &quot;secretLikeCount&quot;: 1,
     &quot;publicLikeCount&quot;: 0,
     &quot;dynamicAccessCount&quot;: 0
@@ -684,19 +682,7 @@
         {
           &quot;kind&quot;: &quot;ci&quot;,
           &quot;file&quot;: &quot;.github/workflows/deploy-katei-heroku.yml&quot;,
-          &quot;line&quot;: 54,
-          &quot;scope&quot;: &quot;root&quot;
-        },
-        {
-          &quot;kind&quot;: &quot;ci&quot;,
-          &quot;file&quot;: &quot;.github/workflows/deploy-katei-heroku.yml&quot;,
-          &quot;line&quot;: 87,
-          &quot;scope&quot;: &quot;root&quot;
-        },
-        {
-          &quot;kind&quot;: &quot;ci&quot;,
-          &quot;file&quot;: &quot;.github/workflows/deploy-katei-heroku.yml&quot;,
-          &quot;line&quot;: 96,
+          &quot;line&quot;: 55,
           &quot;scope&quot;: &quot;root&quot;
         },
         {
@@ -708,23 +694,37 @@
       ],
       &quot;usages&quot;: [
         {
+          &quot;kind&quot;: &quot;default&quot;,
+          &quot;file&quot;: &quot;.github/workflows/deploy-katei-heroku.yml&quot;,
+          &quot;line&quot;: 55,
+          &quot;scope&quot;: &quot;root&quot;,
+          &quot;snippet&quot;: &quot;echo \&quot;HEROKU_API_KEY=${heroku_api_key:-YOUR_HEROKU_API_KEY}\&quot; &gt;&gt; \&quot;$GITHUB_ENV\&quot;&quot;
+        },
+        {
           &quot;kind&quot;: &quot;ci&quot;,
           &quot;file&quot;: &quot;.github/workflows/deploy-katei-heroku.yml&quot;,
-          &quot;line&quot;: 57,
+          &quot;line&quot;: 61,
           &quot;scope&quot;: &quot;root&quot;,
           &quot;snippet&quot;: &quot;test -n \&quot;$HEROKU_API_KEY\&quot; || { echo \&quot;Missing HEROKU_API_KEY\&quot;; exit 1; }&quot;
         },
         {
           &quot;kind&quot;: &quot;ci&quot;,
           &quot;file&quot;: &quot;.github/workflows/deploy-katei-heroku.yml&quot;,
-          &quot;line&quot;: 91,
+          &quot;line&quot;: 62,
+          &quot;scope&quot;: &quot;root&quot;,
+          &quot;snippet&quot;: &quot;test \&quot;$HEROKU_API_KEY\&quot; != \&quot;YOUR_HEROKU_API_KEY\&quot; || { echo \&quot;Replace YOUR_HEROKU_API_KEY with a real Heroku API key\&quot;; exit 1; }&quot;
+        },
+        {
+          &quot;kind&quot;: &quot;ci&quot;,
+          &quot;file&quot;: &quot;.github/workflows/deploy-katei-heroku.yml&quot;,
+          &quot;line&quot;: 94,
           &quot;scope&quot;: &quot;root&quot;,
           &quot;snippet&quot;: &quot;git remote add heroku \&quot;https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\&quot;&quot;
         },
         {
           &quot;kind&quot;: &quot;ci&quot;,
           &quot;file&quot;: &quot;.github/workflows/deploy-katei-heroku.yml&quot;,
-          &quot;line&quot;: 106,
+          &quot;line&quot;: 107,
           &quot;scope&quot;: &quot;root&quot;,
           &quot;snippet&quot;: &quot;git remote add heroku \&quot;https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\&quot;&quot;
         }
@@ -754,33 +754,40 @@
           &quot;file&quot;: &quot;.github/workflows/deploy-katei-heroku.yml&quot;,
           &quot;line&quot;: 50,
           &quot;scope&quot;: &quot;root&quot;,
-          &quot;snippet&quot;: &quot;echo \&quot;HEROKU_APP_NAME=${heroku_app_name:-katei}\&quot; &gt;&gt; \&quot;$GITHUB_ENV\&quot;&quot;
+          &quot;snippet&quot;: &quot;echo \&quot;HEROKU_APP_NAME=${heroku_app_name:-YOUR_HEROKU_APP_NAME}\&quot; &gt;&gt; \&quot;$GITHUB_ENV\&quot;&quot;
         },
         {
           &quot;kind&quot;: &quot;ci&quot;,
           &quot;file&quot;: &quot;.github/workflows/deploy-katei-heroku.yml&quot;,
-          &quot;line&quot;: 56,
+          &quot;line&quot;: 59,
           &quot;scope&quot;: &quot;root&quot;,
           &quot;snippet&quot;: &quot;test -n \&quot;$HEROKU_APP_NAME\&quot; || { echo \&quot;Missing HEROKU_APP_NAME\&quot;; exit 1; }&quot;
         },
         {
           &quot;kind&quot;: &quot;ci&quot;,
           &quot;file&quot;: &quot;.github/workflows/deploy-katei-heroku.yml&quot;,
-          &quot;line&quot;: 58,
+          &quot;line&quot;: 60,
+          &quot;scope&quot;: &quot;root&quot;,
+          &quot;snippet&quot;: &quot;test \&quot;$HEROKU_APP_NAME\&quot; != \&quot;YOUR_HEROKU_APP_NAME\&quot; || { echo \&quot;Replace YOUR_HEROKU_APP_NAME with the real Heroku app slug\&quot;; exit 1; }&quot;
+        },
+        {
+          &quot;kind&quot;: &quot;ci&quot;,
+          &quot;file&quot;: &quot;.github/workflows/deploy-katei-heroku.yml&quot;,
+          &quot;line&quot;: 63,
           &quot;scope&quot;: &quot;root&quot;,
           &quot;snippet&quot;: &quot;echo \&quot;Deploying branch &#39;${GITHUB_REF_NAME}&#39; to app &#39;${HEROKU_APP_NAME}&#39;\&quot;&quot;
         },
         {
           &quot;kind&quot;: &quot;ci&quot;,
           &quot;file&quot;: &quot;.github/workflows/deploy-katei-heroku.yml&quot;,
-          &quot;line&quot;: 91,
+          &quot;line&quot;: 94,
           &quot;scope&quot;: &quot;root&quot;,
           &quot;snippet&quot;: &quot;git remote add heroku \&quot;https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\&quot;&quot;
         },
         {
           &quot;kind&quot;: &quot;ci&quot;,
           &quot;file&quot;: &quot;.github/workflows/deploy-katei-heroku.yml&quot;,
-          &quot;line&quot;: 106,
+          &quot;line&quot;: 107,
           &quot;scope&quot;: &quot;root&quot;,
           &quot;snippet&quot;: &quot;git remote add heroku \&quot;https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\&quot;&quot;
         }
@@ -839,7 +846,7 @@
   
     </main>
     
-    <script id="env-inventory-report-data" type="application/json">{"schemaVersion":"1.0","app":{"name":"katei","path":"apps/katei","outputPath":"apps/katei/doc/env-inventory.json"},"scan":{"config":{"path":".agents/env-inventory.config.json","exists":true},"roots":{"app":["apps/katei","apps/katei/doc","apps/katei/src","apps/katei/src/routes"],"package":[],"root":[".github/workflows"]},"ignoredGlobs":["**/.agents/**","**/.generated/**","**/.github/**","**/build/**","**/coverage/**","**/dist/**","**/doc/*.json","**/node_modules/**","**/public/**","**/src/public/**"]},"summary":{"totalVariables":4,"totalDefinitions":8,"totalUsages":10,"secretLikeCount":1,"publicLikeCount":0,"dynamicAccessCount":0},"variables":[{"name":"HEROKU_API_KEY","secretLike":true,"publicLike":false,"definitions":[{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":54,"scope":"root"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":87,"scope":"root"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":96,"scope":"root"},{"kind":"envFile","file":"apps/katei/.env.example","line":4,"scope":"app"}],"usages":[{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":57,"scope":"root","snippet":"test -n \"$HEROKU_API_KEY\" || { echo \"Missing HEROKU_API_KEY\"; exit 1; }"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":91,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":106,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""}]},{"name":"HEROKU_APP_NAME","secretLike":false,"publicLike":false,"definitions":[{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":50,"scope":"root"},{"kind":"envFile","file":"apps/katei/.env.example","line":3,"scope":"app"}],"usages":[{"kind":"default","file":".github/workflows/deploy-katei-heroku.yml","line":50,"scope":"root","snippet":"echo \"HEROKU_APP_NAME=${heroku_app_name:-katei}\" \u003e\u003e \"$GITHUB_ENV\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":56,"scope":"root","snippet":"test -n \"$HEROKU_APP_NAME\" || { echo \"Missing HEROKU_APP_NAME\"; exit 1; }"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":58,"scope":"root","snippet":"echo \"Deploying branch '${GITHUB_REF_NAME}' to app '${HEROKU_APP_NAME}'\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":91,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":106,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""}]},{"name":"NODE_ENV","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":1,"scope":"app"}],"usages":[{"kind":"default","file":"apps/katei/src/app.js","line":17,"scope":"app","snippet":"const nodeEnv = process.env.NODE_ENV || 'development';"}]},{"name":"PORT","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":2,"scope":"app"}],"usages":[{"kind":"default","file":"apps/katei/src/server.js","line":5,"scope":"app","snippet":"const port = Number(process.env.PORT) || 3000;"}]}],"dynamicAccesses":[],"scanWarnings":[]}</script>
+    <script id="env-inventory-report-data" type="application/json">{"schemaVersion":"1.0","app":{"name":"katei","path":"apps/katei","outputPath":"apps/katei/doc/env-inventory.json"},"scan":{"config":{"path":".agents/env-inventory.config.json","exists":true},"roots":{"app":["apps/katei","apps/katei/doc","apps/katei/src","apps/katei/src/routes"],"package":[],"root":[".github/workflows"]},"ignoredGlobs":["**/.agents/**","**/.generated/**","**/.github/**","**/build/**","**/coverage/**","**/dist/**","**/doc/*.json","**/node_modules/**","**/public/**","**/src/public/**"]},"summary":{"totalVariables":4,"totalDefinitions":6,"totalUsages":13,"secretLikeCount":1,"publicLikeCount":0,"dynamicAccessCount":0},"variables":[{"name":"HEROKU_API_KEY","secretLike":true,"publicLike":false,"definitions":[{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":55,"scope":"root"},{"kind":"envFile","file":"apps/katei/.env.example","line":4,"scope":"app"}],"usages":[{"kind":"default","file":".github/workflows/deploy-katei-heroku.yml","line":55,"scope":"root","snippet":"echo \"HEROKU_API_KEY=${heroku_api_key:-YOUR_HEROKU_API_KEY}\" \u003e\u003e \"$GITHUB_ENV\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":61,"scope":"root","snippet":"test -n \"$HEROKU_API_KEY\" || { echo \"Missing HEROKU_API_KEY\"; exit 1; }"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":62,"scope":"root","snippet":"test \"$HEROKU_API_KEY\" != \"YOUR_HEROKU_API_KEY\" || { echo \"Replace YOUR_HEROKU_API_KEY with a real Heroku API key\"; exit 1; }"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":94,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":107,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""}]},{"name":"HEROKU_APP_NAME","secretLike":false,"publicLike":false,"definitions":[{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":50,"scope":"root"},{"kind":"envFile","file":"apps/katei/.env.example","line":3,"scope":"app"}],"usages":[{"kind":"default","file":".github/workflows/deploy-katei-heroku.yml","line":50,"scope":"root","snippet":"echo \"HEROKU_APP_NAME=${heroku_app_name:-YOUR_HEROKU_APP_NAME}\" \u003e\u003e \"$GITHUB_ENV\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":59,"scope":"root","snippet":"test -n \"$HEROKU_APP_NAME\" || { echo \"Missing HEROKU_APP_NAME\"; exit 1; }"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":60,"scope":"root","snippet":"test \"$HEROKU_APP_NAME\" != \"YOUR_HEROKU_APP_NAME\" || { echo \"Replace YOUR_HEROKU_APP_NAME with the real Heroku app slug\"; exit 1; }"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":63,"scope":"root","snippet":"echo \"Deploying branch '${GITHUB_REF_NAME}' to app '${HEROKU_APP_NAME}'\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":94,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":107,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""}]},{"name":"NODE_ENV","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":1,"scope":"app"}],"usages":[{"kind":"default","file":"apps/katei/src/app.js","line":17,"scope":"app","snippet":"const nodeEnv = process.env.NODE_ENV || 'development';"}]},{"name":"PORT","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":2,"scope":"app"}],"usages":[{"kind":"default","file":"apps/katei/src/server.js","line":5,"scope":"app","snippet":"const port = Number(process.env.PORT) || 3000;"}]}],"dynamicAccesses":[],"scanWarnings":[]}</script>
     <script>
       (() => {
         const report = JSON.parse(document.getElementById("env-inventory-report-data").textContent);

@@ -47,14 +47,19 @@ jobs:
       - name: Select target app
         run: |
           heroku_app_name="${{ secrets.HEROKU_KATEI_APP_PROD }}"
-          echo "HEROKU_APP_NAME=${heroku_app_name:-katei}" >> "$GITHUB_ENV"
+          echo "HEROKU_APP_NAME=${heroku_app_name:-YOUR_HEROKU_APP_NAME}" >> "$GITHUB_ENV"
+
+      - name: Select deploy credentials
+        run: |
+          heroku_api_key="${{ secrets.HEROKU_API_KEY }}"
+          echo "HEROKU_API_KEY=${heroku_api_key:-YOUR_HEROKU_API_KEY}" >> "$GITHUB_ENV"
 
       - name: Validate deploy secrets
-        env:
-          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
         run: |
           test -n "$HEROKU_APP_NAME" || { echo "Missing HEROKU_APP_NAME"; exit 1; }
+          test "$HEROKU_APP_NAME" != "YOUR_HEROKU_APP_NAME" || { echo "Replace YOUR_HEROKU_APP_NAME with the real Heroku app slug or set HEROKY_KATEI_APP_PROD as a Github Repository secret"; exit 1; }
           test -n "$HEROKU_API_KEY" || { echo "Missing HEROKU_API_KEY"; exit 1; }
+          test "$HEROKU_API_KEY" != "YOUR_HEROKU_API_KEY" || { echo "Replace YOUR_HEROKU_API_KEY with a real Heroku API key as a Github Repository secret"; exit 1; }
           echo "Deploying branch '${GITHUB_REF_NAME}' to app '${HEROKU_APP_NAME}'"
 
       - name: Create temporary deploy commit
@@ -83,8 +88,6 @@ jobs:
           git archive ${{ steps.split.outputs.sha }} | tar -x -C deploy-katei
 
       - name: Verify Heroku git remote
-        env:
-          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
         run: |
           cd deploy-katei
           git init
@@ -92,8 +95,6 @@ jobs:
           git ls-remote heroku >/dev/null
 
       - name: Deploy to Heroku
-        env:
-          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
         run: |
           cd deploy-katei
           git init
