@@ -42,7 +42,15 @@ const ROOT_CONTEXT_CANDIDATES = [
 const ROOT_FILE_PATTERNS = [/^\.env/i, /^Dockerfile/i, /^docker-compose.*\.(yml|yaml)$/i];
 const DOC_EXTENSIONS = new Set([".md", ".mdx", ".txt", ".rst", ".adoc"]);
 const YAML_EXTENSIONS = new Set([".yml", ".yaml"]);
-const CI_BUILTIN_VARIABLES = new Set(["GITHUB_ENV", "GITHUB_SHA", "GITHUB_REF", "GITHUB_REF_NAME"]);
+const CI_BUILTIN_VARIABLES = new Set([
+  "GITHUB_ENV",
+  "GITHUB_OUTPUT",
+  "GITHUB_PATH",
+  "GITHUB_REF",
+  "GITHUB_REF_NAME",
+  "GITHUB_SHA",
+  "GITHUB_STATE",
+]);
 
 function toPosixPath(value) {
   return String(value || "").split(path.sep).join("/");

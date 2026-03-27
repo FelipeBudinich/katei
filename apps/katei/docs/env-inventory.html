@@ -65,22 +65,22 @@
         
       <article class="paper-panel env-inventory-status-card env-inventory-status-card--good">
         <div class="env-inventory-status-label">Variables</div>
-        <div class="env-inventory-status-value">5</div>
+        <div class="env-inventory-status-value">4</div>
       </article>
     
       <article class="paper-panel env-inventory-status-card env-inventory-status-card--good">
         <div class="env-inventory-status-label">Definitions</div>
-        <div class="env-inventory-status-value">4</div>
+        <div class="env-inventory-status-value">8</div>
       </article>
     
       <article class="paper-panel env-inventory-status-card env-inventory-status-card--good">
         <div class="env-inventory-status-label">Usages</div>
-        <div class="env-inventory-status-value">11</div>
+        <div class="env-inventory-status-value">9</div>
       </article>
     
       <article class="paper-panel env-inventory-status-card env-inventory-status-card--warning">
         <div class="env-inventory-status-label">Likely required</div>
-        <div class="env-inventory-status-value">4</div>
+        <div class="env-inventory-status-value">3</div>
       </article>
     
       <article class="paper-panel env-inventory-status-card env-inventory-status-card--good">
@@ -88,9 +88,9 @@
         <div class="env-inventory-status-value">1</div>
       </article>
     
-      <article class="paper-panel env-inventory-status-card env-inventory-status-card--warning">
+      <article class="paper-panel env-inventory-status-card env-inventory-status-card--good">
         <div class="env-inventory-status-label">Missing example/docs</div>
-        <div class="env-inventory-status-value">5</div>
+        <div class="env-inventory-status-value">0</div>
       </article>
     
       <article class="paper-panel env-inventory-status-card env-inventory-status-card--good">
@@ -129,52 +129,7 @@
         <h2 class="font-serif text-2xl text-strong">Coverage gaps</h2>
         <p class="text-sm leading-6 text-muted">Variables with usages but no observed <code class="env-inventory-inline-code">.env*</code> or docs/example definition.</p>
       </div>
-      
-          <div class="env-inventory-table-wrap">
-            <table class="env-inventory-table">
-              <thead>
-                <tr>
-                  <th scope="col">Variable</th>
-                  <th scope="col">Usages</th>
-                  <th scope="col">Example usage</th>
-                </tr>
-              </thead>
-              <tbody>
-                
-                  <tr data-gap-row="HEROKU_API_KEY">
-                    <td><code class="env-inventory-inline-code">HEROKU_API_KEY</code></td>
-                    <td>3</td>
-                    <td><code class="env-inventory-inline-code">.github/workflows/deploy-katei-heroku.yml:56</code></td>
-                  </tr>
-                
-                  <tr data-gap-row="HEROKU_APP_NAME">
-                    <td><code class="env-inventory-inline-code">HEROKU_APP_NAME</code></td>
-                    <td>4</td>
-                    <td><code class="env-inventory-inline-code">.github/workflows/deploy-katei-heroku.yml:55</code></td>
-                  </tr>
-                
-                  <tr data-gap-row="GITHUB_OUTPUT">
-                    <td><code class="env-inventory-inline-code">GITHUB_OUTPUT</code></td>
-                    <td>2</td>
-                    <td><code class="env-inventory-inline-code">.github/workflows/deploy-katei-heroku.yml:71</code></td>
-                  </tr>
-                
-                  <tr data-gap-row="NODE_ENV">
-                    <td><code class="env-inventory-inline-code">NODE_ENV</code></td>
-                    <td>1</td>
-                    <td><code class="env-inventory-inline-code">apps/katei/src/app.js:24</code></td>
-                  </tr>
-                
-                  <tr data-gap-row="PORT">
-                    <td><code class="env-inventory-inline-code">PORT</code></td>
-                    <td>1</td>
-                    <td><code class="env-inventory-inline-code">apps/katei/src/server.js:5</code></td>
-                  </tr>
-                
-              </tbody>
-            </table>
-          </div>
-        
+      <p class="text-sm leading-6 text-muted">No example or docs gaps detected from the current report.</p>
     </section>
   
       </div>
@@ -192,10 +147,10 @@
         <div class="env-inventory-variable-summary">
           <div class="env-inventory-variable-heading">
             <h3 class="font-serif text-2xl text-strong env-inventory-variable-name">HEROKU_API_KEY</h3>
-            <div class="env-inventory-chip-row mt-3"><span class="count-chip env-inventory-chip env-inventory-chip--warning">Likely required</span><span class="count-chip env-inventory-chip env-inventory-chip--problem">Secret-like</span><span class="count-chip env-inventory-chip env-inventory-chip--warning">Missing example/docs</span><span class="count-chip env-inventory-chip">Root</span></div>
+            <div class="env-inventory-chip-row mt-3"><span class="count-chip env-inventory-chip env-inventory-chip--warning">Likely required</span><span class="count-chip env-inventory-chip env-inventory-chip--problem">Secret-like</span><span class="count-chip env-inventory-chip">App</span><span class="count-chip env-inventory-chip">Root</span></div>
           </div>
           <div class="env-inventory-variable-counts">
-            <span class="count-chip env-inventory-chip"><strong>3</strong>&nbsp;defs</span>
+            <span class="count-chip env-inventory-chip"><strong>4</strong>&nbsp;defs</span>
             <span class="count-chip env-inventory-chip"><strong>3</strong>&nbsp;uses</span>
           </div>
         </div>
@@ -204,7 +159,7 @@
         <div class="env-inventory-variable-meta">
           <div class="space-y-2">
             <p class="field-label text-sm font-semibold">Definition kinds</p>
-            <p class="text-sm leading-6 text-muted">Ci</p>
+            <p class="text-sm leading-6 text-muted">Ci, EnvFile</p>
           </div>
           <div class="space-y-2">
             <p class="field-label text-sm font-semibold">Usage kinds</p>
@@ -243,6 +198,14 @@
           <div class="env-inventory-occurrence-top">
             <code class="env-inventory-inline-code">.github/workflows/deploy-katei-heroku.yml:95</code>
             <span class="text-sm leading-6 text-muted">Ci · Root</span>
+          </div>
+          
+        </li>
+      
+        <li class="env-inventory-occurrence-item">
+          <div class="env-inventory-occurrence-top">
+            <code class="env-inventory-inline-code">apps/katei/.env.example:4</code>
+            <span class="text-sm leading-6 text-muted">EnvFile · App</span>
           </div>
           
         </li>
@@ -293,10 +256,10 @@
         <div class="env-inventory-variable-summary">
           <div class="env-inventory-variable-heading">
             <h3 class="font-serif text-2xl text-strong env-inventory-variable-name">HEROKU_APP_NAME</h3>
-            <div class="env-inventory-chip-row mt-3"><span class="count-chip env-inventory-chip env-inventory-chip--warning">Likely required</span><span class="count-chip env-inventory-chip env-inventory-chip--warning">Missing example/docs</span><span class="count-chip env-inventory-chip">Root</span></div>
+            <div class="env-inventory-chip-row mt-3"><span class="count-chip env-inventory-chip env-inventory-chip--warning">Likely required</span><span class="count-chip env-inventory-chip">App</span><span class="count-chip env-inventory-chip">Root</span></div>
           </div>
           <div class="env-inventory-variable-counts">
-            <span class="count-chip env-inventory-chip"><strong>1</strong>&nbsp;defs</span>
+            <span class="count-chip env-inventory-chip"><strong>2</strong>&nbsp;defs</span>
             <span class="count-chip env-inventory-chip"><strong>4</strong>&nbsp;uses</span>
           </div>
         </div>
@@ -305,7 +268,7 @@
         <div class="env-inventory-variable-meta">
           <div class="space-y-2">
             <p class="field-label text-sm font-semibold">Definition kinds</p>
-            <p class="text-sm leading-6 text-muted">Ci</p>
+            <p class="text-sm leading-6 text-muted">Ci, EnvFile</p>
           </div>
           <div class="space-y-2">
             <p class="field-label text-sm font-semibold">Usage kinds</p>
@@ -328,6 +291,14 @@
           <div class="env-inventory-occurrence-top">
             <code class="env-inventory-inline-code">.github/workflows/deploy-katei-heroku.yml:49</code>
             <span class="text-sm leading-6 text-muted">Ci · Root</span>
+          </div>
+          
+        </li>
+      
+        <li class="env-inventory-occurrence-item">
+          <div class="env-inventory-occurrence-top">
+            <code class="env-inventory-inline-code">apps/katei/.env.example:3</code>
+            <span class="text-sm leading-6 text-muted">EnvFile · App</span>
           </div>
           
         </li>
@@ -381,80 +352,15 @@
       </div>
     </details>
   
-    <details class="paper-panel env-inventory-variable-card" data-env-variable-card="GITHUB_OUTPUT" data-variable-status="required">
-      <summary>
-        <div class="env-inventory-variable-summary">
-          <div class="env-inventory-variable-heading">
-            <h3 class="font-serif text-2xl text-strong env-inventory-variable-name">GITHUB_OUTPUT</h3>
-            <div class="env-inventory-chip-row mt-3"><span class="count-chip env-inventory-chip env-inventory-chip--warning">Likely required</span><span class="count-chip env-inventory-chip env-inventory-chip--warning">Missing example/docs</span><span class="count-chip env-inventory-chip">Root</span></div>
-          </div>
-          <div class="env-inventory-variable-counts">
-            <span class="count-chip env-inventory-chip"><strong>0</strong>&nbsp;defs</span>
-            <span class="count-chip env-inventory-chip"><strong>2</strong>&nbsp;uses</span>
-          </div>
-        </div>
-      </summary>
-      <div class="env-inventory-variable-body">
-        <div class="env-inventory-variable-meta">
-          <div class="space-y-2">
-            <p class="field-label text-sm font-semibold">Definition kinds</p>
-            <p class="text-sm leading-6 text-muted">None</p>
-          </div>
-          <div class="space-y-2">
-            <p class="field-label text-sm font-semibold">Usage kinds</p>
-            <p class="text-sm leading-6 text-muted">Ci</p>
-          </div>
-          <div class="space-y-2">
-            <p class="field-label text-sm font-semibold">Primary usage</p>
-            <div><code class="env-inventory-inline-code">.github/workflows/deploy-katei-heroku.yml:71</code></div>
-          </div>
-        </div>
-        <div class="env-inventory-split-grid">
-          <section>
-            <div class="env-inventory-section-header">
-              <h4 class="font-serif text-2xl text-strong">Definitions</h4>
-            </div>
-            <p class="text-sm leading-6 text-muted">None recorded.</p>
-          </section>
-          <section>
-            <div class="env-inventory-section-header">
-              <h4 class="font-serif text-2xl text-strong">Usages</h4>
-            </div>
-            
-    <ul class="env-inventory-occurrence-list">
-      
-        <li class="env-inventory-occurrence-item">
-          <div class="env-inventory-occurrence-top">
-            <code class="env-inventory-inline-code">.github/workflows/deploy-katei-heroku.yml:71</code>
-            <span class="text-sm leading-6 text-muted">Ci · Root</span>
-          </div>
-          <div class="env-inventory-snippet"><code class="env-inventory-inline-code">echo &quot;ref=$(git rev-parse HEAD)&quot; &gt;&gt; &quot;$GITHUB_OUTPUT&quot;</code></div>
-        </li>
-      
-        <li class="env-inventory-occurrence-item">
-          <div class="env-inventory-occurrence-top">
-            <code class="env-inventory-inline-code">.github/workflows/deploy-katei-heroku.yml:76</code>
-            <span class="text-sm leading-6 text-muted">Ci · Root</span>
-          </div>
-          <div class="env-inventory-snippet"><code class="env-inventory-inline-code">echo &quot;sha=$(git subtree split --prefix=apps/katei ${{ steps.prep.outputs.ref }})&quot; &gt;&gt; &quot;$GITHUB_OUTPUT&quot;</code></div>
-        </li>
-      
-    </ul>
-  
-          </section>
-        </div>
-      </div>
-    </details>
-  
     <details class="paper-panel env-inventory-variable-card" data-env-variable-card="NODE_ENV" data-variable-status="required">
       <summary>
         <div class="env-inventory-variable-summary">
           <div class="env-inventory-variable-heading">
             <h3 class="font-serif text-2xl text-strong env-inventory-variable-name">NODE_ENV</h3>
-            <div class="env-inventory-chip-row mt-3"><span class="count-chip env-inventory-chip env-inventory-chip--warning">Likely required</span><span class="count-chip env-inventory-chip env-inventory-chip--warning">Missing example/docs</span><span class="count-chip env-inventory-chip">App</span></div>
+            <div class="env-inventory-chip-row mt-3"><span class="count-chip env-inventory-chip env-inventory-chip--warning">Likely required</span><span class="count-chip env-inventory-chip">App</span></div>
           </div>
           <div class="env-inventory-variable-counts">
-            <span class="count-chip env-inventory-chip"><strong>0</strong>&nbsp;defs</span>
+            <span class="count-chip env-inventory-chip"><strong>1</strong>&nbsp;defs</span>
             <span class="count-chip env-inventory-chip"><strong>1</strong>&nbsp;uses</span>
           </div>
         </div>
@@ -463,7 +369,7 @@
         <div class="env-inventory-variable-meta">
           <div class="space-y-2">
             <p class="field-label text-sm font-semibold">Definition kinds</p>
-            <p class="text-sm leading-6 text-muted">None</p>
+            <p class="text-sm leading-6 text-muted">EnvFile</p>
           </div>
           <div class="space-y-2">
             <p class="field-label text-sm font-semibold">Usage kinds</p>
@@ -479,7 +385,19 @@
             <div class="env-inventory-section-header">
               <h4 class="font-serif text-2xl text-strong">Definitions</h4>
             </div>
-            <p class="text-sm leading-6 text-muted">None recorded.</p>
+            
+    <ul class="env-inventory-occurrence-list">
+      
+        <li class="env-inventory-occurrence-item">
+          <div class="env-inventory-occurrence-top">
+            <code class="env-inventory-inline-code">apps/katei/.env.example:1</code>
+            <span class="text-sm leading-6 text-muted">EnvFile · App</span>
+          </div>
+          
+        </li>
+      
+    </ul>
+  
           </section>
           <section>
             <div class="env-inventory-section-header">
@@ -519,10 +437,10 @@
         <div class="env-inventory-variable-summary">
           <div class="env-inventory-variable-heading">
             <h3 class="font-serif text-2xl text-strong env-inventory-variable-name">PORT</h3>
-            <div class="env-inventory-chip-row mt-3"><span class="count-chip env-inventory-chip env-inventory-chip--good">Fallback observed</span><span class="count-chip env-inventory-chip env-inventory-chip--warning">Missing example/docs</span><span class="count-chip env-inventory-chip">App</span></div>
+            <div class="env-inventory-chip-row mt-3"><span class="count-chip env-inventory-chip env-inventory-chip--good">Fallback observed</span><span class="count-chip env-inventory-chip">App</span></div>
           </div>
           <div class="env-inventory-variable-counts">
-            <span class="count-chip env-inventory-chip"><strong>0</strong>&nbsp;defs</span>
+            <span class="count-chip env-inventory-chip"><strong>1</strong>&nbsp;defs</span>
             <span class="count-chip env-inventory-chip"><strong>1</strong>&nbsp;uses</span>
           </div>
         </div>
@@ -531,7 +449,7 @@
         <div class="env-inventory-variable-meta">
           <div class="space-y-2">
             <p class="field-label text-sm font-semibold">Definition kinds</p>
-            <p class="text-sm leading-6 text-muted">None</p>
+            <p class="text-sm leading-6 text-muted">EnvFile</p>
           </div>
           <div class="space-y-2">
             <p class="field-label text-sm font-semibold">Usage kinds</p>
@@ -547,7 +465,19 @@
             <div class="env-inventory-section-header">
               <h4 class="font-serif text-2xl text-strong">Definitions</h4>
             </div>
-            <p class="text-sm leading-6 text-muted">None recorded.</p>
+            
+    <ul class="env-inventory-occurrence-list">
+      
+        <li class="env-inventory-occurrence-item">
+          <div class="env-inventory-occurrence-top">
+            <code class="env-inventory-inline-code">apps/katei/.env.example:2</code>
+            <span class="text-sm leading-6 text-muted">EnvFile · App</span>
+          </div>
+          
+        </li>
+      
+    </ul>
+  
           </section>
           <section>
             <div class="env-inventory-section-header">
@@ -632,36 +562,27 @@
           <tbody id="variable-table-body">
             
                 <tr>
-                  <td><code class="env-inventory-inline-code">GITHUB_OUTPUT</code></td>
-                  <td>Likely required</td>
-                  <td>0</td>
-                  <td>2</td>
-                  <td>root</td>
-                  <td><code class="env-inventory-inline-code">.github/workflows/deploy-katei-heroku.yml:71</code></td>
-                </tr>
-              
-                <tr>
                   <td><code class="env-inventory-inline-code">HEROKU_API_KEY</code></td>
                   <td>Likely required</td>
+                  <td>4</td>
                   <td>3</td>
-                  <td>3</td>
-                  <td>root</td>
+                  <td>app, root</td>
                   <td><code class="env-inventory-inline-code">.github/workflows/deploy-katei-heroku.yml:56</code></td>
                 </tr>
               
                 <tr>
                   <td><code class="env-inventory-inline-code">HEROKU_APP_NAME</code></td>
                   <td>Likely required</td>
-                  <td>1</td>
+                  <td>2</td>
                   <td>4</td>
-                  <td>root</td>
+                  <td>app, root</td>
                   <td><code class="env-inventory-inline-code">.github/workflows/deploy-katei-heroku.yml:55</code></td>
                 </tr>
               
                 <tr>
                   <td><code class="env-inventory-inline-code">NODE_ENV</code></td>
                   <td>Likely required</td>
-                  <td>0</td>
+                  <td>1</td>
                   <td>1</td>
                   <td>app</td>
                   <td><code class="env-inventory-inline-code">apps/katei/src/app.js:24</code></td>
@@ -670,7 +591,7 @@
                 <tr>
                   <td><code class="env-inventory-inline-code">PORT</code></td>
                   <td>Fallback observed</td>
-                  <td>0</td>
+                  <td>1</td>
                   <td>1</td>
                   <td>app</td>
                   <td><code class="env-inventory-inline-code">apps/katei/src/server.js:5</code></td>
@@ -748,36 +669,14 @@
     ]
   },
   &quot;summary&quot;: {
-    &quot;totalVariables&quot;: 5,
-    &quot;totalDefinitions&quot;: 4,
-    &quot;totalUsages&quot;: 11,
+    &quot;totalVariables&quot;: 4,
+    &quot;totalDefinitions&quot;: 8,
+    &quot;totalUsages&quot;: 9,
     &quot;secretLikeCount&quot;: 1,
     &quot;publicLikeCount&quot;: 0,
     &quot;dynamicAccessCount&quot;: 0
   },
   &quot;variables&quot;: [
-    {
-      &quot;name&quot;: &quot;GITHUB_OUTPUT&quot;,
-      &quot;secretLike&quot;: false,
-      &quot;publicLike&quot;: false,
-      &quot;definitions&quot;: [],
-      &quot;usages&quot;: [
-        {
-          &quot;kind&quot;: &quot;ci&quot;,
-          &quot;file&quot;: &quot;.github/workflows/deploy-katei-heroku.yml&quot;,
-          &quot;line&quot;: 71,
-          &quot;scope&quot;: &quot;root&quot;,
-          &quot;snippet&quot;: &quot;echo \&quot;ref=$(git rev-parse HEAD)\&quot; &gt;&gt; \&quot;$GITHUB_OUTPUT\&quot;&quot;
-        },
-        {
-          &quot;kind&quot;: &quot;ci&quot;,
-          &quot;file&quot;: &quot;.github/workflows/deploy-katei-heroku.yml&quot;,
-          &quot;line&quot;: 76,
-          &quot;scope&quot;: &quot;root&quot;,
-          &quot;snippet&quot;: &quot;echo \&quot;sha=$(git subtree split --prefix=apps/katei ${{ steps.prep.outputs.ref }})\&quot; &gt;&gt; \&quot;$GITHUB_OUTPUT\&quot;&quot;
-        }
-      ]
-    },
     {
       &quot;name&quot;: &quot;HEROKU_API_KEY&quot;,
       &quot;secretLike&quot;: true,
@@ -800,6 +699,12 @@
           &quot;file&quot;: &quot;.github/workflows/deploy-katei-heroku.yml&quot;,
           &quot;line&quot;: 95,
           &quot;scope&quot;: &quot;root&quot;
+        },
+        {
+          &quot;kind&quot;: &quot;envFile&quot;,
+          &quot;file&quot;: &quot;apps/katei/.env.example&quot;,
+          &quot;line&quot;: 4,
+          &quot;scope&quot;: &quot;app&quot;
         }
       ],
       &quot;usages&quot;: [
@@ -836,6 +741,12 @@
           &quot;file&quot;: &quot;.github/workflows/deploy-katei-heroku.yml&quot;,
           &quot;line&quot;: 49,
           &quot;scope&quot;: &quot;root&quot;
+        },
+        {
+          &quot;kind&quot;: &quot;envFile&quot;,
+          &quot;file&quot;: &quot;apps/katei/.env.example&quot;,
+          &quot;line&quot;: 3,
+          &quot;scope&quot;: &quot;app&quot;
         }
       ],
       &quot;usages&quot;: [
@@ -873,7 +784,14 @@
       &quot;name&quot;: &quot;NODE_ENV&quot;,
       &quot;secretLike&quot;: false,
       &quot;publicLike&quot;: false,
-      &quot;definitions&quot;: [],
+      &quot;definitions&quot;: [
+        {
+          &quot;kind&quot;: &quot;envFile&quot;,
+          &quot;file&quot;: &quot;apps/katei/.env.example&quot;,
+          &quot;line&quot;: 1,
+          &quot;scope&quot;: &quot;app&quot;
+        }
+      ],
       &quot;usages&quot;: [
         {
           &quot;kind&quot;: &quot;read&quot;,
@@ -888,7 +806,14 @@
       &quot;name&quot;: &quot;PORT&quot;,
       &quot;secretLike&quot;: false,
       &quot;publicLike&quot;: false,
-      &quot;definitions&quot;: [],
+      &quot;definitions&quot;: [
+        {
+          &quot;kind&quot;: &quot;envFile&quot;,
+          &quot;file&quot;: &quot;apps/katei/.env.example&quot;,
+          &quot;line&quot;: 2,
+          &quot;scope&quot;: &quot;app&quot;
+        }
+      ],
       &quot;usages&quot;: [
         {
           &quot;kind&quot;: &quot;default&quot;,
@@ -908,7 +833,7 @@
   
     </main>
     
-    <script id="env-inventory-report-data" type="application/json">{"schemaVersion":"1.0","app":{"name":"katei","path":"apps/katei","outputPath":"apps/katei/doc/env-inventory.json"},"scan":{"config":{"path":".agents/env-inventory.config.json","exists":true},"roots":{"app":["apps/katei","apps/katei/doc","apps/katei/src","apps/katei/src/routes"],"package":[],"root":[".github/workflows"]},"ignoredGlobs":["**/.agents/**","**/.generated/**","**/.github/**","**/build/**","**/coverage/**","**/dist/**","**/doc/*.json","**/node_modules/**","**/public/**","**/src/public/**"]},"summary":{"totalVariables":5,"totalDefinitions":4,"totalUsages":11,"secretLikeCount":1,"publicLikeCount":0,"dynamicAccessCount":0},"variables":[{"name":"GITHUB_OUTPUT","secretLike":false,"publicLike":false,"definitions":[],"usages":[{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":71,"scope":"root","snippet":"echo \"ref=$(git rev-parse HEAD)\" \u003e\u003e \"$GITHUB_OUTPUT\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":76,"scope":"root","snippet":"echo \"sha=$(git subtree split --prefix=apps/katei ${{ steps.prep.outputs.ref }})\" \u003e\u003e \"$GITHUB_OUTPUT\""}]},{"name":"HEROKU_API_KEY","secretLike":true,"publicLike":false,"definitions":[{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":53,"scope":"root"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":86,"scope":"root"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":95,"scope":"root"}],"usages":[{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":56,"scope":"root","snippet":"test -n \"$HEROKU_API_KEY\" || { echo \"Missing HEROKU_API_KEY\"; exit 1; }"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":90,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":105,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""}]},{"name":"HEROKU_APP_NAME","secretLike":false,"publicLike":false,"definitions":[{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":49,"scope":"root"}],"usages":[{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":55,"scope":"root","snippet":"test -n \"$HEROKU_APP_NAME\" || { echo \"Missing HEROKU_APP_NAME\"; exit 1; }"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":57,"scope":"root","snippet":"echo \"Deploying branch '${GITHUB_REF_NAME}' to app '${HEROKU_APP_NAME}'\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":90,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":105,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""}]},{"name":"NODE_ENV","secretLike":false,"publicLike":false,"definitions":[],"usages":[{"kind":"read","file":"apps/katei/src/app.js","line":24,"scope":"app","snippet":"noCache: process.env.NODE_ENV !== 'production'"}]},{"name":"PORT","secretLike":false,"publicLike":false,"definitions":[],"usages":[{"kind":"default","file":"apps/katei/src/server.js","line":5,"scope":"app","snippet":"const port = Number(process.env.PORT) || 3000;"}]}],"dynamicAccesses":[],"scanWarnings":[]}</script>
+    <script id="env-inventory-report-data" type="application/json">{"schemaVersion":"1.0","app":{"name":"katei","path":"apps/katei","outputPath":"apps/katei/doc/env-inventory.json"},"scan":{"config":{"path":".agents/env-inventory.config.json","exists":true},"roots":{"app":["apps/katei","apps/katei/doc","apps/katei/src","apps/katei/src/routes"],"package":[],"root":[".github/workflows"]},"ignoredGlobs":["**/.agents/**","**/.generated/**","**/.github/**","**/build/**","**/coverage/**","**/dist/**","**/doc/*.json","**/node_modules/**","**/public/**","**/src/public/**"]},"summary":{"totalVariables":4,"totalDefinitions":8,"totalUsages":9,"secretLikeCount":1,"publicLikeCount":0,"dynamicAccessCount":0},"variables":[{"name":"HEROKU_API_KEY","secretLike":true,"publicLike":false,"definitions":[{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":53,"scope":"root"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":86,"scope":"root"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":95,"scope":"root"},{"kind":"envFile","file":"apps/katei/.env.example","line":4,"scope":"app"}],"usages":[{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":56,"scope":"root","snippet":"test -n \"$HEROKU_API_KEY\" || { echo \"Missing HEROKU_API_KEY\"; exit 1; }"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":90,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":105,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""}]},{"name":"HEROKU_APP_NAME","secretLike":false,"publicLike":false,"definitions":[{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":49,"scope":"root"},{"kind":"envFile","file":"apps/katei/.env.example","line":3,"scope":"app"}],"usages":[{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":55,"scope":"root","snippet":"test -n \"$HEROKU_APP_NAME\" || { echo \"Missing HEROKU_APP_NAME\"; exit 1; }"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":57,"scope":"root","snippet":"echo \"Deploying branch '${GITHUB_REF_NAME}' to app '${HEROKU_APP_NAME}'\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":90,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":105,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""}]},{"name":"NODE_ENV","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":1,"scope":"app"}],"usages":[{"kind":"read","file":"apps/katei/src/app.js","line":24,"scope":"app","snippet":"noCache: process.env.NODE_ENV !== 'production'"}]},{"name":"PORT","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":2,"scope":"app"}],"usages":[{"kind":"default","file":"apps/katei/src/server.js","line":5,"scope":"app","snippet":"const port = Number(process.env.PORT) || 3000;"}]}],"dynamicAccesses":[],"scanWarnings":[]}</script>
     <script>
       (() => {
         const report = JSON.parse(document.getElementById("env-inventory-report-data").textContent);

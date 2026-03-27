@@ -36,36 +36,14 @@
     ]
   },
   "summary": {
-    "totalVariables": 5,
-    "totalDefinitions": 4,
-    "totalUsages": 11,
+    "totalVariables": 4,
+    "totalDefinitions": 8,
+    "totalUsages": 9,
     "secretLikeCount": 1,
     "publicLikeCount": 0,
     "dynamicAccessCount": 0
   },
   "variables": [
-    {
-      "name": "GITHUB_OUTPUT",
-      "secretLike": false,
-      "publicLike": false,
-      "definitions": [],
-      "usages": [
-        {
-          "kind": "ci",
-          "file": ".github/workflows/deploy-katei-heroku.yml",
-          "line": 71,
-          "scope": "root",
-          "snippet": "echo \"ref=$(git rev-parse HEAD)\" >> \"$GITHUB_OUTPUT\""
-        },
-        {
-          "kind": "ci",
-          "file": ".github/workflows/deploy-katei-heroku.yml",
-          "line": 76,
-          "scope": "root",
-          "snippet": "echo \"sha=$(git subtree split --prefix=apps/katei ${{ steps.prep.outputs.ref }})\" >> \"$GITHUB_OUTPUT\""
-        }
-      ]
-    },
     {
       "name": "HEROKU_API_KEY",
       "secretLike": true,
@@ -88,6 +66,12 @@
           "file": ".github/workflows/deploy-katei-heroku.yml",
           "line": 95,
           "scope": "root"
+        },
+        {
+          "kind": "envFile",
+          "file": "apps/katei/.env.example",
+          "line": 4,
+          "scope": "app"
         }
       ],
       "usages": [
@@ -124,6 +108,12 @@
           "file": ".github/workflows/deploy-katei-heroku.yml",
           "line": 49,
           "scope": "root"
+        },
+        {
+          "kind": "envFile",
+          "file": "apps/katei/.env.example",
+          "line": 3,
+          "scope": "app"
         }
       ],
       "usages": [
@@ -161,7 +151,14 @@
       "name": "NODE_ENV",
       "secretLike": false,
       "publicLike": false,
-      "definitions": [],
+      "definitions": [
+        {
+          "kind": "envFile",
+          "file": "apps/katei/.env.example",
+          "line": 1,
+          "scope": "app"
+        }
+      ],
       "usages": [
         {
           "kind": "read",
@@ -176,7 +173,14 @@
       "name": "PORT",
       "secretLike": false,
       "publicLike": false,
-      "definitions": [],
+      "definitions": [
+        {
+          "kind": "envFile",
+          "file": "apps/katei/.env.example",
+          "line": 2,
+          "scope": "app"
+        }
+      ],
       "usages": [
         {
           "kind": "default",

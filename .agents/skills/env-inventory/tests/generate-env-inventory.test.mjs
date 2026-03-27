@@ -88,6 +88,9 @@ test("generateEnvInventory reports app-local, shared-package, grounded root, def
   assert.ok(report.variables.some((entry) => entry.name === "APP_A_RUNTIME_SECRET" && entry.usages.some((usage) => usage.kind === "validation")));
   assert.ok(report.dynamicAccesses.some((entry) => entry.file === "apps/app-a/src/config/env.js"));
   assert.equal(report.variables.some((entry) => entry.name === "UNGROUNDED_ROOT"), false);
+  assert.equal(report.variables.some((entry) => entry.name === "GITHUB_OUTPUT"), false);
+  assert.equal(report.variables.some((entry) => entry.name === "GITHUB_PATH"), false);
+  assert.equal(report.variables.some((entry) => entry.name === "GITHUB_STATE"), false);
 
   const serialized = JSON.stringify(report);
   assert.equal(serialized.includes("replace-me"), false);
