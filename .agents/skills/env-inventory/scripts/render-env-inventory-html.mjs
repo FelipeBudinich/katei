@@ -692,7 +692,6 @@ export function renderEnvInventoryHtml(report, { htmlOutputPath = "" } = {}) {
         </div>
         <div class="env-inventory-actions">
           <a class="touch-button-secondary" href="/">Back to board</a>
-          <a class="touch-button-secondary" href="#variable-explorer">Jump to explorer</a>
         </div>
       </header>
 
