@@ -82,13 +82,14 @@ test("generateEnvInventory reports app-local, shared-package, grounded root, def
 
   assert.equal(report.app.outputPath, "apps/app-a/doc/env-inventory.json");
   assert.ok(report.variables.some((entry) => entry.name === "APP_A_TOKEN" && entry.definitions.some((definition) => definition.kind === "envFile")));
-  assert.ok(report.variables.some((entry) => entry.name === "APP_A_TOKEN" && entry.definitions.some((definition) => definition.snippet === "APP_A_TOKEN=<redacted>")));
+  assert.ok(report.variables.some((entry) => entry.name === "APP_A_TOKEN" && entry.definitions.some((definition) => definition.snippet === "APP_A_TOKEN=replace-me" && definition.comment === "# Example token for local docs")));
+  assert.ok(report.variables.some((entry) => entry.name === "PUBLIC_FLAG" && entry.definitions.some((definition) => definition.snippet === "PUBLIC_FLAG=1" && definition.comment === "# Immediate public flag note")));
+  assert.equal(report.variables.every((entry) => entry.definitions.every((definition) => definition.file.endsWith(".env.example"))), true);
   assert.ok(report.variables.some((entry) => entry.name === "SHARED_TOKEN" && entry.usages.some((usage) => usage.scope === "package")));
-  assert.ok(report.variables.some((entry) => entry.name === "APP_A_RUNTIME_SECRET" && entry.definitions.some((definition) => definition.kind === "ci")));
-  assert.ok(report.variables.some((entry) => entry.name === "APP_A_DEPLOY_NAME" && entry.definitions.some((definition) => definition.kind === "ci")));
-  assert.ok(report.variables.some((entry) => entry.name === "APP_A_DEPLOY_NAME" && entry.definitions.some((definition) => definition.snippet === "echo \"APP_A_DEPLOY_NAME=<redacted>\" >> \"$GITHUB_ENV\"")));
+  assert.ok(report.variables.some((entry) => entry.name === "APP_A_RUNTIME_SECRET" && entry.definitions.length === 0));
+  assert.ok(report.variables.some((entry) => entry.name === "APP_A_DEPLOY_NAME" && entry.definitions.length === 0));
   assert.ok(report.variables.some((entry) => entry.name === "APP_A_DEPLOY_NAME" && entry.usages.some((usage) => usage.kind === "default")));
-  assert.ok(report.variables.some((entry) => entry.name === "COMPOSE_ONLY" && entry.definitions.some((definition) => definition.kind === "compose")));
+  assert.ok(report.variables.some((entry) => entry.name === "COMPOSE_ONLY" && entry.definitions.length === 0));
   assert.ok(report.variables.some((entry) => entry.name === "APP_A_RUNTIME_SECRET" && entry.usages.some((usage) => usage.kind === "validation")));
   assert.ok(report.dynamicAccesses.some((entry) => entry.file === "apps/app-a/src/config/env.js"));
   assert.equal(report.variables.some((entry) => entry.name === "UNGROUNDED_ROOT"), false);
@@ -97,7 +98,9 @@ test("generateEnvInventory reports app-local, shared-package, grounded root, def
   assert.equal(report.variables.some((entry) => entry.name === "GITHUB_STATE"), false);
 
   const serialized = JSON.stringify(report);
-  assert.equal(serialized.includes("replace-me"), false);
+  assert.equal(serialized.includes("APP_A_TOKEN=replace-me"), true);
+  assert.equal(serialized.includes("# Example token for local docs"), true);
+  assert.equal(serialized.includes("# Public flag note that should not be used"), false);
 });
 
 test("generateEnvInventory keeps shared and rooted variables out of non-consuming apps unless grounded or app-scoped", async () => {

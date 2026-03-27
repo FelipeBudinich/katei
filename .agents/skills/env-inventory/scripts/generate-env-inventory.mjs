@@ -729,42 +729,20 @@ function snippetForLine(line) {
   return String(line || "").trim().slice(0, 240);
 }
 
-function definitionSnippetForLine(line, variableName) {
-  const snippet = snippetForLine(line);
-  const escapedName = escapeRegExp(variableName);
-  const redact = (prefix, value = "") => `${prefix}${String(value).trim() ? "<redacted>" : ""}`;
+function rawSnippetForLine(line) {
+  return String(line || "").slice(0, 240);
+}
 
-  let match = snippet.match(new RegExp(`^(\\s*(?:export\\s+)?${escapedName}\\s*=)(.*)$`));
-  if (match) {
-    return redact(match[1], match[2]);
-  }
+function fileBaseName(value) {
+  return normalizePath(value).split("/").pop() || "";
+}
 
-  match = snippet.match(new RegExp(`^(\\s*-\\s*${escapedName}\\s*=)(.*)$`));
-  if (match) {
-    return redact(match[1], match[2]);
-  }
+function isEnvExamplePath(value) {
+  return fileBaseName(value) === ".env.example";
+}
 
-  match = snippet.match(new RegExp(`^(\\s*${escapedName}\\s*:\\s*)(.*)$`));
-  if (match) {
-    return redact(match[1], match[2]);
-  }
-
-  match = snippet.match(new RegExp(`^(\\s*ARG\\s+${escapedName}\\s*=)(.*)$`, "i"));
-  if (match) {
-    return redact(match[1], match[2]);
-  }
-
-  match = snippet.match(new RegExp(`^(\\s*ENV\\s+${escapedName}\\s*=)(.*)$`, "i"));
-  if (match) {
-    return redact(match[1], match[2]);
-  }
-
-  match = snippet.match(new RegExp(`^(\\s*ENV\\s+${escapedName}\\s+)(.*)$`, "i"));
-  if (match) {
-    return redact(match[1], match[2]);
-  }
-
-  return snippet.replace(new RegExp(`(${escapedName}=)([^"\\s]+)`), (_, prefix, value) => redact(prefix, value));
+function isEnvExampleDefinition(entry) {
+  return entry?.kind === "envFile" && isEnvExamplePath(entry.file);
 }
 
 function shouldTrackVariableName(name) {
@@ -818,17 +796,22 @@ function addDynamic(targetList, entry) {
 
 function scanEnvFile(relativePath, content, scope, definitions) {
   const lines = content.split(/\r?\n/);
+  if (!isEnvExamplePath(relativePath)) {
+    return;
+  }
   lines.forEach((line, index) => {
     const match = line.match(/^\s*(?:export\s+)?([A-Z][A-Z0-9_]+)\s*=/);
     if (!match) {
       return;
     }
+    const previousLine = index > 0 ? lines[index - 1] : "";
     addDefinition(definitions, match[1], {
       kind: "envFile",
       file: normalizePath(relativePath),
       line: index + 1,
       scope,
-      snippet: definitionSnippetForLine(line, match[1]),
+      snippet: rawSnippetForLine(line),
+      comment: /^\s*#/.test(previousLine) ? rawSnippetForLine(previousLine) : "",
     });
   });
 }
@@ -926,7 +909,6 @@ function scanYamlLikeFile(relativePath, content, scope, fileKind, definitions, u
           file: normalizePath(relativePath),
           line: index + 1,
           scope,
-          snippet: definitionSnippetForLine(line, match[1]),
         });
       }
       match = line.match(/^\s*-\s*([A-Z][A-Z0-9_]+)\s*=/);
@@ -936,7 +918,6 @@ function scanYamlLikeFile(relativePath, content, scope, fileKind, definitions, u
           file: normalizePath(relativePath),
           line: index + 1,
           scope,
-          snippet: definitionSnippetForLine(line, match[1]),
         });
       }
     }
@@ -952,7 +933,6 @@ function scanYamlLikeFile(relativePath, content, scope, fileKind, definitions, u
           file: normalizePath(relativePath),
           line: index + 1,
           scope,
-          snippet: definitionSnippetForLine(line, variableName),
         });
         if (hasShellDefaultFallback(assignedValue)) {
           addUsage(usages, variableName, {
@@ -1019,7 +999,6 @@ function scanDockerFile(relativePath, content, scope, definitions, usages) {
         file: normalizePath(relativePath),
         line: index + 1,
         scope,
-        snippet: definitionSnippetForLine(line, match[1]),
       });
     }
     const envPattern = /^\s*ENV\s+([A-Z][A-Z0-9_]+)(?:=|\s+)/i;
@@ -1030,7 +1009,6 @@ function scanDockerFile(relativePath, content, scope, definitions, usages) {
         file: normalizePath(relativePath),
         line: index + 1,
         scope,
-        snippet: definitionSnippetForLine(line, match[1]),
       });
     }
     const refPattern = /\$\{([A-Z][A-Z0-9_]+)\}/g;
@@ -1279,7 +1257,7 @@ function serializeOccurrences(entries, includeSnippet = false) {
 function buildReport({ app, configMeta, candidateFiles, definitions, usages, dynamicAccesses, scanWarnings }) {
   const variableNames = sortUnique([...definitions.keys(), ...usages.keys()]);
   const variables = variableNames.map((name) => {
-    const definitionEntries = Array.from(definitions.get(name)?.values() || []);
+    const definitionEntries = Array.from(definitions.get(name)?.values() || []).filter(isEnvExampleDefinition);
     const usageEntries = Array.from(usages.get(name)?.values() || []);
     return {
       name,

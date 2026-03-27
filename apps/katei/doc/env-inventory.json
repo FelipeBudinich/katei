@@ -37,7 +37,7 @@
   },
   "summary": {
     "totalVariables": 4,
-    "totalDefinitions": 6,
+    "totalDefinitions": 4,
     "totalUsages": 13,
     "secretLikeCount": 1,
     "publicLikeCount": 0,
@@ -50,18 +50,12 @@
       "publicLike": false,
       "definitions": [
         {
-          "kind": "ci",
-          "file": ".github/workflows/deploy-katei-heroku.yml",
-          "line": 55,
-          "scope": "root",
-          "snippet": "echo \"HEROKU_API_KEY=<redacted>\" >> \"$GITHUB_ENV\""
-        },
-        {
           "kind": "envFile",
           "file": "apps/katei/.env.example",
           "line": 11,
           "scope": "app",
-          "snippet": "HEROKU_API_KEY=<redacted>"
+          "snippet": "HEROKU_API_KEY=YOUR_HEROKU_API_KEY",
+          "comment": "# Replace YOUR_HEROKU_API_KEY with a real Heroku API key as a Github Repository secret"
         }
       ],
       "usages": [
@@ -108,18 +102,12 @@
       "publicLike": false,
       "definitions": [
         {
-          "kind": "ci",
-          "file": ".github/workflows/deploy-katei-heroku.yml",
-          "line": 50,
-          "scope": "root",
-          "snippet": "echo \"HEROKU_APP_NAME=<redacted>\" >> \"$GITHUB_ENV\""
-        },
-        {
           "kind": "envFile",
           "file": "apps/katei/.env.example",
           "line": 8,
           "scope": "app",
-          "snippet": "HEROKU_APP_NAME=<redacted>"
+          "snippet": "HEROKU_APP_NAME=HEROKY_KATEI_APP_PROD",
+          "comment": "# set HEROKY_KATEI_APP_PROD as a Github Repository secret, it should be the name of the app you created in heroku"
         }
       ],
       "usages": [
@@ -177,7 +165,8 @@
           "file": "apps/katei/.env.example",
           "line": 2,
           "scope": "app",
-          "snippet": "NODE_ENV=<redacted>"
+          "snippet": "NODE_ENV=development",
+          "comment": "# Let the server know if you are in 'development' or 'production' you should set this as an environment variable in the Heroku dashboard of your app."
         }
       ],
       "usages": [
@@ -200,7 +189,8 @@
           "file": "apps/katei/.env.example",
           "line": 5,
           "scope": "app",
-          "snippet": "PORT=<redacted>"
+          "snippet": "PORT=3000",
+          "comment": "# Server port, you must not set it manually when deploying to Heroku, as it provides process.env.PORT so it must only be used for local testing"
         }
       ],
       "usages": [

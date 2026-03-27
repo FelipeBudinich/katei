@@ -64,7 +64,8 @@ test("renderEnvInventoryHtml highlights config warnings, fallback groups, gaps, 
             file: "apps/demo/.env.example",
             line: 1,
             scope: "app",
-            snippet: "APP_SECRET=<redacted>",
+            comment: "# Demo app secret",
+            snippet: "APP_SECRET=replace-me",
           },
         ],
         usages: [
@@ -96,15 +97,7 @@ test("renderEnvInventoryHtml highlights config warnings, fallback groups, gaps, 
         name: "SHARED_FLAG",
         secretLike: false,
         publicLike: false,
-        definitions: [
-          {
-            kind: "doc",
-            file: "apps/demo/README.md",
-            line: 2,
-            scope: "app",
-            snippet: "SHARED_FLAG=<redacted>",
-          },
-        ],
+        definitions: [],
         usages: [
           {
             kind: "read",
@@ -142,7 +135,8 @@ test("renderEnvInventoryHtml highlights config warnings, fallback groups, gaps, 
   assert.match(html, /data-copy-target="scan-details-raw-json"/);
   assert.match(html, /<pre id="scan-details-raw-json" class="env-inventory-raw text-sm leading-6" data-copy-source>/);
   assert.match(html, /navigator\.clipboard\.writeText/);
-  assert.match(html, /<div class="env-inventory-snippet"><code class="env-inventory-inline-code">APP_SECRET=&lt;redacted&gt;<\/code><\/div>/);
+  assert.match(html, /# Demo app secret/);
+  assert.match(html, /<div class="env-inventory-snippet">\s*<div class="text-sm leading-6 text-muted"># Demo app secret<\/div>\s*<code class="env-inventory-inline-code">APP_SECRET=replace-me<\/code>/);
   assert.match(html, /Config warning:/);
   assert.match(html, /No fallback observed/);
   assert.match(html, /Fallbacks observed/);

@@ -63,11 +63,19 @@ function summarizeOccurrence(entry) {
   return `${entry.file}:${entry.line}`;
 }
 
+function fileBaseName(value) {
+  return normalizePath(value).split("/").pop() || "";
+}
+
+function isEnvExampleDefinition(definition) {
+  return definition?.kind === "envFile" && fileBaseName(definition.file) === ".env.example";
+}
+
 function deriveVariableMeta(variable) {
   const definitions = ensureArray(variable.definitions);
   const usages = ensureArray(variable.usages);
   const hasFallback = usages.some((usage) => usage.kind === "default");
-  const missingExample = usages.length > 0 && !definitions.some((definition) => definition.kind === "envFile" || definition.kind === "doc");
+  const missingExample = usages.length > 0 && !definitions.some(isEnvExampleDefinition);
   const scopes = sortUnique([
     ...definitions.map((definition) => definition.scope),
     ...usages.map((usage) => usage.scope),
@@ -202,7 +210,14 @@ function renderOccurrenceList(entries, { includeSnippet = false } = {}) {
             ${renderInlineCode(summarizeOccurrence(entry))}
             <span class="text-sm leading-6 text-muted">${escapeHtml(titleCase(entry.kind))} · ${escapeHtml(titleCase(entry.scope))}</span>
           </div>
-          ${includeSnippet && entry.snippet ? `<div class="env-inventory-snippet">${renderInlineCode(entry.snippet)}</div>` : ""}
+          ${includeSnippet && (entry.comment || entry.snippet)
+            ? `
+              <div class="env-inventory-snippet">
+                ${entry.comment ? `<div class="text-sm leading-6 text-muted">${escapeHtml(entry.comment)}</div>` : ""}
+                ${entry.snippet ? renderInlineCode(entry.snippet) : ""}
+              </div>
+            `
+            : ""}
         </li>
       `).join("")}
     </ul>
@@ -509,7 +524,7 @@ function renderClientScript(report) {
           const definitions = ensureArray(variable.definitions);
           const usages = ensureArray(variable.usages);
           const hasFallback = usages.some((usage) => usage.kind === "default");
-          const missingExample = usages.length > 0 && !definitions.some((definition) => definition.kind === "envFile" || definition.kind === "doc");
+          const missingExample = usages.length > 0 && !definitions.some((definition) => definition.kind === "envFile" && String(definition.file || "").split("/").pop() === ".env.example");
           const scopes = sortUnique([
             ...definitions.map((definition) => definition.scope),
             ...usages.map((usage) => usage.scope),
