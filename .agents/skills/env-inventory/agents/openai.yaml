@@ -1,0 +1,7 @@
+interface:
+  display_name: "Env Inventory"
+  short_description: "Inventory per-app env definitions and usage"
+  default_prompt: "Use $env-inventory to analyze environment variable definitions and usages for one or more apps in this monorepo, regenerate the per-app JSON reports under apps/*/doc/env-inventory.json and HTML reports under apps/*/docs/env-inventory.html, verify the app exposes /docs/env-inventory.html, and summarize app-local, shared-package, grounded root-level, secret-like, public-like, missing-example/docs, and dynamic env access findings."
+
+policy:
+  allow_implicit_invocation: false

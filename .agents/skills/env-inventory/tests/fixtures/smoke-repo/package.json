@@ -1,0 +1,8 @@
+{
+  "name": "env-inventory-smoke-repo",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
+}

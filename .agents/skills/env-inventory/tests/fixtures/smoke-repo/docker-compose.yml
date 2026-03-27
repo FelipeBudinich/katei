@@ -1,0 +1,4 @@
+services:
+  app-a:
+    environment:
+      COMPOSE_ONLY: ${COMPOSE_ONLY}

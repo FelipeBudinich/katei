@@ -1,0 +1,43 @@
+{
+  "ignoreGlobs": [
+    "**/node_modules/**",
+    "**/doc/*.json",
+    "**/.generated/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/coverage/**",
+    "**/src/public/**",
+    "**/public/**"
+  ],
+  "extraScanRoots": [],
+  "sharedRoots": [
+    "packages/*",
+    "libs/*"
+  ],
+  "docRoots": [
+    "README*",
+    "doc/**/*"
+  ],
+  "publicPrefixes": [
+    "NEXT_PUBLIC_",
+    "VITE_",
+    "PUBLIC_"
+  ],
+  "secretLikePatterns": [
+    "KEY",
+    "SECRET",
+    "TOKEN",
+    "PASSWORD",
+    "PWD",
+    "PRIVATE",
+    "DATABASE_URL"
+  ],
+  "appPathOverrides": {
+    ".github/workflows/deploy-listings.yml": [
+      "listings"
+    ],
+    ".github/workflows/deploy-agents.yml": [
+      "agents"
+    ]
+  }
+}

@@ -109,6 +109,8 @@ Persistence is abstracted behind `WorkspaceRepository`, with:
 
 Codex automation for this repository should run from the repo root so the repo-local skills under `.agents/skills/` are available in context.
 
+Repo-local skills are the first place to look before making implementation decisions in a skill-covered domain, especially for generated docs or reporting work.
+
 Each repo-local skill is self-contained in `.agents/skills/<skill-name>/` and should include:
 
 - `SKILL.md`
@@ -117,4 +119,5 @@ Each repo-local skill is self-contained in `.agents/skills/<skill-name>/` and sh
 
 Available repo-local skills:
 
+- `env-inventory` — inventory per-app environment variable definitions and usages, regenerate `apps/*/doc/env-inventory.json` and `apps/*/docs/env-inventory.html`, and verify apps expose `/docs/env-inventory.html`. Path: `.agents/skills/env-inventory/SKILL.md`
 - `monorepo-filetree` — refresh generated monorepo and app file tree documentation when repository structure changes materially. Path: `.agents/skills/monorepo-filetree/SKILL.md`

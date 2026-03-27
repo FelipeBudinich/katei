@@ -18,7 +18,35 @@ This document provides a structural overview of the monorepo.
 ```text
 hanmoto-board/
 ├── .agents/
+│   ├── env-inventory/
+│   │   ├── agents/
+│   │   │   └── openai.yaml
+│   │   ├── assets/
+│   │   │   └── env-inventory.config.example.json
+│   │   ├── references/
+│   │   │   └── README.md
+│   │   ├── scripts/
+│   │   │   ├── generate-env-inventory.mjs
+│   │   │   └── render-env-inventory-html.mjs
+│   │   ├── tests/
+│   │   │   ├── fixtures/
+│   │   │   │   └── …
+│   │   │   ├── generate-env-inventory.test.mjs
+│   │   │   └── render-env-inventory-html.test.mjs
+│   │   └── SKILL.md
 │   └── skills/
+│       ├── env-inventory/
+│       │   ├── agents/
+│       │   │   └── …
+│       │   ├── assets/
+│       │   │   └── …
+│       │   ├── references/
+│       │   │   └── …
+│       │   ├── scripts/
+│       │   │   └── …
+│       │   ├── tests/
+│       │   │   └── …
+│       │   └── SKILL.md
 │       └── monorepo-filetree/
 │           ├── agents/
 │           │   └── …
