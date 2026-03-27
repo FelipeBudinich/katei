@@ -60,6 +60,10 @@
     grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
   }
 
+  .env-inventory-section-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .env-inventory-meta-card,
   .env-inventory-status-card {
     @apply grid px-4 py-4;
@@ -341,7 +345,6 @@
   }
 
   @media (min-width: 64rem) {
-    .env-inventory-section-grid,
     .env-inventory-split-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
