@@ -23,7 +23,9 @@
       ]
     },
     "ignoredGlobs": [
+      "**/.agents/**",
       "**/.generated/**",
+      "**/.github/**",
       "**/build/**",
       "**/coverage/**",
       "**/dist/**",
