@@ -395,7 +395,7 @@ function renderExplorer(report, derived) {
               <th scope="col">Example location</th>
             </tr>
           </thead>
-          <tbody id="variable-table-body">
+          <tbody id="variable-table-body" class="text-sm leading-6">
             ${derived.variables.length
               ? derived.variables.map((variable) => `
                 <tr>

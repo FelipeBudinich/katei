@@ -135,6 +135,7 @@ test("renderEnvInventoryHtml highlights config warnings, fallback groups, gaps, 
   assert.match(html, /class="top-bar"/);
   assert.match(html, /class="top-bar-title-row env-inventory-title-row"/);
   assert.match(html, /<a class="touch-button-secondary" href="\/">demo<\/a>/);
+  assert.match(html, /<tbody id="variable-table-body" class="text-sm leading-6">/);
   assert.match(html, /Config warning:/);
   assert.match(html, /No fallback observed/);
   assert.match(html, /Fallbacks observed/);
