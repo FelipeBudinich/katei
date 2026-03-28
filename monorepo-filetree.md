@@ -87,6 +87,22 @@ hanmoto-board/
 │       ├── package.json
 │       └── Procfile
 ├── cool-stuff/
+│   └── env-inventory/
+│       ├── agents/
+│       │   └── openai.yaml
+│       ├── assets/
+│       │   └── env-inventory.config.example.json
+│       ├── references/
+│       │   └── README.md
+│       ├── scripts/
+│       │   ├── generate-env-inventory.mjs
+│       │   └── render-env-inventory-html.mjs
+│       ├── tests/
+│       │   ├── fixtures/
+│       │   │   └── …
+│       │   ├── generate-env-inventory.test.mjs
+│       │   └── render-env-inventory-html.test.mjs
+│       └── SKILL.md
 ├── integrate/
 │   ├── cards.svg
 │   ├── clock.svg
