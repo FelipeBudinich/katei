@@ -16,6 +16,10 @@ const timestampFormatter = new Intl.DateTimeFormat(undefined, {
 });
 
 export default class extends Controller {
+  static values = {
+    viewerSub: String
+  };
+
   static targets = [
     'boardTitle',
     'desktopColumns',
@@ -33,7 +37,13 @@ export default class extends Controller {
   ];
 
   connect() {
-    this.service = new WorkspaceService(new LocalWorkspaceRepository(window.localStorage));
+    if (!this.hasViewerSubValue || !this.viewerSubValue.trim()) {
+      console.error('Workspace viewer sub is missing.');
+      this.announce('Unable to load this workspace.');
+      return;
+    }
+
+    this.service = new WorkspaceService(new LocalWorkspaceRepository(window.localStorage, this.viewerSubValue));
     this.templates = {
       columnTemplate: document.getElementById('column-panel-template'),
       cardTemplate: document.getElementById('card-item-template')

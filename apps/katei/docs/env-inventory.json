@@ -13,8 +13,9 @@
     "roots": {
       "app": [
         "apps/katei",
-        "apps/katei/doc",
         "apps/katei/src",
+        "apps/katei/src/auth",
+        "apps/katei/src/middleware",
         "apps/katei/src/routes"
       ],
       "package": [],
@@ -36,14 +37,93 @@
     ]
   },
   "summary": {
-    "totalVariables": 4,
-    "totalDefinitions": 4,
-    "totalUsages": 13,
-    "secretLikeCount": 1,
+    "totalVariables": 9,
+    "totalDefinitions": 9,
+    "totalUsages": 20,
+    "secretLikeCount": 2,
     "publicLikeCount": 0,
     "dynamicAccessCount": 0
   },
   "variables": [
+    {
+      "name": "APP_BASE_URL",
+      "secretLike": false,
+      "publicLike": false,
+      "definitions": [
+        {
+          "kind": "envFile",
+          "file": "apps/katei/.env.example",
+          "line": 20,
+          "scope": "app",
+          "snippet": "APP_BASE_URL=http://localhost:3000",
+          "comment": "# Optional canonical app URL used to validate sign-in request origins in production."
+        }
+      ],
+      "usages": [
+        {
+          "kind": "read",
+          "file": "apps/katei/src/config.js",
+          "line": 5,
+          "scope": "app",
+          "snippet": "const appBaseUrl = normalizeOptionalString(env.APP_BASE_URL);"
+        }
+      ]
+    },
+    {
+      "name": "GOOGLE_ALLOWLIST_SUBS",
+      "secretLike": false,
+      "publicLike": false,
+      "definitions": [
+        {
+          "kind": "envFile",
+          "file": "apps/katei/.env.example",
+          "line": 14,
+          "scope": "app",
+          "snippet": "GOOGLE_ALLOWLIST_SUBS=",
+          "comment": "# Optional comma-separated allowlist of Google `sub` identifiers. Leave blank to allow any verified account."
+        }
+      ],
+      "usages": [
+        {
+          "kind": "read",
+          "file": "apps/katei/src/config.js",
+          "line": 12,
+          "scope": "app",
+          "snippet": "googleAllowlistSubs: parseAllowlistSubs(env.GOOGLE_ALLOWLIST_SUBS),"
+        }
+      ]
+    },
+    {
+      "name": "GOOGLE_CLIENT_ID",
+      "secretLike": false,
+      "publicLike": false,
+      "definitions": [
+        {
+          "kind": "envFile",
+          "file": "apps/katei/.env.example",
+          "line": 8,
+          "scope": "app",
+          "snippet": "GOOGLE_CLIENT_ID=YOUR_GOOGLE_CLIENT_ID",
+          "comment": "# Google Identity Services OAuth client ID used by the landing page sign-in flow."
+        }
+      ],
+      "usages": [
+        {
+          "kind": "read",
+          "file": "apps/katei/src/config.js",
+          "line": 10,
+          "scope": "app",
+          "snippet": "googleClientId: requireNonEmptyEnv('GOOGLE_CLIENT_ID', env.GOOGLE_CLIENT_ID),"
+        },
+        {
+          "kind": "validation",
+          "file": "apps/katei/src/config.js",
+          "line": 10,
+          "scope": "app",
+          "snippet": "googleClientId: requireNonEmptyEnv('GOOGLE_CLIENT_ID', env.GOOGLE_CLIENT_ID),"
+        }
+      ]
+    },
     {
       "name": "HEROKU_API_KEY",
       "secretLike": true,
@@ -52,7 +132,7 @@
         {
           "kind": "envFile",
           "file": "apps/katei/.env.example",
-          "line": 11,
+          "line": 26,
           "scope": "app",
           "snippet": "HEROKU_API_KEY=YOUR_HEROKU_API_KEY",
           "comment": "# Replace YOUR_HEROKU_API_KEY with a real Heroku API key as a Github Repository secret"
@@ -104,7 +184,7 @@
         {
           "kind": "envFile",
           "file": "apps/katei/.env.example",
-          "line": 8,
+          "line": 23,
           "scope": "app",
           "snippet": "HEROKU_APP_NAME=HEROKY_KATEI_APP_PROD",
           "comment": "# set HEROKY_KATEI_APP_PROD as a Github Repository secret, it should be the name of the app you created in heroku"
@@ -172,10 +252,10 @@
       "usages": [
         {
           "kind": "default",
-          "file": "apps/katei/src/app.js",
-          "line": 17,
+          "file": "apps/katei/src/config.js",
+          "line": 4,
           "scope": "app",
-          "snippet": "const nodeEnv = process.env.NODE_ENV || 'development';"
+          "snippet": "const nodeEnv = normalizeOptionalString(env.NODE_ENV) || 'development';"
         }
       ]
     },
@@ -200,6 +280,61 @@
           "line": 5,
           "scope": "app",
           "snippet": "const port = Number(process.env.PORT) || 3000;"
+        }
+      ]
+    },
+    {
+      "name": "SESSION_SECRET",
+      "secretLike": true,
+      "publicLike": false,
+      "definitions": [
+        {
+          "kind": "envFile",
+          "file": "apps/katei/.env.example",
+          "line": 11,
+          "scope": "app",
+          "snippet": "SESSION_SECRET=replace-with-a-long-random-string",
+          "comment": "# Secret used to sign the Katei session cookie."
+        }
+      ],
+      "usages": [
+        {
+          "kind": "read",
+          "file": "apps/katei/src/config.js",
+          "line": 11,
+          "scope": "app",
+          "snippet": "sessionSecret: requireNonEmptyEnv('SESSION_SECRET', env.SESSION_SECRET),"
+        },
+        {
+          "kind": "validation",
+          "file": "apps/katei/src/config.js",
+          "line": 11,
+          "scope": "app",
+          "snippet": "sessionSecret: requireNonEmptyEnv('SESSION_SECRET', env.SESSION_SECRET),"
+        }
+      ]
+    },
+    {
+      "name": "SESSION_TTL_SECONDS",
+      "secretLike": false,
+      "publicLike": false,
+      "definitions": [
+        {
+          "kind": "envFile",
+          "file": "apps/katei/.env.example",
+          "line": 17,
+          "scope": "app",
+          "snippet": "SESSION_TTL_SECONDS=2592000",
+          "comment": "# Optional session duration for the Katei session cookie. Defaults to 30 days."
+        }
+      ],
+      "usages": [
+        {
+          "kind": "read",
+          "file": "apps/katei/src/config.js",
+          "line": 13,
+          "scope": "app",
+          "snippet": "sessionTtlSeconds: parseSessionTtlSeconds(env.SESSION_TTL_SECONDS),"
         }
       ]
     }

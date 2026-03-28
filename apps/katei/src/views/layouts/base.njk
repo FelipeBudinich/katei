@@ -12,9 +12,11 @@
     >
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="/assets/app.css">
+    {% block head %}{% endblock %}
   </head>
-  <body class="app-shell">
+  <body class="{{ bodyClass or 'app-shell' }}">
     {% block body %}{% endblock %}
     <script type="module" src="/js/app.js"></script>
+    {% block afterScripts %}{% endblock %}
   </body>
 </html>

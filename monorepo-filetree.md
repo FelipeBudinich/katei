@@ -75,14 +75,24 @@ hanmoto-board/
 │       │   ├── background.webp
 │       │   └── favicon.svg
 │       ├── src/
+│       │   ├── auth/
+│       │   │   └── …
+│       │   ├── middleware/
+│       │   │   └── …
 │       │   ├── routes/
 │       │   │   └── …
 │       │   ├── views/
 │       │   │   └── …
 │       │   ├── app.js
+│       │   ├── config.js
 │       │   └── server.js
 │       ├── styles/
 │       │   └── app.css
+│       ├── test/
+│       │   ├── allowlist.test.js
+│       │   ├── app.test.js
+│       │   ├── local_workspace_repository.test.js
+│       │   └── session_cookie.test.js
 │       ├── .env.example
 │       ├── package.json
 │       └── Procfile

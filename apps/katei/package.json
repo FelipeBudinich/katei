@@ -10,17 +10,21 @@
     "dev:server": "nodemon -L --watch src --watch public/js --watch styles --watch ../../packages/brand/src --ext js,njk,css --exec \"npm run build:css && node src/server.js\"",
     "build": "node -e \"console.log('No app-local build step. Prebuild public/assets/app.css from the monorepo before subtree deploy.')\"",
     "build:css": "tailwindcss -i ./styles/app.css -o ./public/assets/app.css",
-    "start": "node src/server.js"
+    "start": "node src/server.js",
+    "test": "node --test"
   },
   "dependencies": {
     "@hotwired/stimulus": "^3.2.2",
+    "cookie-parser": "^1.4.7",
     "express": "^5.1.0",
+    "google-auth-library": "^10.6.2",
     "nunjucks": "^3.2.4"
   },
   "devDependencies": {
     "@tailwindcss/cli": "^4.1.4",
     "concurrently": "^9.1.2",
     "nodemon": "^3.1.10",
+    "supertest": "^7.2.2",
     "tailwindcss": "^4.1.4"
   }
 }

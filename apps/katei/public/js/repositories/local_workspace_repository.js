@@ -1,10 +1,21 @@
 import { WorkspaceRepository } from './workspace_repository.js';
-import { STORAGE_KEY, createEmptyWorkspace, validateWorkspaceShape } from '../domain/workspace.js';
+import { createEmptyWorkspace, validateWorkspaceShape } from '../domain/workspace.js';
+
+export const WORKSPACE_STORAGE_PREFIX = 'katei.workspace.v3:';
+
+export function createWorkspaceStorageKey(viewerSub) {
+  if (typeof viewerSub !== 'string' || !viewerSub.trim()) {
+    throw new Error('A verified viewer sub is required for workspace storage.');
+  }
+
+  return `${WORKSPACE_STORAGE_PREFIX}${viewerSub.trim()}`;
+}
 
 export class LocalWorkspaceRepository extends WorkspaceRepository {
-  constructor(storage = globalThis.localStorage) {
+  constructor(storage = globalThis.localStorage, viewerSub) {
     super();
     this.storage = storage;
+    this.storageKey = createWorkspaceStorageKey(viewerSub);
   }
 
   async loadWorkspace() {
@@ -13,7 +24,7 @@ export class LocalWorkspaceRepository extends WorkspaceRepository {
     }
 
     try {
-      const rawValue = this.storage.getItem(STORAGE_KEY);
+      const rawValue = this.storage.getItem(this.storageKey);
 
       if (!rawValue) {
         return createEmptyWorkspace();
@@ -33,7 +44,7 @@ export class LocalWorkspaceRepository extends WorkspaceRepository {
     }
 
     if (this.storage) {
-      this.storage.setItem(STORAGE_KEY, JSON.stringify(workspace));
+      this.storage.setItem(this.storageKey, JSON.stringify(workspace));
     }
 
     return workspace;

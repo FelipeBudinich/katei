@@ -1,6 +1,6 @@
 # 過程 (katei)
 
-Katei is a single-user, multi-board kanban app built with Node.js, Express, Nunjucks, Stimulus, and Tailwind CSS v4.
+Katei is a Google-authenticated, multi-board kanban app built with Node.js, Express, Nunjucks, Stimulus, and Tailwind CSS v4.
 
 Each board always has the same fixed columns:
 
@@ -17,9 +17,17 @@ Cards use three priorities:
 
 New cards are always created in `backlog`.
 
+## Authentication
+
+Unauthenticated visitors land on `GET /`, where Google Identity Services renders the sign-in button. After the backend verifies the Google ID token and creates a Katei-owned session cookie, authenticated users enter the app on `GET /boards`.
+
+Katei uses the verified Google `sub` claim as the only identity key. The session cookie is signed, HTTP-only, and managed independently from Google token expiry.
+
+If `GOOGLE_ALLOWLIST_SUBS` is blank, any verified Google account may sign in. If it contains comma-separated `sub` values, only those testers are admitted.
+
 ## Workspace and Boards
 
-Katei stores one local workspace per browser. That workspace can contain multiple named boards, and one board is active at a time.
+Katei stores one local workspace per signed-in Google user. That workspace can contain multiple named boards, and one board is active at a time.
 
 Board management lives in the **Options** modal. From there you can:
 
@@ -75,7 +83,10 @@ From the app subtree:
 
 ## Runtime
 
-- `GET /` renders the workspace shell
+- `GET /` renders the public landing page or redirects to `/boards` when a valid Katei session exists
+- `GET /boards` renders the authenticated workspace shell
+- `POST /auth/google` verifies a Google ID token and creates the Katei session
+- `POST /auth/logout` clears the Katei session
 - `GET /health` returns `{ ok: true }`
 
 Heroku deployment is subtree-based. The deployable unit is `apps/katei`, and runtime metadata lives in:
@@ -85,11 +96,11 @@ Heroku deployment is subtree-based. The deployable unit is `apps/katei`, and run
 
 ## Persistence
 
-Katei v2 stores the full workspace in browser `localStorage` under:
+Katei v3 stores the full workspace in browser `localStorage` under a user-scoped key:
 
-- `katei.workspace.v2`
+- `katei.workspace.v3:<google-sub>`
 
-v2 does not migrate old `hanmoto.board.v1` data.
+Legacy `katei.workspace.v2` data is left untouched and is not read by v3.
 
 Persistence is abstracted behind `WorkspaceRepository`, with:
 

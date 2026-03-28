@@ -1,0 +1,43 @@
+{% extends "layouts/base.njk" %}
+
+{% block head %}
+  <script id="google-identity-script" src="https://accounts.google.com/gsi/client" async defer></script>
+{% endblock %}
+
+{% block body %}
+  <main
+    class="landing-page"
+    data-controller="landing"
+    data-landing-google-client-id-value="{{ googleClientId }}"
+    data-landing-auth-url-value="{{ authUrl }}"
+    data-landing-redirect-url-value="{{ redirectUrl }}"
+  >
+    <section class="landing-hero paper-panel">
+      <div class="landing-copy">
+        <p class="landing-eyebrow">Private tester preview</p>
+        <h1 class="font-serif text-5xl leading-none text-strong sm:text-6xl">過程</h1>
+        <p class="max-w-xl text-base leading-7 text-muted sm:text-lg">
+          Katei keeps your boards focused and tactile. Sign in with Google to open your private test workspace.
+        </p>
+      </div>
+
+      <div class="landing-auth-card paper-panel">
+        <div class="landing-auth-copy">
+          <h2 class="font-serif text-3xl text-strong">Enter Your Boards</h2>
+          <p class="text-sm leading-6 text-muted">
+            Google confirms who you are. Katei verifies that identity, then opens your board workspace with its own
+            private session.
+          </p>
+        </div>
+
+        <div class="landing-auth-stack">
+          <div class="google-button-slot" data-landing-target="button"></div>
+          <p class="landing-loading text-sm leading-6 text-muted" data-landing-target="loading" hidden>
+            Verifying your Google sign-in…
+          </p>
+          <p class="landing-status text-sm leading-6" data-landing-target="status" aria-live="polite" hidden></p>
+        </div>
+      </div>
+    </section>
+  </main>
+{% endblock %}

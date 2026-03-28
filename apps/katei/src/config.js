@@ -1,0 +1,67 @@
+const DEFAULT_SESSION_TTL_SECONDS = 60 * 60 * 24 * 30;
+
+export function createRuntimeConfig(env = process.env) {
+  const nodeEnv = normalizeOptionalString(env.NODE_ENV) || 'development';
+  const appBaseUrl = normalizeOptionalString(env.APP_BASE_URL);
+
+  return {
+    nodeEnv,
+    isProduction: nodeEnv === 'production',
+    googleClientId: requireNonEmptyEnv('GOOGLE_CLIENT_ID', env.GOOGLE_CLIENT_ID),
+    sessionSecret: requireNonEmptyEnv('SESSION_SECRET', env.SESSION_SECRET),
+    googleAllowlistSubs: parseAllowlistSubs(env.GOOGLE_ALLOWLIST_SUBS),
+    sessionTtlSeconds: parseSessionTtlSeconds(env.SESSION_TTL_SECONDS),
+    appBaseUrl,
+    appOrigin: appBaseUrl ? new URL(appBaseUrl).origin : null
+  };
+}
+
+export function parseAllowlistSubs(rawValue) {
+  const normalizedValue = normalizeOptionalString(rawValue);
+
+  if (!normalizedValue) {
+    return new Set();
+  }
+
+  return new Set(
+    normalizedValue
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean)
+  );
+}
+
+export function parseSessionTtlSeconds(rawValue) {
+  const normalizedValue = normalizeOptionalString(rawValue);
+
+  if (!normalizedValue) {
+    return DEFAULT_SESSION_TTL_SECONDS;
+  }
+
+  const parsedValue = Number.parseInt(normalizedValue, 10);
+
+  if (!Number.isInteger(parsedValue) || parsedValue <= 0) {
+    throw new Error('SESSION_TTL_SECONDS must be a positive integer.');
+  }
+
+  return parsedValue;
+}
+
+function requireNonEmptyEnv(name, value) {
+  const normalizedValue = normalizeOptionalString(value);
+
+  if (!normalizedValue) {
+    throw new Error(`${name} is required.`);
+  }
+
+  return normalizedValue;
+}
+
+function normalizeOptionalString(value) {
+  if (typeof value !== 'string') {
+    return '';
+  }
+
+  return value.trim();
+}
+
