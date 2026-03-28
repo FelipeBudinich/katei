@@ -1,7 +1,0 @@
-{
-  "appPathOverrides": {
-    ".github/workflows/deploy-app-a.yml": [
-      "app-a"
-    ]
-  }
-}
