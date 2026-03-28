@@ -34,25 +34,26 @@ hanmoto-board/
 │   │   │   ├── generate-env-inventory.test.mjs
 │   │   │   └── render-env-inventory-html.test.mjs
 │   │   └── SKILL.md
-│   └── skills/
-│       ├── env-inventory/
-│       │   ├── agents/
-│       │   │   └── …
-│       │   ├── assets/
-│       │   │   └── …
-│       │   ├── references/
-│       │   │   └── …
-│       │   ├── scripts/
-│       │   │   └── …
-│       │   ├── tests/
-│       │   │   └── …
-│       │   └── SKILL.md
-│       └── monorepo-filetree/
-│           ├── agents/
-│           │   └── …
-│           ├── scripts/
-│           │   └── …
-│           └── SKILL.md
+│   ├── skills/
+│   │   ├── env-inventory/
+│   │   │   ├── agents/
+│   │   │   │   └── …
+│   │   │   ├── assets/
+│   │   │   │   └── …
+│   │   │   ├── references/
+│   │   │   │   └── …
+│   │   │   ├── scripts/
+│   │   │   │   └── …
+│   │   │   ├── tests/
+│   │   │   │   └── …
+│   │   │   └── SKILL.md
+│   │   └── monorepo-filetree/
+│   │       ├── agents/
+│   │       │   └── …
+│   │       ├── scripts/
+│   │       │   └── …
+│   │       └── SKILL.md
+│   └── env-inventory.config.json
 ├── .github/
 │   └── workflows/
 │       └── deploy-katei-heroku.yml
@@ -81,8 +82,26 @@ hanmoto-board/
 │       │   └── server.js
 │       ├── styles/
 │       │   └── app.css
+│       ├── .env.example
 │       ├── package.json
 │       └── Procfile
+├── cool-stuff/
+│   └── env-inventory/
+│       ├── agents/
+│       │   └── openai.yaml
+│       ├── assets/
+│       │   └── env-inventory.config.example.json
+│       ├── references/
+│       │   └── README.md
+│       ├── scripts/
+│       │   ├── generate-env-inventory.mjs
+│       │   └── render-env-inventory-html.mjs
+│       ├── tests/
+│       │   ├── fixtures/
+│       │   │   └── …
+│       │   ├── generate-env-inventory.test.mjs
+│       │   └── render-env-inventory-html.test.mjs
+│       └── SKILL.md
 ├── integrate/
 │   ├── cards.svg
 │   ├── clock.svg

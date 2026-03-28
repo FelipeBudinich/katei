@@ -78,6 +78,7 @@ apps/katei/
 │   └── server.js
 ├── styles/
 │   └── app.css
+├── .env.example
 ├── package.json
 └── Procfile
 ```
