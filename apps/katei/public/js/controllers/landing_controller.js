@@ -1,4 +1,5 @@
 import { Controller } from '/vendor/stimulus/stimulus.js';
+import { isLandingControllerConnected } from '/js/controllers/landing_controller_connection.js';
 import {
   EMPTY_GOOGLE_BUTTON_SLOT_ERROR_CODE,
   assertValidGoogleClientId,
@@ -72,7 +73,7 @@ export default class extends Controller {
       return;
     }
 
-    if (!this.isConnected) {
+    if (!isLandingControllerConnected(this)) {
       return;
     }
 
