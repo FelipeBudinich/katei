@@ -706,7 +706,6 @@ def render_snapshot_panel(
     snapshot: dict,
     *,
     line_states: dict[str, str] | None = None,
-    supplementary_html: str = "",
 ) -> str:
     summary = snapshot["summary"]
     metadata_text = (
@@ -723,7 +722,6 @@ def render_snapshot_panel(
         "</div>"
         '<div class="filetree-snapshot-meta">'
         f'<p class="text-sm leading-6 text-muted">{html.escape(metadata_text)}</p>'
-        f"{supplementary_html}"
         "</div>"
         f'<div class="env-inventory-raw filetree-snapshot-tree">{render_snapshot_tree(snapshot, line_states)}</div>'
         "</article>"
@@ -762,7 +760,7 @@ def render_snapshot_section(report: dict) -> str:
         else "First stored snapshot. Diff highlighting appears after the next generation."
     )
     comparison_summary = render_diff_summary(diff) if previous_snapshot is not None else ""
-    current_supplementary_html = (
+    removed_paths_summary = (
         render_removed_paths(diff)
         if previous_snapshot is not None
         else ""
@@ -772,7 +770,6 @@ def render_snapshot_section(report: dict) -> str:
         current_description,
         current_snapshot,
         line_states=current_line_states,
-        supplementary_html=current_supplementary_html,
     )
 
     return (
@@ -787,6 +784,7 @@ def render_snapshot_section(report: dict) -> str:
         f"{previous_notice}"
         '<div class="filetree-snapshot-comparison">'
         f"{comparison_summary}"
+        f"{removed_paths_summary}"
         '<div class="filetree-snapshot-grid">'
         f"{previous_panel}"
         f"{current_panel}"
