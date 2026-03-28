@@ -68,5 +68,15 @@
         Delete Board
       </button>
     </div>
+
+    <div
+      class="dialog-actions mt-4"
+      data-controller="session"
+      data-session-auth-url-value="/auth/logout"
+      data-session-redirect-url-value="/"
+    >
+      <button type="button" class="touch-button-secondary" data-action="session#logout">Logout</button>
+      <p class="sr-only" aria-live="polite" data-session-target="status"></p>
+    </div>
   </div>
 </dialog>

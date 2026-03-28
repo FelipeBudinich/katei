@@ -106,6 +106,19 @@
     justify-items: start;
   }
 
+  .top-bar-heading-group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+  }
+
+  .top-bar-title {
+    min-width: 0;
+    flex: 1 1 16rem;
+  }
+
   .viewer-chip {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);

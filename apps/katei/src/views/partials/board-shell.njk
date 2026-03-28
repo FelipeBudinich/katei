@@ -1,12 +1,5 @@
 <header class="top-bar">
-  <div class="min-w-0">
-    <div class="top-bar-title-row">
-      <h1 class="font-serif text-3xl leading-tight text-strong" data-workspace-target="boardTitle">{{ board.title }}</h1>
-      <button type="button" class="touch-button-secondary" data-action="workspace#openBoardOptions">Options</button>
-    </div>
-  </div>
-
-  <div class="top-bar-actions">
+  <div class="top-bar-heading-group">
     {% if viewer %}
       <div class="viewer-chip">
         {% if viewer.picture %}
@@ -31,15 +24,11 @@
       </div>
     {% endif %}
 
-    <div
-      data-controller="session"
-      data-session-auth-url-value="/auth/logout"
-      data-session-redirect-url-value="/"
-    >
-      <button type="button" class="touch-button-secondary" data-action="session#logout">Logout</button>
-      <p class="sr-only" aria-live="polite" data-session-target="status"></p>
-    </div>
+    <h1 class="top-bar-title font-serif text-3xl leading-tight text-strong" data-workspace-target="boardTitle">{{ board.title }}</h1>
+  </div>
 
+  <div class="top-bar-actions">
+    <button type="button" class="touch-button-secondary" data-action="workspace#openBoardOptions">Options</button>
     <button type="button" class="touch-button-primary" data-action="workspace#openCreateCard">Add Card</button>
   </div>
 </header>
