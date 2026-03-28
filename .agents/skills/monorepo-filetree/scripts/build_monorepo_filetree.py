@@ -8,6 +8,7 @@ import re
 import subprocess
 import sys
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 
 EXCLUDED_NAMES = {
@@ -269,30 +270,197 @@ def render_root_markdown(repo_root: Path, apps: list[Path], tree: str) -> str:
     )
 
 
-def build_app_report(app_name: str, app_relative_path: str, json_output_path: str, html_output_path: str, tree_model: dict) -> dict:
+def iso_utc_now() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def iso_utc_from_timestamp(timestamp: float) -> str:
+    return datetime.fromtimestamp(timestamp, tz=timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def build_snapshot_summary(tree_model: dict) -> dict:
     return {
-        "schemaVersion": "1.0",
+        "directoryCount": tree_model["summary"]["directoryCount"],
+        "fileCount": tree_model["summary"]["fileCount"],
+        "maxDepth": tree_model["maxDepth"],
+        "topLevelEntryCount": len(tree_model["nodes"]),
+    }
+
+
+def build_snapshot(app_relative_path: str, tree_model: dict, generated_at: str) -> dict:
+    return {
+        "generatedAt": generated_at,
+        "rootPath": app_relative_path,
+        "summary": build_snapshot_summary(tree_model),
+        "tree": {
+            "label": tree_model["label"],
+            "text": render_tree_text(tree_model),
+            "nodes": tree_model["nodes"],
+        },
+    }
+
+
+def normalize_snapshot(
+    snapshot_value: object,
+    *,
+    snapshot_name: str,
+    fallback_root_path: str,
+    fallback_generated_at: str,
+) -> dict:
+    if not isinstance(snapshot_value, dict):
+        raise ValueError(f"{snapshot_name} must be an object.")
+
+    tree = snapshot_value.get("tree")
+    summary = snapshot_value.get("summary")
+    if not isinstance(tree, dict):
+        raise ValueError(f"{snapshot_name}.tree must be an object.")
+    if not isinstance(summary, dict):
+        raise ValueError(f"{snapshot_name}.summary must be an object.")
+
+    label = tree.get("label")
+    text = tree.get("text")
+    nodes = tree.get("nodes")
+    if not isinstance(label, str) or not label:
+        raise ValueError(f"{snapshot_name}.tree.label must be a non-empty string.")
+    if not isinstance(nodes, list):
+        raise ValueError(f"{snapshot_name}.tree.nodes must be an array.")
+    if not isinstance(text, str) or not text:
+        text = render_tree_text({"label": label, "nodes": nodes})
+
+    directory_count = summary.get("directoryCount")
+    file_count = summary.get("fileCount")
+    max_depth = summary.get("maxDepth")
+    top_level_entry_count = summary.get("topLevelEntryCount")
+    if not isinstance(directory_count, int):
+        raise ValueError(f"{snapshot_name}.summary.directoryCount must be an integer.")
+    if not isinstance(file_count, int):
+        raise ValueError(f"{snapshot_name}.summary.fileCount must be an integer.")
+    if not isinstance(max_depth, int):
+        raise ValueError(f"{snapshot_name}.summary.maxDepth must be an integer.")
+    if not isinstance(top_level_entry_count, int):
+        top_level_entry_count = len(nodes)
+
+    generated_at = snapshot_value.get("generatedAt")
+    if not isinstance(generated_at, str) or not generated_at:
+        generated_at = fallback_generated_at
+
+    root_path = snapshot_value.get("rootPath")
+    if not isinstance(root_path, str) or not root_path:
+        root_path = fallback_root_path
+
+    return {
+        "generatedAt": generated_at,
+        "rootPath": root_path,
+        "summary": {
+            "directoryCount": directory_count,
+            "fileCount": file_count,
+            "maxDepth": max_depth,
+            "topLevelEntryCount": top_level_entry_count,
+        },
+        "tree": {
+            "label": label,
+            "text": text,
+            "nodes": nodes,
+        },
+    }
+
+
+def load_existing_app_snapshots(json_path: Path, app_relative_path: str) -> tuple[dict | None, dict | None]:
+    if not json_path.exists():
+        return None, None
+
+    try:
+        payload = json.loads(json_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError(
+            f"existing {json_path} is malformed JSON at line {exc.lineno}, column {exc.colno}: {exc.msg}"
+        ) from exc
+
+    if not isinstance(payload, dict):
+        raise ValueError(f"existing {json_path} must contain a top-level object.")
+
+    fallback_generated_at = iso_utc_from_timestamp(json_path.stat().st_mtime)
+
+    if "currentSnapshot" in payload or "previousSnapshot" in payload:
+        current_snapshot = payload.get("currentSnapshot")
+        if current_snapshot is None:
+            raise ValueError(f"existing {json_path} is missing currentSnapshot.")
+        previous_snapshot = payload.get("previousSnapshot")
+        normalized_previous = (
+            None
+            if previous_snapshot is None
+            else normalize_snapshot(
+                previous_snapshot,
+                snapshot_name="previousSnapshot",
+                fallback_root_path=app_relative_path,
+                fallback_generated_at=fallback_generated_at,
+            )
+        )
+        normalized_current = normalize_snapshot(
+            current_snapshot,
+            snapshot_name="currentSnapshot",
+            fallback_root_path=app_relative_path,
+            fallback_generated_at=fallback_generated_at,
+        )
+        return normalized_previous, normalized_current
+
+    legacy_tree = payload.get("tree")
+    legacy_summary = payload.get("summary")
+    if not isinstance(legacy_tree, dict) or not isinstance(legacy_summary, dict):
+        raise ValueError(
+            f"existing {json_path} does not match either the current snapshot contract or the legacy filetree contract."
+        )
+
+    legacy_app = payload.get("app")
+    legacy_root_path = app_relative_path
+    if isinstance(legacy_app, dict):
+        legacy_path = legacy_app.get("path")
+        if isinstance(legacy_path, str) and legacy_path:
+            legacy_root_path = legacy_path
+
+    legacy_snapshot = normalize_snapshot(
+        {
+            "generatedAt": fallback_generated_at,
+            "rootPath": legacy_root_path,
+            "summary": {
+                "directoryCount": legacy_summary.get("directoryCount"),
+                "fileCount": legacy_summary.get("fileCount"),
+                "maxDepth": legacy_summary.get("maxDepth"),
+                "topLevelEntryCount": len(legacy_tree.get("nodes", [])) if isinstance(legacy_tree.get("nodes"), list) else None,
+            },
+            "tree": legacy_tree,
+        },
+        snapshot_name="legacySnapshot",
+        fallback_root_path=legacy_root_path,
+        fallback_generated_at=fallback_generated_at,
+    )
+    return None, legacy_snapshot
+
+
+def build_app_report(
+    app_name: str,
+    app_relative_path: str,
+    json_output_path: str,
+    html_output_path: str,
+    previous_snapshot: dict | None,
+    current_snapshot: dict,
+) -> dict:
+    return {
+        "schemaVersion": "2.0",
         "app": {
             "name": app_name,
             "path": app_relative_path,
             "outputPath": json_output_path,
             "htmlOutputPath": html_output_path,
         },
-        "summary": {
-            "directoryCount": tree_model["summary"]["directoryCount"],
-            "fileCount": tree_model["summary"]["fileCount"],
-            "maxDepth": tree_model["maxDepth"],
-        },
         "notes": [
             "Generated automatically",
             "Excludes generated/vendor/noisy paths",
             "Intended for navigation and agent orientation",
+            "Diff identity uses stable repo-relative paths",
         ],
-        "tree": {
-            "label": tree_model["label"],
-            "text": render_tree_text(tree_model),
-            "nodes": tree_model["nodes"],
-        },
+        "previousSnapshot": previous_snapshot,
+        "currentSnapshot": current_snapshot,
     }
 
 
@@ -316,11 +484,12 @@ def render_meta_cards(report: dict) -> str:
 
 
 def render_status_cards(report: dict) -> str:
+    current_summary = report["currentSnapshot"]["summary"]
     cards = [
-        ("Directories", str(report["summary"]["directoryCount"])),
-        ("Files", str(report["summary"]["fileCount"])),
-        ("Max depth", str(report["summary"]["maxDepth"])),
-        ("Top-level entries", str(len(report["tree"]["nodes"]))),
+        ("Directories", str(current_summary["directoryCount"])),
+        ("Files", str(current_summary["fileCount"])),
+        ("Max depth", str(current_summary["maxDepth"])),
+        ("Top-level entries", str(current_summary["topLevelEntryCount"])),
     ]
     return "\n".join(
         [
@@ -333,6 +502,55 @@ def render_status_cards(report: dict) -> str:
             for label, value in cards
         ]
     )
+
+
+def flatten_tree_nodes(nodes: list[dict]) -> dict[str, dict]:
+    flat_index: dict[str, dict] = {}
+
+    def walk(items: list[dict]) -> None:
+        for node in items:
+            relative_path = node.get("relativePath")
+            kind = node.get("kind")
+            if not isinstance(relative_path, str) or not isinstance(kind, str):
+                raise ValueError("filetree node entries must include string relativePath and kind values.")
+            flat_index[relative_path] = {
+                "kind": kind,
+                "childCount": int(node.get("childCount", 0)),
+                "truncated": bool(node.get("truncated", False)),
+            }
+            if kind == "directory":
+                children = node.get("children", [])
+                if not isinstance(children, list):
+                    raise ValueError(f"directory node {relative_path} must include an array children value.")
+                walk(children)
+
+    walk(nodes)
+    return flat_index
+
+
+def build_snapshot_diff(previous_snapshot: dict | None, current_snapshot: dict) -> dict:
+    if previous_snapshot is None:
+        return {
+            "addedPaths": [],
+            "removedPaths": [],
+            "changedPaths": [],
+        }
+
+    previous_index = flatten_tree_nodes(previous_snapshot["tree"]["nodes"])
+    current_index = flatten_tree_nodes(current_snapshot["tree"]["nodes"])
+
+    previous_paths = set(previous_index)
+    current_paths = set(current_index)
+    added_paths = sorted(current_paths - previous_paths)
+    removed_paths = sorted(previous_paths - current_paths)
+    changed_paths = sorted(
+        path for path in (previous_paths & current_paths) if previous_index[path] != current_index[path]
+    )
+    return {
+        "addedPaths": added_paths,
+        "removedPaths": removed_paths,
+        "changedPaths": changed_paths,
+    }
 
 
 def render_node_rows(nodes: list[dict], depth: int = 0) -> str:
@@ -358,9 +576,180 @@ def render_node_rows(nodes: list[dict], depth: int = 0) -> str:
     return "".join(rows)
 
 
+def format_snapshot_timestamp(generated_at: str | None) -> str:
+    if not generated_at:
+        return "Timestamp unavailable"
+    try:
+        parsed = datetime.fromisoformat(generated_at.replace("Z", "+00:00")).astimezone(timezone.utc)
+    except ValueError:
+        return generated_at
+    return parsed.strftime("%Y-%m-%d %H:%M:%S UTC")
+
+
+def render_tree_line(text: str, state: str | None = None, *, is_label: bool = False) -> str:
+    classes = ["filetree-tree-line"]
+    if is_label:
+        classes.append("filetree-tree-line--label")
+    if state in {"added", "removed", "changed"}:
+        classes.append(f"filetree-tree-line--{state}")
+    return f'<span class="{" ".join(classes)}">{html.escape(text)}</span>'
+
+
+def render_snapshot_tree(snapshot: dict, line_states: dict[str, str] | None = None) -> str:
+    line_states = line_states or {}
+    lines = [render_tree_line(snapshot["tree"]["label"], is_label=True)]
+
+    def walk(nodes: list[dict], prefix: str) -> list[str]:
+        output: list[str] = []
+        for index, node in enumerate(nodes):
+            is_last = index == len(nodes) - 1
+            connector = "└── " if is_last else "├── "
+            display_name = f"{node['name']}/" if node["kind"] == "directory" else node["name"]
+            state = line_states.get(node["relativePath"])
+            output.append(render_tree_line(f"{prefix}{connector}{display_name}", state))
+            next_prefix = prefix + ("    " if is_last else "│   ")
+            if node["kind"] == "directory":
+                output.extend(walk(node.get("children", []), next_prefix))
+                if node.get("truncated"):
+                    output.append(render_tree_line(f"{next_prefix}└── …", state))
+        return output
+
+    lines.extend(walk(snapshot["tree"]["nodes"], ""))
+    return "".join(lines)
+
+
+def render_diff_summary(diff: dict) -> str:
+    chips = [
+        ("Added", len(diff["addedPaths"]), "env-inventory-chip--good"),
+        ("Removed", len(diff["removedPaths"]), "env-inventory-chip--problem"),
+        ("Changed", len(diff["changedPaths"]), "env-inventory-chip--accent"),
+    ]
+    return (
+        '<div class="env-inventory-chip-row">'
+        + "".join(
+            f'<span class="count-chip env-inventory-chip {modifier}">{html.escape(label)}: {count}</span>'
+            for label, count, modifier in chips
+        )
+        + "</div>"
+    )
+
+
+def render_removed_paths(diff: dict) -> str:
+    removed_paths = diff["removedPaths"]
+    if not removed_paths:
+        return ""
+    removed_chips = "".join(
+        (
+            '<span class="count-chip env-inventory-chip env-inventory-chip--problem">'
+            f'<code class="env-inventory-inline-code">{html.escape(path)}</code>'
+            "</span>"
+        )
+        for path in removed_paths
+    )
+    return (
+        '<div class="filetree-removed-paths">'
+        '<div class="env-inventory-meta-label">Removed since previous snapshot</div>'
+        f'<div class="env-inventory-chip-row">{removed_chips}</div>'
+        "</div>"
+    )
+
+
+def render_snapshot_panel(
+    title: str,
+    description: str,
+    snapshot: dict,
+    *,
+    line_states: dict[str, str] | None = None,
+    supplementary_html: str = "",
+) -> str:
+    summary = snapshot["summary"]
+    metadata_text = (
+        f"Generated {format_snapshot_timestamp(snapshot.get('generatedAt'))} · "
+        f"{summary['directoryCount']} directories · "
+        f"{summary['fileCount']} files · "
+        f"max depth {summary['maxDepth']}."
+    )
+    return (
+        '<article class="paper-panel env-inventory-panel filetree-snapshot-card">'
+        '<div class="env-inventory-section-header">'
+        f'<h3 class="font-serif text-2xl text-strong">{html.escape(title)}</h3>'
+        f'<p class="text-sm leading-6 text-muted">{html.escape(description)}</p>'
+        "</div>"
+        '<div class="filetree-snapshot-meta">'
+        f'<p class="text-sm leading-6 text-muted">{html.escape(metadata_text)}</p>'
+        f"{supplementary_html}"
+        "</div>"
+        f'<div class="env-inventory-raw filetree-snapshot-tree">{render_snapshot_tree(snapshot, line_states)}</div>'
+        "</article>"
+    )
+
+
+def render_snapshot_section(report: dict) -> str:
+    previous_snapshot = report["previousSnapshot"]
+    current_snapshot = report["currentSnapshot"]
+    diff = build_snapshot_diff(previous_snapshot, current_snapshot)
+
+    previous_panel = ""
+    previous_notice = ""
+    if previous_snapshot is None:
+        previous_notice = (
+            '<div class="env-inventory-alert">'
+            "No previous snapshot is stored yet. This current snapshot becomes the comparison baseline on the next generation."
+            "</div>"
+        )
+    else:
+        previous_line_states = {path: "removed" for path in diff["removedPaths"]}
+        previous_panel = render_snapshot_panel(
+            "Previous snapshot",
+            "Reference context from the immediately prior generation. Removed paths are lightly marked here.",
+            previous_snapshot,
+            line_states=previous_line_states,
+        )
+
+    current_line_states = {path: "added" for path in diff["addedPaths"]}
+    for path in diff["changedPaths"]:
+        current_line_states[path] = "changed"
+
+    current_description = (
+        "Newest snapshot. Stable repo-relative paths are used as node identities for diffing."
+        if previous_snapshot is not None
+        else "First stored snapshot. Diff highlighting appears after the next generation."
+    )
+    current_supplementary_html = (
+        render_diff_summary(diff) + render_removed_paths(diff)
+        if previous_snapshot is not None
+        else ""
+    )
+    current_panel = render_snapshot_panel(
+        "Current snapshot",
+        current_description,
+        current_snapshot,
+        line_states=current_line_states,
+        supplementary_html=current_supplementary_html,
+    )
+
+    return (
+        '<section class="paper-panel env-inventory-panel">'
+        '<div class="env-inventory-section-header">'
+        '<h2 class="font-serif text-2xl text-strong">Tree snapshots</h2>'
+        '<p class="text-sm leading-6 text-muted">'
+        "Compare the immediately previous snapshot with the latest snapshot. "
+        "Added and changed paths are emphasized in the current view; removed paths are summarized and shown in the previous view when available."
+        "</p>"
+        "</div>"
+        f"{previous_notice}"
+        '<div class="filetree-snapshot-grid">'
+        f"{previous_panel}"
+        f"{current_panel}"
+        "</div>"
+        "</section>"
+    )
+
+
 def render_app_html(report: dict) -> str:
     app_name = report["app"]["name"]
-    app_root = report["app"]["path"]
+    current_snapshot = report["currentSnapshot"]
+    app_root = current_snapshot["rootPath"]
     json_blob = json.dumps(report, separators=(",", ":")).replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
     return f"""<!doctype html>
 <html lang="en">
@@ -408,18 +797,12 @@ def render_app_html(report: dict) -> str:
       </section>
 
       <div class="env-inventory-section-grid">
-        <section class="paper-panel env-inventory-panel">
-          <div class="env-inventory-section-header">
-            <h2 class="font-serif text-2xl text-strong">Tree snapshot</h2>
-            <p class="text-sm leading-6 text-muted">Rendered from the structured node model for <code class="env-inventory-inline-code">{html.escape(app_root)}</code>.</p>
-          </div>
-          <pre id="filetree-raw-text" class="env-inventory-raw text-sm leading-6" data-copy-source>{html.escape(report["tree"]["text"])}</pre>
-        </section>
+        {render_snapshot_section(report)}
 
         <section class="paper-panel env-inventory-panel">
           <div class="env-inventory-section-header">
             <h2 class="font-serif text-2xl text-strong">Structured entries</h2>
-            <p class="text-sm leading-6 text-muted">Directory and file nodes from the same JSON source used to build this page.</p>
+            <p class="text-sm leading-6 text-muted">Directory and file nodes from the current snapshot in the same JSON source used to build this page.</p>
           </div>
           <div class="overflow-auto">
             <table class="min-w-full text-left">
@@ -432,7 +815,7 @@ def render_app_html(report: dict) -> str:
                 </tr>
               </thead>
               <tbody id="filetree-node-table" class="text-sm leading-6">
-                {render_node_rows(report["tree"]["nodes"])}
+                {render_node_rows(current_snapshot["tree"]["nodes"])}
               </tbody>
             </table>
           </div>
@@ -559,7 +942,16 @@ def main() -> int:
                 )
                 json_output_relative = f"{app_relative}/docs/filetree.json"
                 html_output_relative = f"{app_relative}/docs/filetree.html"
-                report = build_app_report(app.name, app_relative, json_output_relative, html_output_relative, tree_model)
+                _, existing_current_snapshot = load_existing_app_snapshots(docs_dir / "filetree.json", app_relative)
+                current_snapshot = build_snapshot(app_relative, tree_model, iso_utc_now())
+                report = build_app_report(
+                    app.name,
+                    app_relative,
+                    json_output_relative,
+                    html_output_relative,
+                    existing_current_snapshot,
+                    current_snapshot,
+                )
                 json_result = write_if_changed(docs_dir / "filetree.json", f"{json.dumps(report, indent=2)}\n")
                 html_result = write_if_changed(docs_dir / "filetree.html", render_app_html(report))
                 removed_paths: list[Path] = []
