@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+import html
 import re
 import subprocess
 import sys
@@ -49,7 +51,8 @@ FILE_TREE_SECTION = """## File tree documentation
 This repository maintains generated file tree references for navigation and agent orientation.
 
 - Root overview: `monorepo-filetree.md`
-- Per-app overviews: `apps/<app-name>/doc/filetree.md`
+- Per-app overviews: `apps/<app-name>/docs/filetree.html`
+- Per-app structured data: `apps/<app-name>/docs/filetree.json`
 
 When repository structure changes materially, update these generated documents to keep them in sync.
 """
@@ -64,7 +67,8 @@ This repository contains a monorepo with app-specific file tree documentation.
 This repository maintains generated file tree references for navigation and agent orientation.
 
 - Root overview: `monorepo-filetree.md`
-- Per-app overviews: `apps/<app-name>/doc/filetree.md`
+- Per-app overviews: `apps/<app-name>/docs/filetree.html`
+- Per-app structured data: `apps/<app-name>/docs/filetree.json`
 
 When repository structure changes materially, update these generated documents to keep them in sync.
 
@@ -89,8 +93,9 @@ class WriteResult:
 @dataclass(frozen=True)
 class AppResult:
     name: str
-    doc_dir_created: bool
-    file_result: WriteResult | None
+    docs_dir_created: bool
+    file_results: tuple[WriteResult, ...]
+    removed_paths: tuple[Path, ...]
     error: str | None
 
 
@@ -154,29 +159,78 @@ def has_visible_children(directory: Path, scope_root: Path, virtual_files: set[P
     return bool(visible_children(directory, scope_root, virtual_files))
 
 
-def render_tree(scope_root: Path, label: str, max_depth: int, virtual_files: set[Path] | None = None) -> str:
+def build_tree_model(scope_root: Path, label: str, max_depth: int, virtual_files: set[Path] | None = None) -> dict:
     virtual_files = virtual_files or set()
-    lines = [label]
 
-    def walk(directory: Path, prefix: str, depth: int) -> list[str]:
+    def walk(directory: Path, depth: int, relative_parent: Path) -> list[dict]:
         entries = visible_children(directory, scope_root, virtual_files)
+        children: list[dict] = []
+        for name, is_dir, child_path in entries:
+            relative_path = (relative_parent / name).as_posix()
+            node = {
+                "name": name,
+                "kind": "directory" if is_dir else "file",
+                "relativePath": relative_path,
+            }
+            if is_dir:
+                child_has_more = child_path is not None and has_visible_children(child_path, scope_root, virtual_files)
+                if child_path is None:
+                    node["children"] = []
+                elif depth >= max_depth:
+                    node["children"] = []
+                    node["truncated"] = child_has_more
+                else:
+                    node["children"] = walk(child_path, depth + 1, relative_parent / name)
+                if node.get("children") or node.get("truncated"):
+                    node["childCount"] = len(node.get("children", []))
+            children.append(node)
+        return children
+
+    nodes = walk(scope_root, 1, Path("."))
+
+    def count_nodes(items: list[dict]) -> tuple[int, int]:
+        directory_count = 0
+        file_count = 0
+        for item in items:
+            if item["kind"] == "directory":
+                directory_count += 1
+                child_directories, child_files = count_nodes(item.get("children", []))
+                directory_count += child_directories
+                file_count += child_files
+            else:
+                file_count += 1
+        return directory_count, file_count
+
+    directory_count, file_count = count_nodes(nodes)
+    return {
+        "label": label,
+        "maxDepth": max_depth,
+        "nodes": nodes,
+        "summary": {
+            "directoryCount": directory_count,
+            "fileCount": file_count,
+        },
+    }
+
+
+def render_tree_text(tree_model: dict) -> str:
+    lines = [tree_model["label"]]
+
+    def walk(nodes: list[dict], prefix: str) -> list[str]:
         output: list[str] = []
-        for index, (name, is_dir, child_path) in enumerate(entries):
-            is_last = index == len(entries) - 1
+        for index, node in enumerate(nodes):
+            is_last = index == len(nodes) - 1
             connector = "└── " if is_last else "├── "
-            display_name = f"{name}/" if is_dir else name
+            display_name = f"{node['name']}/" if node["kind"] == "directory" else node["name"]
             output.append(f"{prefix}{connector}{display_name}")
             next_prefix = prefix + ("    " if is_last else "│   ")
-            if not is_dir or child_path is None:
-                continue
-            if depth >= max_depth:
-                if has_visible_children(child_path, scope_root, virtual_files):
+            if node["kind"] == "directory":
+                output.extend(walk(node.get("children", []), next_prefix))
+                if node.get("truncated"):
                     output.append(f"{next_prefix}└── …")
-                continue
-            output.extend(walk(child_path, next_prefix, depth + 1))
         return output
 
-    lines.extend(walk(scope_root, "", 1))
+    lines.extend(walk(tree_model["nodes"], ""))
     return "\n".join(lines)
 
 
@@ -184,7 +238,11 @@ def render_root_markdown(repo_root: Path, apps: list[Path], tree: str) -> str:
     if apps:
         apps_section = "\n\n".join(
             [
-                f"### apps/{app.name}\n\n- Detailed tree: `apps/{app.name}/doc/filetree.md`"
+                (
+                    f"### apps/{app.name}\n\n"
+                    f"- Detailed tree: `apps/{app.name}/docs/filetree.html`\n"
+                    f"- Structured source: `apps/{app.name}/docs/filetree.json`"
+                )
                 for app in apps
             ]
         )
@@ -200,7 +258,8 @@ def render_root_markdown(repo_root: Path, apps: list[Path], tree: str) -> str:
         "- Generated automatically\n"
         "- Source of truth: current repository structure\n"
         "- Excludes generated/vendor/noisy paths\n"
-        "- Per-app detailed trees live in each app's `doc/filetree.md`\n\n"
+        "- Per-app detailed trees live in each app's `docs/filetree.html`\n"
+        "- Per-app structured data lives in each app's `docs/filetree.json`\n\n"
         "## Top-level structure\n\n"
         "```text\n"
         f"{tree}\n"
@@ -210,23 +269,181 @@ def render_root_markdown(repo_root: Path, apps: list[Path], tree: str) -> str:
     )
 
 
-def render_app_markdown(app_name: str, app_relative_path: str, tree: str) -> str:
-    return (
-        f"{GENERATED_COMMENT}\n\n"
-        f"# File Tree: {app_name}\n\n"
-        "## Purpose\n\n"
-        f"This document provides a structural overview of the `{app_name}` app.\n\n"
-        "## Path\n\n"
-        f"`{app_relative_path}`\n\n"
-        "## Notes\n\n"
-        "- Generated automatically\n"
-        "- Excludes generated/vendor/noisy paths\n"
-        "- Intended for navigation and agent orientation\n\n"
-        "## Tree\n\n"
-        "```text\n"
-        f"{tree}\n"
-        "```\n"
+def build_app_report(app_name: str, app_relative_path: str, json_output_path: str, html_output_path: str, tree_model: dict) -> dict:
+    return {
+        "schemaVersion": "1.0",
+        "app": {
+            "name": app_name,
+            "path": app_relative_path,
+            "outputPath": json_output_path,
+            "htmlOutputPath": html_output_path,
+        },
+        "summary": {
+            "directoryCount": tree_model["summary"]["directoryCount"],
+            "fileCount": tree_model["summary"]["fileCount"],
+            "maxDepth": tree_model["maxDepth"],
+        },
+        "notes": [
+            "Generated automatically",
+            "Excludes generated/vendor/noisy paths",
+            "Intended for navigation and agent orientation",
+        ],
+        "tree": {
+            "label": tree_model["label"],
+            "text": render_tree_text(tree_model),
+            "nodes": tree_model["nodes"],
+        },
+    }
+
+
+def render_meta_cards(report: dict) -> str:
+    cards = [
+        ("App root", report["app"]["path"]),
+        ("JSON report path", report["app"]["outputPath"]),
+        ("HTML report path", report["app"]["htmlOutputPath"]),
+    ]
+    return "\n".join(
+        [
+            (
+                '<article class="paper-panel env-inventory-meta-card">'
+                f'<div class="env-inventory-meta-label">{html.escape(label)}</div>'
+                f'<div class="text-sm leading-6 text-strong"><code class="env-inventory-inline-code">{html.escape(value)}</code></div>'
+                "</article>"
+            )
+            for label, value in cards
+        ]
     )
+
+
+def render_status_cards(report: dict) -> str:
+    cards = [
+        ("Directories", str(report["summary"]["directoryCount"])),
+        ("Files", str(report["summary"]["fileCount"])),
+        ("Max depth", str(report["summary"]["maxDepth"])),
+        ("Top-level entries", str(len(report["tree"]["nodes"]))),
+    ]
+    return "\n".join(
+        [
+            (
+                '<article class="paper-panel env-inventory-status-card env-inventory-status-card--good">'
+                f'<div class="env-inventory-status-label">{html.escape(label)}</div>'
+                f'<div class="env-inventory-status-value">{html.escape(value)}</div>'
+                "</article>"
+            )
+            for label, value in cards
+        ]
+    )
+
+
+def render_node_rows(nodes: list[dict], depth: int = 0) -> str:
+    rows: list[str] = []
+    for node in nodes:
+        indent = "&nbsp;" * (depth * 4)
+        kind = "Directory" if node["kind"] == "directory" else "File"
+        child_summary = ""
+        if node["kind"] == "directory":
+            children = node.get("children", [])
+            suffix = " + more" if node.get("truncated") else ""
+            child_summary = f"{len(children)} shown{suffix}"
+        rows.append(
+            "<tr>"
+            f'<td class="text-sm leading-6 text-strong">{indent}<code class="env-inventory-inline-code">{html.escape(node["name"])}</code></td>'
+            f'<td class="text-sm leading-6 text-muted">{html.escape(kind)}</td>'
+            f'<td class="text-sm leading-6 text-muted"><code class="env-inventory-inline-code">{html.escape(node["relativePath"])}</code></td>'
+            f'<td class="text-sm leading-6 text-muted">{html.escape(child_summary)}</td>'
+            "</tr>"
+        )
+        if node["kind"] == "directory":
+            rows.append(render_node_rows(node.get("children", []), depth + 1))
+    return "".join(rows)
+
+
+def render_app_html(report: dict) -> str:
+    app_name = report["app"]["name"]
+    app_root = report["app"]["path"]
+    json_blob = json.dumps(report, separators=(",", ":")).replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
+    return f"""<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>File tree · {html.escape(app_name)}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap"
+    >
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/assets/app.css">
+  </head>
+  <body class="app-shell">
+    <main class="mx-auto grid min-h-screen w-full max-w-7xl content-start gap-4 px-4 pb-10 pt-4 sm:px-6 lg:px-8">
+      <header class="top-bar">
+        <div class="min-w-0 env-inventory-header-copy">
+          <div class="top-bar-title-row env-inventory-title-row">
+            <a class="touch-button-secondary" href="/">{html.escape(app_name)}</a>
+            <h1 class="font-serif text-3xl leading-tight text-strong">File tree report</h1>
+          </div>
+          <p class="text-sm leading-6 text-muted">Static, app-local HTML built from the structured file tree report.</p>
+        </div>
+      </header>
+
+      <section class="env-inventory-meta-grid">
+        {render_meta_cards(report)}
+      </section>
+
+      <section class="env-inventory-status-grid">
+        {render_status_cards(report)}
+      </section>
+
+      <section class="paper-panel env-inventory-panel">
+        <div class="env-inventory-section-header">
+          <h2 class="font-serif text-2xl text-strong">Notes</h2>
+          <p class="text-sm leading-6 text-muted">Generation rules and navigation intent for this app-level tree.</p>
+        </div>
+        <div class="env-inventory-chip-row">
+          {"".join(f'<span class="count-chip env-inventory-chip">{html.escape(note)}</span>' for note in report["notes"])}
+        </div>
+      </section>
+
+      <div class="env-inventory-section-grid">
+        <section class="paper-panel env-inventory-panel">
+          <div class="env-inventory-section-header">
+            <h2 class="font-serif text-2xl text-strong">Tree snapshot</h2>
+            <p class="text-sm leading-6 text-muted">Rendered from the structured node model for <code class="env-inventory-inline-code">{html.escape(app_root)}</code>.</p>
+          </div>
+          <pre id="filetree-raw-text" class="env-inventory-raw text-sm leading-6" data-copy-source>{html.escape(report["tree"]["text"])}</pre>
+        </section>
+
+        <section class="paper-panel env-inventory-panel">
+          <div class="env-inventory-section-header">
+            <h2 class="font-serif text-2xl text-strong">Structured entries</h2>
+            <p class="text-sm leading-6 text-muted">Directory and file nodes from the same JSON source used to build this page.</p>
+          </div>
+          <div class="overflow-auto">
+            <table class="min-w-full text-left">
+              <thead>
+                <tr>
+                  <th class="field-label text-sm font-semibold">Name</th>
+                  <th class="field-label text-sm font-semibold">Kind</th>
+                  <th class="field-label text-sm font-semibold">Relative path</th>
+                  <th class="field-label text-sm font-semibold">Children</th>
+                </tr>
+              </thead>
+              <tbody id="filetree-node-table" class="text-sm leading-6">
+                {render_node_rows(report["tree"]["nodes"])}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <script id="filetree-report-data" type="application/json">{json_blob}</script>
+    </main>
+  </body>
+</html>
+"""
 
 
 def write_if_changed(path: Path, content: str) -> WriteResult:
@@ -238,6 +455,22 @@ def write_if_changed(path: Path, content: str) -> WriteResult:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, encoding="utf-8")
     return WriteResult(path=path, status="updated" if existed else "created")
+
+
+def remove_if_exists(path: Path) -> bool:
+    if not path.exists():
+        return False
+    path.unlink()
+    return True
+
+
+def remove_dir_if_empty(path: Path) -> bool:
+    if not path.exists() or not path.is_dir():
+        return False
+    if any(path.iterdir()):
+        return False
+    path.rmdir()
+    return True
 
 
 def is_file_tree_heading(line: str) -> bool:
@@ -312,31 +545,41 @@ def main() -> int:
         app_results: list[AppResult] = []
         for app in apps:
             app_relative = relative_path(app, repo_root)
-            doc_dir = app / "doc"
-            doc_dir_created = False
+            docs_dir = app / "docs"
+            docs_dir_created = False
             try:
-                if not doc_dir.exists():
-                    doc_dir.mkdir(parents=True, exist_ok=True)
-                    doc_dir_created = True
-                tree = render_tree(
+                if not docs_dir.exists():
+                    docs_dir.mkdir(parents=True, exist_ok=True)
+                    docs_dir_created = True
+                tree_model = build_tree_model(
                     app,
                     label=f"{app_relative}/",
                     max_depth=6,
-                    virtual_files={Path("doc/filetree.md")},
+                    virtual_files={Path("docs/filetree.json"), Path("docs/filetree.html")},
                 )
-                markdown = render_app_markdown(app.name, app_relative, tree)
-                file_result = write_if_changed(doc_dir / "filetree.md", markdown)
-                app_results.append(AppResult(app.name, doc_dir_created, file_result, None))
+                json_output_relative = f"{app_relative}/docs/filetree.json"
+                html_output_relative = f"{app_relative}/docs/filetree.html"
+                report = build_app_report(app.name, app_relative, json_output_relative, html_output_relative, tree_model)
+                json_result = write_if_changed(docs_dir / "filetree.json", f"{json.dumps(report, indent=2)}\n")
+                html_result = write_if_changed(docs_dir / "filetree.html", render_app_html(report))
+                removed_paths: list[Path] = []
+                legacy_markdown = app / "doc" / "filetree.md"
+                if remove_if_exists(legacy_markdown):
+                    removed_paths.append(legacy_markdown)
+                if remove_dir_if_empty(app / "doc"):
+                    removed_paths.append(app / "doc")
+                app_results.append(AppResult(app.name, docs_dir_created, (json_result, html_result), tuple(removed_paths), None))
             except Exception as exc:
-                app_results.append(AppResult(app.name, doc_dir_created, None, str(exc)))
+                app_results.append(AppResult(app.name, docs_dir_created, tuple(), tuple(), str(exc)))
 
         try:
-            root_tree = render_tree(
+            root_tree_model = build_tree_model(
                 repo_root,
                 label=f"{repo_root.name}/",
                 max_depth=4,
                 virtual_files={Path("monorepo-filetree.md")},
             )
+            root_tree = render_tree_text(root_tree_model)
             root_markdown = render_root_markdown(repo_root, apps, root_tree)
             root_result = write_if_changed(repo_root / "monorepo-filetree.md", root_markdown)
         except OSError as exc:
@@ -349,10 +592,12 @@ def main() -> int:
             if app_result.error:
                 print(f"partial failure: {prefix}{app_result.error}")
                 continue
-            if app_result.doc_dir_created:
-                print(f"created directory: {relative_path(repo_root / 'apps' / app_result.name / 'doc', repo_root)}")
-            if app_result.file_result is not None:
-                print(format_write_result(app_result.file_result, repo_root))
+            if app_result.docs_dir_created:
+                print(f"created directory: {relative_path(repo_root / 'apps' / app_result.name / 'docs', repo_root)}")
+            for file_result in app_result.file_results:
+                print(format_write_result(file_result, repo_root))
+            for removed_path in app_result.removed_paths:
+                print(f"removed: {relative_path(removed_path, repo_root)}")
 
         failed_apps = [result.name for result in app_results if result.error]
         if failed_apps:

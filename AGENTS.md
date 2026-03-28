@@ -25,6 +25,7 @@
 This repository maintains generated file tree references for navigation and agent orientation.
 
 - Root overview: `monorepo-filetree.md`
-- Per-app overviews: `apps/<app-name>/doc/filetree.md`
+- Per-app overviews: `apps/<app-name>/docs/filetree.html`
+- Per-app structured data: `apps/<app-name>/docs/filetree.json`
 
 When repository structure changes materially, update these generated documents to keep them in sync.

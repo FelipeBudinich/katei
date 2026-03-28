@@ -13,6 +13,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const appRoot = path.resolve(__dirname, '../..');
 const envInventoryPath = path.join(appRoot, 'docs', 'env-inventory.html');
+const filetreePath = path.join(appRoot, 'docs', 'filetree.html');
 
 const router = Router();
 
@@ -36,8 +37,8 @@ export function renderHealth(request, response) {
   response.json({ ok: true });
 }
 
-export function renderEnvInventory(request, response, next) {
-  response.sendFile(envInventoryPath, (error) => {
+function sendGeneratedDoc(response, next, filePath) {
+  response.sendFile(filePath, (error) => {
     if (!error) {
       return;
     }
@@ -51,9 +52,18 @@ export function renderEnvInventory(request, response, next) {
   });
 }
 
+export function renderEnvInventory(request, response, next) {
+  sendGeneratedDoc(response, next, envInventoryPath);
+}
+
+export function renderFiletree(request, response, next) {
+  sendGeneratedDoc(response, next, filetreePath);
+}
+
 router.get('/', renderWorkspacePage);
 
 router.get('/docs/env-inventory.html', renderEnvInventory);
+router.get('/docs/filetree.html', renderFiletree);
 
 router.get('/health', renderHealth);
 

@@ -16,7 +16,7 @@ Use this skill when repository structure changes materially or when file tree do
 Workflow:
 
 1. Run the generator.
-2. Review `git diff -- AGENTS.md monorepo-filetree.md apps/*/doc/filetree.md`.
+2. Review `git diff -- AGENTS.md monorepo-filetree.md apps/*/docs/filetree.json apps/*/docs/filetree.html`.
 3. Summarize which files were created or updated, any zero-asset or empty apps, and any partial app failures.
 4. Do not hand-edit generated file tree docs unless the generation contract changes.
 
@@ -31,7 +31,7 @@ Notes:
 - The generator fails with a clear blocking error if `/apps` does not exist at the repo root.
 - App discovery only uses immediate children of `/apps`.
 - The root output is always `monorepo-filetree.md`.
-- Each app output is always `apps/<app-name>/doc/filetree.md`; missing `doc/` folders are created.
+- Each app output is always `apps/<app-name>/docs/filetree.json` and `apps/<app-name>/docs/filetree.html`; missing `docs/` folders are created.
 - App trees are scoped to that app only and do not include another app's files.
-- Empty apps still get a valid `apps/<app-name>/doc/filetree.md`.
+- Empty apps still get valid `apps/<app-name>/docs/filetree.json` and `apps/<app-name>/docs/filetree.html` outputs.
 - `AGENTS.md` is created if missing and otherwise updated conservatively without duplicating the file tree documentation section.

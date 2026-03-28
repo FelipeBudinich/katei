@@ -11,7 +11,8 @@ This document provides a structural overview of the monorepo.
 - Generated automatically
 - Source of truth: current repository structure
 - Excludes generated/vendor/noisy paths
-- Per-app detailed trees live in each app's `doc/filetree.md`
+- Per-app detailed trees live in each app's `docs/filetree.html`
+- Per-app structured data lives in each app's `docs/filetree.json`
 
 ## Top-level structure
 
@@ -59,11 +60,11 @@ hanmoto-board/
 │       └── deploy-katei-heroku.yml
 ├── apps/
 │   └── katei/
-│       ├── doc/
-│       │   └── filetree.md
 │       ├── docs/
 │       │   ├── env-inventory.html
-│       │   └── env-inventory.json
+│       │   ├── env-inventory.json
+│       │   ├── filetree.html
+│       │   └── filetree.json
 │       ├── public/
 │       │   ├── assets/
 │       │   │   └── …
@@ -112,4 +113,5 @@ hanmoto-board/
 
 ### apps/katei
 
-- Detailed tree: `apps/katei/doc/filetree.md`
+- Detailed tree: `apps/katei/docs/filetree.html`
+- Structured source: `apps/katei/docs/filetree.json`

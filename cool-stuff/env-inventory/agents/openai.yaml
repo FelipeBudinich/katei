@@ -1,0 +1,7 @@
+interface:
+  display_name: "Env Inventory"
+  short_description: "Inventory repo env definitions and usage"
+  default_prompt: "Use $env-inventory to audit environment variable definitions and usages in an apps/* monorepo, regenerate per-app env inventory JSON and HTML reports, and summarize grounded root, shared-package, missing-example, and dynamic-access findings."
+
+policy:
+  allow_implicit_invocation: false
