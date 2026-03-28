@@ -7,6 +7,7 @@ import html
 import re
 import subprocess
 import sys
+from copy import deepcopy
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -444,7 +445,10 @@ def build_app_report(
     html_output_path: str,
     previous_snapshot: dict | None,
     current_snapshot: dict,
+    diff: dict,
 ) -> dict:
+    if previous_snapshot is current_snapshot and previous_snapshot is not None:
+        raise ValueError("previousSnapshot and currentSnapshot must be distinct objects.")
     return {
         "schemaVersion": "2.0",
         "app": {
@@ -461,6 +465,7 @@ def build_app_report(
         ],
         "previousSnapshot": previous_snapshot,
         "currentSnapshot": current_snapshot,
+        "diff": diff,
     }
 
 
@@ -504,28 +509,64 @@ def render_status_cards(report: dict) -> str:
     )
 
 
-def flatten_tree_nodes(nodes: list[dict]) -> dict[str, dict]:
+def flatten_tree_nodes(nodes: list[dict]) -> tuple[dict[str, dict], str]:
     flat_index: dict[str, dict] = {}
 
-    def walk(items: list[dict]) -> None:
+    def walk(items: list[dict]) -> list[tuple[str, str]]:
+        signatures: list[tuple[str, str]] = []
         for node in items:
+            name = node.get("name")
             relative_path = node.get("relativePath")
             kind = node.get("kind")
-            if not isinstance(relative_path, str) or not isinstance(kind, str):
-                raise ValueError("filetree node entries must include string relativePath and kind values.")
-            flat_index[relative_path] = {
-                "kind": kind,
-                "childCount": int(node.get("childCount", 0)),
-                "truncated": bool(node.get("truncated", False)),
-            }
+            if not isinstance(name, str) or not isinstance(relative_path, str) or not isinstance(kind, str):
+                raise ValueError("filetree node entries must include string name, relativePath, and kind values.")
+            if relative_path in flat_index:
+                raise ValueError(f"duplicate filetree node path detected: {relative_path}")
+
+            truncated = bool(node.get("truncated", False))
+            child_signatures: list[tuple[str, str]] = []
             if kind == "directory":
                 children = node.get("children", [])
                 if not isinstance(children, list):
                     raise ValueError(f"directory node {relative_path} must include an array children value.")
-                walk(children)
+                child_signatures = walk(children)
 
-    walk(nodes)
-    return flat_index
+            structure_signature = json.dumps(
+                {
+                    "kind": kind,
+                    "truncated": truncated,
+                    "children": [f"{child_name}:{child_signature}" for child_name, child_signature in child_signatures],
+                },
+                separators=(",", ":"),
+            )
+            flat_index[relative_path] = {
+                "kind": kind,
+                "childCount": int(node.get("childCount", 0)),
+                "truncated": truncated,
+                "structureSignature": structure_signature,
+            }
+            signatures.append((name, structure_signature))
+        return signatures
+
+    root_signature = json.dumps(
+        {
+            "children": [f"{name}:{signature}" for name, signature in walk(nodes)],
+        },
+        separators=(",", ":"),
+    )
+    return flat_index, root_signature
+
+
+def snapshots_structurally_equal(left_snapshot: dict, right_snapshot: dict) -> bool:
+    left_index, left_root_signature = flatten_tree_nodes(left_snapshot["tree"]["nodes"])
+    right_index, right_root_signature = flatten_tree_nodes(right_snapshot["tree"]["nodes"])
+    return (
+        left_snapshot["rootPath"] == right_snapshot["rootPath"]
+        and left_snapshot["tree"]["label"] == right_snapshot["tree"]["label"]
+        and left_snapshot["summary"] == right_snapshot["summary"]
+        and left_root_signature == right_root_signature
+        and left_index == right_index
+    )
 
 
 def build_snapshot_diff(previous_snapshot: dict | None, current_snapshot: dict) -> dict:
@@ -536,15 +577,20 @@ def build_snapshot_diff(previous_snapshot: dict | None, current_snapshot: dict) 
             "changedPaths": [],
         }
 
-    previous_index = flatten_tree_nodes(previous_snapshot["tree"]["nodes"])
-    current_index = flatten_tree_nodes(current_snapshot["tree"]["nodes"])
+    if previous_snapshot is current_snapshot:
+        raise ValueError("previousSnapshot and currentSnapshot must not reference the same object.")
+
+    previous_index, _ = flatten_tree_nodes(previous_snapshot["tree"]["nodes"])
+    current_index, _ = flatten_tree_nodes(current_snapshot["tree"]["nodes"])
 
     previous_paths = set(previous_index)
     current_paths = set(current_index)
     added_paths = sorted(current_paths - previous_paths)
     removed_paths = sorted(previous_paths - current_paths)
     changed_paths = sorted(
-        path for path in (previous_paths & current_paths) if previous_index[path] != current_index[path]
+        path
+        for path in (previous_paths & current_paths)
+        if previous_index[path]["structureSignature"] != current_index[path]["structureSignature"]
     )
     return {
         "addedPaths": added_paths,
@@ -687,7 +733,7 @@ def render_snapshot_panel(
 def render_snapshot_section(report: dict) -> str:
     previous_snapshot = report["previousSnapshot"]
     current_snapshot = report["currentSnapshot"]
-    diff = build_snapshot_diff(previous_snapshot, current_snapshot)
+    diff = report.get("diff") or build_snapshot_diff(previous_snapshot, current_snapshot)
 
     previous_panel = ""
     previous_notice = ""
@@ -946,15 +992,25 @@ def main() -> int:
                 )
                 json_output_relative = f"{app_relative}/docs/filetree.json"
                 html_output_relative = f"{app_relative}/docs/filetree.html"
-                _, existing_current_snapshot = load_existing_app_snapshots(docs_dir / "filetree.json", app_relative)
-                current_snapshot = build_snapshot(app_relative, tree_model, iso_utc_now())
+                existing_previous_snapshot, existing_current_snapshot = load_existing_app_snapshots(
+                    docs_dir / "filetree.json", app_relative
+                )
+                freshly_generated_snapshot = build_snapshot(app_relative, tree_model, iso_utc_now())
+                if existing_current_snapshot and snapshots_structurally_equal(existing_current_snapshot, freshly_generated_snapshot):
+                    previous_snapshot = existing_previous_snapshot
+                    current_snapshot = existing_current_snapshot
+                else:
+                    previous_snapshot = None if existing_current_snapshot is None else deepcopy(existing_current_snapshot)
+                    current_snapshot = freshly_generated_snapshot
+                diff = build_snapshot_diff(previous_snapshot, current_snapshot)
                 report = build_app_report(
                     app.name,
                     app_relative,
                     json_output_relative,
                     html_output_relative,
-                    existing_current_snapshot,
+                    previous_snapshot,
                     current_snapshot,
+                    diff,
                 )
                 json_result = write_if_changed(docs_dir / "filetree.json", f"{json.dumps(report, indent=2)}\n")
                 html_result = write_if_changed(docs_dir / "filetree.html", render_app_html(report))

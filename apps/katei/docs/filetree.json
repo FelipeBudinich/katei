@@ -763,5 +763,10 @@
         }
       ]
     }
+  },
+  "diff": {
+    "addedPaths": [],
+    "removedPaths": [],
+    "changedPaths": []
   }
 }
