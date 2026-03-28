@@ -112,6 +112,11 @@
     gap: 1rem;
   }
 
+  .filetree-snapshot-comparison {
+    display: grid;
+    gap: 1rem;
+  }
+
   .filetree-snapshot-card {
     display: grid;
     gap: 1rem;

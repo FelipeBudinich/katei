@@ -13,7 +13,7 @@
     "Diff identity uses stable repo-relative paths"
   ],
   "previousSnapshot": {
-    "generatedAt": "2026-03-28T14:26:00Z",
+    "generatedAt": "2026-03-28T14:26:36Z",
     "rootPath": "apps/katei",
     "summary": {
       "directoryCount": 19,
@@ -389,7 +389,7 @@
     }
   },
   "currentSnapshot": {
-    "generatedAt": "2026-03-28T14:26:36Z",
+    "generatedAt": "2026-03-28T14:37:20Z",
     "rootPath": "apps/katei",
     "summary": {
       "directoryCount": 19,

@@ -715,8 +715,9 @@ def render_snapshot_section(report: dict) -> str:
         if previous_snapshot is not None
         else "First stored snapshot. Diff highlighting appears after the next generation."
     )
+    comparison_summary = render_diff_summary(diff) if previous_snapshot is not None else ""
     current_supplementary_html = (
-        render_diff_summary(diff) + render_removed_paths(diff)
+        render_removed_paths(diff)
         if previous_snapshot is not None
         else ""
     )
@@ -738,9 +739,12 @@ def render_snapshot_section(report: dict) -> str:
         "</p>"
         "</div>"
         f"{previous_notice}"
+        '<div class="filetree-snapshot-comparison">'
+        f"{comparison_summary}"
         '<div class="filetree-snapshot-grid">'
         f"{previous_panel}"
         f"{current_panel}"
+        "</div>"
         "</div>"
         "</section>"
     )
