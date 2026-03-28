@@ -236,6 +236,37 @@
       ]
     },
     {
+      "name": "KATEI_SESSION_SECRET",
+      "secretLike": true,
+      "publicLike": false,
+      "definitions": [
+        {
+          "kind": "envFile",
+          "file": "apps/katei/.env.example",
+          "line": 11,
+          "scope": "app",
+          "snippet": "KATEI_SESSION_SECRET=replace-with-a-long-random-string",
+          "comment": "# Secret used to sign the Katei session cookie."
+        }
+      ],
+      "usages": [
+        {
+          "kind": "read",
+          "file": "apps/katei/src/config.js",
+          "line": 11,
+          "scope": "app",
+          "snippet": "sessionSecret: requireNonEmptyEnv('KATEI_SESSION_SECRET', env.KATEI_SESSION_SECRET),"
+        },
+        {
+          "kind": "validation",
+          "file": "apps/katei/src/config.js",
+          "line": 11,
+          "scope": "app",
+          "snippet": "sessionSecret: requireNonEmptyEnv('KATEI_SESSION_SECRET', env.KATEI_SESSION_SECRET),"
+        }
+      ]
+    },
+    {
       "name": "NODE_ENV",
       "secretLike": false,
       "publicLike": false,
@@ -280,37 +311,6 @@
           "line": 5,
           "scope": "app",
           "snippet": "const port = Number(process.env.PORT) || 3000;"
-        }
-      ]
-    },
-    {
-      "name": "SESSION_SECRET",
-      "secretLike": true,
-      "publicLike": false,
-      "definitions": [
-        {
-          "kind": "envFile",
-          "file": "apps/katei/.env.example",
-          "line": 11,
-          "scope": "app",
-          "snippet": "SESSION_SECRET=replace-with-a-long-random-string",
-          "comment": "# Secret used to sign the Katei session cookie."
-        }
-      ],
-      "usages": [
-        {
-          "kind": "read",
-          "file": "apps/katei/src/config.js",
-          "line": 11,
-          "scope": "app",
-          "snippet": "sessionSecret: requireNonEmptyEnv('SESSION_SECRET', env.SESSION_SECRET),"
-        },
-        {
-          "kind": "validation",
-          "file": "apps/katei/src/config.js",
-          "line": 11,
-          "scope": "app",
-          "snippet": "sessionSecret: requireNonEmptyEnv('SESSION_SECRET', env.SESSION_SECRET),"
         }
       ]
     },

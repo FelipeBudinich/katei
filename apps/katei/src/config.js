@@ -8,7 +8,7 @@ export function createRuntimeConfig(env = process.env) {
     nodeEnv,
     isProduction: nodeEnv === 'production',
     googleClientId: requireNonEmptyEnv('GOOGLE_CLIENT_ID', env.GOOGLE_CLIENT_ID),
-    sessionSecret: requireNonEmptyEnv('SESSION_SECRET', env.SESSION_SECRET),
+    sessionSecret: requireNonEmptyEnv('KATEI_SESSION_SECRET', env.KATEI_SESSION_SECRET),
     googleAllowlistSubs: parseAllowlistSubs(env.GOOGLE_ALLOWLIST_SUBS),
     sessionTtlSeconds: parseSessionTtlSeconds(env.SESSION_TTL_SECONDS),
     appBaseUrl,
@@ -64,4 +64,3 @@ function normalizeOptionalString(value) {
 
   return value.trim();
 }
-

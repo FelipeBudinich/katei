@@ -13,7 +13,7 @@ function createTestApp({ env = {}, googleTokenVerifier } = {}) {
     env: {
       NODE_ENV: 'test',
       GOOGLE_CLIENT_ID: 'test-google-client-id',
-      SESSION_SECRET: 'test-session-secret',
+      KATEI_SESSION_SECRET: 'test-session-secret',
       ...env
     },
     googleTokenVerifier
