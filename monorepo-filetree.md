@@ -91,6 +91,8 @@ hanmoto-board/
 │       ├── test/
 │       │   ├── allowlist.test.js
 │       │   ├── app.test.js
+│       │   ├── google_identity.test.js
+│       │   ├── landing_controller_connection.test.js
 │       │   ├── local_workspace_repository.test.js
 │       │   └── session_cookie.test.js
 │       ├── .env.example

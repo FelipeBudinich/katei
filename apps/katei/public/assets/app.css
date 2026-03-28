@@ -632,12 +632,6 @@
   .card-item[data-column-id="archived"] {
     --card-priority-accent: var(--color-border-subtle);
   }
-  .top-bar-title-row {
-    display: grid;
-    grid-template-columns: minmax(0,1fr) auto;
-    align-items: center;
-    gap: calc(var(--spacing) * 3);
-  }
   .dialog-header-row {
     display: grid;
     grid-template-columns: minmax(0,1fr) auto;
@@ -1167,20 +1161,27 @@
   }
   .top-bar-actions {
     display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: max-content;
     gap: 0.75rem;
     align-items: center;
     justify-items: start;
+    justify-content: start;
   }
   .top-bar-heading-group {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
     gap: 0.75rem;
     min-width: 0;
+    overflow: hidden;
   }
   .top-bar-title {
     min-width: 0;
-    flex: 1 1 16rem;
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .viewer-chip {
     display: grid;
@@ -1195,6 +1196,8 @@
     @supports (color: color-mix(in lab, red, red)) {
       background-color: color-mix(in srgb, var(--color-bg-muted) 70%, white 30%);
     }
+    flex: 0 1 18rem;
+    max-width: min(100%, 18rem);
   }
   .viewer-chip-avatar {
     width: 2.75rem;
@@ -1645,7 +1648,6 @@
   }
   @media (min-width: 1024px) {
     .top-bar-actions {
-      grid-auto-flow: column;
       justify-items: end;
       justify-content: end;
     }

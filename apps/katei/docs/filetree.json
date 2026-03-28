@@ -13,382 +13,6 @@
     "Diff identity uses stable repo-relative paths"
   ],
   "previousSnapshot": {
-    "generatedAt": "2026-03-28T15:10:52Z",
-    "rootPath": "apps/katei",
-    "summary": {
-      "directoryCount": 19,
-      "fileCount": 42,
-      "maxDepth": 6,
-      "topLevelEntryCount": 7
-    },
-    "tree": {
-      "label": "apps/katei/",
-      "text": "apps/katei/\n\u251c\u2500\u2500 docs/\n\u2502   \u251c\u2500\u2500 env-inventory.html\n\u2502   \u251c\u2500\u2500 env-inventory.json\n\u2502   \u251c\u2500\u2500 filetree.html\n\u2502   \u2514\u2500\u2500 filetree.json\n\u251c\u2500\u2500 public/\n\u2502   \u251c\u2500\u2500 assets/\n\u2502   \u2502   \u2514\u2500\u2500 app.css\n\u2502   \u251c\u2500\u2500 js/\n\u2502   \u2502   \u251c\u2500\u2500 controllers/\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 board_editor_controller.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 board_options_controller.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 card_editor_controller.js\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 workspace_controller.js\n\u2502   \u2502   \u251c\u2500\u2500 domain/\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 workspace.js\n\u2502   \u2502   \u251c\u2500\u2500 renderers/\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 board_renderer.js\n\u2502   \u2502   \u251c\u2500\u2500 repositories/\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 local_workspace_repository.js\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 workspace_repository.js\n\u2502   \u2502   \u251c\u2500\u2500 services/\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 workspace_service.js\n\u2502   \u2502   \u251c\u2500\u2500 utils/\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 id.js\n\u2502   \u2502   \u2514\u2500\u2500 app.js\n\u2502   \u251c\u2500\u2500 svg/\n\u2502   \u2502   \u251c\u2500\u2500 cards.svg\n\u2502   \u2502   \u251c\u2500\u2500 clock.svg\n\u2502   \u2502   \u251c\u2500\u2500 edit.svg\n\u2502   \u2502   \u2514\u2500\u2500 look.svg\n\u2502   \u251c\u2500\u2500 background.webp\n\u2502   \u2514\u2500\u2500 favicon.svg\n\u251c\u2500\u2500 src/\n\u2502   \u251c\u2500\u2500 routes/\n\u2502   \u2502   \u2514\u2500\u2500 web.js\n\u2502   \u251c\u2500\u2500 views/\n\u2502   \u2502   \u251c\u2500\u2500 layouts/\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 base.njk\n\u2502   \u2502   \u251c\u2500\u2500 macros/\n\u2502   \u2502   \u251c\u2500\u2500 pages/\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 workspace.njk\n\u2502   \u2502   \u2514\u2500\u2500 partials/\n\u2502   \u2502       \u251c\u2500\u2500 board-editor-sheet.njk\n\u2502   \u2502       \u251c\u2500\u2500 board-options-dialog.njk\n\u2502   \u2502       \u251c\u2500\u2500 board-shell.njk\n\u2502   \u2502       \u251c\u2500\u2500 board-templates.njk\n\u2502   \u2502       \u251c\u2500\u2500 card-editor-sheet.njk\n\u2502   \u2502       \u251c\u2500\u2500 card-item.njk\n\u2502   \u2502       \u251c\u2500\u2500 card-view-dialog.njk\n\u2502   \u2502       \u251c\u2500\u2500 column-panel.njk\n\u2502   \u2502       \u251c\u2500\u2500 confirm-dialog.njk\n\u2502   \u2502       \u251c\u2500\u2500 desktop-board.njk\n\u2502   \u2502       \u2514\u2500\u2500 workspace-shell.njk\n\u2502   \u251c\u2500\u2500 app.js\n\u2502   \u2514\u2500\u2500 server.js\n\u251c\u2500\u2500 styles/\n\u2502   \u2514\u2500\u2500 app.css\n\u251c\u2500\u2500 .env.example\n\u251c\u2500\u2500 package.json\n\u2514\u2500\u2500 Procfile",
-      "nodes": [
-        {
-          "name": "docs",
-          "kind": "directory",
-          "relativePath": "docs",
-          "children": [
-            {
-              "name": "env-inventory.html",
-              "kind": "file",
-              "relativePath": "docs/env-inventory.html"
-            },
-            {
-              "name": "env-inventory.json",
-              "kind": "file",
-              "relativePath": "docs/env-inventory.json"
-            },
-            {
-              "name": "filetree.html",
-              "kind": "file",
-              "relativePath": "docs/filetree.html"
-            },
-            {
-              "name": "filetree.json",
-              "kind": "file",
-              "relativePath": "docs/filetree.json"
-            }
-          ],
-          "childCount": 4
-        },
-        {
-          "name": "public",
-          "kind": "directory",
-          "relativePath": "public",
-          "children": [
-            {
-              "name": "assets",
-              "kind": "directory",
-              "relativePath": "public/assets",
-              "children": [
-                {
-                  "name": "app.css",
-                  "kind": "file",
-                  "relativePath": "public/assets/app.css"
-                }
-              ],
-              "childCount": 1
-            },
-            {
-              "name": "js",
-              "kind": "directory",
-              "relativePath": "public/js",
-              "children": [
-                {
-                  "name": "controllers",
-                  "kind": "directory",
-                  "relativePath": "public/js/controllers",
-                  "children": [
-                    {
-                      "name": "board_editor_controller.js",
-                      "kind": "file",
-                      "relativePath": "public/js/controllers/board_editor_controller.js"
-                    },
-                    {
-                      "name": "board_options_controller.js",
-                      "kind": "file",
-                      "relativePath": "public/js/controllers/board_options_controller.js"
-                    },
-                    {
-                      "name": "card_editor_controller.js",
-                      "kind": "file",
-                      "relativePath": "public/js/controllers/card_editor_controller.js"
-                    },
-                    {
-                      "name": "workspace_controller.js",
-                      "kind": "file",
-                      "relativePath": "public/js/controllers/workspace_controller.js"
-                    }
-                  ],
-                  "childCount": 4
-                },
-                {
-                  "name": "domain",
-                  "kind": "directory",
-                  "relativePath": "public/js/domain",
-                  "children": [
-                    {
-                      "name": "workspace.js",
-                      "kind": "file",
-                      "relativePath": "public/js/domain/workspace.js"
-                    }
-                  ],
-                  "childCount": 1
-                },
-                {
-                  "name": "renderers",
-                  "kind": "directory",
-                  "relativePath": "public/js/renderers",
-                  "children": [
-                    {
-                      "name": "board_renderer.js",
-                      "kind": "file",
-                      "relativePath": "public/js/renderers/board_renderer.js"
-                    }
-                  ],
-                  "childCount": 1
-                },
-                {
-                  "name": "repositories",
-                  "kind": "directory",
-                  "relativePath": "public/js/repositories",
-                  "children": [
-                    {
-                      "name": "local_workspace_repository.js",
-                      "kind": "file",
-                      "relativePath": "public/js/repositories/local_workspace_repository.js"
-                    },
-                    {
-                      "name": "workspace_repository.js",
-                      "kind": "file",
-                      "relativePath": "public/js/repositories/workspace_repository.js"
-                    }
-                  ],
-                  "childCount": 2
-                },
-                {
-                  "name": "services",
-                  "kind": "directory",
-                  "relativePath": "public/js/services",
-                  "children": [
-                    {
-                      "name": "workspace_service.js",
-                      "kind": "file",
-                      "relativePath": "public/js/services/workspace_service.js"
-                    }
-                  ],
-                  "childCount": 1
-                },
-                {
-                  "name": "utils",
-                  "kind": "directory",
-                  "relativePath": "public/js/utils",
-                  "children": [
-                    {
-                      "name": "id.js",
-                      "kind": "file",
-                      "relativePath": "public/js/utils/id.js"
-                    }
-                  ],
-                  "childCount": 1
-                },
-                {
-                  "name": "app.js",
-                  "kind": "file",
-                  "relativePath": "public/js/app.js"
-                }
-              ],
-              "childCount": 7
-            },
-            {
-              "name": "svg",
-              "kind": "directory",
-              "relativePath": "public/svg",
-              "children": [
-                {
-                  "name": "cards.svg",
-                  "kind": "file",
-                  "relativePath": "public/svg/cards.svg"
-                },
-                {
-                  "name": "clock.svg",
-                  "kind": "file",
-                  "relativePath": "public/svg/clock.svg"
-                },
-                {
-                  "name": "edit.svg",
-                  "kind": "file",
-                  "relativePath": "public/svg/edit.svg"
-                },
-                {
-                  "name": "look.svg",
-                  "kind": "file",
-                  "relativePath": "public/svg/look.svg"
-                }
-              ],
-              "childCount": 4
-            },
-            {
-              "name": "background.webp",
-              "kind": "file",
-              "relativePath": "public/background.webp"
-            },
-            {
-              "name": "favicon.svg",
-              "kind": "file",
-              "relativePath": "public/favicon.svg"
-            }
-          ],
-          "childCount": 5
-        },
-        {
-          "name": "src",
-          "kind": "directory",
-          "relativePath": "src",
-          "children": [
-            {
-              "name": "routes",
-              "kind": "directory",
-              "relativePath": "src/routes",
-              "children": [
-                {
-                  "name": "web.js",
-                  "kind": "file",
-                  "relativePath": "src/routes/web.js"
-                }
-              ],
-              "childCount": 1
-            },
-            {
-              "name": "views",
-              "kind": "directory",
-              "relativePath": "src/views",
-              "children": [
-                {
-                  "name": "layouts",
-                  "kind": "directory",
-                  "relativePath": "src/views/layouts",
-                  "children": [
-                    {
-                      "name": "base.njk",
-                      "kind": "file",
-                      "relativePath": "src/views/layouts/base.njk"
-                    }
-                  ],
-                  "childCount": 1
-                },
-                {
-                  "name": "macros",
-                  "kind": "directory",
-                  "relativePath": "src/views/macros",
-                  "children": []
-                },
-                {
-                  "name": "pages",
-                  "kind": "directory",
-                  "relativePath": "src/views/pages",
-                  "children": [
-                    {
-                      "name": "workspace.njk",
-                      "kind": "file",
-                      "relativePath": "src/views/pages/workspace.njk"
-                    }
-                  ],
-                  "childCount": 1
-                },
-                {
-                  "name": "partials",
-                  "kind": "directory",
-                  "relativePath": "src/views/partials",
-                  "children": [
-                    {
-                      "name": "board-editor-sheet.njk",
-                      "kind": "file",
-                      "relativePath": "src/views/partials/board-editor-sheet.njk"
-                    },
-                    {
-                      "name": "board-options-dialog.njk",
-                      "kind": "file",
-                      "relativePath": "src/views/partials/board-options-dialog.njk"
-                    },
-                    {
-                      "name": "board-shell.njk",
-                      "kind": "file",
-                      "relativePath": "src/views/partials/board-shell.njk"
-                    },
-                    {
-                      "name": "board-templates.njk",
-                      "kind": "file",
-                      "relativePath": "src/views/partials/board-templates.njk"
-                    },
-                    {
-                      "name": "card-editor-sheet.njk",
-                      "kind": "file",
-                      "relativePath": "src/views/partials/card-editor-sheet.njk"
-                    },
-                    {
-                      "name": "card-item.njk",
-                      "kind": "file",
-                      "relativePath": "src/views/partials/card-item.njk"
-                    },
-                    {
-                      "name": "card-view-dialog.njk",
-                      "kind": "file",
-                      "relativePath": "src/views/partials/card-view-dialog.njk"
-                    },
-                    {
-                      "name": "column-panel.njk",
-                      "kind": "file",
-                      "relativePath": "src/views/partials/column-panel.njk"
-                    },
-                    {
-                      "name": "confirm-dialog.njk",
-                      "kind": "file",
-                      "relativePath": "src/views/partials/confirm-dialog.njk"
-                    },
-                    {
-                      "name": "desktop-board.njk",
-                      "kind": "file",
-                      "relativePath": "src/views/partials/desktop-board.njk"
-                    },
-                    {
-                      "name": "workspace-shell.njk",
-                      "kind": "file",
-                      "relativePath": "src/views/partials/workspace-shell.njk"
-                    }
-                  ],
-                  "childCount": 11
-                }
-              ],
-              "childCount": 4
-            },
-            {
-              "name": "app.js",
-              "kind": "file",
-              "relativePath": "src/app.js"
-            },
-            {
-              "name": "server.js",
-              "kind": "file",
-              "relativePath": "src/server.js"
-            }
-          ],
-          "childCount": 4
-        },
-        {
-          "name": "styles",
-          "kind": "directory",
-          "relativePath": "styles",
-          "children": [
-            {
-              "name": "app.css",
-              "kind": "file",
-              "relativePath": "styles/app.css"
-            }
-          ],
-          "childCount": 1
-        },
-        {
-          "name": ".env.example",
-          "kind": "file",
-          "relativePath": ".env.example"
-        },
-        {
-          "name": "package.json",
-          "kind": "file",
-          "relativePath": "package.json"
-        },
-        {
-          "name": "Procfile",
-          "kind": "file",
-          "relativePath": "Procfile"
-        }
-      ]
-    }
-  },
-  "currentSnapshot": {
     "generatedAt": "2026-03-28T15:38:27Z",
     "rootPath": "apps/katei",
     "summary": {
@@ -873,39 +497,518 @@
       ]
     }
   },
+  "currentSnapshot": {
+    "generatedAt": "2026-03-28T17:23:08Z",
+    "rootPath": "apps/katei",
+    "summary": {
+      "directoryCount": 22,
+      "fileCount": 62,
+      "maxDepth": 6,
+      "topLevelEntryCount": 8
+    },
+    "tree": {
+      "label": "apps/katei/",
+      "text": "apps/katei/\n\u251c\u2500\u2500 docs/\n\u2502   \u251c\u2500\u2500 env-inventory.html\n\u2502   \u251c\u2500\u2500 env-inventory.json\n\u2502   \u251c\u2500\u2500 filetree.html\n\u2502   \u2514\u2500\u2500 filetree.json\n\u251c\u2500\u2500 public/\n\u2502   \u251c\u2500\u2500 assets/\n\u2502   \u2502   \u2514\u2500\u2500 app.css\n\u2502   \u251c\u2500\u2500 js/\n\u2502   \u2502   \u251c\u2500\u2500 controllers/\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 board_editor_controller.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 board_options_controller.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 card_editor_controller.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 landing_controller.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 landing_controller_connection.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 session_controller.js\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 workspace_controller.js\n\u2502   \u2502   \u251c\u2500\u2500 domain/\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 workspace.js\n\u2502   \u2502   \u251c\u2500\u2500 renderers/\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 board_renderer.js\n\u2502   \u2502   \u251c\u2500\u2500 repositories/\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 local_workspace_repository.js\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 workspace_repository.js\n\u2502   \u2502   \u251c\u2500\u2500 services/\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 workspace_service.js\n\u2502   \u2502   \u251c\u2500\u2500 utils/\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 google_identity.js\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 id.js\n\u2502   \u2502   \u2514\u2500\u2500 app.js\n\u2502   \u251c\u2500\u2500 svg/\n\u2502   \u2502   \u251c\u2500\u2500 cards.svg\n\u2502   \u2502   \u251c\u2500\u2500 clock.svg\n\u2502   \u2502   \u251c\u2500\u2500 edit.svg\n\u2502   \u2502   \u2514\u2500\u2500 look.svg\n\u2502   \u251c\u2500\u2500 background.webp\n\u2502   \u2514\u2500\u2500 favicon.svg\n\u251c\u2500\u2500 src/\n\u2502   \u251c\u2500\u2500 auth/\n\u2502   \u2502   \u251c\u2500\u2500 allowlist.js\n\u2502   \u2502   \u251c\u2500\u2500 session_cookie.js\n\u2502   \u2502   \u2514\u2500\u2500 verify_google_id_token.js\n\u2502   \u251c\u2500\u2500 middleware/\n\u2502   \u2502   \u251c\u2500\u2500 attach_session.js\n\u2502   \u2502   \u2514\u2500\u2500 require_session.js\n\u2502   \u251c\u2500\u2500 routes/\n\u2502   \u2502   \u251c\u2500\u2500 auth.js\n\u2502   \u2502   \u251c\u2500\u2500 boards.js\n\u2502   \u2502   \u251c\u2500\u2500 public.js\n\u2502   \u2502   \u2514\u2500\u2500 web.js\n\u2502   \u251c\u2500\u2500 views/\n\u2502   \u2502   \u251c\u2500\u2500 layouts/\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 base.njk\n\u2502   \u2502   \u251c\u2500\u2500 macros/\n\u2502   \u2502   \u251c\u2500\u2500 pages/\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 landing.njk\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 workspace.njk\n\u2502   \u2502   \u2514\u2500\u2500 partials/\n\u2502   \u2502       \u251c\u2500\u2500 board-editor-sheet.njk\n\u2502   \u2502       \u251c\u2500\u2500 board-options-dialog.njk\n\u2502   \u2502       \u251c\u2500\u2500 board-shell.njk\n\u2502   \u2502       \u251c\u2500\u2500 board-templates.njk\n\u2502   \u2502       \u251c\u2500\u2500 card-editor-sheet.njk\n\u2502   \u2502       \u251c\u2500\u2500 card-item.njk\n\u2502   \u2502       \u251c\u2500\u2500 card-view-dialog.njk\n\u2502   \u2502       \u251c\u2500\u2500 column-panel.njk\n\u2502   \u2502       \u251c\u2500\u2500 confirm-dialog.njk\n\u2502   \u2502       \u251c\u2500\u2500 desktop-board.njk\n\u2502   \u2502       \u2514\u2500\u2500 workspace-shell.njk\n\u2502   \u251c\u2500\u2500 app.js\n\u2502   \u251c\u2500\u2500 config.js\n\u2502   \u2514\u2500\u2500 server.js\n\u251c\u2500\u2500 styles/\n\u2502   \u2514\u2500\u2500 app.css\n\u251c\u2500\u2500 test/\n\u2502   \u251c\u2500\u2500 allowlist.test.js\n\u2502   \u251c\u2500\u2500 app.test.js\n\u2502   \u251c\u2500\u2500 google_identity.test.js\n\u2502   \u251c\u2500\u2500 landing_controller_connection.test.js\n\u2502   \u251c\u2500\u2500 local_workspace_repository.test.js\n\u2502   \u2514\u2500\u2500 session_cookie.test.js\n\u251c\u2500\u2500 .env.example\n\u251c\u2500\u2500 package.json\n\u2514\u2500\u2500 Procfile",
+      "nodes": [
+        {
+          "name": "docs",
+          "kind": "directory",
+          "relativePath": "docs",
+          "children": [
+            {
+              "name": "env-inventory.html",
+              "kind": "file",
+              "relativePath": "docs/env-inventory.html"
+            },
+            {
+              "name": "env-inventory.json",
+              "kind": "file",
+              "relativePath": "docs/env-inventory.json"
+            },
+            {
+              "name": "filetree.html",
+              "kind": "file",
+              "relativePath": "docs/filetree.html"
+            },
+            {
+              "name": "filetree.json",
+              "kind": "file",
+              "relativePath": "docs/filetree.json"
+            }
+          ],
+          "childCount": 4
+        },
+        {
+          "name": "public",
+          "kind": "directory",
+          "relativePath": "public",
+          "children": [
+            {
+              "name": "assets",
+              "kind": "directory",
+              "relativePath": "public/assets",
+              "children": [
+                {
+                  "name": "app.css",
+                  "kind": "file",
+                  "relativePath": "public/assets/app.css"
+                }
+              ],
+              "childCount": 1
+            },
+            {
+              "name": "js",
+              "kind": "directory",
+              "relativePath": "public/js",
+              "children": [
+                {
+                  "name": "controllers",
+                  "kind": "directory",
+                  "relativePath": "public/js/controllers",
+                  "children": [
+                    {
+                      "name": "board_editor_controller.js",
+                      "kind": "file",
+                      "relativePath": "public/js/controllers/board_editor_controller.js"
+                    },
+                    {
+                      "name": "board_options_controller.js",
+                      "kind": "file",
+                      "relativePath": "public/js/controllers/board_options_controller.js"
+                    },
+                    {
+                      "name": "card_editor_controller.js",
+                      "kind": "file",
+                      "relativePath": "public/js/controllers/card_editor_controller.js"
+                    },
+                    {
+                      "name": "landing_controller.js",
+                      "kind": "file",
+                      "relativePath": "public/js/controllers/landing_controller.js"
+                    },
+                    {
+                      "name": "landing_controller_connection.js",
+                      "kind": "file",
+                      "relativePath": "public/js/controllers/landing_controller_connection.js"
+                    },
+                    {
+                      "name": "session_controller.js",
+                      "kind": "file",
+                      "relativePath": "public/js/controllers/session_controller.js"
+                    },
+                    {
+                      "name": "workspace_controller.js",
+                      "kind": "file",
+                      "relativePath": "public/js/controllers/workspace_controller.js"
+                    }
+                  ],
+                  "childCount": 7
+                },
+                {
+                  "name": "domain",
+                  "kind": "directory",
+                  "relativePath": "public/js/domain",
+                  "children": [
+                    {
+                      "name": "workspace.js",
+                      "kind": "file",
+                      "relativePath": "public/js/domain/workspace.js"
+                    }
+                  ],
+                  "childCount": 1
+                },
+                {
+                  "name": "renderers",
+                  "kind": "directory",
+                  "relativePath": "public/js/renderers",
+                  "children": [
+                    {
+                      "name": "board_renderer.js",
+                      "kind": "file",
+                      "relativePath": "public/js/renderers/board_renderer.js"
+                    }
+                  ],
+                  "childCount": 1
+                },
+                {
+                  "name": "repositories",
+                  "kind": "directory",
+                  "relativePath": "public/js/repositories",
+                  "children": [
+                    {
+                      "name": "local_workspace_repository.js",
+                      "kind": "file",
+                      "relativePath": "public/js/repositories/local_workspace_repository.js"
+                    },
+                    {
+                      "name": "workspace_repository.js",
+                      "kind": "file",
+                      "relativePath": "public/js/repositories/workspace_repository.js"
+                    }
+                  ],
+                  "childCount": 2
+                },
+                {
+                  "name": "services",
+                  "kind": "directory",
+                  "relativePath": "public/js/services",
+                  "children": [
+                    {
+                      "name": "workspace_service.js",
+                      "kind": "file",
+                      "relativePath": "public/js/services/workspace_service.js"
+                    }
+                  ],
+                  "childCount": 1
+                },
+                {
+                  "name": "utils",
+                  "kind": "directory",
+                  "relativePath": "public/js/utils",
+                  "children": [
+                    {
+                      "name": "google_identity.js",
+                      "kind": "file",
+                      "relativePath": "public/js/utils/google_identity.js"
+                    },
+                    {
+                      "name": "id.js",
+                      "kind": "file",
+                      "relativePath": "public/js/utils/id.js"
+                    }
+                  ],
+                  "childCount": 2
+                },
+                {
+                  "name": "app.js",
+                  "kind": "file",
+                  "relativePath": "public/js/app.js"
+                }
+              ],
+              "childCount": 7
+            },
+            {
+              "name": "svg",
+              "kind": "directory",
+              "relativePath": "public/svg",
+              "children": [
+                {
+                  "name": "cards.svg",
+                  "kind": "file",
+                  "relativePath": "public/svg/cards.svg"
+                },
+                {
+                  "name": "clock.svg",
+                  "kind": "file",
+                  "relativePath": "public/svg/clock.svg"
+                },
+                {
+                  "name": "edit.svg",
+                  "kind": "file",
+                  "relativePath": "public/svg/edit.svg"
+                },
+                {
+                  "name": "look.svg",
+                  "kind": "file",
+                  "relativePath": "public/svg/look.svg"
+                }
+              ],
+              "childCount": 4
+            },
+            {
+              "name": "background.webp",
+              "kind": "file",
+              "relativePath": "public/background.webp"
+            },
+            {
+              "name": "favicon.svg",
+              "kind": "file",
+              "relativePath": "public/favicon.svg"
+            }
+          ],
+          "childCount": 5
+        },
+        {
+          "name": "src",
+          "kind": "directory",
+          "relativePath": "src",
+          "children": [
+            {
+              "name": "auth",
+              "kind": "directory",
+              "relativePath": "src/auth",
+              "children": [
+                {
+                  "name": "allowlist.js",
+                  "kind": "file",
+                  "relativePath": "src/auth/allowlist.js"
+                },
+                {
+                  "name": "session_cookie.js",
+                  "kind": "file",
+                  "relativePath": "src/auth/session_cookie.js"
+                },
+                {
+                  "name": "verify_google_id_token.js",
+                  "kind": "file",
+                  "relativePath": "src/auth/verify_google_id_token.js"
+                }
+              ],
+              "childCount": 3
+            },
+            {
+              "name": "middleware",
+              "kind": "directory",
+              "relativePath": "src/middleware",
+              "children": [
+                {
+                  "name": "attach_session.js",
+                  "kind": "file",
+                  "relativePath": "src/middleware/attach_session.js"
+                },
+                {
+                  "name": "require_session.js",
+                  "kind": "file",
+                  "relativePath": "src/middleware/require_session.js"
+                }
+              ],
+              "childCount": 2
+            },
+            {
+              "name": "routes",
+              "kind": "directory",
+              "relativePath": "src/routes",
+              "children": [
+                {
+                  "name": "auth.js",
+                  "kind": "file",
+                  "relativePath": "src/routes/auth.js"
+                },
+                {
+                  "name": "boards.js",
+                  "kind": "file",
+                  "relativePath": "src/routes/boards.js"
+                },
+                {
+                  "name": "public.js",
+                  "kind": "file",
+                  "relativePath": "src/routes/public.js"
+                },
+                {
+                  "name": "web.js",
+                  "kind": "file",
+                  "relativePath": "src/routes/web.js"
+                }
+              ],
+              "childCount": 4
+            },
+            {
+              "name": "views",
+              "kind": "directory",
+              "relativePath": "src/views",
+              "children": [
+                {
+                  "name": "layouts",
+                  "kind": "directory",
+                  "relativePath": "src/views/layouts",
+                  "children": [
+                    {
+                      "name": "base.njk",
+                      "kind": "file",
+                      "relativePath": "src/views/layouts/base.njk"
+                    }
+                  ],
+                  "childCount": 1
+                },
+                {
+                  "name": "macros",
+                  "kind": "directory",
+                  "relativePath": "src/views/macros",
+                  "children": []
+                },
+                {
+                  "name": "pages",
+                  "kind": "directory",
+                  "relativePath": "src/views/pages",
+                  "children": [
+                    {
+                      "name": "landing.njk",
+                      "kind": "file",
+                      "relativePath": "src/views/pages/landing.njk"
+                    },
+                    {
+                      "name": "workspace.njk",
+                      "kind": "file",
+                      "relativePath": "src/views/pages/workspace.njk"
+                    }
+                  ],
+                  "childCount": 2
+                },
+                {
+                  "name": "partials",
+                  "kind": "directory",
+                  "relativePath": "src/views/partials",
+                  "children": [
+                    {
+                      "name": "board-editor-sheet.njk",
+                      "kind": "file",
+                      "relativePath": "src/views/partials/board-editor-sheet.njk"
+                    },
+                    {
+                      "name": "board-options-dialog.njk",
+                      "kind": "file",
+                      "relativePath": "src/views/partials/board-options-dialog.njk"
+                    },
+                    {
+                      "name": "board-shell.njk",
+                      "kind": "file",
+                      "relativePath": "src/views/partials/board-shell.njk"
+                    },
+                    {
+                      "name": "board-templates.njk",
+                      "kind": "file",
+                      "relativePath": "src/views/partials/board-templates.njk"
+                    },
+                    {
+                      "name": "card-editor-sheet.njk",
+                      "kind": "file",
+                      "relativePath": "src/views/partials/card-editor-sheet.njk"
+                    },
+                    {
+                      "name": "card-item.njk",
+                      "kind": "file",
+                      "relativePath": "src/views/partials/card-item.njk"
+                    },
+                    {
+                      "name": "card-view-dialog.njk",
+                      "kind": "file",
+                      "relativePath": "src/views/partials/card-view-dialog.njk"
+                    },
+                    {
+                      "name": "column-panel.njk",
+                      "kind": "file",
+                      "relativePath": "src/views/partials/column-panel.njk"
+                    },
+                    {
+                      "name": "confirm-dialog.njk",
+                      "kind": "file",
+                      "relativePath": "src/views/partials/confirm-dialog.njk"
+                    },
+                    {
+                      "name": "desktop-board.njk",
+                      "kind": "file",
+                      "relativePath": "src/views/partials/desktop-board.njk"
+                    },
+                    {
+                      "name": "workspace-shell.njk",
+                      "kind": "file",
+                      "relativePath": "src/views/partials/workspace-shell.njk"
+                    }
+                  ],
+                  "childCount": 11
+                }
+              ],
+              "childCount": 4
+            },
+            {
+              "name": "app.js",
+              "kind": "file",
+              "relativePath": "src/app.js"
+            },
+            {
+              "name": "config.js",
+              "kind": "file",
+              "relativePath": "src/config.js"
+            },
+            {
+              "name": "server.js",
+              "kind": "file",
+              "relativePath": "src/server.js"
+            }
+          ],
+          "childCount": 7
+        },
+        {
+          "name": "styles",
+          "kind": "directory",
+          "relativePath": "styles",
+          "children": [
+            {
+              "name": "app.css",
+              "kind": "file",
+              "relativePath": "styles/app.css"
+            }
+          ],
+          "childCount": 1
+        },
+        {
+          "name": "test",
+          "kind": "directory",
+          "relativePath": "test",
+          "children": [
+            {
+              "name": "allowlist.test.js",
+              "kind": "file",
+              "relativePath": "test/allowlist.test.js"
+            },
+            {
+              "name": "app.test.js",
+              "kind": "file",
+              "relativePath": "test/app.test.js"
+            },
+            {
+              "name": "google_identity.test.js",
+              "kind": "file",
+              "relativePath": "test/google_identity.test.js"
+            },
+            {
+              "name": "landing_controller_connection.test.js",
+              "kind": "file",
+              "relativePath": "test/landing_controller_connection.test.js"
+            },
+            {
+              "name": "local_workspace_repository.test.js",
+              "kind": "file",
+              "relativePath": "test/local_workspace_repository.test.js"
+            },
+            {
+              "name": "session_cookie.test.js",
+              "kind": "file",
+              "relativePath": "test/session_cookie.test.js"
+            }
+          ],
+          "childCount": 6
+        },
+        {
+          "name": ".env.example",
+          "kind": "file",
+          "relativePath": ".env.example"
+        },
+        {
+          "name": "package.json",
+          "kind": "file",
+          "relativePath": "package.json"
+        },
+        {
+          "name": "Procfile",
+          "kind": "file",
+          "relativePath": "Procfile"
+        }
+      ]
+    }
+  },
   "diff": {
     "addedPaths": [
-      "public/js/controllers/landing_controller.js",
-      "public/js/controllers/session_controller.js",
-      "public/js/utils/google_identity.js",
-      "src/auth",
-      "src/auth/allowlist.js",
-      "src/auth/session_cookie.js",
-      "src/auth/verify_google_id_token.js",
-      "src/config.js",
-      "src/middleware",
-      "src/middleware/attach_session.js",
-      "src/middleware/require_session.js",
-      "src/routes/auth.js",
-      "src/routes/boards.js",
-      "src/routes/public.js",
-      "src/views/pages/landing.njk",
-      "test",
-      "test/allowlist.test.js",
-      "test/app.test.js",
-      "test/local_workspace_repository.test.js",
-      "test/session_cookie.test.js"
+      "public/js/controllers/landing_controller_connection.js",
+      "test/google_identity.test.js",
+      "test/landing_controller_connection.test.js"
     ],
     "removedPaths": [],
     "changedPaths": [
       "public",
       "public/js",
       "public/js/controllers",
-      "public/js/utils",
-      "src",
-      "src/routes",
-      "src/views",
-      "src/views/pages"
+      "test"
     ]
   }
 }

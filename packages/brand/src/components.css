@@ -124,10 +124,6 @@
     --card-priority-accent: var(--color-border-subtle);
   }
 
-  .top-bar-title-row {
-    @apply grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3;
-  }
-
   .dialog-header-row {
     @apply grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4;
   }
