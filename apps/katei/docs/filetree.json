@@ -13,7 +13,7 @@
     "Diff identity uses stable repo-relative paths"
   ],
   "previousSnapshot": {
-    "generatedAt": "2026-03-28T14:26:36Z",
+    "generatedAt": "2026-03-28T14:43:06Z",
     "rootPath": "apps/katei",
     "summary": {
       "directoryCount": 19,
@@ -23,7 +23,7 @@
     },
     "tree": {
       "label": "apps/katei/",
-      "text": "apps/katei/\n\u251c\u2500\u2500 docs/\n\u2502   \u251c\u2500\u2500 env-inventory.html\n\u2502   \u251c\u2500\u2500 env-inventory.json\n\u2502   \u251c\u2500\u2500 filetree.html\n\u2502   \u2514\u2500\u2500 filetree.json\n\u251c\u2500\u2500 public/\n\u2502   \u251c\u2500\u2500 assets/\n\u2502   \u2502   \u2514\u2500\u2500 app.css\n\u2502   \u251c\u2500\u2500 integrate/\n\u2502   \u2502   \u251c\u2500\u2500 cards.svg\n\u2502   \u2502   \u251c\u2500\u2500 clock.svg\n\u2502   \u2502   \u251c\u2500\u2500 edit.svg\n\u2502   \u2502   \u2514\u2500\u2500 look.svg\n\u2502   \u251c\u2500\u2500 js/\n\u2502   \u2502   \u251c\u2500\u2500 controllers/\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 board_editor_controller.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 board_options_controller.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 card_editor_controller.js\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 workspace_controller.js\n\u2502   \u2502   \u251c\u2500\u2500 domain/\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 workspace.js\n\u2502   \u2502   \u251c\u2500\u2500 renderers/\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 board_renderer.js\n\u2502   \u2502   \u251c\u2500\u2500 repositories/\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 local_workspace_repository.js\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 workspace_repository.js\n\u2502   \u2502   \u251c\u2500\u2500 services/\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 workspace_service.js\n\u2502   \u2502   \u251c\u2500\u2500 utils/\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 id.js\n\u2502   \u2502   \u2514\u2500\u2500 app.js\n\u2502   \u251c\u2500\u2500 background.webp\n\u2502   \u2514\u2500\u2500 favicon.svg\n\u251c\u2500\u2500 src/\n\u2502   \u251c\u2500\u2500 routes/\n\u2502   \u2502   \u2514\u2500\u2500 web.js\n\u2502   \u251c\u2500\u2500 views/\n\u2502   \u2502   \u251c\u2500\u2500 layouts/\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 base.njk\n\u2502   \u2502   \u251c\u2500\u2500 macros/\n\u2502   \u2502   \u251c\u2500\u2500 pages/\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 workspace.njk\n\u2502   \u2502   \u2514\u2500\u2500 partials/\n\u2502   \u2502       \u251c\u2500\u2500 board-editor-sheet.njk\n\u2502   \u2502       \u251c\u2500\u2500 board-options-dialog.njk\n\u2502   \u2502       \u251c\u2500\u2500 board-shell.njk\n\u2502   \u2502       \u251c\u2500\u2500 board-templates.njk\n\u2502   \u2502       \u251c\u2500\u2500 card-editor-sheet.njk\n\u2502   \u2502       \u251c\u2500\u2500 card-item.njk\n\u2502   \u2502       \u251c\u2500\u2500 card-view-dialog.njk\n\u2502   \u2502       \u251c\u2500\u2500 column-panel.njk\n\u2502   \u2502       \u251c\u2500\u2500 confirm-dialog.njk\n\u2502   \u2502       \u251c\u2500\u2500 desktop-board.njk\n\u2502   \u2502       \u2514\u2500\u2500 workspace-shell.njk\n\u2502   \u251c\u2500\u2500 app.js\n\u2502   \u2514\u2500\u2500 server.js\n\u251c\u2500\u2500 styles/\n\u2502   \u2514\u2500\u2500 app.css\n\u251c\u2500\u2500 .env.example\n\u251c\u2500\u2500 package.json\n\u2514\u2500\u2500 Procfile",
+      "text": "apps/katei/\n\u251c\u2500\u2500 docs/\n\u2502   \u251c\u2500\u2500 env-inventory.html\n\u2502   \u251c\u2500\u2500 env-inventory.json\n\u2502   \u251c\u2500\u2500 filetree.html\n\u2502   \u2514\u2500\u2500 filetree.json\n\u251c\u2500\u2500 public/\n\u2502   \u251c\u2500\u2500 assets/\n\u2502   \u2502   \u2514\u2500\u2500 app.css\n\u2502   \u251c\u2500\u2500 js/\n\u2502   \u2502   \u251c\u2500\u2500 controllers/\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 board_editor_controller.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 board_options_controller.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 card_editor_controller.js\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 workspace_controller.js\n\u2502   \u2502   \u251c\u2500\u2500 domain/\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 workspace.js\n\u2502   \u2502   \u251c\u2500\u2500 renderers/\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 board_renderer.js\n\u2502   \u2502   \u251c\u2500\u2500 repositories/\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 local_workspace_repository.js\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 workspace_repository.js\n\u2502   \u2502   \u251c\u2500\u2500 services/\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 workspace_service.js\n\u2502   \u2502   \u251c\u2500\u2500 utils/\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 id.js\n\u2502   \u2502   \u2514\u2500\u2500 app.js\n\u2502   \u251c\u2500\u2500 svg/\n\u2502   \u2502   \u251c\u2500\u2500 cards.svg\n\u2502   \u2502   \u251c\u2500\u2500 clock.svg\n\u2502   \u2502   \u251c\u2500\u2500 edit.svg\n\u2502   \u2502   \u2514\u2500\u2500 look.svg\n\u2502   \u251c\u2500\u2500 background.webp\n\u2502   \u2514\u2500\u2500 favicon.svg\n\u251c\u2500\u2500 src/\n\u2502   \u251c\u2500\u2500 routes/\n\u2502   \u2502   \u2514\u2500\u2500 web.js\n\u2502   \u251c\u2500\u2500 views/\n\u2502   \u2502   \u251c\u2500\u2500 layouts/\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 base.njk\n\u2502   \u2502   \u251c\u2500\u2500 macros/\n\u2502   \u2502   \u251c\u2500\u2500 pages/\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 workspace.njk\n\u2502   \u2502   \u2514\u2500\u2500 partials/\n\u2502   \u2502       \u251c\u2500\u2500 board-editor-sheet.njk\n\u2502   \u2502       \u251c\u2500\u2500 board-options-dialog.njk\n\u2502   \u2502       \u251c\u2500\u2500 board-shell.njk\n\u2502   \u2502       \u251c\u2500\u2500 board-templates.njk\n\u2502   \u2502       \u251c\u2500\u2500 card-editor-sheet.njk\n\u2502   \u2502       \u251c\u2500\u2500 card-item.njk\n\u2502   \u2502       \u251c\u2500\u2500 card-view-dialog.njk\n\u2502   \u2502       \u251c\u2500\u2500 column-panel.njk\n\u2502   \u2502       \u251c\u2500\u2500 confirm-dialog.njk\n\u2502   \u2502       \u251c\u2500\u2500 desktop-board.njk\n\u2502   \u2502       \u2514\u2500\u2500 workspace-shell.njk\n\u2502   \u251c\u2500\u2500 app.js\n\u2502   \u2514\u2500\u2500 server.js\n\u251c\u2500\u2500 styles/\n\u2502   \u2514\u2500\u2500 app.css\n\u251c\u2500\u2500 .env.example\n\u251c\u2500\u2500 package.json\n\u2514\u2500\u2500 Procfile",
       "nodes": [
         {
           "name": "docs",
@@ -70,34 +70,6 @@
                 }
               ],
               "childCount": 1
-            },
-            {
-              "name": "integrate",
-              "kind": "directory",
-              "relativePath": "public/integrate",
-              "children": [
-                {
-                  "name": "cards.svg",
-                  "kind": "file",
-                  "relativePath": "public/integrate/cards.svg"
-                },
-                {
-                  "name": "clock.svg",
-                  "kind": "file",
-                  "relativePath": "public/integrate/clock.svg"
-                },
-                {
-                  "name": "edit.svg",
-                  "kind": "file",
-                  "relativePath": "public/integrate/edit.svg"
-                },
-                {
-                  "name": "look.svg",
-                  "kind": "file",
-                  "relativePath": "public/integrate/look.svg"
-                }
-              ],
-              "childCount": 4
             },
             {
               "name": "js",
@@ -209,6 +181,34 @@
                 }
               ],
               "childCount": 7
+            },
+            {
+              "name": "svg",
+              "kind": "directory",
+              "relativePath": "public/svg",
+              "children": [
+                {
+                  "name": "cards.svg",
+                  "kind": "file",
+                  "relativePath": "public/svg/cards.svg"
+                },
+                {
+                  "name": "clock.svg",
+                  "kind": "file",
+                  "relativePath": "public/svg/clock.svg"
+                },
+                {
+                  "name": "edit.svg",
+                  "kind": "file",
+                  "relativePath": "public/svg/edit.svg"
+                },
+                {
+                  "name": "look.svg",
+                  "kind": "file",
+                  "relativePath": "public/svg/look.svg"
+                }
+              ],
+              "childCount": 4
             },
             {
               "name": "background.webp",
@@ -389,7 +389,7 @@
     }
   },
   "currentSnapshot": {
-    "generatedAt": "2026-03-28T14:37:20Z",
+    "generatedAt": "2026-03-28T14:43:39Z",
     "rootPath": "apps/katei",
     "summary": {
       "directoryCount": 19,
@@ -399,7 +399,7 @@
     },
     "tree": {
       "label": "apps/katei/",
-      "text": "apps/katei/\n\u251c\u2500\u2500 docs/\n\u2502   \u251c\u2500\u2500 env-inventory.html\n\u2502   \u251c\u2500\u2500 env-inventory.json\n\u2502   \u251c\u2500\u2500 filetree.html\n\u2502   \u2514\u2500\u2500 filetree.json\n\u251c\u2500\u2500 public/\n\u2502   \u251c\u2500\u2500 assets/\n\u2502   \u2502   \u2514\u2500\u2500 app.css\n\u2502   \u251c\u2500\u2500 integrate/\n\u2502   \u2502   \u251c\u2500\u2500 cards.svg\n\u2502   \u2502   \u251c\u2500\u2500 clock.svg\n\u2502   \u2502   \u251c\u2500\u2500 edit.svg\n\u2502   \u2502   \u2514\u2500\u2500 look.svg\n\u2502   \u251c\u2500\u2500 js/\n\u2502   \u2502   \u251c\u2500\u2500 controllers/\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 board_editor_controller.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 board_options_controller.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 card_editor_controller.js\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 workspace_controller.js\n\u2502   \u2502   \u251c\u2500\u2500 domain/\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 workspace.js\n\u2502   \u2502   \u251c\u2500\u2500 renderers/\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 board_renderer.js\n\u2502   \u2502   \u251c\u2500\u2500 repositories/\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 local_workspace_repository.js\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 workspace_repository.js\n\u2502   \u2502   \u251c\u2500\u2500 services/\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 workspace_service.js\n\u2502   \u2502   \u251c\u2500\u2500 utils/\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 id.js\n\u2502   \u2502   \u2514\u2500\u2500 app.js\n\u2502   \u251c\u2500\u2500 background.webp\n\u2502   \u2514\u2500\u2500 favicon.svg\n\u251c\u2500\u2500 src/\n\u2502   \u251c\u2500\u2500 routes/\n\u2502   \u2502   \u2514\u2500\u2500 web.js\n\u2502   \u251c\u2500\u2500 views/\n\u2502   \u2502   \u251c\u2500\u2500 layouts/\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 base.njk\n\u2502   \u2502   \u251c\u2500\u2500 macros/\n\u2502   \u2502   \u251c\u2500\u2500 pages/\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 workspace.njk\n\u2502   \u2502   \u2514\u2500\u2500 partials/\n\u2502   \u2502       \u251c\u2500\u2500 board-editor-sheet.njk\n\u2502   \u2502       \u251c\u2500\u2500 board-options-dialog.njk\n\u2502   \u2502       \u251c\u2500\u2500 board-shell.njk\n\u2502   \u2502       \u251c\u2500\u2500 board-templates.njk\n\u2502   \u2502       \u251c\u2500\u2500 card-editor-sheet.njk\n\u2502   \u2502       \u251c\u2500\u2500 card-item.njk\n\u2502   \u2502       \u251c\u2500\u2500 card-view-dialog.njk\n\u2502   \u2502       \u251c\u2500\u2500 column-panel.njk\n\u2502   \u2502       \u251c\u2500\u2500 confirm-dialog.njk\n\u2502   \u2502       \u251c\u2500\u2500 desktop-board.njk\n\u2502   \u2502       \u2514\u2500\u2500 workspace-shell.njk\n\u2502   \u251c\u2500\u2500 app.js\n\u2502   \u2514\u2500\u2500 server.js\n\u251c\u2500\u2500 styles/\n\u2502   \u2514\u2500\u2500 app.css\n\u251c\u2500\u2500 .env.example\n\u251c\u2500\u2500 package.json\n\u2514\u2500\u2500 Procfile",
+      "text": "apps/katei/\n\u251c\u2500\u2500 docs/\n\u2502   \u251c\u2500\u2500 env-inventory.html\n\u2502   \u251c\u2500\u2500 env-inventory.json\n\u2502   \u251c\u2500\u2500 filetree.html\n\u2502   \u2514\u2500\u2500 filetree.json\n\u251c\u2500\u2500 public/\n\u2502   \u251c\u2500\u2500 assets/\n\u2502   \u2502   \u2514\u2500\u2500 app.css\n\u2502   \u251c\u2500\u2500 js/\n\u2502   \u2502   \u251c\u2500\u2500 controllers/\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 board_editor_controller.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 board_options_controller.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 card_editor_controller.js\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 workspace_controller.js\n\u2502   \u2502   \u251c\u2500\u2500 domain/\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 workspace.js\n\u2502   \u2502   \u251c\u2500\u2500 renderers/\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 board_renderer.js\n\u2502   \u2502   \u251c\u2500\u2500 repositories/\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 local_workspace_repository.js\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 workspace_repository.js\n\u2502   \u2502   \u251c\u2500\u2500 services/\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 workspace_service.js\n\u2502   \u2502   \u251c\u2500\u2500 utils/\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 id.js\n\u2502   \u2502   \u2514\u2500\u2500 app.js\n\u2502   \u251c\u2500\u2500 svg/\n\u2502   \u2502   \u251c\u2500\u2500 cards.svg\n\u2502   \u2502   \u251c\u2500\u2500 clock.svg\n\u2502   \u2502   \u251c\u2500\u2500 edit.svg\n\u2502   \u2502   \u2514\u2500\u2500 look.svg\n\u2502   \u251c\u2500\u2500 background.webp\n\u2502   \u2514\u2500\u2500 favicon.svg\n\u251c\u2500\u2500 src/\n\u2502   \u251c\u2500\u2500 routes/\n\u2502   \u2502   \u2514\u2500\u2500 web.js\n\u2502   \u251c\u2500\u2500 views/\n\u2502   \u2502   \u251c\u2500\u2500 layouts/\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 base.njk\n\u2502   \u2502   \u251c\u2500\u2500 macros/\n\u2502   \u2502   \u251c\u2500\u2500 pages/\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 workspace.njk\n\u2502   \u2502   \u2514\u2500\u2500 partials/\n\u2502   \u2502       \u251c\u2500\u2500 board-editor-sheet.njk\n\u2502   \u2502       \u251c\u2500\u2500 board-options-dialog.njk\n\u2502   \u2502       \u251c\u2500\u2500 board-shell.njk\n\u2502   \u2502       \u251c\u2500\u2500 board-templates.njk\n\u2502   \u2502       \u251c\u2500\u2500 card-editor-sheet.njk\n\u2502   \u2502       \u251c\u2500\u2500 card-item.njk\n\u2502   \u2502       \u251c\u2500\u2500 card-view-dialog.njk\n\u2502   \u2502       \u251c\u2500\u2500 column-panel.njk\n\u2502   \u2502       \u251c\u2500\u2500 confirm-dialog.njk\n\u2502   \u2502       \u251c\u2500\u2500 desktop-board.njk\n\u2502   \u2502       \u2514\u2500\u2500 workspace-shell.njk\n\u2502   \u251c\u2500\u2500 app.js\n\u2502   \u2514\u2500\u2500 server.js\n\u251c\u2500\u2500 styles/\n\u2502   \u2514\u2500\u2500 app.css\n\u251c\u2500\u2500 .env.example\n\u251c\u2500\u2500 package.json\n\u2514\u2500\u2500 Procfile",
       "nodes": [
         {
           "name": "docs",
@@ -446,34 +446,6 @@
                 }
               ],
               "childCount": 1
-            },
-            {
-              "name": "integrate",
-              "kind": "directory",
-              "relativePath": "public/integrate",
-              "children": [
-                {
-                  "name": "cards.svg",
-                  "kind": "file",
-                  "relativePath": "public/integrate/cards.svg"
-                },
-                {
-                  "name": "clock.svg",
-                  "kind": "file",
-                  "relativePath": "public/integrate/clock.svg"
-                },
-                {
-                  "name": "edit.svg",
-                  "kind": "file",
-                  "relativePath": "public/integrate/edit.svg"
-                },
-                {
-                  "name": "look.svg",
-                  "kind": "file",
-                  "relativePath": "public/integrate/look.svg"
-                }
-              ],
-              "childCount": 4
             },
             {
               "name": "js",
@@ -585,6 +557,34 @@
                 }
               ],
               "childCount": 7
+            },
+            {
+              "name": "svg",
+              "kind": "directory",
+              "relativePath": "public/svg",
+              "children": [
+                {
+                  "name": "cards.svg",
+                  "kind": "file",
+                  "relativePath": "public/svg/cards.svg"
+                },
+                {
+                  "name": "clock.svg",
+                  "kind": "file",
+                  "relativePath": "public/svg/clock.svg"
+                },
+                {
+                  "name": "edit.svg",
+                  "kind": "file",
+                  "relativePath": "public/svg/edit.svg"
+                },
+                {
+                  "name": "look.svg",
+                  "kind": "file",
+                  "relativePath": "public/svg/look.svg"
+                }
+              ],
+              "childCount": 4
             },
             {
               "name": "background.webp",

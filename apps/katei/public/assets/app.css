@@ -652,8 +652,8 @@
     width: 0.9rem;
     height: 0.9rem;
     background-color: currentColor;
-    -webkit-mask-image: url("/integrate/clock.svg");
-    mask-image: url("/integrate/clock.svg");
+    -webkit-mask-image: url("/svg/clock.svg");
+    mask-image: url("/svg/clock.svg");
     -webkit-mask-repeat: no-repeat;
     mask-repeat: no-repeat;
     -webkit-mask-position: center;
@@ -680,8 +680,8 @@
     width: 100%;
     height: 100%;
     background-color: currentColor;
-    -webkit-mask-image: url("/integrate/edit.svg");
-    mask-image: url("/integrate/edit.svg");
+    -webkit-mask-image: url("/svg/edit.svg");
+    mask-image: url("/svg/edit.svg");
     -webkit-mask-repeat: no-repeat;
     mask-repeat: no-repeat;
     -webkit-mask-position: center;
@@ -694,8 +694,8 @@
     width: 1rem;
     height: 1rem;
     background-color: currentColor;
-    -webkit-mask-image: url("/integrate/look.svg");
-    mask-image: url("/integrate/look.svg");
+    -webkit-mask-image: url("/svg/look.svg");
+    mask-image: url("/svg/look.svg");
     -webkit-mask-repeat: no-repeat;
     mask-repeat: no-repeat;
     -webkit-mask-position: center;
@@ -1009,8 +1009,8 @@
     width: 0.95rem;
     height: 0.95rem;
     background-color: currentColor;
-    -webkit-mask-image: url("/integrate/cards.svg");
-    mask-image: url("/integrate/cards.svg");
+    -webkit-mask-image: url("/svg/cards.svg");
+    mask-image: url("/svg/cards.svg");
     -webkit-mask-repeat: no-repeat;
     mask-repeat: no-repeat;
     -webkit-mask-position: center;
