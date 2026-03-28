@@ -1,5 +1,5 @@
 import { Controller } from '/vendor/stimulus/stimulus.js';
-import { consumeDisableAutoSelectFlag } from '/js/utils/google_identity.js';
+import { consumeDisableAutoSelectFlag, waitForGoogleIdentity } from '/js/utils/google_identity.js';
 
 export default class extends Controller {
   static targets = ['button', 'status', 'loading'];
@@ -94,44 +94,6 @@ export default class extends Controller {
     this.statusTarget.textContent = message;
     this.statusTarget.hidden = !message;
   }
-}
-
-async function waitForGoogleIdentity() {
-  if (window.google?.accounts?.id) {
-    return window.google;
-  }
-
-  const script = document.getElementById('google-identity-script');
-
-  if (!script) {
-    throw new Error('Google Identity Services script is missing.');
-  }
-
-  await new Promise((resolve, reject) => {
-    const handleLoad = () => {
-      cleanup();
-
-      if (window.google?.accounts?.id) {
-        resolve();
-        return;
-      }
-
-      reject(new Error('Google Identity Services did not finish loading.'));
-    };
-    const handleError = () => {
-      cleanup();
-      reject(new Error('Unable to load Google Identity Services.'));
-    };
-    const cleanup = () => {
-      script.removeEventListener('load', handleLoad);
-      script.removeEventListener('error', handleError);
-    };
-
-    script.addEventListener('load', handleLoad, { once: true });
-    script.addEventListener('error', handleError, { once: true });
-  });
-
-  return window.google;
 }
 
 async function parseJsonResponse(response) {
