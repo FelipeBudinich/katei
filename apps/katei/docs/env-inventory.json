@@ -3,7 +3,7 @@
   "app": {
     "name": "katei",
     "path": "apps/katei",
-    "outputPath": "apps/katei/doc/env-inventory.json"
+    "outputPath": "apps/katei/docs/env-inventory.json"
   },
   "scan": {
     "config": {

@@ -31,7 +31,7 @@ test("renderEnvInventoryHtml highlights config warnings, fallback groups, gaps, 
     app: {
       name: "demo",
       path: "apps/demo",
-      outputPath: "apps/demo/doc/env-inventory.json",
+      outputPath: "apps/demo/docs/env-inventory.json",
     },
     scan: {
       config: {
@@ -187,7 +187,7 @@ test("standalone renderer reads JSON input and supports --check", async () => {
 
   const staleExit = await renderRunCli([
     "--input",
-    path.join(repoRoot, "apps", "app-a", "doc", "env-inventory.json"),
+    path.join(repoRoot, "apps", "app-a", "docs", "env-inventory.json"),
     "--output",
     path.join(repoRoot, "apps", "app-a", "docs", "env-inventory.html"),
     "--check",
@@ -196,7 +196,7 @@ test("standalone renderer reads JSON input and supports --check", async () => {
 
   const renderExit = await renderRunCli([
     "--input",
-    path.join(repoRoot, "apps", "app-a", "doc", "env-inventory.json"),
+    path.join(repoRoot, "apps", "app-a", "docs", "env-inventory.json"),
     "--output",
     path.join(repoRoot, "apps", "app-a", "docs", "env-inventory.html"),
   ]);
@@ -212,7 +212,7 @@ test("standalone renderer reads JSON input and supports --check", async () => {
 
   const cleanExit = await renderRunCli([
     "--input",
-    path.join(repoRoot, "apps", "app-a", "doc", "env-inventory.json"),
+    path.join(repoRoot, "apps", "app-a", "docs", "env-inventory.json"),
     "--output",
     path.join(repoRoot, "apps", "app-a", "docs", "env-inventory.html"),
     "--check",

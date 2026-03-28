@@ -14,7 +14,7 @@
 
 - `env-inventory`
   Path: `.agents/skills/env-inventory/SKILL.md`
-  Purpose: inventory per-app environment variable definitions and usages, regenerate `apps/*/doc/env-inventory.json` and `apps/*/docs/env-inventory.html`, and verify apps expose `/docs/env-inventory.html`.
+  Purpose: inventory per-app environment variable definitions and usages, regenerate `apps/*/docs/env-inventory.json` and `apps/*/docs/env-inventory.html`, and verify apps expose `/docs/env-inventory.html`.
 
 - `monorepo-filetree`
   Path: `.agents/skills/monorepo-filetree/SKILL.md`

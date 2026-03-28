@@ -119,5 +119,5 @@ Each repo-local skill is self-contained in `.agents/skills/<skill-name>/` and sh
 
 Available repo-local skills:
 
-- `env-inventory` — inventory per-app environment variable definitions and usages, regenerate `apps/*/doc/env-inventory.json` and `apps/*/docs/env-inventory.html`, and verify apps expose `/docs/env-inventory.html`. Path: `.agents/skills/env-inventory/SKILL.md`
+- `env-inventory` — inventory per-app environment variable definitions and usages, regenerate `apps/*/docs/env-inventory.json` and `apps/*/docs/env-inventory.html`, and verify apps expose `/docs/env-inventory.html`. Path: `.agents/skills/env-inventory/SKILL.md`
 - `monorepo-filetree` — refresh generated monorepo and app file tree documentation when repository structure changes materially. Path: `.agents/skills/monorepo-filetree/SKILL.md`

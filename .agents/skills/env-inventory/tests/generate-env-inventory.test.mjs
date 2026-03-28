@@ -80,7 +80,7 @@ test("generateEnvInventory reports app-local, shared-package, grounded root, def
     configPath: DEFAULT_CONFIG_RELATIVE,
   });
 
-  assert.equal(report.app.outputPath, "apps/app-a/doc/env-inventory.json");
+  assert.equal(report.app.outputPath, "apps/app-a/docs/env-inventory.json");
   assert.ok(report.variables.some((entry) => entry.name === "APP_A_TOKEN" && entry.definitions.some((definition) => definition.kind === "envFile")));
   assert.ok(report.variables.some((entry) => entry.name === "APP_A_TOKEN" && entry.definitions.some((definition) => definition.snippet === "APP_A_TOKEN=replace-me" && definition.comment === "# Example token for local docs")));
   assert.ok(report.variables.some((entry) => entry.name === "PUBLIC_FLAG" && entry.definitions.some((definition) => definition.snippet === "PUBLIC_FLAG=1" && definition.comment === "# Immediate public flag note")));
@@ -119,6 +119,8 @@ test("generateEnvInventory keeps shared and rooted variables out of non-consumin
 
 test("runCli writes one app report or all app reports and does not create a root aggregate", async () => {
   const repoRoot = await copyFixtureRepo();
+  await fs.mkdir(path.join(repoRoot, "apps", "app-a", "doc"), { recursive: true });
+  await fs.writeFile(path.join(repoRoot, "apps", "app-a", "doc", "env-inventory.json"), "{\"stale\":true}\n", "utf8");
 
   const singleExit = await runCli([
     "--root",
@@ -134,6 +136,7 @@ test("runCli writes one app report or all app reports and does not create a root
   assert.equal(await fileExists(path.join(repoRoot, "apps", "app-a", REPORT_RELATIVE)), true);
   assert.equal(await fileExists(path.join(repoRoot, "apps", "app-b", REPORT_RELATIVE)), false);
   assert.equal(await fileExists(path.join(repoRoot, "doc", "env-inventory.json")), false);
+  assert.equal(await fileExists(path.join(repoRoot, "apps", "app-a", "doc", "env-inventory.json")), false);
 
   const allExit = await runCli([
     "--root",
@@ -146,6 +149,7 @@ test("runCli writes one app report or all app reports and does not create a root
   ]);
   assert.equal(allExit, 0);
   assert.equal(await fileExists(path.join(repoRoot, "apps", "app-b", REPORT_RELATIVE)), true);
+  assert.equal(await fileExists(path.join(repoRoot, "apps", "app-b", "doc", "env-inventory.json")), false);
 });
 
 test("runCli --check fails when reports are missing and succeeds after generation", async () => {
@@ -184,6 +188,21 @@ test("runCli --check fails when reports are missing and succeeds after generatio
     "--check",
   ]);
   assert.equal(cleanExit, 0);
+
+  await fs.mkdir(path.join(repoRoot, "apps", "app-a", "doc"), { recursive: true });
+  await fs.writeFile(path.join(repoRoot, "apps", "app-a", "doc", "env-inventory.json"), "{\"stale\":true}\n", "utf8");
+
+  const legacyExit = await runCli([
+    "--root",
+    repoRoot,
+    "--apps-root",
+    "./apps",
+    "--all-apps",
+    "--config",
+    DEFAULT_CONFIG_RELATIVE,
+    "--check",
+  ]);
+  assert.equal(legacyExit, 1);
 });
 
 async function fileExists(filePath) {

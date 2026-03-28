@@ -4,7 +4,10 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-export const HTML_REPORT_RELATIVE = path.join("docs", "env-inventory.html");
+export const ENV_INVENTORY_OUTPUT_DIRNAME = "docs";
+export const JSON_REPORT_FILENAME = "env-inventory.json";
+export const HTML_REPORT_FILENAME = "env-inventory.html";
+export const HTML_REPORT_RELATIVE = path.join(ENV_INVENTORY_OUTPUT_DIRNAME, HTML_REPORT_FILENAME);
 const NO_FALLBACK_LABEL = "No fallback observed";
 const FALLBACK_LABEL = "Fallback observed";
 const FALLBACKS_LABEL = "Fallbacks observed";
@@ -828,8 +831,20 @@ export async function loadEnvInventoryReport(inputPath) {
   return JSON.parse(raw);
 }
 
+export function defaultOutputDirectoryForApp(appPath) {
+  return normalizePath(path.join(appPath, ENV_INVENTORY_OUTPUT_DIRNAME));
+}
+
+export function defaultJsonOutputForApp(appPath) {
+  return normalizePath(path.join(defaultOutputDirectoryForApp(appPath), JSON_REPORT_FILENAME));
+}
+
+export function defaultHtmlOutputForApp(appPath) {
+  return normalizePath(path.join(defaultOutputDirectoryForApp(appPath), HTML_REPORT_FILENAME));
+}
+
 export function defaultHtmlOutputForReport(report) {
-  return normalizePath(path.join(report.app.path, HTML_REPORT_RELATIVE));
+  return defaultHtmlOutputForApp(report.app.path);
 }
 
 export async function writeEnvInventoryHtml({ repoRoot, report, outputPath }) {
@@ -877,8 +892,8 @@ function parseCliArgs(argv) {
 function usage() {
   return [
     "Usage:",
-    "  node .agents/skills/env-inventory/scripts/render-env-inventory-html.mjs --input apps/listings/doc/env-inventory.json",
-    "  node .agents/skills/env-inventory/scripts/render-env-inventory-html.mjs --input apps/listings/doc/env-inventory.json --output apps/listings/docs/env-inventory.html",
+    "  node .agents/skills/env-inventory/scripts/render-env-inventory-html.mjs --input apps/listings/docs/env-inventory.json",
+    "  node .agents/skills/env-inventory/scripts/render-env-inventory-html.mjs --input apps/listings/docs/env-inventory.json --output apps/listings/docs/env-inventory.html",
     "",
     "Options:",
     "  --input <path>   Input JSON report path",

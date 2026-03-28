@@ -5,12 +5,15 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import {
   HTML_REPORT_RELATIVE,
+  defaultJsonOutputForApp,
+  defaultHtmlOutputForApp,
   renderEnvInventoryHtml,
 } from "./render-env-inventory-html.mjs";
 
 export const ENV_INVENTORY_SCHEMA_VERSION = "1.0";
-export const REPORT_RELATIVE = path.join("doc", "env-inventory.json");
+export const REPORT_RELATIVE = path.join("docs", "env-inventory.json");
 export const DEFAULT_CONFIG_RELATIVE = path.join(".agents", "env-inventory.config.json");
+const LEGACY_REPORT_RELATIVE = path.join("doc", "env-inventory.json");
 
 const SOURCE_EXTENSIONS = [".js", ".mjs", ".cjs", ".jsx", ".ts", ".tsx"];
 const PACKAGE_JSON = "package.json";
@@ -18,6 +21,7 @@ const DEFAULT_CONFIG = Object.freeze({
   ignoreGlobs: [
     "**/node_modules/**",
     "**/doc/*.json",
+    "**/docs/env-inventory.json",
     "**/.generated/**",
     "**/dist/**",
     "**/build/**",
@@ -1273,7 +1277,7 @@ function buildReport({ app, configMeta, candidateFiles, definitions, usages, dyn
     app: {
       name: app.name,
       path: app.rootRel,
-      outputPath: normalizePath(path.join(app.rootRel, REPORT_RELATIVE)),
+      outputPath: defaultJsonOutputForApp(app.rootRel),
     },
     scan: {
       config: {
@@ -1410,6 +1414,10 @@ async function writeReport(repoRoot, report) {
   await fs.mkdir(path.dirname(outputPath), { recursive: true });
   const serialized = `${JSON.stringify(report, null, 2)}\n`;
   await fs.writeFile(outputPath, serialized, "utf8");
+  const legacyOutputPath = path.join(repoRoot, report.app.path, LEGACY_REPORT_RELATIVE);
+  if (legacyOutputPath !== outputPath && await pathExists(legacyOutputPath)) {
+    await fs.rm(legacyOutputPath, { force: true });
+  }
   return serialized;
 }
 
@@ -1420,6 +1428,11 @@ async function readExistingReport(repoRoot, report) {
   } catch {
     return null;
   }
+}
+
+async function legacyReportExists(repoRoot, report) {
+  const legacyOutputPath = path.join(repoRoot, report.app.path, LEGACY_REPORT_RELATIVE);
+  return legacyOutputPath !== path.join(repoRoot, report.app.outputPath) && pathExists(legacyOutputPath);
 }
 
 function parseCliArgs(argv) {
@@ -1512,12 +1525,16 @@ export async function runCli(argv = process.argv.slice(2)) {
           clean = false;
           console.error(`[env-inventory] stale or missing report: ${report.app.outputPath}`);
         }
+        if (await legacyReportExists(repoRoot, report)) {
+          clean = false;
+          console.error(`[env-inventory] legacy report should be removed: ${normalizePath(path.join(report.app.path, LEGACY_REPORT_RELATIVE))}`);
+        }
       } else {
         await writeReport(repoRoot, report);
       }
 
       if (options.html) {
-        const htmlRelativePath = normalizePath(path.join(report.app.path, HTML_REPORT_RELATIVE));
+        const htmlRelativePath = defaultHtmlOutputForApp(report.app.path);
         const htmlOutputPath = path.join(repoRoot, htmlRelativePath);
         const htmlRendered = renderEnvInventoryHtml(report, { htmlOutputPath: htmlRelativePath });
         let previousHtml = "";
