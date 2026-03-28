@@ -389,11 +389,11 @@ def render_app_html(report: dict) -> str:
         </div>
       </header>
 
-      <section class="env-inventory-meta-grid">
+      <section class="env-inventory-meta-grid filetree-meta-grid">
         {render_meta_cards(report)}
       </section>
 
-      <section class="env-inventory-status-grid">
+      <section class="env-inventory-status-grid filetree-status-grid">
         {render_status_cards(report)}
       </section>
 
