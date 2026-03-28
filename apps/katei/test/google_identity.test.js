@@ -1,6 +1,20 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { waitForGoogleIdentity } from '../public/js/utils/google_identity.js';
+import {
+  EMPTY_GOOGLE_BUTTON_SLOT_ERROR_CODE,
+  MISSING_GOOGLE_CLIENT_ID_ERROR_CODE,
+  assertValidGoogleClientId,
+  initializeGoogleIdentityClient,
+  renderGoogleIdentityButton,
+  waitForGoogleIdentity
+} from '../public/js/utils/google_identity.js';
+
+test('assertValidGoogleClientId rejects an empty client ID', () => {
+  assert.throws(
+    () => assertValidGoogleClientId('   '),
+    (error) => error?.code === MISSING_GOOGLE_CLIENT_ID_ERROR_CODE && error.message === 'Google client ID is missing.'
+  );
+});
 
 test('waitForGoogleIdentity returns immediately when GIS is already ready', async () => {
   const win = {
@@ -54,6 +68,87 @@ test('waitForGoogleIdentity resolves when the script exists and GIS becomes read
   assert.equal(result, win.google);
   assert.equal(script.listenerCount('load'), 0);
   assert.equal(script.listenerCount('error'), 0);
+});
+
+test('initializeGoogleIdentityClient rethrows initialize failures', () => {
+  const expectedError = new Error('invalid origin');
+  const googleIdentity = {
+    accounts: {
+      id: {
+        initialize() {
+          throw expectedError;
+        }
+      }
+    }
+  };
+
+  assert.throws(
+    () =>
+      initializeGoogleIdentityClient(googleIdentity, {
+        clientId: 'client-id',
+        callback() {}
+      }),
+    expectedError
+  );
+});
+
+test('renderGoogleIdentityButton rethrows renderButton failures', async () => {
+  const expectedError = new Error('render failed');
+  const googleIdentity = {
+    accounts: {
+      id: {
+        renderButton() {
+          throw expectedError;
+        }
+      }
+    }
+  };
+
+  await assert.rejects(
+    renderGoogleIdentityButton(googleIdentity, createButtonTarget(), {
+      requestAnimationFrameImpl: (callback) => callback()
+    }),
+    expectedError
+  );
+});
+
+test('renderGoogleIdentityButton rejects when Google leaves the button slot empty', async () => {
+  const googleIdentity = {
+    accounts: {
+      id: {
+        renderButton() {}
+      }
+    }
+  };
+
+  await assert.rejects(
+    renderGoogleIdentityButton(googleIdentity, createButtonTarget(), {
+      requestAnimationFrameImpl: (callback) => callback()
+    }),
+    (error) =>
+      error?.code === EMPTY_GOOGLE_BUTTON_SLOT_ERROR_CODE &&
+      error.message ===
+        'Google sign-in button was not rendered. Check the allowed JavaScript origins for this client ID.'
+  );
+});
+
+test('renderGoogleIdentityButton resolves when Google renders content into the button slot', async () => {
+  const buttonTarget = createButtonTarget();
+  const googleIdentity = {
+    accounts: {
+      id: {
+        renderButton(target) {
+          target.appendChild({ nodeName: 'DIV' });
+        }
+      }
+    }
+  };
+
+  await renderGoogleIdentityButton(googleIdentity, buttonTarget, {
+    requestAnimationFrameImpl: (callback) => callback()
+  });
+
+  assert.equal(buttonTarget.hasChildNodes(), true);
 });
 
 test('waitForGoogleIdentity rejects when the GIS script tag is missing', async () => {
@@ -114,6 +209,21 @@ function createFakeScript() {
     },
     listenerCount(type) {
       return listeners.get(type)?.size ?? 0;
+    }
+  };
+}
+
+function createButtonTarget() {
+  const childNodes = [];
+
+  return {
+    childNodes,
+    textContent: '',
+    appendChild(node) {
+      childNodes.push(node);
+    },
+    hasChildNodes() {
+      return childNodes.length > 0;
     }
   };
 }

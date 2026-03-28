@@ -1,6 +1,17 @@
 export const GOOGLE_DISABLE_AUTOSELECT_STORAGE_KEY = 'katei.google.disableAutoSelect';
+export const MISSING_GOOGLE_CLIENT_ID_ERROR_CODE = 'missing-google-client-id';
+export const EMPTY_GOOGLE_BUTTON_SLOT_ERROR_CODE = 'empty-google-button-slot-after-render';
 const DEFAULT_GIS_TIMEOUT_MS = 5000;
 const DEFAULT_GIS_POLL_INTERVAL_MS = 50;
+const GOOGLE_SIGNIN_BUTTON_OPTIONS = Object.freeze({
+  type: 'standard',
+  theme: 'outline',
+  size: 'large',
+  text: 'signin_with',
+  shape: 'pill',
+  width: 280,
+  logo_alignment: 'left'
+});
 
 export function markDisableAutoSelectPending(storage = globalThis.sessionStorage) {
   try {
@@ -23,6 +34,14 @@ export function consumeDisableAutoSelectFlag(storage = globalThis.sessionStorage
   } catch (error) {
     return false;
   }
+}
+
+export function assertValidGoogleClientId(clientId) {
+  if (typeof clientId !== 'string' || !clientId.trim()) {
+    throw createGoogleIdentityError('Google client ID is missing.', MISSING_GOOGLE_CLIENT_ID_ERROR_CODE);
+  }
+
+  return clientId.trim();
 }
 
 export function waitForGoogleIdentity({
@@ -110,4 +129,60 @@ export function waitForGoogleIdentity({
 
     checkReady();
   });
+}
+
+export function initializeGoogleIdentityClient(googleIdentity, { clientId, callback }) {
+  googleIdentity.accounts.id.initialize({
+    client_id: clientId,
+    callback
+  });
+}
+
+export async function renderGoogleIdentityButton(
+  googleIdentity,
+  buttonTarget,
+  { requestAnimationFrameImpl = globalThis.requestAnimationFrame } = {}
+) {
+  googleIdentity.accounts.id.renderButton(buttonTarget, GOOGLE_SIGNIN_BUTTON_OPTIONS);
+  await waitForNextRender(requestAnimationFrameImpl);
+
+  if (!hasRenderedButtonContent(buttonTarget)) {
+    throw createGoogleIdentityError(
+      'Google sign-in button was not rendered. Check the allowed JavaScript origins for this client ID.',
+      EMPTY_GOOGLE_BUTTON_SLOT_ERROR_CODE
+    );
+  }
+}
+
+function waitForNextRender(requestAnimationFrameImpl) {
+  return new Promise((resolve) => {
+    if (typeof requestAnimationFrameImpl === 'function') {
+      requestAnimationFrameImpl(() => resolve());
+      return;
+    }
+
+    Promise.resolve().then(resolve);
+  });
+}
+
+function hasRenderedButtonContent(buttonTarget) {
+  if (!buttonTarget) {
+    return false;
+  }
+
+  const hasChildNodes =
+    typeof buttonTarget.hasChildNodes === 'function'
+      ? buttonTarget.hasChildNodes()
+      : Array.isArray(buttonTarget.childNodes)
+        ? buttonTarget.childNodes.length > 0
+        : Number(buttonTarget.childNodes?.length) > 0;
+  const textContent = typeof buttonTarget.textContent === 'string' ? buttonTarget.textContent.trim() : '';
+
+  return Boolean(hasChildNodes || textContent);
+}
+
+function createGoogleIdentityError(message, code) {
+  const error = new Error(message);
+  error.code = code;
+  return error;
 }
