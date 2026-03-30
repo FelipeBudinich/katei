@@ -567,6 +567,216 @@
     word-break: break-word;
   }
 
+  .card-item [data-card-field="preview"] {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .EasyMDEContainer {
+    overflow: hidden;
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-2xl);
+    background:
+      linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--color-bg-elevated-strong) 92%, white 8%),
+        color-mix(in srgb, var(--color-bg-muted) 86%, white 14%)
+      );
+    transition:
+      border-color 160ms ease,
+      box-shadow 160ms ease;
+  }
+
+  .EasyMDEContainer:focus-within {
+    border-color: var(--color-focus-border);
+    box-shadow: 0 0 0 4px var(--color-focus-ring);
+  }
+
+  .EasyMDEContainer .editor-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    padding: 0.5rem;
+    border: 0;
+    border-bottom: 1px solid var(--color-border-subtle);
+    background-color: color-mix(in srgb, var(--color-bg-elevated-strong) 82%, var(--color-bg-muted) 18%);
+  }
+
+  .EasyMDEContainer .editor-toolbar button {
+    width: auto;
+    height: auto;
+    margin: 0;
+    padding: 0.45rem 0.75rem;
+    border: 1px solid transparent;
+    border-radius: var(--radius-xl);
+    background-color: transparent;
+    color: var(--color-text-strong);
+    font-size: var(--text-xs);
+    line-height: 1;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .EasyMDEContainer .editor-toolbar button:hover,
+  .EasyMDEContainer .editor-toolbar button.active {
+    border-color: var(--color-border-subtle);
+    background-color: color-mix(in srgb, var(--color-bg-muted) 84%, white 16%);
+  }
+
+  .EasyMDEContainer .editor-toolbar button:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: 0 0 0 4px var(--color-focus-ring);
+  }
+
+  .EasyMDEContainer .editor-toolbar i.separator {
+    width: 1px;
+    height: auto;
+    margin: 0.15rem 0.1rem;
+    border: 0;
+    background-color: var(--color-border-subtle);
+  }
+
+  .EasyMDEContainer .editor-toolbar.disabled-for-preview button:not(.no-disable) {
+    opacity: 0.45;
+  }
+
+  .EasyMDEContainer .CodeMirror {
+    border: 0;
+    background: transparent;
+    color: var(--color-text-strong);
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    line-height: 1.7;
+  }
+
+  .EasyMDEContainer .CodeMirror-lines {
+    padding-block: 0.55rem 0.8rem;
+  }
+
+  .EasyMDEContainer .CodeMirror pre.CodeMirror-line,
+  .EasyMDEContainer .CodeMirror pre.CodeMirror-line-like {
+    padding-inline: 1rem;
+  }
+
+  .EasyMDEContainer .CodeMirror-scroll {
+    min-height: 14rem;
+  }
+
+  .EasyMDEContainer .CodeMirror-cursor {
+    border-left-color: var(--color-action-primary);
+  }
+
+  .EasyMDEContainer .CodeMirror-selected {
+    background-color: color-mix(in srgb, var(--color-action-primary) 16%, white 84%);
+  }
+
+  .editor-preview,
+  .editor-preview-side,
+  .markdown-rendered {
+    display: grid;
+    gap: 0.85rem;
+    color: var(--color-text-strong);
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .editor-preview,
+  .editor-preview-side {
+    padding: 1rem 1.1rem 1.25rem;
+    background-color: color-mix(in srgb, var(--color-bg-elevated-strong) 82%, var(--color-bg-muted) 18%);
+  }
+
+  .markdown-rendered {
+    min-height: 3.5rem;
+    padding: 0.95rem 1rem;
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-2xl);
+    background-color: color-mix(in srgb, var(--color-bg-muted) 76%, white 24%);
+  }
+
+  .editor-preview > :first-child,
+  .editor-preview-side > :first-child,
+  .markdown-rendered > :first-child {
+    margin-top: 0;
+  }
+
+  .editor-preview > :last-child,
+  .editor-preview-side > :last-child,
+  .markdown-rendered > :last-child {
+    margin-bottom: 0;
+  }
+
+  :where(.editor-preview, .editor-preview-side, .markdown-rendered) h1,
+  :where(.editor-preview, .editor-preview-side, .markdown-rendered) h2,
+  :where(.editor-preview, .editor-preview-side, .markdown-rendered) h3,
+  :where(.editor-preview, .editor-preview-side, .markdown-rendered) h4 {
+    font-family: var(--font-serif);
+    font-weight: 600;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    color: var(--color-text-strong);
+  }
+
+  :where(.editor-preview, .editor-preview-side, .markdown-rendered) h1 {
+    font-size: 1.55rem;
+  }
+
+  :where(.editor-preview, .editor-preview-side, .markdown-rendered) h2 {
+    font-size: 1.3rem;
+  }
+
+  :where(.editor-preview, .editor-preview-side, .markdown-rendered) h3,
+  :where(.editor-preview, .editor-preview-side, .markdown-rendered) h4 {
+    font-size: 1.05rem;
+  }
+
+  :where(.editor-preview, .editor-preview-side, .markdown-rendered) ul,
+  :where(.editor-preview, .editor-preview-side, .markdown-rendered) ol {
+    padding-inline-start: 1.3rem;
+  }
+
+  :where(.editor-preview, .editor-preview-side, .markdown-rendered) li + li {
+    margin-top: 0.3rem;
+  }
+
+  :where(.editor-preview, .editor-preview-side, .markdown-rendered) blockquote {
+    padding: 0.7rem 0.9rem;
+    border-inline-start: 0.22rem solid var(--color-action-primary);
+    border-radius: var(--radius-xl);
+    background-color: color-mix(in srgb, var(--ref-accent-yellow) 12%, var(--color-bg-canvas));
+    color: var(--color-text-muted);
+  }
+
+  :where(.editor-preview, .editor-preview-side, .markdown-rendered) code {
+    padding: 0.12rem 0.4rem;
+    border-radius: var(--radius-xl);
+    background-color: color-mix(in srgb, var(--color-bg-muted) 90%, white 10%);
+    font-family: ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    font-size: 0.92em;
+  }
+
+  :where(.editor-preview, .editor-preview-side, .markdown-rendered) pre {
+    overflow: auto;
+    padding: 0.9rem 1rem;
+    border-radius: var(--radius-2xl);
+    background-color: var(--color-bg-inverse);
+    color: var(--color-text-inverse);
+  }
+
+  :where(.editor-preview, .editor-preview-side, .markdown-rendered) pre code {
+    padding: 0;
+    border-radius: 0;
+    background: none;
+    color: inherit;
+    font-size: 0.95em;
+  }
+
+  :where(.editor-preview, .editor-preview-side, .markdown-rendered) a {
+    color: var(--color-text-accent);
+    text-decoration-thickness: 0.08em;
+    text-underline-offset: 0.18em;
+  }
+
   @media (min-width: 48rem) {
     .env-inventory-meta-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
