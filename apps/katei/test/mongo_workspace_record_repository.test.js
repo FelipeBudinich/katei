@@ -10,7 +10,13 @@ import {
   createMongoWorkspaceRecordRepository,
   getWorkspaceRecordCollection
 } from '../src/workspaces/mongo_workspace_record_repository.js';
-import { WORKSPACE_RECORD_COLLECTION_NAME } from '../src/workspaces/workspace_record.js';
+import {
+  WORKSPACE_RECORD_COLLECTION_NAME,
+  createInitialWorkspaceRecord,
+  createUpdatedWorkspaceRecord,
+  toWorkspaceRecordDocument
+} from '../src/workspaces/workspace_record.js';
+import { WorkspaceImportConflictError } from '../src/workspaces/workspace_record_repository.js';
 
 test('loadOrCreateWorkspaceRecord creates an empty record on first access', async () => {
   const collection = createWorkspaceRecordCollectionDouble();
@@ -90,6 +96,62 @@ test('replaceWorkspaceSnapshot rejects invalid workspaces before saving', async 
   assert.equal(collection.getDocument('sub_123'), null);
 });
 
+test('importWorkspaceSnapshot stores a validated full-workspace snapshot only when the server record is pristine', async () => {
+  const collection = createWorkspaceRecordCollectionDouble();
+  const nowValues = ['2026-04-01T10:00:00.000Z', '2026-04-01T11:15:00.000Z'];
+  const repository = createMongoWorkspaceRecordRepository({
+    collection,
+    now: () => nowValues.shift() ?? '2026-04-01T11:15:00.000Z'
+  });
+  const workspace = createCard(createEmptyWorkspace(), 'main', {
+    title: 'Imported board',
+    detailsMarkdown: 'Migrated from local v4 storage',
+    priority: 'important'
+  });
+
+  const record = await repository.importWorkspaceSnapshot({
+    viewerSub: 'sub_123',
+    workspace,
+    actor: { id: 'sub_123' }
+  });
+
+  assert.equal(record.revision, 1);
+  assert.equal(record.updatedAt, '2026-04-01T11:15:00.000Z');
+  assert.equal(record.lastChangedBy, 'sub_123');
+  assert.equal(validateWorkspaceShape(record.workspace), true);
+});
+
+test('importWorkspaceSnapshot rejects imports once the server record is no longer pristine', async () => {
+  const workspace = createCard(createEmptyWorkspace(), 'main', {
+    title: 'Existing server card',
+    detailsMarkdown: 'Already saved on the server',
+    priority: 'urgent'
+  });
+  const initialRecord = createUpdatedWorkspaceRecord(
+    createInitialWorkspaceRecord('sub_123', {
+      now: '2026-04-01T10:00:00.000Z'
+    }),
+    {
+      workspace,
+      actor: { id: 'sub_123' },
+      now: '2026-04-01T11:15:00.000Z'
+    }
+  );
+  const collection = createWorkspaceRecordCollectionDouble([toWorkspaceRecordDocument(initialRecord)]);
+  const repository = new MongoWorkspaceRecordRepository({ collection });
+
+  await assert.rejects(
+    repository.importWorkspaceSnapshot({
+      viewerSub: 'sub_123',
+      workspace: createEmptyWorkspace(),
+      actor: { id: 'sub_123' }
+    }),
+    WorkspaceImportConflictError
+  );
+
+  assert.equal(collection.getDocument('sub_123').revision, 1);
+});
+
 test('getWorkspaceRecordCollection can resolve the dedicated collection from an injected db handle', () => {
   const collection = {};
   const db = {
@@ -125,12 +187,19 @@ function createWorkspaceRecordCollectionDouble(initialDocuments = []) {
 
     async replaceOne(filter, replacement, options = {}) {
       const documentId = filter._id;
+      const currentDocument = documents.get(documentId) ?? null;
+      const revisionMatches =
+        !Object.hasOwn(filter, 'revision') || currentDocument?.revision === filter.revision;
 
-      if (options.upsert || documents.has(documentId)) {
+      if ((currentDocument && revisionMatches) || (options.upsert && !currentDocument)) {
         documents.set(documentId, structuredClone(replacement));
       }
 
-      return { acknowledged: true };
+      return {
+        acknowledged: true,
+        matchedCount: currentDocument && revisionMatches ? 1 : 0,
+        modifiedCount: (currentDocument && revisionMatches) || (options.upsert && !currentDocument) ? 1 : 0
+      };
     },
 
     getDocument(documentId) {

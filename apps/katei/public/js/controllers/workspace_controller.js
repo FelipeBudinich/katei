@@ -8,7 +8,7 @@ import { createBrowserDateTimeFormatter, getBrowserTranslator } from '../i18n/br
 import { localizeErrorMessage } from '../i18n/errors.js';
 import { getColumnDisplayLabel, getPriorityDisplayLabel } from '../i18n/workspace_labels.js';
 import { renderMarkdownInto } from '../lib/markdown.js';
-import { LocalWorkspaceRepository } from '../repositories/local_workspace_repository.js';
+import { HttpWorkspaceRepository } from '../repositories/http_workspace_repository.js';
 import { renderBoardState } from '../renderers/board_renderer.js';
 import { WorkspaceService } from '../services/workspace_service.js';
 
@@ -43,7 +43,13 @@ export default class extends Controller {
       return;
     }
 
-    this.service = new WorkspaceService(new LocalWorkspaceRepository(window.localStorage, this.viewerSubValue));
+    this.service = new WorkspaceService(
+      new HttpWorkspaceRepository({
+        fetchImpl: window.fetch.bind(window),
+        viewerSub: this.viewerSubValue,
+        storage: window.localStorage
+      })
+    );
     this.templates = {
       columnTemplate: document.getElementById('column-panel-template'),
       cardTemplate: document.getElementById('card-item-template')

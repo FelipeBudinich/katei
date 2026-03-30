@@ -1,5 +1,5 @@
 import { getMongoDb } from '../data/mongo_client.js';
-import { WorkspaceRecordRepository } from './workspace_record_repository.js';
+import { WorkspaceImportConflictError, WorkspaceRecordRepository } from './workspace_record_repository.js';
 import {
   WORKSPACE_RECORD_COLLECTION_NAME,
   createInitialWorkspaceRecord,
@@ -80,7 +80,32 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
   }
 
   async importWorkspaceSnapshot({ viewerSub, workspace, actor } = {}) {
-    return this.replaceWorkspaceSnapshot({ viewerSub, workspace, actor });
+    const collection = this.#getCollection();
+    validateWorkspaceSnapshot(workspace);
+
+    const currentRecord = await this.loadOrCreateWorkspaceRecord(viewerSub);
+
+    if (currentRecord.revision !== 0) {
+      throw new WorkspaceImportConflictError();
+    }
+
+    const nextRecord = createUpdatedWorkspaceRecord(currentRecord, {
+      workspace,
+      actor,
+      now: this.now()
+    });
+    const result = await collection.replaceOne(
+      { _id: nextRecord.viewerSub, revision: currentRecord.revision },
+      toWorkspaceRecordDocument(nextRecord),
+      { upsert: false }
+    );
+    const matchedCount = typeof result?.matchedCount === 'number' ? result.matchedCount : 1;
+
+    if (matchedCount === 0) {
+      throw new WorkspaceImportConflictError();
+    }
+
+    return nextRecord;
   }
 
   async #loadRequiredWorkspaceRecord(viewerSub) {

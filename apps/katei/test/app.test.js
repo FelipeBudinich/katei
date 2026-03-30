@@ -15,6 +15,7 @@ import {
   createInitialWorkspaceRecord,
   createUpdatedWorkspaceRecord
 } from '../src/workspaces/workspace_record.js';
+import { WorkspaceImportConflictError } from '../src/workspaces/workspace_record_repository.js';
 
 const WORKSPACE_VENDOR_ASSET_PATHS = [
   '/vendor/easymde/easymde.min.css',
@@ -308,6 +309,78 @@ test('PUT /api/workspace saves a valid full-workspace snapshot for the authentic
   ]);
 });
 
+test('POST /api/workspace/import saves a valid full-workspace snapshot for a pristine server record', async () => {
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble();
+  const app = createTestApp({
+    googleTokenVerifier: async () => ({ sub: 'sub_123' }),
+    workspaceRecordRepository
+  });
+  const workspace = createCard(createEmptyWorkspace(), 'main', {
+    title: 'Imported task',
+    detailsMarkdown: 'From local v4 storage',
+    priority: 'important'
+  });
+
+  const response = await request(app)
+    .post('/api/workspace/import')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_123', name: 'Tester' }))
+    .send({ workspace });
+
+  assert.equal(response.status, 200);
+  assert.equal(response.body.ok, true);
+  assert.equal(validateWorkspaceShape(response.body.workspace), true);
+  assert.deepEqual(response.body.meta, {
+    revision: 1,
+    updatedAt: '2026-04-02T11:00:00.000Z',
+    lastChangedBy: 'sub_123',
+    isPristine: false
+  });
+  assert.deepEqual(workspaceRecordRepository.importCalls, [
+    {
+      viewerSub: 'sub_123',
+      workspace,
+      actor: {
+        type: 'human',
+        id: 'sub_123'
+      }
+    }
+  ]);
+});
+
+test('POST /api/workspace/import returns 409 when the server workspace is no longer pristine', async () => {
+  const existingWorkspace = createCard(createEmptyWorkspace(), 'main', {
+    title: 'Server task',
+    detailsMarkdown: 'Already persisted',
+    priority: 'urgent'
+  });
+  const existingRecord = createUpdatedWorkspaceRecord(
+    createInitialWorkspaceRecord('sub_123', {
+      now: '2026-04-02T10:00:00.000Z'
+    }),
+    {
+      workspace: existingWorkspace,
+      actor: { id: 'sub_123' },
+      now: '2026-04-02T11:00:00.000Z'
+    }
+  );
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([existingRecord]);
+  const app = createTestApp({
+    googleTokenVerifier: async () => ({ sub: 'sub_123' }),
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .post('/api/workspace/import')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_123', name: 'Tester' }))
+    .send({ workspace: createEmptyWorkspace() });
+
+  assert.equal(response.status, 409);
+  assert.deepEqual(response.body, {
+    ok: false,
+    error: 'Workspace import is only allowed while the server workspace is still pristine.'
+  });
+});
+
 test('buildWorkspacePageModel localizes fixed labels without rewriting user-authored workspace content', () => {
   const workspace = createEmptyWorkspace();
   const board = workspace.boards[workspace.ui.activeBoardId];
@@ -500,12 +573,15 @@ function findSetCookie(response, cookieName) {
   return response.headers['set-cookie']?.find((value) => value.startsWith(`${cookieName}=`)) ?? null;
 }
 
-function createWorkspaceRecordRepositoryDouble() {
-  const records = new Map();
+function createWorkspaceRecordRepositoryDouble(initialRecords = []) {
+  const records = new Map(
+    initialRecords.map((record) => [record.viewerSub, structuredClone(record)])
+  );
 
   return {
     loadCalls: [],
     replaceCalls: [],
+    importCalls: [],
 
     async loadOrCreateWorkspaceRecord(viewerSub) {
       this.loadCalls.push(viewerSub);
@@ -534,6 +610,33 @@ function createWorkspaceRecordRepositoryDouble() {
         ?? createInitialWorkspaceRecord(viewerSub, {
           now: '2026-04-02T10:00:00.000Z'
         });
+      const nextRecord = createUpdatedWorkspaceRecord(currentRecord, {
+        workspace,
+        actor,
+        now: '2026-04-02T11:00:00.000Z'
+      });
+
+      records.set(viewerSub, nextRecord);
+      return structuredClone(nextRecord);
+    },
+
+    async importWorkspaceSnapshot({ viewerSub, workspace, actor }) {
+      this.importCalls.push({
+        viewerSub,
+        workspace,
+        actor
+      });
+
+      const currentRecord =
+        records.get(viewerSub)
+        ?? createInitialWorkspaceRecord(viewerSub, {
+          now: '2026-04-02T10:00:00.000Z'
+        });
+
+      if (currentRecord.revision !== 0) {
+        throw new WorkspaceImportConflictError();
+      }
+
       const nextRecord = createUpdatedWorkspaceRecord(currentRecord, {
         workspace,
         actor,
