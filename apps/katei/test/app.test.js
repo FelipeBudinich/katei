@@ -7,10 +7,14 @@ import {
   createSessionPayload,
   createSignedSessionCookieValue
 } from '../src/auth/session_cookie.js';
-import { createEmptyWorkspace } from '../public/js/domain/workspace.js';
+import { createCard, createEmptyWorkspace, validateWorkspaceShape } from '../public/js/domain/workspace.js';
 import { KATEI_UI_LOCALE_COOKIE_NAME } from '../src/i18n/request_ui_locale.js';
 import { createTranslator } from '../public/js/i18n/translate.js';
 import { buildWorkspacePageModel } from '../src/routes/boards.js';
+import {
+  createInitialWorkspaceRecord,
+  createUpdatedWorkspaceRecord
+} from '../src/workspaces/workspace_record.js';
 
 const WORKSPACE_VENDOR_ASSET_PATHS = [
   '/vendor/easymde/easymde.min.css',
@@ -19,7 +23,7 @@ const WORKSPACE_VENDOR_ASSET_PATHS = [
   '/vendor/dompurify/purify.min.js'
 ];
 
-function createTestApp({ env = {}, googleTokenVerifier } = {}) {
+function createTestApp({ env = {}, googleTokenVerifier, workspaceRecordRepository } = {}) {
   return createApp({
     env: {
       NODE_ENV: 'test',
@@ -27,7 +31,8 @@ function createTestApp({ env = {}, googleTokenVerifier } = {}) {
       KATEI_SESSION_SECRET: 'test-session-secret',
       ...env
     },
-    googleTokenVerifier
+    googleTokenVerifier,
+    workspaceRecordRepository
   });
 }
 
@@ -200,6 +205,107 @@ test('GET /boards localizes server-rendered chrome for ja without changing user-
   assert.doesNotMatch(response.text, />Backlog</);
   assert.match(response.text, /<option value="ja" selected>\s*日本語\s*<\/option>/);
   assert.match(response.text, /UI言語/);
+});
+
+test('GET /api/workspace returns 401 when the viewer is not authenticated', async () => {
+  const app = createTestApp({
+    googleTokenVerifier: async () => ({ sub: 'sub_123' }),
+    workspaceRecordRepository: createWorkspaceRecordRepositoryDouble()
+  });
+
+  const response = await request(app).get('/api/workspace');
+
+  assert.equal(response.status, 401);
+  assert.deepEqual(response.body, {
+    ok: false,
+    error: 'Authentication required.'
+  });
+});
+
+test('GET /api/workspace returns the authenticated viewer workspace JSON', async () => {
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble();
+  const app = createTestApp({
+    googleTokenVerifier: async () => ({ sub: 'sub_123' }),
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .get('/api/workspace')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_123', name: 'Tester' }));
+
+  assert.equal(response.status, 200);
+  assert.equal(response.body.ok, true);
+  assert.equal(validateWorkspaceShape(response.body.workspace), true);
+  assert.deepEqual(response.body.meta, {
+    revision: 0,
+    updatedAt: '2026-04-02T10:00:00.000Z',
+    lastChangedBy: null,
+    isPristine: true
+  });
+  assert.deepEqual(workspaceRecordRepository.loadCalls, ['sub_123']);
+});
+
+test('PUT /api/workspace rejects invalid workspace shapes for authenticated viewers', async () => {
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble();
+  const app = createTestApp({
+    googleTokenVerifier: async () => ({ sub: 'sub_123' }),
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .put('/api/workspace')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_123', name: 'Tester' }))
+    .send({
+      workspace: {
+        version: -1
+      }
+    });
+
+  assert.equal(response.status, 400);
+  assert.deepEqual(response.body, {
+    ok: false,
+    error: 'Cannot save an invalid workspace.'
+  });
+  assert.equal(workspaceRecordRepository.replaceCalls.length, 0);
+});
+
+test('PUT /api/workspace saves a valid full-workspace snapshot for the authenticated viewer', async () => {
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble();
+  const app = createTestApp({
+    googleTokenVerifier: async () => ({ sub: 'sub_123' }),
+    workspaceRecordRepository
+  });
+  const workspace = createCard(createEmptyWorkspace(), 'main', {
+    title: 'Ship launch checklist',
+    detailsMarkdown: 'Owner: Mina',
+    priority: 'urgent'
+  });
+
+  const response = await request(app)
+    .put('/api/workspace')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_123', name: 'Tester' }))
+    .send({ workspace });
+
+  assert.equal(response.status, 200);
+  assert.equal(response.body.ok, true);
+  assert.equal(validateWorkspaceShape(response.body.workspace), true);
+  assert.equal(response.body.workspace.boards.main.cards[Object.keys(response.body.workspace.boards.main.cards)[0]].title, 'Ship launch checklist');
+  assert.deepEqual(response.body.meta, {
+    revision: 1,
+    updatedAt: '2026-04-02T11:00:00.000Z',
+    lastChangedBy: 'sub_123',
+    isPristine: false
+  });
+  assert.deepEqual(workspaceRecordRepository.replaceCalls, [
+    {
+      viewerSub: 'sub_123',
+      workspace,
+      actor: {
+        type: 'human',
+        id: 'sub_123'
+      }
+    }
+  ]);
 });
 
 test('buildWorkspacePageModel localizes fixed labels without rewriting user-authored workspace content', () => {
@@ -392,4 +498,50 @@ function escapeForRegex(value) {
 
 function findSetCookie(response, cookieName) {
   return response.headers['set-cookie']?.find((value) => value.startsWith(`${cookieName}=`)) ?? null;
+}
+
+function createWorkspaceRecordRepositoryDouble() {
+  const records = new Map();
+
+  return {
+    loadCalls: [],
+    replaceCalls: [],
+
+    async loadOrCreateWorkspaceRecord(viewerSub) {
+      this.loadCalls.push(viewerSub);
+
+      if (!records.has(viewerSub)) {
+        records.set(
+          viewerSub,
+          createInitialWorkspaceRecord(viewerSub, {
+            now: '2026-04-02T10:00:00.000Z'
+          })
+        );
+      }
+
+      return structuredClone(records.get(viewerSub));
+    },
+
+    async replaceWorkspaceSnapshot({ viewerSub, workspace, actor }) {
+      this.replaceCalls.push({
+        viewerSub,
+        workspace,
+        actor
+      });
+
+      const currentRecord =
+        records.get(viewerSub)
+        ?? createInitialWorkspaceRecord(viewerSub, {
+          now: '2026-04-02T10:00:00.000Z'
+        });
+      const nextRecord = createUpdatedWorkspaceRecord(currentRecord, {
+        workspace,
+        actor,
+        now: '2026-04-02T11:00:00.000Z'
+      });
+
+      records.set(viewerSub, nextRecord);
+      return structuredClone(nextRecord);
+    }
+  };
 }

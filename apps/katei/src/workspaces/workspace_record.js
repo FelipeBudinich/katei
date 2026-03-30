@@ -105,7 +105,7 @@ export function normalizeActorSub(actor) {
   }
 
   if (typeof actor === 'object') {
-    return normalizeOptionalString(actor.sub) || null;
+    return normalizeOptionalString(actor.id ?? actor.sub) || null;
   }
 
   return null;

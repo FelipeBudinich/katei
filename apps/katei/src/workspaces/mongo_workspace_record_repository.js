@@ -31,13 +31,17 @@ export function getWorkspaceRecordCollection({ collection, db, config, getDb = g
 export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
   constructor({ collection, db, config, getDb = getMongoDb, now = createNowIsoString } = {}) {
     super();
-    this.collection = getWorkspaceRecordCollection({ collection, db, config, getDb });
+    this.collection = collection ?? null;
+    this.db = db ?? null;
+    this.config = config;
+    this.getDb = getDb;
     this.now = now;
   }
 
   async loadOrCreateWorkspaceRecord(viewerSub) {
+    const collection = this.#getCollection();
     const normalizedViewerSub = normalizeViewerSub(viewerSub);
-    const existingDocument = await this.collection.findOne({ _id: normalizedViewerSub });
+    const existingDocument = await collection.findOne({ _id: normalizedViewerSub });
     const existingRecord = fromWorkspaceRecordDocument(existingDocument);
 
     if (existingRecord) {
@@ -46,7 +50,7 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
 
     const initialRecord = createInitialWorkspaceRecord(normalizedViewerSub, { now: this.now() });
 
-    await this.collection.updateOne(
+    await collection.updateOne(
       { _id: normalizedViewerSub },
       { $setOnInsert: toWorkspaceRecordDocument(initialRecord) },
       { upsert: true }
@@ -56,6 +60,7 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
   }
 
   async replaceWorkspaceSnapshot({ viewerSub, workspace, actor } = {}) {
+    const collection = this.#getCollection();
     validateWorkspaceSnapshot(workspace);
 
     const currentRecord = await this.loadOrCreateWorkspaceRecord(viewerSub);
@@ -65,7 +70,7 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
       now: this.now()
     });
 
-    await this.collection.replaceOne(
+    await collection.replaceOne(
       { _id: nextRecord.viewerSub },
       toWorkspaceRecordDocument(nextRecord),
       { upsert: true }
@@ -79,7 +84,7 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
   }
 
   async #loadRequiredWorkspaceRecord(viewerSub) {
-    const document = await this.collection.findOne({ _id: viewerSub });
+    const document = await this.#getCollection().findOne({ _id: viewerSub });
     const record = fromWorkspaceRecordDocument(document);
 
     if (!record) {
@@ -87,6 +92,18 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
     }
 
     return record;
+  }
+
+  #getCollection() {
+    if (!this.collection) {
+      this.collection = getWorkspaceRecordCollection({
+        db: this.db,
+        config: this.config,
+        getDb: this.getDb
+      });
+    }
+
+    return this.collection;
   }
 }
 

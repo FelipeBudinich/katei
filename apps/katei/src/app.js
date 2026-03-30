@@ -9,13 +9,14 @@ import { createGoogleIdTokenVerifier } from './auth/verify_google_id_token.js';
 import { createAttachSessionMiddleware } from './middleware/attach_session.js';
 import { createAttachUiLocaleMiddleware } from './middleware/attach_ui_locale.js';
 import { createWebRouter } from './routes/web.js';
+import { createMongoWorkspaceRecordRepository } from './workspaces/mongo_workspace_record_repository.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const appRoot = path.resolve(__dirname, '..');
 const repoRoot = path.resolve(appRoot, '../..');
 
-export function createApp({ env = process.env, googleTokenVerifier } = {}) {
+export function createApp({ env = process.env, googleTokenVerifier, workspaceRecordRepository } = {}) {
   const app = express();
   const config = createRuntimeConfig(env);
   const viewsPath = path.join(__dirname, 'views');
@@ -23,6 +24,8 @@ export function createApp({ env = process.env, googleTokenVerifier } = {}) {
   const verifyGoogleIdToken = googleTokenVerifier || createGoogleIdTokenVerifier({
     clientId: config.googleClientId
   });
+  const resolvedWorkspaceRecordRepository =
+    workspaceRecordRepository || createMongoWorkspaceRecordRepository({ config });
 
   app.set('view engine', 'njk');
   app.set('views', viewsPath);
@@ -44,7 +47,11 @@ export function createApp({ env = process.env, googleTokenVerifier } = {}) {
   }
 
   app.use(createAttachSessionMiddleware(config));
-  app.use(createWebRouter({ config, verifyGoogleIdToken }));
+  app.use(createWebRouter({
+    config,
+    verifyGoogleIdToken,
+    workspaceRecordRepository: resolvedWorkspaceRecordRepository
+  }));
   app.use(handleBodyParserError);
   app.use(handleUnexpectedError);
 
@@ -57,7 +64,7 @@ function handleBodyParserError(error, request, response, next) {
     return;
   }
 
-  if (request.path.startsWith('/auth/')) {
+  if (request.path.startsWith('/auth/') || request.path.startsWith('/api/')) {
     response.status(400).json({
       ok: false,
       error: 'Invalid request body.'
@@ -74,7 +81,7 @@ function handleUnexpectedError(error, request, response, next) {
     return;
   }
 
-  if (request.path.startsWith('/auth/')) {
+  if (request.path.startsWith('/auth/') || request.path.startsWith('/api/')) {
     response.status(500).json({
       ok: false,
       error: 'Unable to complete the request.'
