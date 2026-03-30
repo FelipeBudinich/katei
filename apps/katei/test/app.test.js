@@ -561,6 +561,47 @@ test('POST /auth/google returns 403 when the request origin does not match APP_B
   });
 });
 
+test('POST /auth/google returns 403 for a mismatched origin under the development APP_BASE_URL fallback', async () => {
+  const app = createTestApp({
+    env: {
+      NODE_ENV: 'development'
+    },
+    googleTokenVerifier: async () => ({ sub: 'sub_123' })
+  });
+
+  const response = await request(app)
+    .post('/auth/google')
+    .set('Origin', 'https://evil.example.com')
+    .send({ credential: 'valid-token' });
+
+  assert.equal(response.status, 403);
+  assert.deepEqual(response.body, {
+    ok: false,
+    error: 'Sign-in request origin is not allowed.'
+  });
+});
+
+test('POST /auth/google allows the matching localhost origin under the development APP_BASE_URL fallback', async () => {
+  const app = createTestApp({
+    env: {
+      NODE_ENV: 'development',
+      PORT: '4567'
+    },
+    googleTokenVerifier: async () => ({ sub: 'sub_123' })
+  });
+
+  const response = await request(app)
+    .post('/auth/google')
+    .set('Origin', 'http://localhost:4567')
+    .send({ credential: 'valid-token' });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(response.body, {
+    ok: true,
+    redirectTo: '/boards'
+  });
+});
+
 test('POST /auth/google returns 403 when the verified tester sub is not on the allowlist', async () => {
   const app = createTestApp({
     env: {
