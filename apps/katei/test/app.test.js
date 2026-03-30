@@ -15,7 +15,10 @@ import {
   createInitialWorkspaceRecord,
   createUpdatedWorkspaceRecord
 } from '../src/workspaces/workspace_record.js';
-import { WorkspaceImportConflictError } from '../src/workspaces/workspace_record_repository.js';
+import {
+  WorkspaceImportConflictError,
+  WorkspaceRevisionConflictError
+} from '../src/workspaces/workspace_record_repository.js';
 
 const WORKSPACE_VENDOR_ASSET_PATHS = [
   '/vendor/easymde/easymde.min.css',
@@ -324,7 +327,7 @@ test('PUT /api/workspace saves a valid full-workspace snapshot for the authentic
   const response = await request(app)
     .put('/api/workspace')
     .set('Cookie', createSessionCookieHeader({ sub: 'sub_123', name: 'Tester' }))
-    .send({ workspace });
+    .send({ workspace, expectedRevision: 0 });
 
   assert.equal(response.status, 200);
   assert.equal(response.body.ok, true);
@@ -340,12 +343,51 @@ test('PUT /api/workspace saves a valid full-workspace snapshot for the authentic
     {
       viewerSub: 'sub_123',
       workspace,
+      expectedRevision: 0,
       actor: {
         type: 'human',
         id: 'sub_123'
       }
     }
   ]);
+});
+
+test('PUT /api/workspace returns 409 when expectedRevision is stale', async () => {
+  const existingWorkspace = createCard(createEmptyWorkspace(), 'main', {
+    title: 'Server task',
+    detailsMarkdown: 'Already persisted',
+    priority: 'urgent'
+  });
+  const existingRecord = createUpdatedWorkspaceRecord(
+    createInitialWorkspaceRecord('sub_123', {
+      now: '2026-04-02T10:00:00.000Z'
+    }),
+    {
+      workspace: existingWorkspace,
+      actor: { type: 'human', id: 'sub_123' },
+      now: '2026-04-02T11:00:00.000Z',
+      createActivityEventId: () => 'activity_saved_existing'
+    }
+  );
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([existingRecord]);
+  const app = createTestApp({
+    googleTokenVerifier: async () => ({ sub: 'sub_123' }),
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .put('/api/workspace')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_123', name: 'Tester' }))
+    .send({
+      workspace: existingWorkspace,
+      expectedRevision: 0
+    });
+
+  assert.equal(response.status, 409);
+  assert.deepEqual(response.body, {
+    ok: false,
+    error: 'This workspace changed elsewhere. Refresh to continue.'
+  });
 });
 
 test('POST /api/workspace/import saves a valid full-workspace snapshot for a pristine server record', async () => {
@@ -647,10 +689,11 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = []) {
       return structuredClone(records.get(viewerSub));
     },
 
-    async replaceWorkspaceSnapshot({ viewerSub, workspace, actor }) {
+    async replaceWorkspaceSnapshot({ viewerSub, workspace, actor, expectedRevision }) {
       this.replaceCalls.push({
         viewerSub,
         workspace,
+        expectedRevision,
         actor
       });
 
@@ -659,10 +702,16 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = []) {
         ?? createInitialWorkspaceRecord(viewerSub, {
           now: '2026-04-02T10:00:00.000Z'
         });
+
+      if (currentRecord.revision !== expectedRevision) {
+        throw new WorkspaceRevisionConflictError();
+      }
+
       const nextRecord = createUpdatedWorkspaceRecord(currentRecord, {
         workspace,
         actor,
-        now: '2026-04-02T11:00:00.000Z'
+        now: '2026-04-02T11:00:00.000Z',
+        createActivityEventId: () => 'activity_saved_test'
       });
 
       records.set(viewerSub, nextRecord);
@@ -689,7 +738,9 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = []) {
       const nextRecord = createUpdatedWorkspaceRecord(currentRecord, {
         workspace,
         actor,
-        now: '2026-04-02T11:00:00.000Z'
+        now: '2026-04-02T11:00:00.000Z',
+        activityType: 'workspace.imported',
+        createActivityEventId: () => 'activity_imported_test'
       });
 
       records.set(viewerSub, nextRecord);

@@ -6,12 +6,20 @@ export class WorkspaceImportConflictError extends Error {
   }
 }
 
+export class WorkspaceRevisionConflictError extends Error {
+  constructor(message = 'This workspace changed elsewhere. Refresh to continue.') {
+    super(message);
+    this.name = 'WorkspaceRevisionConflictError';
+    this.code = 'WORKSPACE_REVISION_CONFLICT';
+  }
+}
+
 export class WorkspaceRecordRepository {
   async loadOrCreateWorkspaceRecord(viewerSub) {
     throw new Error('Not implemented');
   }
 
-  async replaceWorkspaceSnapshot({ viewerSub, workspace, actor }) {
+  async replaceWorkspaceSnapshot({ viewerSub, workspace, actor, expectedRevision }) {
     throw new Error('Not implemented');
   }
 

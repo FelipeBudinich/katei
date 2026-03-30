@@ -1,7 +1,12 @@
 import { getMongoDb } from '../data/mongo_client.js';
-import { WorkspaceImportConflictError, WorkspaceRecordRepository } from './workspace_record_repository.js';
+import {
+  WorkspaceImportConflictError,
+  WorkspaceRecordRepository,
+  WorkspaceRevisionConflictError
+} from './workspace_record_repository.js';
 import {
   WORKSPACE_RECORD_COLLECTION_NAME,
+  createWorkspaceActivityEventId,
   createInitialWorkspaceRecord,
   createUpdatedWorkspaceRecord,
   fromWorkspaceRecordDocument,
@@ -29,13 +34,21 @@ export function getWorkspaceRecordCollection({ collection, db, config, getDb = g
 }
 
 export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
-  constructor({ collection, db, config, getDb = getMongoDb, now = createNowIsoString } = {}) {
+  constructor({
+    collection,
+    db,
+    config,
+    getDb = getMongoDb,
+    now = createNowIsoString,
+    createActivityEventId = createWorkspaceActivityEventId
+  } = {}) {
     super();
     this.collection = collection ?? null;
     this.db = db ?? null;
     this.config = config;
     this.getDb = getDb;
     this.now = now;
+    this.createActivityEventId = createActivityEventId;
   }
 
   async loadOrCreateWorkspaceRecord(viewerSub) {
@@ -59,22 +72,33 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
     return this.#loadRequiredWorkspaceRecord(normalizedViewerSub);
   }
 
-  async replaceWorkspaceSnapshot({ viewerSub, workspace, actor } = {}) {
+  async replaceWorkspaceSnapshot({ viewerSub, workspace, actor, expectedRevision } = {}) {
     const collection = this.#getCollection();
     validateWorkspaceSnapshot(workspace);
 
     const currentRecord = await this.loadOrCreateWorkspaceRecord(viewerSub);
+
+    if (currentRecord.revision !== expectedRevision) {
+      throw new WorkspaceRevisionConflictError();
+    }
+
     const nextRecord = createUpdatedWorkspaceRecord(currentRecord, {
       workspace,
       actor,
-      now: this.now()
+      now: this.now(),
+      activityType: 'workspace.saved',
+      createActivityEventId: this.createActivityEventId
     });
-
-    await collection.replaceOne(
-      { _id: nextRecord.viewerSub },
+    const result = await collection.replaceOne(
+      { _id: nextRecord.viewerSub, revision: expectedRevision },
       toWorkspaceRecordDocument(nextRecord),
-      { upsert: true }
+      { upsert: false }
     );
+    const matchedCount = typeof result?.matchedCount === 'number' ? result.matchedCount : 1;
+
+    if (matchedCount === 0) {
+      throw new WorkspaceRevisionConflictError();
+    }
 
     return nextRecord;
   }
@@ -92,7 +116,9 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
     const nextRecord = createUpdatedWorkspaceRecord(currentRecord, {
       workspace,
       actor,
-      now: this.now()
+      now: this.now(),
+      activityType: 'workspace.imported',
+      createActivityEventId: this.createActivityEventId
     });
     const result = await collection.replaceOne(
       { _id: nextRecord.viewerSub, revision: currentRecord.revision },

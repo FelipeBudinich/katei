@@ -16,7 +16,10 @@ import {
   createUpdatedWorkspaceRecord,
   toWorkspaceRecordDocument
 } from '../src/workspaces/workspace_record.js';
-import { WorkspaceImportConflictError } from '../src/workspaces/workspace_record_repository.js';
+import {
+  WorkspaceImportConflictError,
+  WorkspaceRevisionConflictError
+} from '../src/workspaces/workspace_record_repository.js';
 
 test('loadOrCreateWorkspaceRecord creates an empty record on first access', async () => {
   const collection = createWorkspaceRecordCollectionDouble();
@@ -44,9 +47,11 @@ test('loadOrCreateWorkspaceRecord creates an empty record on first access', asyn
 test('replaceWorkspaceSnapshot stores a validated full-workspace snapshot with metadata', async () => {
   const collection = createWorkspaceRecordCollectionDouble();
   const nowValues = ['2026-04-01T10:00:00.000Z', '2026-04-01T11:15:00.000Z'];
+  const eventIds = ['activity_saved_1'];
   const repository = createMongoWorkspaceRecordRepository({
     collection,
-    now: () => nowValues.shift() ?? '2026-04-01T11:15:00.000Z'
+    now: () => nowValues.shift() ?? '2026-04-01T11:15:00.000Z',
+    createActivityEventId: () => eventIds.shift() ?? 'activity_saved_fallback'
   });
   const workspace = createCard(createEmptyWorkspace(), 'main', {
     title: 'Ship launch checklist',
@@ -57,7 +62,8 @@ test('replaceWorkspaceSnapshot stores a validated full-workspace snapshot with m
   const record = await repository.replaceWorkspaceSnapshot({
     viewerSub: 'sub_123',
     workspace,
-    actor: { sub: 'sub_123', name: 'Tester' }
+    expectedRevision: 0,
+    actor: { type: 'human', id: 'sub_123' }
   });
 
   assert.equal(record.viewerSub, 'sub_123');
@@ -65,12 +71,56 @@ test('replaceWorkspaceSnapshot stores a validated full-workspace snapshot with m
   assert.equal(record.createdAt, '2026-04-01T10:00:00.000Z');
   assert.equal(record.updatedAt, '2026-04-01T11:15:00.000Z');
   assert.equal(record.lastChangedBy, 'sub_123');
+  assert.deepEqual(record.activityEvents, [
+    {
+      id: 'activity_saved_1',
+      type: 'workspace.saved',
+      actor: {
+        type: 'human',
+        id: 'sub_123'
+      },
+      createdAt: '2026-04-01T11:15:00.000Z',
+      revision: 1
+    }
+  ]);
   assert.equal(record.workspace.boards.main.cards[Object.keys(record.workspace.boards.main.cards)[0]].title, 'Ship launch checklist');
 
   const storedDocument = collection.getDocument('sub_123');
   assert.equal(storedDocument.revision, 1);
   assert.equal(storedDocument.lastChangedBy, 'sub_123');
+  assert.equal(storedDocument.activityEvents[0].type, 'workspace.saved');
   assert.equal(validateWorkspaceShape(storedDocument.workspace), true);
+});
+
+test('replaceWorkspaceSnapshot rejects stale expectedRevision values', async () => {
+  const existingWorkspace = createCard(createEmptyWorkspace(), 'main', {
+    title: 'Server task',
+    detailsMarkdown: 'Already saved on the server',
+    priority: 'urgent'
+  });
+  const existingRecord = createUpdatedWorkspaceRecord(
+    createInitialWorkspaceRecord('sub_123', {
+      now: '2026-04-01T10:00:00.000Z'
+    }),
+    {
+      workspace: existingWorkspace,
+      actor: { type: 'human', id: 'sub_123' },
+      now: '2026-04-01T11:15:00.000Z',
+      createActivityEventId: () => 'activity_saved_existing'
+    }
+  );
+  const collection = createWorkspaceRecordCollectionDouble([toWorkspaceRecordDocument(existingRecord)]);
+  const repository = new MongoWorkspaceRecordRepository({ collection });
+
+  await assert.rejects(
+    repository.replaceWorkspaceSnapshot({
+      viewerSub: 'sub_123',
+      workspace: createEmptyWorkspace(),
+      expectedRevision: 0,
+      actor: { type: 'human', id: 'sub_123' }
+    }),
+    WorkspaceRevisionConflictError
+  );
 });
 
 test('replaceWorkspaceSnapshot rejects invalid workspaces before saving', async () => {
@@ -85,6 +135,7 @@ test('replaceWorkspaceSnapshot rejects invalid workspaces before saving', async 
     repository.replaceWorkspaceSnapshot({
       viewerSub: 'sub_123',
       workspace: invalidWorkspace,
+      expectedRevision: 0,
       actor: 'sub_123'
     }),
     {
@@ -99,9 +150,11 @@ test('replaceWorkspaceSnapshot rejects invalid workspaces before saving', async 
 test('importWorkspaceSnapshot stores a validated full-workspace snapshot only when the server record is pristine', async () => {
   const collection = createWorkspaceRecordCollectionDouble();
   const nowValues = ['2026-04-01T10:00:00.000Z', '2026-04-01T11:15:00.000Z'];
+  const eventIds = ['activity_imported_1'];
   const repository = createMongoWorkspaceRecordRepository({
     collection,
-    now: () => nowValues.shift() ?? '2026-04-01T11:15:00.000Z'
+    now: () => nowValues.shift() ?? '2026-04-01T11:15:00.000Z',
+    createActivityEventId: () => eventIds.shift() ?? 'activity_imported_fallback'
   });
   const workspace = createCard(createEmptyWorkspace(), 'main', {
     title: 'Imported board',
@@ -112,12 +165,24 @@ test('importWorkspaceSnapshot stores a validated full-workspace snapshot only wh
   const record = await repository.importWorkspaceSnapshot({
     viewerSub: 'sub_123',
     workspace,
-    actor: { id: 'sub_123' }
+    actor: { type: 'human', id: 'sub_123' }
   });
 
   assert.equal(record.revision, 1);
   assert.equal(record.updatedAt, '2026-04-01T11:15:00.000Z');
   assert.equal(record.lastChangedBy, 'sub_123');
+  assert.deepEqual(record.activityEvents, [
+    {
+      id: 'activity_imported_1',
+      type: 'workspace.imported',
+      actor: {
+        type: 'human',
+        id: 'sub_123'
+      },
+      createdAt: '2026-04-01T11:15:00.000Z',
+      revision: 1
+    }
+  ]);
   assert.equal(validateWorkspaceShape(record.workspace), true);
 });
 
@@ -133,8 +198,9 @@ test('importWorkspaceSnapshot rejects imports once the server record is no longe
     }),
     {
       workspace,
-      actor: { id: 'sub_123' },
-      now: '2026-04-01T11:15:00.000Z'
+      actor: { type: 'human', id: 'sub_123' },
+      now: '2026-04-01T11:15:00.000Z',
+      createActivityEventId: () => 'activity_saved_existing'
     }
   );
   const collection = createWorkspaceRecordCollectionDouble([toWorkspaceRecordDocument(initialRecord)]);

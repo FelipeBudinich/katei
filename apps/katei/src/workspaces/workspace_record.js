@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import {
   cloneWorkspace,
   createEmptyWorkspace,
@@ -38,17 +39,36 @@ export function createWorkspaceRecord({
   };
 }
 
-export function createUpdatedWorkspaceRecord(record, { workspace, actor, now = new Date().toISOString() } = {}) {
+export function createUpdatedWorkspaceRecord(
+  record,
+  {
+    workspace,
+    actor,
+    now = new Date().toISOString(),
+    activityType = 'workspace.saved',
+    createActivityEventId = createWorkspaceActivityEventId
+  } = {}
+) {
   const currentRecord = createWorkspaceRecord(record);
+  const nextRevision = currentRecord.revision + 1;
 
   return createWorkspaceRecord({
     viewerSub: currentRecord.viewerSub,
     workspace,
-    revision: currentRecord.revision + 1,
+    revision: nextRevision,
     createdAt: currentRecord.createdAt,
     updatedAt: now,
     lastChangedBy: normalizeActorSub(actor),
-    activityEvents: currentRecord.activityEvents
+    activityEvents: [
+      ...currentRecord.activityEvents,
+      createWorkspaceActivityEvent({
+        id: createActivityEventId(),
+        type: activityType,
+        actor,
+        createdAt: now,
+        revision: nextRevision
+      })
+    ]
   });
 }
 
@@ -83,6 +103,26 @@ export function validateWorkspaceSnapshot(workspace) {
   }
 
   return workspace;
+}
+
+export function createWorkspaceActivityEvent({
+  id = createWorkspaceActivityEventId(),
+  type,
+  actor = null,
+  createdAt = new Date().toISOString(),
+  revision
+} = {}) {
+  return {
+    id: normalizeRequiredString(id, 'Workspace activity event id is required.'),
+    type: normalizeRequiredString(type, 'Workspace activity event type is required.'),
+    actor: normalizeActivityActor(actor),
+    createdAt: normalizeIsoTimestamp(createdAt, 'activityEvent.createdAt'),
+    revision: normalizeRevision(revision)
+  };
+}
+
+export function createWorkspaceActivityEventId() {
+  return `activity_${randomUUID().replaceAll('-', '').slice(0, 12)}`;
 }
 
 export function normalizeViewerSub(viewerSub) {
@@ -145,7 +185,50 @@ function normalizeActivityEvents(activityEvents) {
     throw new Error('Workspace record activityEvents must be an array.');
   }
 
-  return structuredClone(activityEvents);
+  return activityEvents.map((activityEvent) => createWorkspaceActivityEvent(activityEvent));
+}
+
+function normalizeActivityActor(actor) {
+  if (actor == null) {
+    return null;
+  }
+
+  if (typeof actor === 'string') {
+    const normalizedId = normalizeOptionalString(actor);
+
+    return normalizedId ? { id: normalizedId } : null;
+  }
+
+  if (typeof actor === 'object') {
+    const normalizedId = normalizeOptionalString(actor.id ?? actor.sub);
+
+    if (!normalizedId) {
+      return null;
+    }
+
+    const normalizedType = normalizeOptionalString(actor.type);
+
+    return normalizedType
+      ? {
+          type: normalizedType,
+          id: normalizedId
+        }
+      : {
+          id: normalizedId
+        };
+  }
+
+  return null;
+}
+
+function normalizeRequiredString(value, errorMessage) {
+  const normalizedValue = normalizeOptionalString(value);
+
+  if (!normalizedValue) {
+    throw new Error(errorMessage);
+  }
+
+  return normalizedValue;
 }
 
 function normalizeOptionalString(value) {

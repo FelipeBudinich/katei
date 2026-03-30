@@ -2,6 +2,8 @@ import { validateWorkspaceShape } from '../domain/workspace.js';
 import { postWorkspaceImport, readLocalV4Workspace } from '../lib/workspace_import.js';
 import { WorkspaceRepository } from './workspace_repository.js';
 
+export const WORKSPACE_CONFLICT_ERROR_MESSAGE = 'This workspace changed elsewhere. Refresh to continue.';
+
 export class HttpWorkspaceRepository extends WorkspaceRepository {
   constructor({
     fetchImpl = globalThis.fetch?.bind(globalThis),
@@ -15,6 +17,7 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
     this.storage = storage ?? null;
     this.document = document ?? null;
     this.meta = null;
+    this.revision = null;
     this.hasConsumedBootstrap = false;
   }
 
@@ -32,10 +35,11 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
 
       if (localWorkspace) {
         try {
-          await postWorkspaceImport({
+          const importedPayload = await postWorkspaceImport({
             fetchImpl: this.fetchImpl,
             workspace: localWorkspace
           });
+          this.#setMeta(importedPayload.meta ?? null);
         } catch (error) {
           if (error?.status !== 409) {
             throw error;
@@ -60,7 +64,10 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
       '/api/workspace',
       {
         method: 'PUT',
-        body: JSON.stringify({ workspace })
+        body: JSON.stringify({
+          workspace,
+          expectedRevision: this.revision ?? 0
+        })
       },
       'Unable to save workspace.'
     );
@@ -88,7 +95,7 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
       throw new Error('Workspace API returned an invalid workspace.');
     }
 
-    this.meta = data.meta ?? null;
+    this.#setMeta(data.meta ?? null);
     return data;
   }
 
@@ -116,11 +123,16 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
         return null;
       }
 
-      this.meta = payload.meta ?? null;
+      this.#setMeta(payload.meta ?? null);
       return payload;
     } catch (error) {
       return null;
     }
+  }
+
+  #setMeta(meta) {
+    this.meta = meta ?? null;
+    this.revision = Number.isInteger(meta?.revision) ? meta.revision : null;
   }
 }
 
@@ -149,7 +161,8 @@ async function parseJsonResponse(response) {
 }
 
 function createWorkspaceApiError(response, data, fallbackMessage) {
-  const error = new Error(data?.error || fallbackMessage);
+  const message = response.status === 409 ? WORKSPACE_CONFLICT_ERROR_MESSAGE : (data?.error || fallbackMessage);
+  const error = new Error(message);
   error.status = response.status;
   error.data = data;
   return error;

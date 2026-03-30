@@ -2,7 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createCard, createEmptyWorkspace } from '../public/js/domain/workspace.js';
 import { readLocalV4Workspace } from '../public/js/lib/workspace_import.js';
-import { HttpWorkspaceRepository } from '../public/js/repositories/http_workspace_repository.js';
+import {
+  HttpWorkspaceRepository,
+  WORKSPACE_CONFLICT_ERROR_MESSAGE
+} from '../public/js/repositories/http_workspace_repository.js';
 import { createWorkspaceStorageKey } from '../public/js/repositories/local_workspace_repository.js';
 
 test('HttpWorkspaceRepository loads workspace snapshots from the server API', async () => {
@@ -73,7 +76,10 @@ test('HttpWorkspaceRepository saves workspace snapshots to the server API', asyn
   assert.equal(fetchDouble.calls[0].options.credentials, 'same-origin');
   assert.equal(fetchDouble.calls[0].options.headers.Accept, 'application/json');
   assert.equal(fetchDouble.calls[0].options.headers['Content-Type'], 'application/json');
-  assert.deepEqual(JSON.parse(fetchDouble.calls[0].options.body), { workspace });
+  assert.deepEqual(JSON.parse(fetchDouble.calls[0].options.body), {
+    workspace,
+    expectedRevision: 0
+  });
 });
 
 test('HttpWorkspaceRepository imports valid v4 local data when the server record is pristine', async () => {
@@ -186,6 +192,7 @@ test('HttpWorkspaceRepository prefers bootstrap payload on first load and consum
     lastChangedBy: 'sub_123',
     isPristine: false
   });
+  assert.equal(repository.revision, 3);
   assert.equal(fetchDouble.calls.length, 0);
 
   const secondLoad = await repository.loadWorkspace();
@@ -193,6 +200,78 @@ test('HttpWorkspaceRepository prefers bootstrap payload on first load and consum
   assert.deepEqual(secondLoad, networkWorkspace);
   assert.equal(fetchDouble.calls.length, 1);
   assert.equal(fetchDouble.calls[0].url, '/api/workspace');
+});
+
+test('HttpWorkspaceRepository sends the bootstrapped revision on save', async () => {
+  const workspace = createCard(createEmptyWorkspace(), 'main', {
+    title: 'Bootstrapped save',
+    detailsMarkdown: 'Revision-aware save',
+    priority: 'important'
+  });
+  const repository = new HttpWorkspaceRepository({
+    fetchImpl: createFetchDouble([
+      createJsonResponse(createWorkspaceApiPayload(workspace, {
+        revision: 6,
+        updatedAt: '2026-04-03T13:00:00.000Z',
+        lastChangedBy: 'sub_123',
+        isPristine: false
+      }))
+    ]).fetch,
+    viewerSub: 'sub_123',
+    storage: null,
+    document: createDocumentDouble({
+      'workspace-bootstrap': JSON.stringify(
+        createWorkspaceApiPayload(createEmptyWorkspace(), {
+          revision: 5,
+          updatedAt: '2026-04-03T12:00:00.000Z',
+          lastChangedBy: 'sub_123',
+          isPristine: false
+        })
+      )
+    })
+  });
+
+  await repository.loadWorkspace();
+  const fetchDouble = createFetchDouble([
+    createJsonResponse(createWorkspaceApiPayload(workspace, {
+      revision: 6,
+      updatedAt: '2026-04-03T13:00:00.000Z',
+      lastChangedBy: 'sub_123',
+      isPristine: false
+    }))
+  ]);
+  repository.fetchImpl = fetchDouble.fetch;
+
+  await repository.saveWorkspace(workspace);
+
+  assert.deepEqual(JSON.parse(fetchDouble.calls[0].options.body), {
+    workspace,
+    expectedRevision: 5
+  });
+  assert.equal(repository.revision, 6);
+});
+
+test('HttpWorkspaceRepository surfaces revision conflicts with a friendly error', async () => {
+  const workspace = createEmptyWorkspace();
+  const fetchDouble = createFetchDouble([
+    createJsonResponse({
+      ok: false,
+      error: 'Workspace revision mismatch.'
+    }, 409)
+  ]);
+  const repository = new HttpWorkspaceRepository({
+    fetchImpl: fetchDouble.fetch,
+    viewerSub: 'sub_123',
+    storage: null
+  });
+
+  await assert.rejects(
+    repository.saveWorkspace(workspace),
+    {
+      message: WORKSPACE_CONFLICT_ERROR_MESSAGE,
+      status: 409
+    }
+  );
 });
 
 function createWorkspaceApiPayload(workspace, meta = {}) {
