@@ -90,7 +90,7 @@
         {
           "kind": "read",
           "file": "apps/katei/src/config.js",
-          "line": 14,
+          "line": 15,
           "scope": "app",
           "snippet": "googleAllowlistSubs: parseAllowlistSubs(env.GOOGLE_ALLOWLIST_SUBS),"
         }
@@ -114,14 +114,14 @@
         {
           "kind": "read",
           "file": "apps/katei/src/config.js",
-          "line": 12,
+          "line": 13,
           "scope": "app",
           "snippet": "googleClientId: requireNonEmptyEnv('GOOGLE_CLIENT_ID', env.GOOGLE_CLIENT_ID),"
         },
         {
           "kind": "validation",
           "file": "apps/katei/src/config.js",
-          "line": 12,
+          "line": 13,
           "scope": "app",
           "snippet": "googleClientId: requireNonEmptyEnv('GOOGLE_CLIENT_ID', env.GOOGLE_CLIENT_ID),"
         }
@@ -256,14 +256,14 @@
         {
           "kind": "read",
           "file": "apps/katei/src/config.js",
-          "line": 13,
+          "line": 14,
           "scope": "app",
           "snippet": "sessionSecret: requireNonEmptyEnv('KATEI_SESSION_SECRET', env.KATEI_SESSION_SECRET),"
         },
         {
           "kind": "validation",
           "file": "apps/katei/src/config.js",
-          "line": 13,
+          "line": 14,
           "scope": "app",
           "snippet": "sessionSecret: requireNonEmptyEnv('KATEI_SESSION_SECRET', env.KATEI_SESSION_SECRET),"
         }
@@ -375,17 +375,17 @@
           "file": "apps/katei/.env.example",
           "line": 17,
           "scope": "app",
-          "snippet": "SESSION_TTL_SECONDS=2592000",
-          "comment": "# Optional session duration for the Katei session cookie. Defaults to 30 days."
+          "snippet": "SESSION_TTL_SECONDS=604800",
+          "comment": "# Optional session duration for the Katei session cookie. Defaults to 7 days."
         }
       ],
       "usages": [
         {
-          "kind": "read",
+          "kind": "default",
           "file": "apps/katei/src/config.js",
-          "line": 15,
+          "line": 8,
           "scope": "app",
-          "snippet": "sessionTtlSeconds: parseSessionTtlSeconds(env.SESSION_TTL_SECONDS),"
+          "snippet": "const sessionTtlSeconds = parseSessionTtlSeconds(normalizeOptionalString(env.SESSION_TTL_SECONDS) || String(DEFAULT_SESSION_TTL_SECONDS));"
         }
       ]
     }

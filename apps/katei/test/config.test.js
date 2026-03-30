@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createRuntimeConfig } from '../src/config.js';
+import { createRuntimeConfig, parseSessionTtlSeconds } from '../src/config.js';
 
 const REQUIRED_ENV = Object.freeze({
   GOOGLE_CLIENT_ID: 'test-google-client-id',
@@ -27,4 +27,45 @@ test('createRuntimeConfig leaves MongoDB config optional in this step', () => {
 
   assert.equal(config.mongoUri, '');
   assert.equal(config.mongoDbName, '');
+});
+
+test('createRuntimeConfig defaults session TTL to 7 days when SESSION_TTL_SECONDS is unset', () => {
+  const config = createRuntimeConfig({
+    ...REQUIRED_ENV
+  });
+
+  assert.equal(config.sessionTtlSeconds, 604800);
+});
+
+test('createRuntimeConfig defaults session TTL to 7 days when SESSION_TTL_SECONDS is blank', () => {
+  const blankConfig = createRuntimeConfig({
+    ...REQUIRED_ENV,
+    SESSION_TTL_SECONDS: ''
+  });
+  const whitespaceConfig = createRuntimeConfig({
+    ...REQUIRED_ENV,
+    SESSION_TTL_SECONDS: '   '
+  });
+
+  assert.equal(blankConfig.sessionTtlSeconds, 604800);
+  assert.equal(whitespaceConfig.sessionTtlSeconds, 604800);
+});
+
+test('createRuntimeConfig parses positive SESSION_TTL_SECONDS overrides', () => {
+  const config = createRuntimeConfig({
+    ...REQUIRED_ENV,
+    SESSION_TTL_SECONDS: '900'
+  });
+
+  assert.equal(config.sessionTtlSeconds, 900);
+});
+
+test('parseSessionTtlSeconds keeps a defensive fallback for blank input', () => {
+  assert.equal(parseSessionTtlSeconds('   '), 604800);
+});
+
+test('parseSessionTtlSeconds rejects invalid values', () => {
+  assert.throws(() => parseSessionTtlSeconds('0'), /SESSION_TTL_SECONDS must be a positive integer\./);
+  assert.throws(() => parseSessionTtlSeconds('-1'), /SESSION_TTL_SECONDS must be a positive integer\./);
+  assert.throws(() => parseSessionTtlSeconds('nope'), /SESSION_TTL_SECONDS must be a positive integer\./);
 });

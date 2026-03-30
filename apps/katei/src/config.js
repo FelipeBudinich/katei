@@ -1,10 +1,11 @@
-const DEFAULT_SESSION_TTL_SECONDS = 60 * 60 * 24 * 30;
+const DEFAULT_SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
 
 export function createRuntimeConfig(env = process.env) {
   const nodeEnv = normalizeOptionalString(env.NODE_ENV) || 'development';
   const appBaseUrl = normalizeOptionalString(env.APP_BASE_URL);
   const mongoUri = normalizeOptionalString(env.MONGODB_URI);
   const mongoDbName = normalizeOptionalString(env.MONGODB_DB_NAME);
+  const sessionTtlSeconds = parseSessionTtlSeconds(normalizeOptionalString(env.SESSION_TTL_SECONDS) || String(DEFAULT_SESSION_TTL_SECONDS));
 
   return {
     nodeEnv,
@@ -12,7 +13,7 @@ export function createRuntimeConfig(env = process.env) {
     googleClientId: requireNonEmptyEnv('GOOGLE_CLIENT_ID', env.GOOGLE_CLIENT_ID),
     sessionSecret: requireNonEmptyEnv('KATEI_SESSION_SECRET', env.KATEI_SESSION_SECRET),
     googleAllowlistSubs: parseAllowlistSubs(env.GOOGLE_ALLOWLIST_SUBS),
-    sessionTtlSeconds: parseSessionTtlSeconds(env.SESSION_TTL_SECONDS),
+    sessionTtlSeconds,
     appBaseUrl,
     appOrigin: appBaseUrl ? new URL(appBaseUrl).origin : null,
     mongoUri,
