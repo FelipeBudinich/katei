@@ -13,16 +13,37 @@ test('createWorkspaceStorageKey scopes workspace storage by verified Google sub'
 
 test('LocalWorkspaceRepository reads and writes only the viewer-scoped workspace key', async () => {
   const storage = createStorageDouble({
-    'katei.workspace.v2': JSON.stringify({ legacy: true })
+    'katei.workspace.v3:sub_123': JSON.stringify({ legacy: true })
   });
   const repository = new LocalWorkspaceRepository(storage, 'sub_123');
   const workspace = createEmptyWorkspace();
 
   await repository.saveWorkspace(workspace);
 
-  assert.deepEqual(JSON.parse(storage.getItem('katei.workspace.v3:sub_123')), workspace);
-  assert.equal(storage.getItem('katei.workspace.v2'), JSON.stringify({ legacy: true }));
+  assert.deepEqual(JSON.parse(storage.getItem('katei.workspace.v4:sub_123')), workspace);
+  assert.equal(storage.getItem('katei.workspace.v3:sub_123'), JSON.stringify({ legacy: true }));
   assert.deepEqual(await repository.loadWorkspace(), workspace);
+});
+
+test('LocalWorkspaceRepository rejects stored cards that still use the legacy description field', async () => {
+  const workspace = createEmptyWorkspace();
+  const board = workspace.boards.main;
+
+  board.cards.card_legacy = {
+    id: 'card_legacy',
+    title: 'Legacy card',
+    description: 'Old field name',
+    priority: 'important',
+    createdAt: '2026-03-30T00:00:00.000Z',
+    updatedAt: '2026-03-30T00:00:00.000Z'
+  };
+  board.columns.backlog.cardIds.push('card_legacy');
+  const storage = createStorageDouble({
+    'katei.workspace.v4:sub_123': JSON.stringify(workspace)
+  });
+  const repository = new LocalWorkspaceRepository(storage, 'sub_123');
+
+  assert.deepEqual(await repository.loadWorkspace(), createEmptyWorkspace());
 });
 
 function createStorageDouble(initialEntries = {}) {

@@ -14,7 +14,7 @@ export default class extends Controller {
     'priorityInput',
     'priorityOption',
     'titleInput',
-    'descriptionInput',
+    'markdownInput',
     'editActions',
     'deleteActions',
     'deleteActionRegion',
@@ -38,7 +38,7 @@ export default class extends Controller {
     this.targetColumnIdInputTarget.value = targetColumnId;
     this.priorityInputTarget.value = card?.priority ?? 'important';
     this.titleInputTarget.value = card?.title ?? '';
-    this.descriptionInputTarget.value = card?.description ?? '';
+    this.markdownInputTarget.value = card?.detailsMarkdown ?? '';
     this.headingTarget.textContent = isEditMode ? 'Edit card' : 'New card';
     this.syncPriorityOptions();
     this.syncEditActions({
@@ -104,7 +104,7 @@ export default class extends Controller {
         targetColumnId: formData.get('targetColumnId'),
         input: {
           title: formData.get('title'),
-          description: formData.get('description'),
+          detailsMarkdown: formData.get('detailsMarkdown'),
           priority: formData.get('priority')
         }
       }

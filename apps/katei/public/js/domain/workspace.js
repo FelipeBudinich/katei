@@ -1,8 +1,8 @@
 import { createBoardId, createCardId } from '../utils/id.js';
 
-export const WORKSPACE_VERSION = 2;
+export const WORKSPACE_VERSION = 4;
 export const WORKSPACE_ID = 'main';
-export const STORAGE_KEY = 'katei.workspace.v2';
+export const STORAGE_KEY = 'katei.workspace.v4';
 export const APP_TITLE = '過程 (katei)';
 export const DEFAULT_BOARD_ID = 'main';
 export const DEFAULT_BOARD_TITLE = '過程';
@@ -225,7 +225,7 @@ export function createCard(workspace, boardId, input) {
   board.cards[cardId] = {
     id: cardId,
     title: normalizeCardTitle(input?.title),
-    description: normalizeDescription(input?.description),
+    detailsMarkdown: normalizeDetailsMarkdown(input?.detailsMarkdown),
     priority: normalizePriority(input?.priority ?? DEFAULT_PRIORITY),
     createdAt: timestamp,
     updatedAt: timestamp
@@ -245,7 +245,9 @@ export function updateCard(workspace, boardId, cardId, updates) {
   board.cards[cardId] = {
     ...card,
     title: hasOwn(updates, 'title') ? normalizeCardTitle(updates.title) : card.title,
-    description: hasOwn(updates, 'description') ? normalizeDescription(updates.description) : card.description,
+    detailsMarkdown: hasOwn(updates, 'detailsMarkdown')
+      ? normalizeDetailsMarkdown(updates.detailsMarkdown)
+      : card.detailsMarkdown,
     priority: hasOwn(updates, 'priority') ? normalizePriority(updates.priority) : card.priority,
     updatedAt: timestamp
   };
@@ -393,7 +395,7 @@ function normalizeCardTitle(value) {
   return normalized;
 }
 
-function normalizeDescription(value) {
+function normalizeDetailsMarkdown(value) {
   return String(value ?? '').trim();
 }
 
@@ -492,7 +494,7 @@ function isValidCard(card, cardId) {
       card.id === cardId &&
       typeof card.title === 'string' &&
       card.title.trim() &&
-      typeof card.description === 'string' &&
+      typeof card.detailsMarkdown === 'string' &&
       typeof card.createdAt === 'string' &&
       typeof card.updatedAt === 'string' &&
       isValidPriority(card.priority)

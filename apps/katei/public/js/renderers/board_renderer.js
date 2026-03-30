@@ -95,8 +95,8 @@ function createCardElement({ board, card, columnId, templates }) {
 
   const descriptionElement = cardNode.querySelector('[data-card-field="description"]');
   if (descriptionElement) {
-    descriptionElement.textContent = card.description;
-    descriptionElement.classList.toggle('hidden', !card.description);
+    descriptionElement.textContent = card.detailsMarkdown;
+    descriptionElement.classList.toggle('hidden', !card.detailsMarkdown);
   }
 
   const metaElement = cardNode.querySelector('[data-card-field="meta"]');

@@ -398,7 +398,7 @@ export default class extends Controller {
     const shouldShowPriority = columnId !== 'done' && columnId !== 'archived';
 
     this.viewCardTitleTarget.textContent = card.title;
-    this.viewCardDescriptionTarget.textContent = card.description || 'No description added.';
+    this.viewCardDescriptionTarget.textContent = card.detailsMarkdown || 'No details added.';
     this.viewCardPrioritySectionTarget.hidden = !shouldShowPriority;
     this.viewCardPriorityTarget.textContent = shouldShowPriority ? PRIORITY_LABELS[card.priority] : '';
     this.viewCardUpdatedTarget.textContent = timestampFormatter.format(new Date(card.updatedAt));

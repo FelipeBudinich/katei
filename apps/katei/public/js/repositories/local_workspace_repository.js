@@ -1,7 +1,7 @@
 import { WorkspaceRepository } from './workspace_repository.js';
 import { createEmptyWorkspace, validateWorkspaceShape } from '../domain/workspace.js';
 
-export const WORKSPACE_STORAGE_PREFIX = 'katei.workspace.v3:';
+export const WORKSPACE_STORAGE_PREFIX = 'katei.workspace.v4:';
 
 export function createWorkspaceStorageKey(viewerSub) {
   if (typeof viewerSub !== 'string' || !viewerSub.trim()) {
