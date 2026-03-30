@@ -11,6 +11,8 @@ export const HTML_REPORT_RELATIVE = path.join(ENV_INVENTORY_OUTPUT_DIRNAME, HTML
 const NO_FALLBACK_LABEL = "No fallback observed";
 const FALLBACK_LABEL = "Fallback observed";
 const FALLBACKS_LABEL = "Fallbacks observed";
+const REQUIRED_HELPER_LABEL = "Required helper";
+const NO_FALLBACK_ALLOWED_TITLE = "No fallback allowed";
 
 function toPosixPath(value) {
   return String(value || "").split(path.sep).join("/");
@@ -62,6 +64,32 @@ function titleCase(value) {
     .join(" ");
 }
 
+function kindLabel(value) {
+  if (value === "requiredHelper") {
+    return REQUIRED_HELPER_LABEL;
+  }
+  return titleCase(value);
+}
+
+function variableStatusMeta({ hasRequiredHelper, hasFallback }) {
+  if (hasRequiredHelper) {
+    return {
+      status: "required-helper",
+      statusLabel: REQUIRED_HELPER_LABEL,
+    };
+  }
+  if (hasFallback) {
+    return {
+      status: "optional",
+      statusLabel: FALLBACK_LABEL,
+    };
+  }
+  return {
+    status: "required",
+    statusLabel: NO_FALLBACK_LABEL,
+  };
+}
+
 function summarizeOccurrence(entry) {
   return `${entry.file}:${entry.line}`;
 }
@@ -77,7 +105,9 @@ function isEnvExampleDefinition(definition) {
 function deriveVariableMeta(variable) {
   const definitions = ensureArray(variable.definitions);
   const usages = ensureArray(variable.usages);
+  const hasRequiredHelper = usages.some((usage) => usage.kind === "requiredHelper");
   const hasFallback = usages.some((usage) => usage.kind === "default");
+  const { status, statusLabel } = variableStatusMeta({ hasRequiredHelper, hasFallback });
   const missingExample = usages.length > 0 && !definitions.some(isEnvExampleDefinition);
   const scopes = sortUnique([
     ...definitions.map((definition) => definition.scope),
@@ -91,8 +121,11 @@ function deriveVariableMeta(variable) {
     ...variable,
     definitions,
     usages,
+    hasRequiredHelper,
     hasFallback,
-    likelyRequired: !hasFallback,
+    status,
+    statusLabel,
+    likelyRequired: status === "required",
     missingExample,
     scopes,
     definitionKinds,
@@ -129,19 +162,22 @@ function cardState(value, mode) {
 
 function buildDerived(report) {
   const variables = ensureArray(report.variables).map(deriveVariableMeta);
-  const required = variables.filter((variable) => variable.likelyRequired).sort(sortVariableMeta);
-  const optional = variables.filter((variable) => !variable.likelyRequired).sort(sortVariableMeta);
+  const requiredHelper = variables.filter((variable) => variable.status === "required-helper").sort(sortVariableMeta);
+  const required = variables.filter((variable) => variable.status === "required").sort(sortVariableMeta);
+  const optional = variables.filter((variable) => variable.status === "optional").sort(sortVariableMeta);
   const missingExample = variables.filter((variable) => variable.missingExample).sort(sortVariableMeta);
   const variableScopes = sortUnique(variables.flatMap((variable) => variable.scopes));
 
   return {
     variables,
+    requiredHelper,
     required,
     optional,
     missingExample,
     variableScopes,
+    requiredHelperCount: requiredHelper.length,
     withFallbackCount: optional.length,
-    likelyRequiredCount: required.length,
+    noFallbackObservedCount: required.length,
   };
 }
 
@@ -161,7 +197,8 @@ function statusCards(report, derived) {
     { label: "Variables", value: report.summary.totalVariables, mode: "good" },
     { label: "Definitions", value: report.summary.totalDefinitions, mode: "good" },
     { label: "Usages", value: report.summary.totalUsages, mode: "good" },
-    { label: NO_FALLBACK_LABEL, value: derived.likelyRequiredCount, mode: "warning" },
+    { label: REQUIRED_HELPER_LABEL, value: derived.requiredHelperCount, mode: "good" },
+    { label: NO_FALLBACK_LABEL, value: derived.noFallbackObservedCount, mode: "warning" },
     { label: FALLBACKS_LABEL, value: derived.withFallbackCount, mode: "good" },
     { label: "Missing example/docs", value: derived.missingExample.length, mode: "warning" },
     { label: "Secret-like", value: report.summary.secretLikeCount, mode: "good" },
@@ -183,9 +220,13 @@ function renderStatusCards(report, derived) {
 
 function renderPills(variable) {
   const pills = [];
-  pills.push(variable.likelyRequired
-    ? `<span class="count-chip env-inventory-chip env-inventory-chip--warning">${NO_FALLBACK_LABEL}</span>`
-    : `<span class="count-chip env-inventory-chip env-inventory-chip--good">${FALLBACK_LABEL}</span>`);
+  if (variable.status === "required-helper") {
+    pills.push(`<span class="count-chip env-inventory-chip env-inventory-chip--accent">${REQUIRED_HELPER_LABEL}</span>`);
+  } else if (variable.status === "required") {
+    pills.push(`<span class="count-chip env-inventory-chip env-inventory-chip--warning">${NO_FALLBACK_LABEL}</span>`);
+  } else {
+    pills.push(`<span class="count-chip env-inventory-chip env-inventory-chip--good">${FALLBACK_LABEL}</span>`);
+  }
   if (variable.secretLike) {
     pills.push('<span class="count-chip env-inventory-chip env-inventory-chip--problem">Secret-like</span>');
   }
@@ -211,7 +252,7 @@ function renderOccurrenceList(entries, { includeSnippet = false } = {}) {
         <li class="env-inventory-occurrence-item">
           <div class="env-inventory-occurrence-top">
             ${renderInlineCode(summarizeOccurrence(entry))}
-            <span class="text-sm leading-6 text-muted">${escapeHtml(titleCase(entry.kind))} · ${escapeHtml(titleCase(entry.scope))}</span>
+            <span class="text-sm leading-6 text-muted">${escapeHtml(kindLabel(entry.kind))} · ${escapeHtml(titleCase(entry.scope))}</span>
           </div>
           ${includeSnippet && (entry.comment || entry.snippet)
             ? `
@@ -229,7 +270,7 @@ function renderOccurrenceList(entries, { includeSnippet = false } = {}) {
 
 function renderVariableCard(variable) {
   return `
-    <details class="paper-panel env-inventory-variable-card" data-env-variable-card="${escapeHtml(variable.name)}" data-variable-status="${variable.likelyRequired ? "required" : "optional"}">
+    <details class="paper-panel env-inventory-variable-card" data-env-variable-card="${escapeHtml(variable.name)}" data-variable-status="${variable.status}">
       <summary>
         <div class="env-inventory-variable-summary">
           <div class="env-inventory-variable-heading">
@@ -246,11 +287,11 @@ function renderVariableCard(variable) {
         <div class="env-inventory-variable-meta">
           <div class="space-y-2">
             <p class="field-label text-sm font-semibold">Definition kinds</p>
-            <p class="text-sm leading-6 text-muted">${variable.definitionKinds.length ? escapeHtml(variable.definitionKinds.map(titleCase).join(", ")) : "None"}</p>
+            <p class="text-sm leading-6 text-muted">${variable.definitionKinds.length ? escapeHtml(variable.definitionKinds.map(kindLabel).join(", ")) : "None"}</p>
           </div>
           <div class="space-y-2">
             <p class="field-label text-sm font-semibold">Usage kinds</p>
-            <p class="text-sm leading-6 text-muted">${variable.usageKinds.length ? escapeHtml(variable.usageKinds.map(titleCase).join(", ")) : "None"}</p>
+            <p class="text-sm leading-6 text-muted">${variable.usageKinds.length ? escapeHtml(variable.usageKinds.map(kindLabel).join(", ")) : "None"}</p>
           </div>
           <div class="space-y-2">
             <p class="field-label text-sm font-semibold">Primary usage</p>
@@ -382,6 +423,7 @@ function renderExplorer(report, derived) {
           <span class="field-label text-sm font-semibold">Status</span>
           <select id="variable-status" class="field-control">
             <option value="">All</option>
+            <option value="required-helper">${REQUIRED_HELPER_LABEL}</option>
             <option value="required">${NO_FALLBACK_LABEL}</option>
             <option value="optional">${FALLBACK_LABEL}</option>
             <option value="missing-example">Missing example/docs</option>
@@ -418,7 +460,7 @@ function renderExplorer(report, derived) {
               ? derived.variables.map((variable) => `
                 <tr>
                   <td>${renderInlineCode(variable.name)}</td>
-                  <td>${variable.likelyRequired ? NO_FALLBACK_LABEL : FALLBACK_LABEL}</td>
+                  <td>${escapeHtml(variable.statusLabel)}</td>
                   <td>${escapeHtml(variable.definitions.length)}</td>
                   <td>${escapeHtml(variable.usages.length)}</td>
                   <td>${escapeHtml(variable.scopes.join(", ") || "—")}</td>
@@ -526,19 +568,32 @@ function renderClientScript(report) {
         function derive(variable) {
           const definitions = ensureArray(variable.definitions);
           const usages = ensureArray(variable.usages);
+          const hasRequiredHelper = usages.some((usage) => usage.kind === "requiredHelper");
           const hasFallback = usages.some((usage) => usage.kind === "default");
           const missingExample = usages.length > 0 && !definitions.some((definition) => definition.kind === "envFile" && String(definition.file || "").split("/").pop() === ".env.example");
           const scopes = sortUnique([
             ...definitions.map((definition) => definition.scope),
             ...usages.map((usage) => usage.scope),
           ]);
+          let status = "required";
+          let statusLabel = ${JSON.stringify(NO_FALLBACK_LABEL)};
+          if (hasRequiredHelper) {
+            status = "required-helper";
+            statusLabel = ${JSON.stringify(REQUIRED_HELPER_LABEL)};
+          } else if (hasFallback) {
+            status = "optional";
+            statusLabel = ${JSON.stringify(FALLBACK_LABEL)};
+          }
           return {
             ...variable,
             definitions,
             usages,
             scopes,
+            hasRequiredHelper,
             hasFallback,
-            likelyRequired: !hasFallback,
+            status,
+            statusLabel,
+            likelyRequired: status === "required",
             missingExample,
             firstUsage: usages[0] || null,
             searchBlob: [
@@ -645,11 +700,14 @@ function renderClientScript(report) {
           if (!state.status) {
             return true;
           }
+          if (state.status === "required-helper") {
+            return variable.status === "required-helper";
+          }
           if (state.status === "required") {
-            return variable.likelyRequired;
+            return variable.status === "required";
           }
           if (state.status === "optional") {
-            return !variable.likelyRequired;
+            return variable.status === "optional";
           }
           if (state.status === "missing-example") {
             return variable.missingExample;
@@ -695,7 +753,7 @@ function renderClientScript(report) {
           controls.body.innerHTML = visible.map((variable) => [
             "<tr>",
             "<td><code class=\\"env-inventory-inline-code\\">" + escapeHtml(variable.name) + "</code></td>",
-            "<td>" + (variable.likelyRequired ? ${JSON.stringify(NO_FALLBACK_LABEL)} : ${JSON.stringify(FALLBACK_LABEL)}) + "</td>",
+            "<td>" + escapeHtml(variable.statusLabel) + "</td>",
             "<td>" + variable.definitions.length + "</td>",
             "<td>" + variable.usages.length + "</td>",
             "<td>" + escapeHtml(variable.scopes.join(", ") || "—") + "</td>",
@@ -802,9 +860,10 @@ export function renderEnvInventoryHtml(report, { htmlOutputPath = "" } = {}) {
         <section class="paper-panel env-inventory-panel">
           <div class="env-inventory-section-header">
             <h2 class="font-serif text-2xl text-strong">Inventory model</h2>
-            <p class="text-sm leading-6 text-muted">Required vs optional is inferred from observed fallback usage. Variables with a ${renderInlineCode("default")} usage are treated as optional for this report.</p>
+            <p class="text-sm leading-6 text-muted">Variables with a ${renderInlineCode("requiredHelper")} usage are treated as required by design. Variables with a ${renderInlineCode("default")} usage are treated as optional. Remaining variables stay in ${renderInlineCode(NO_FALLBACK_LABEL)}.</p>
           </div>
           <div class="env-inventory-chip-row">
+            <span class="count-chip env-inventory-chip env-inventory-chip--accent">${REQUIRED_HELPER_LABEL}</span>
             <span class="count-chip env-inventory-chip env-inventory-chip--warning">${NO_FALLBACK_LABEL}</span>
             <span class="count-chip env-inventory-chip env-inventory-chip--good">${FALLBACK_LABEL}</span>
             <span class="count-chip env-inventory-chip env-inventory-chip--problem">Secret-like</span>
@@ -814,7 +873,8 @@ export function renderEnvInventoryHtml(report, { htmlOutputPath = "" } = {}) {
         ${renderCoverageGaps(derived)}
       </div>
 
-      ${renderVariableGroup("No fallback observed", "Variables with usages but no observed in-code fallback/default.", derived.required, "required")}
+      ${renderVariableGroup(NO_FALLBACK_ALLOWED_TITLE, "Variables enforced by a required-env helper where missing values are fatal, not fallbackable.", derived.requiredHelper, "required-helper")}
+      ${renderVariableGroup("No fallback observed", "Variables with usages but no observed in-code fallback/default and no recognized required-env helper.", derived.required, "required")}
       ${renderVariableGroup("Fallbacks observed", "Variables where the report found an explicit default/fallback path.", derived.optional, "optional")}
       ${renderDynamicAccesses(report)}
       ${renderExplorer(report, derived)}

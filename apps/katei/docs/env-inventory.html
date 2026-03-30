@@ -66,12 +66,17 @@
     
       <article class="paper-panel env-inventory-status-card env-inventory-status-card--good">
         <div class="env-inventory-status-label">Usages</div>
-        <div class="env-inventory-status-value">23</div>
+        <div class="env-inventory-status-value">21</div>
+      </article>
+    
+      <article class="paper-panel env-inventory-status-card env-inventory-status-card--good">
+        <div class="env-inventory-status-label">Required helper</div>
+        <div class="env-inventory-status-value">2</div>
       </article>
     
       <article class="paper-panel env-inventory-status-card env-inventory-status-card--warning">
         <div class="env-inventory-status-label">No fallback observed</div>
-        <div class="env-inventory-status-value">5</div>
+        <div class="env-inventory-status-value">3</div>
       </article>
     
       <article class="paper-panel env-inventory-status-card env-inventory-status-card--good">
@@ -105,9 +110,10 @@
         <section class="paper-panel env-inventory-panel">
           <div class="env-inventory-section-header">
             <h2 class="font-serif text-2xl text-strong">Inventory model</h2>
-            <p class="text-sm leading-6 text-muted">Required vs optional is inferred from observed fallback usage. Variables with a <code class="env-inventory-inline-code">default</code> usage are treated as optional for this report.</p>
+            <p class="text-sm leading-6 text-muted">Variables with a <code class="env-inventory-inline-code">requiredHelper</code> usage are treated as required by design. Variables with a <code class="env-inventory-inline-code">default</code> usage are treated as optional. Remaining variables stay in <code class="env-inventory-inline-code">No fallback observed</code>.</p>
           </div>
           <div class="env-inventory-chip-row">
+            <span class="count-chip env-inventory-chip env-inventory-chip--accent">Required helper</span>
             <span class="count-chip env-inventory-chip env-inventory-chip--warning">No fallback observed</span>
             <span class="count-chip env-inventory-chip env-inventory-chip--good">Fallback observed</span>
             <span class="count-chip env-inventory-chip env-inventory-chip--problem">Secret-like</span>
@@ -128,21 +134,21 @@
       
     <section class="paper-panel env-inventory-panel">
       <div class="env-inventory-section-header">
-        <h2 class="font-serif text-2xl text-strong">No fallback observed</h2>
-        <p class="text-sm leading-6 text-muted">Variables with usages but no observed in-code fallback/default.</p>
+        <h2 class="font-serif text-2xl text-strong">No fallback allowed</h2>
+        <p class="text-sm leading-6 text-muted">Variables enforced by a required-env helper where missing values are fatal, not fallbackable.</p>
       </div>
-      <div class="env-inventory-variable-grid" data-env-group="required">
+      <div class="env-inventory-variable-grid" data-env-group="required-helper">
         
-    <details class="paper-panel env-inventory-variable-card" data-env-variable-card="KATEI_SESSION_SECRET" data-variable-status="required">
+    <details class="paper-panel env-inventory-variable-card" data-env-variable-card="KATEI_SESSION_SECRET" data-variable-status="required-helper">
       <summary>
         <div class="env-inventory-variable-summary">
           <div class="env-inventory-variable-heading">
             <h3 class="font-serif text-2xl text-strong env-inventory-variable-name">KATEI_SESSION_SECRET</h3>
-            <div class="env-inventory-chip-row mt-3"><span class="count-chip env-inventory-chip env-inventory-chip--warning">No fallback observed</span><span class="count-chip env-inventory-chip env-inventory-chip--problem">Secret-like</span><span class="count-chip env-inventory-chip">App</span></div>
+            <div class="env-inventory-chip-row mt-3"><span class="count-chip env-inventory-chip env-inventory-chip--accent">Required helper</span><span class="count-chip env-inventory-chip env-inventory-chip--problem">Secret-like</span><span class="count-chip env-inventory-chip">App</span></div>
           </div>
           <div class="env-inventory-variable-counts">
             <span class="count-chip env-inventory-chip"><strong>1</strong>&nbsp;defs</span>
-            <span class="count-chip env-inventory-chip"><strong>2</strong>&nbsp;uses</span>
+            <span class="count-chip env-inventory-chip"><strong>1</strong>&nbsp;uses</span>
           </div>
         </div>
       </summary>
@@ -154,7 +160,7 @@
           </div>
           <div class="space-y-2">
             <p class="field-label text-sm font-semibold">Usage kinds</p>
-            <p class="text-sm leading-6 text-muted">Read, Validation</p>
+            <p class="text-sm leading-6 text-muted">Required helper</p>
           </div>
           <div class="space-y-2">
             <p class="field-label text-sm font-semibold">Primary usage</p>
@@ -195,20 +201,7 @@
         <li class="env-inventory-occurrence-item">
           <div class="env-inventory-occurrence-top">
             <code class="env-inventory-inline-code">apps/katei/src/config.js:14</code>
-            <span class="text-sm leading-6 text-muted">Read · App</span>
-          </div>
-          
-              <div class="env-inventory-snippet">
-                
-                <code class="env-inventory-inline-code">sessionSecret: requireNonEmptyEnv(&#39;KATEI_SESSION_SECRET&#39;, env.KATEI_SESSION_SECRET),</code>
-              </div>
-            
-        </li>
-      
-        <li class="env-inventory-occurrence-item">
-          <div class="env-inventory-occurrence-top">
-            <code class="env-inventory-inline-code">apps/katei/src/config.js:14</code>
-            <span class="text-sm leading-6 text-muted">Validation · App</span>
+            <span class="text-sm leading-6 text-muted">Required helper · App</span>
           </div>
           
               <div class="env-inventory-snippet">
@@ -225,16 +218,16 @@
       </div>
     </details>
   
-    <details class="paper-panel env-inventory-variable-card" data-env-variable-card="GOOGLE_CLIENT_ID" data-variable-status="required">
+    <details class="paper-panel env-inventory-variable-card" data-env-variable-card="GOOGLE_CLIENT_ID" data-variable-status="required-helper">
       <summary>
         <div class="env-inventory-variable-summary">
           <div class="env-inventory-variable-heading">
             <h3 class="font-serif text-2xl text-strong env-inventory-variable-name">GOOGLE_CLIENT_ID</h3>
-            <div class="env-inventory-chip-row mt-3"><span class="count-chip env-inventory-chip env-inventory-chip--warning">No fallback observed</span><span class="count-chip env-inventory-chip">App</span></div>
+            <div class="env-inventory-chip-row mt-3"><span class="count-chip env-inventory-chip env-inventory-chip--accent">Required helper</span><span class="count-chip env-inventory-chip">App</span></div>
           </div>
           <div class="env-inventory-variable-counts">
             <span class="count-chip env-inventory-chip"><strong>1</strong>&nbsp;defs</span>
-            <span class="count-chip env-inventory-chip"><strong>2</strong>&nbsp;uses</span>
+            <span class="count-chip env-inventory-chip"><strong>1</strong>&nbsp;uses</span>
           </div>
         </div>
       </summary>
@@ -246,7 +239,7 @@
           </div>
           <div class="space-y-2">
             <p class="field-label text-sm font-semibold">Usage kinds</p>
-            <p class="text-sm leading-6 text-muted">Read, Validation</p>
+            <p class="text-sm leading-6 text-muted">Required helper</p>
           </div>
           <div class="space-y-2">
             <p class="field-label text-sm font-semibold">Primary usage</p>
@@ -287,20 +280,7 @@
         <li class="env-inventory-occurrence-item">
           <div class="env-inventory-occurrence-top">
             <code class="env-inventory-inline-code">apps/katei/src/config.js:13</code>
-            <span class="text-sm leading-6 text-muted">Read · App</span>
-          </div>
-          
-              <div class="env-inventory-snippet">
-                
-                <code class="env-inventory-inline-code">googleClientId: requireNonEmptyEnv(&#39;GOOGLE_CLIENT_ID&#39;, env.GOOGLE_CLIENT_ID),</code>
-              </div>
-            
-        </li>
-      
-        <li class="env-inventory-occurrence-item">
-          <div class="env-inventory-occurrence-top">
-            <code class="env-inventory-inline-code">apps/katei/src/config.js:13</code>
-            <span class="text-sm leading-6 text-muted">Validation · App</span>
+            <span class="text-sm leading-6 text-muted">Required helper · App</span>
           </div>
           
               <div class="env-inventory-snippet">
@@ -317,6 +297,17 @@
       </div>
     </details>
   
+      </div>
+    </section>
+  
+      
+    <section class="paper-panel env-inventory-panel">
+      <div class="env-inventory-section-header">
+        <h2 class="font-serif text-2xl text-strong">No fallback observed</h2>
+        <p class="text-sm leading-6 text-muted">Variables with usages but no observed in-code fallback/default and no recognized required-env helper.</p>
+      </div>
+      <div class="env-inventory-variable-grid" data-env-group="required">
+        
     <details class="paper-panel env-inventory-variable-card" data-env-variable-card="GOOGLE_ALLOWLIST_SUBS" data-variable-status="required">
       <summary>
         <div class="env-inventory-variable-summary">
@@ -1196,6 +1187,7 @@
           <span class="field-label text-sm font-semibold">Status</span>
           <select id="variable-status" class="field-control">
             <option value="">All</option>
+            <option value="required-helper">Required helper</option>
             <option value="required">No fallback observed</option>
             <option value="optional">Fallback observed</option>
             <option value="missing-example">Missing example/docs</option>
@@ -1249,9 +1241,9 @@
               
                 <tr>
                   <td><code class="env-inventory-inline-code">GOOGLE_CLIENT_ID</code></td>
-                  <td>No fallback observed</td>
+                  <td>Required helper</td>
                   <td>1</td>
-                  <td>2</td>
+                  <td>1</td>
                   <td>app</td>
                   <td><code class="env-inventory-inline-code">apps/katei/src/config.js:13</code></td>
                 </tr>
@@ -1276,9 +1268,9 @@
               
                 <tr>
                   <td><code class="env-inventory-inline-code">KATEI_SESSION_SECRET</code></td>
-                  <td>No fallback observed</td>
+                  <td>Required helper</td>
                   <td>1</td>
-                  <td>2</td>
+                  <td>1</td>
                   <td>app</td>
                   <td><code class="env-inventory-inline-code">apps/katei/src/config.js:14</code></td>
                 </tr>
@@ -1376,7 +1368,7 @@
         >Copy</button>
       </div>
       <pre id="scan-details-raw-json" class="env-inventory-raw text-sm leading-6" data-copy-source>{
-  &quot;schemaVersion&quot;: &quot;1.0&quot;,
+  &quot;schemaVersion&quot;: &quot;1.1&quot;,
   &quot;app&quot;: {
     &quot;name&quot;: &quot;katei&quot;,
     &quot;path&quot;: &quot;apps/katei&quot;,
@@ -1419,7 +1411,7 @@
   &quot;summary&quot;: {
     &quot;totalVariables&quot;: 11,
     &quot;totalDefinitions&quot;: 11,
-    &quot;totalUsages&quot;: 23,
+    &quot;totalUsages&quot;: 21,
     &quot;secretLikeCount&quot;: 2,
     &quot;publicLikeCount&quot;: 0,
     &quot;dynamicAccessCount&quot;: 0
@@ -1489,14 +1481,7 @@
       ],
       &quot;usages&quot;: [
         {
-          &quot;kind&quot;: &quot;read&quot;,
-          &quot;file&quot;: &quot;apps/katei/src/config.js&quot;,
-          &quot;line&quot;: 13,
-          &quot;scope&quot;: &quot;app&quot;,
-          &quot;snippet&quot;: &quot;googleClientId: requireNonEmptyEnv(&#39;GOOGLE_CLIENT_ID&#39;, env.GOOGLE_CLIENT_ID),&quot;
-        },
-        {
-          &quot;kind&quot;: &quot;validation&quot;,
+          &quot;kind&quot;: &quot;requiredHelper&quot;,
           &quot;file&quot;: &quot;apps/katei/src/config.js&quot;,
           &quot;line&quot;: 13,
           &quot;scope&quot;: &quot;app&quot;,
@@ -1631,14 +1616,7 @@
       ],
       &quot;usages&quot;: [
         {
-          &quot;kind&quot;: &quot;read&quot;,
-          &quot;file&quot;: &quot;apps/katei/src/config.js&quot;,
-          &quot;line&quot;: 14,
-          &quot;scope&quot;: &quot;app&quot;,
-          &quot;snippet&quot;: &quot;sessionSecret: requireNonEmptyEnv(&#39;KATEI_SESSION_SECRET&#39;, env.KATEI_SESSION_SECRET),&quot;
-        },
-        {
-          &quot;kind&quot;: &quot;validation&quot;,
+          &quot;kind&quot;: &quot;requiredHelper&quot;,
           &quot;file&quot;: &quot;apps/katei/src/config.js&quot;,
           &quot;line&quot;: 14,
           &quot;scope&quot;: &quot;app&quot;,
@@ -1784,7 +1762,7 @@
   
     </main>
     
-    <script id="env-inventory-report-data" type="application/json">{"schemaVersion":"1.0","app":{"name":"katei","path":"apps/katei","outputPath":"apps/katei/docs/env-inventory.json"},"scan":{"config":{"path":".agents/env-inventory.config.json","exists":true},"roots":{"app":["apps/katei","apps/katei/src","apps/katei/src/auth","apps/katei/src/data","apps/katei/src/i18n","apps/katei/src/middleware","apps/katei/src/routes","apps/katei/src/workspaces"],"package":[],"root":[".github/workflows"]},"ignoredGlobs":["**/.agents/**","**/.generated/**","**/.github/**","**/build/**","**/coverage/**","**/dist/**","**/doc/*.json","**/node_modules/**","**/public/**","**/src/public/**"]},"summary":{"totalVariables":11,"totalDefinitions":11,"totalUsages":23,"secretLikeCount":2,"publicLikeCount":0,"dynamicAccessCount":0},"variables":[{"name":"APP_BASE_URL","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":20,"scope":"app","snippet":"APP_BASE_URL=http://localhost:3000","comment":"# Optional canonical app URL used to validate sign-in request origins in production. Local development defaults to http://localhost:3000; set this explicitly outside development when origin validation matters."}],"usages":[{"kind":"default","file":"apps/katei/src/config.js","line":5,"scope":"app","snippet":"const appBaseUrl = normalizeOptionalString(env.APP_BASE_URL) || (nodeEnv === 'development' ? `http://localhost:${Number(env.PORT) || 3000}` : '');"}]},{"name":"GOOGLE_ALLOWLIST_SUBS","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":14,"scope":"app","snippet":"GOOGLE_ALLOWLIST_SUBS=","comment":"# Optional comma-separated allowlist of Google `sub` identifiers. Leave blank to allow any verified account."}],"usages":[{"kind":"read","file":"apps/katei/src/config.js","line":15,"scope":"app","snippet":"googleAllowlistSubs: parseAllowlistSubs(env.GOOGLE_ALLOWLIST_SUBS),"}]},{"name":"GOOGLE_CLIENT_ID","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":8,"scope":"app","snippet":"GOOGLE_CLIENT_ID=YOUR_GOOGLE_CLIENT_ID","comment":"# Google Identity Services OAuth client ID used by the landing page sign-in flow."}],"usages":[{"kind":"read","file":"apps/katei/src/config.js","line":13,"scope":"app","snippet":"googleClientId: requireNonEmptyEnv('GOOGLE_CLIENT_ID', env.GOOGLE_CLIENT_ID),"},{"kind":"validation","file":"apps/katei/src/config.js","line":13,"scope":"app","snippet":"googleClientId: requireNonEmptyEnv('GOOGLE_CLIENT_ID', env.GOOGLE_CLIENT_ID),"}]},{"name":"HEROKU_API_KEY","secretLike":true,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":32,"scope":"app","snippet":"HEROKU_API_KEY=YOUR_HEROKU_API_KEY","comment":"# Replace YOUR_HEROKU_API_KEY with a real Heroku API key as a Github Repository secret"}],"usages":[{"kind":"default","file":".github/workflows/deploy-katei-heroku.yml","line":55,"scope":"root","snippet":"echo \"HEROKU_API_KEY=${heroku_api_key:-YOUR_HEROKU_API_KEY}\" \u003e\u003e \"$GITHUB_ENV\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":61,"scope":"root","snippet":"test -n \"$HEROKU_API_KEY\" || { echo \"Missing HEROKU_API_KEY\"; exit 1; }"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":62,"scope":"root","snippet":"test \"$HEROKU_API_KEY\" != \"YOUR_HEROKU_API_KEY\" || { echo \"Replace YOUR_HEROKU_API_KEY with a real Heroku API key as a Github Repository secret\"; exit 1; }"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":94,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":107,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""}]},{"name":"HEROKU_APP_NAME","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":29,"scope":"app","snippet":"HEROKU_APP_NAME=HEROKY_KATEI_APP_PROD","comment":"# set HEROKY_KATEI_APP_PROD as a Github Repository secret, it should be the name of the app you created in heroku"}],"usages":[{"kind":"default","file":".github/workflows/deploy-katei-heroku.yml","line":50,"scope":"root","snippet":"echo \"HEROKU_APP_NAME=${heroku_app_name:-YOUR_HEROKU_APP_NAME}\" \u003e\u003e \"$GITHUB_ENV\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":59,"scope":"root","snippet":"test -n \"$HEROKU_APP_NAME\" || { echo \"Missing HEROKU_APP_NAME\"; exit 1; }"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":60,"scope":"root","snippet":"test \"$HEROKU_APP_NAME\" != \"YOUR_HEROKU_APP_NAME\" || { echo \"Replace YOUR_HEROKU_APP_NAME with the real Heroku app slug or set HEROKY_KATEI_APP_PROD as a Github Repository secret\"; exit 1; }"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":63,"scope":"root","snippet":"echo \"Deploying branch '${GITHUB_REF_NAME}' to app '${HEROKU_APP_NAME}'\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":94,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":107,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""}]},{"name":"KATEI_SESSION_SECRET","secretLike":true,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":11,"scope":"app","snippet":"KATEI_SESSION_SECRET=replace-with-a-long-random-string","comment":"# Secret used to sign the Katei session cookie."}],"usages":[{"kind":"read","file":"apps/katei/src/config.js","line":14,"scope":"app","snippet":"sessionSecret: requireNonEmptyEnv('KATEI_SESSION_SECRET', env.KATEI_SESSION_SECRET),"},{"kind":"validation","file":"apps/katei/src/config.js","line":14,"scope":"app","snippet":"sessionSecret: requireNonEmptyEnv('KATEI_SESSION_SECRET', env.KATEI_SESSION_SECRET),"}]},{"name":"MONGODB_DB_NAME","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":26,"scope":"app","snippet":"MONGODB_DB_NAME=","comment":"# Optional MongoDB database name used for server-owned workspace persistence."}],"usages":[{"kind":"read","file":"apps/katei/src/config.js","line":7,"scope":"app","snippet":"const mongoDbName = normalizeOptionalString(env.MONGODB_DB_NAME);"}]},{"name":"MONGODB_URI","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":23,"scope":"app","snippet":"MONGODB_URI=","comment":"# Optional MongoDB connection string used for server-owned workspace persistence."}],"usages":[{"kind":"read","file":"apps/katei/src/config.js","line":6,"scope":"app","snippet":"const mongoUri = normalizeOptionalString(env.MONGODB_URI);"}]},{"name":"NODE_ENV","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":2,"scope":"app","snippet":"NODE_ENV=development","comment":"# Let the server know if you are in 'development' or 'production' you should set this as an environment variable in the Heroku dashboard of your app."}],"usages":[{"kind":"default","file":"apps/katei/src/config.js","line":4,"scope":"app","snippet":"const nodeEnv = normalizeOptionalString(env.NODE_ENV) || 'development';"}]},{"name":"PORT","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":5,"scope":"app","snippet":"PORT=3000","comment":"# Server port, you must not set it manually when deploying to Heroku, as it provides process.env.PORT so it must only be used for local testing"}],"usages":[{"kind":"default","file":"apps/katei/src/config.js","line":5,"scope":"app","snippet":"const appBaseUrl = normalizeOptionalString(env.APP_BASE_URL) || (nodeEnv === 'development' ? `http://localhost:${Number(env.PORT) || 3000}` : '');"},{"kind":"default","file":"apps/katei/src/server.js","line":5,"scope":"app","snippet":"const port = Number(process.env.PORT) || 3000;"}]},{"name":"SESSION_TTL_SECONDS","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":17,"scope":"app","snippet":"SESSION_TTL_SECONDS=604800","comment":"# Optional session duration for the Katei session cookie. Defaults to 7 days."}],"usages":[{"kind":"default","file":"apps/katei/src/config.js","line":8,"scope":"app","snippet":"const sessionTtlSeconds = parseSessionTtlSeconds(normalizeOptionalString(env.SESSION_TTL_SECONDS) || String(DEFAULT_SESSION_TTL_SECONDS));"}]}],"dynamicAccesses":[],"scanWarnings":[]}</script>
+    <script id="env-inventory-report-data" type="application/json">{"schemaVersion":"1.1","app":{"name":"katei","path":"apps/katei","outputPath":"apps/katei/docs/env-inventory.json"},"scan":{"config":{"path":".agents/env-inventory.config.json","exists":true},"roots":{"app":["apps/katei","apps/katei/src","apps/katei/src/auth","apps/katei/src/data","apps/katei/src/i18n","apps/katei/src/middleware","apps/katei/src/routes","apps/katei/src/workspaces"],"package":[],"root":[".github/workflows"]},"ignoredGlobs":["**/.agents/**","**/.generated/**","**/.github/**","**/build/**","**/coverage/**","**/dist/**","**/doc/*.json","**/node_modules/**","**/public/**","**/src/public/**"]},"summary":{"totalVariables":11,"totalDefinitions":11,"totalUsages":21,"secretLikeCount":2,"publicLikeCount":0,"dynamicAccessCount":0},"variables":[{"name":"APP_BASE_URL","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":20,"scope":"app","snippet":"APP_BASE_URL=http://localhost:3000","comment":"# Optional canonical app URL used to validate sign-in request origins in production. Local development defaults to http://localhost:3000; set this explicitly outside development when origin validation matters."}],"usages":[{"kind":"default","file":"apps/katei/src/config.js","line":5,"scope":"app","snippet":"const appBaseUrl = normalizeOptionalString(env.APP_BASE_URL) || (nodeEnv === 'development' ? `http://localhost:${Number(env.PORT) || 3000}` : '');"}]},{"name":"GOOGLE_ALLOWLIST_SUBS","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":14,"scope":"app","snippet":"GOOGLE_ALLOWLIST_SUBS=","comment":"# Optional comma-separated allowlist of Google `sub` identifiers. Leave blank to allow any verified account."}],"usages":[{"kind":"read","file":"apps/katei/src/config.js","line":15,"scope":"app","snippet":"googleAllowlistSubs: parseAllowlistSubs(env.GOOGLE_ALLOWLIST_SUBS),"}]},{"name":"GOOGLE_CLIENT_ID","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":8,"scope":"app","snippet":"GOOGLE_CLIENT_ID=YOUR_GOOGLE_CLIENT_ID","comment":"# Google Identity Services OAuth client ID used by the landing page sign-in flow."}],"usages":[{"kind":"requiredHelper","file":"apps/katei/src/config.js","line":13,"scope":"app","snippet":"googleClientId: requireNonEmptyEnv('GOOGLE_CLIENT_ID', env.GOOGLE_CLIENT_ID),"}]},{"name":"HEROKU_API_KEY","secretLike":true,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":32,"scope":"app","snippet":"HEROKU_API_KEY=YOUR_HEROKU_API_KEY","comment":"# Replace YOUR_HEROKU_API_KEY with a real Heroku API key as a Github Repository secret"}],"usages":[{"kind":"default","file":".github/workflows/deploy-katei-heroku.yml","line":55,"scope":"root","snippet":"echo \"HEROKU_API_KEY=${heroku_api_key:-YOUR_HEROKU_API_KEY}\" \u003e\u003e \"$GITHUB_ENV\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":61,"scope":"root","snippet":"test -n \"$HEROKU_API_KEY\" || { echo \"Missing HEROKU_API_KEY\"; exit 1; }"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":62,"scope":"root","snippet":"test \"$HEROKU_API_KEY\" != \"YOUR_HEROKU_API_KEY\" || { echo \"Replace YOUR_HEROKU_API_KEY with a real Heroku API key as a Github Repository secret\"; exit 1; }"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":94,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":107,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""}]},{"name":"HEROKU_APP_NAME","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":29,"scope":"app","snippet":"HEROKU_APP_NAME=HEROKY_KATEI_APP_PROD","comment":"# set HEROKY_KATEI_APP_PROD as a Github Repository secret, it should be the name of the app you created in heroku"}],"usages":[{"kind":"default","file":".github/workflows/deploy-katei-heroku.yml","line":50,"scope":"root","snippet":"echo \"HEROKU_APP_NAME=${heroku_app_name:-YOUR_HEROKU_APP_NAME}\" \u003e\u003e \"$GITHUB_ENV\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":59,"scope":"root","snippet":"test -n \"$HEROKU_APP_NAME\" || { echo \"Missing HEROKU_APP_NAME\"; exit 1; }"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":60,"scope":"root","snippet":"test \"$HEROKU_APP_NAME\" != \"YOUR_HEROKU_APP_NAME\" || { echo \"Replace YOUR_HEROKU_APP_NAME with the real Heroku app slug or set HEROKY_KATEI_APP_PROD as a Github Repository secret\"; exit 1; }"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":63,"scope":"root","snippet":"echo \"Deploying branch '${GITHUB_REF_NAME}' to app '${HEROKU_APP_NAME}'\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":94,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":107,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""}]},{"name":"KATEI_SESSION_SECRET","secretLike":true,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":11,"scope":"app","snippet":"KATEI_SESSION_SECRET=replace-with-a-long-random-string","comment":"# Secret used to sign the Katei session cookie."}],"usages":[{"kind":"requiredHelper","file":"apps/katei/src/config.js","line":14,"scope":"app","snippet":"sessionSecret: requireNonEmptyEnv('KATEI_SESSION_SECRET', env.KATEI_SESSION_SECRET),"}]},{"name":"MONGODB_DB_NAME","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":26,"scope":"app","snippet":"MONGODB_DB_NAME=","comment":"# Optional MongoDB database name used for server-owned workspace persistence."}],"usages":[{"kind":"read","file":"apps/katei/src/config.js","line":7,"scope":"app","snippet":"const mongoDbName = normalizeOptionalString(env.MONGODB_DB_NAME);"}]},{"name":"MONGODB_URI","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":23,"scope":"app","snippet":"MONGODB_URI=","comment":"# Optional MongoDB connection string used for server-owned workspace persistence."}],"usages":[{"kind":"read","file":"apps/katei/src/config.js","line":6,"scope":"app","snippet":"const mongoUri = normalizeOptionalString(env.MONGODB_URI);"}]},{"name":"NODE_ENV","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":2,"scope":"app","snippet":"NODE_ENV=development","comment":"# Let the server know if you are in 'development' or 'production' you should set this as an environment variable in the Heroku dashboard of your app."}],"usages":[{"kind":"default","file":"apps/katei/src/config.js","line":4,"scope":"app","snippet":"const nodeEnv = normalizeOptionalString(env.NODE_ENV) || 'development';"}]},{"name":"PORT","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":5,"scope":"app","snippet":"PORT=3000","comment":"# Server port, you must not set it manually when deploying to Heroku, as it provides process.env.PORT so it must only be used for local testing"}],"usages":[{"kind":"default","file":"apps/katei/src/config.js","line":5,"scope":"app","snippet":"const appBaseUrl = normalizeOptionalString(env.APP_BASE_URL) || (nodeEnv === 'development' ? `http://localhost:${Number(env.PORT) || 3000}` : '');"},{"kind":"default","file":"apps/katei/src/server.js","line":5,"scope":"app","snippet":"const port = Number(process.env.PORT) || 3000;"}]},{"name":"SESSION_TTL_SECONDS","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":17,"scope":"app","snippet":"SESSION_TTL_SECONDS=604800","comment":"# Optional session duration for the Katei session cookie. Defaults to 7 days."}],"usages":[{"kind":"default","file":"apps/katei/src/config.js","line":8,"scope":"app","snippet":"const sessionTtlSeconds = parseSessionTtlSeconds(normalizeOptionalString(env.SESSION_TTL_SECONDS) || String(DEFAULT_SESSION_TTL_SECONDS));"}]}],"dynamicAccesses":[],"scanWarnings":[]}</script>
     <script>
       (() => {
         const report = JSON.parse(document.getElementById("env-inventory-report-data").textContent);
@@ -1800,19 +1778,32 @@
         function derive(variable) {
           const definitions = ensureArray(variable.definitions);
           const usages = ensureArray(variable.usages);
+          const hasRequiredHelper = usages.some((usage) => usage.kind === "requiredHelper");
           const hasFallback = usages.some((usage) => usage.kind === "default");
           const missingExample = usages.length > 0 && !definitions.some((definition) => definition.kind === "envFile" && String(definition.file || "").split("/").pop() === ".env.example");
           const scopes = sortUnique([
             ...definitions.map((definition) => definition.scope),
             ...usages.map((usage) => usage.scope),
           ]);
+          let status = "required";
+          let statusLabel = "No fallback observed";
+          if (hasRequiredHelper) {
+            status = "required-helper";
+            statusLabel = "Required helper";
+          } else if (hasFallback) {
+            status = "optional";
+            statusLabel = "Fallback observed";
+          }
           return {
             ...variable,
             definitions,
             usages,
             scopes,
+            hasRequiredHelper,
             hasFallback,
-            likelyRequired: !hasFallback,
+            status,
+            statusLabel,
+            likelyRequired: status === "required",
             missingExample,
             firstUsage: usages[0] || null,
             searchBlob: [
@@ -1919,11 +1910,14 @@
           if (!state.status) {
             return true;
           }
+          if (state.status === "required-helper") {
+            return variable.status === "required-helper";
+          }
           if (state.status === "required") {
-            return variable.likelyRequired;
+            return variable.status === "required";
           }
           if (state.status === "optional") {
-            return !variable.likelyRequired;
+            return variable.status === "optional";
           }
           if (state.status === "missing-example") {
             return variable.missingExample;
@@ -1969,7 +1963,7 @@
           controls.body.innerHTML = visible.map((variable) => [
             "<tr>",
             "<td><code class=\"env-inventory-inline-code\">" + escapeHtml(variable.name) + "</code></td>",
-            "<td>" + (variable.likelyRequired ? "No fallback observed" : "Fallback observed") + "</td>",
+            "<td>" + escapeHtml(variable.statusLabel) + "</td>",
             "<td>" + variable.definitions.length + "</td>",
             "<td>" + variable.usages.length + "</td>",
             "<td>" + escapeHtml(variable.scopes.join(", ") || "—") + "</td>",

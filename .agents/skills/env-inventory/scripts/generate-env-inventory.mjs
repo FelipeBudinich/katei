@@ -10,7 +10,7 @@ import {
   renderEnvInventoryHtml,
 } from "./render-env-inventory-html.mjs";
 
-export const ENV_INVENTORY_SCHEMA_VERSION = "1.0";
+export const ENV_INVENTORY_SCHEMA_VERSION = "1.1";
 export const REPORT_RELATIVE = path.join("docs", "env-inventory.json");
 export const DEFAULT_CONFIG_RELATIVE = path.join(".agents", "env-inventory.config.json");
 const LEGACY_REPORT_RELATIVE = path.join("doc", "env-inventory.json");
@@ -798,6 +798,25 @@ function addDynamic(targetList, entry) {
   }
 }
 
+function collectRequiredHelperEnvNames(line, aliasNameSet) {
+  const matches = new Set();
+  const helperPattern = /requireNonEmptyEnv\(\s*(["'`])([A-Z][A-Z0-9_]+)\1\s*,\s*(process\.env|[A-Za-z_$][\w$]*)\.([A-Z][A-Z0-9_]+)\s*\)/g;
+  let match;
+  while ((match = helperPattern.exec(line)) !== null) {
+    const variableName = match[2];
+    const sourceName = match[3];
+    const accessedName = match[4];
+    if (variableName !== accessedName) {
+      continue;
+    }
+    if (sourceName !== "process.env" && !aliasNameSet.has(sourceName)) {
+      continue;
+    }
+    matches.add(variableName);
+  }
+  return matches;
+}
+
 function scanEnvFile(relativePath, content, scope, definitions) {
   const lines = content.split(/\r?\n/);
   if (!isEnvExamplePath(relativePath)) {
@@ -827,6 +846,7 @@ function scanSourceFile(relativePath, content, scope, usages, dynamicAccesses) {
   const aliasNames = sortUnique(
     Array.from(sanitized.matchAll(/\b([A-Za-z_$][\w$]*)\s*=\s*process\.env\b/g)).map((match) => match[1])
   );
+  const aliasNameSet = new Set(aliasNames);
   const directPatterns = [
     /process\.env\.([A-Z][A-Z0-9_]+)/g,
     /process\.env\[\s*["']([A-Z][A-Z0-9_]+)["']\s*\]/g,
@@ -839,9 +859,24 @@ function scanSourceFile(relativePath, content, scope, usages, dynamicAccesses) {
 
   lines.forEach((line, index) => {
     const snippet = snippetForLine(originalLines[index]);
+    const requiredHelperNames = collectRequiredHelperEnvNames(line, aliasNameSet);
+
+    for (const name of requiredHelperNames) {
+      addUsage(usages, name, {
+        kind: "requiredHelper",
+        file: normalizePath(relativePath),
+        line: index + 1,
+        scope,
+        snippet,
+      });
+    }
+
     for (const regex of directPatterns) {
       let match;
       while ((match = regex.exec(line)) !== null) {
+        if (requiredHelperNames.has(match[1])) {
+          continue;
+        }
         const kind = /(\|\||\?\?)/.test(line.slice(match.index)) ? "default" : "read";
         addUsage(usages, match[1], {
           kind,
@@ -858,6 +893,9 @@ function scanSourceFile(relativePath, content, scope, usages, dynamicAccesses) {
       let match;
       const stringPattern = /["'`]([A-Z][A-Z0-9_]+)["'`]/g;
       while ((match = stringPattern.exec(line)) !== null) {
+        if (requiredHelperNames.has(match[1])) {
+          continue;
+        }
         addUsage(usages, match[1], {
           kind: "validation",
           file: normalizePath(relativePath),

@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "1.1",
   "app": {
     "name": "katei",
     "path": "apps/katei",
@@ -42,7 +42,7 @@
   "summary": {
     "totalVariables": 11,
     "totalDefinitions": 11,
-    "totalUsages": 23,
+    "totalUsages": 21,
     "secretLikeCount": 2,
     "publicLikeCount": 0,
     "dynamicAccessCount": 0
@@ -112,14 +112,7 @@
       ],
       "usages": [
         {
-          "kind": "read",
-          "file": "apps/katei/src/config.js",
-          "line": 13,
-          "scope": "app",
-          "snippet": "googleClientId: requireNonEmptyEnv('GOOGLE_CLIENT_ID', env.GOOGLE_CLIENT_ID),"
-        },
-        {
-          "kind": "validation",
+          "kind": "requiredHelper",
           "file": "apps/katei/src/config.js",
           "line": 13,
           "scope": "app",
@@ -254,14 +247,7 @@
       ],
       "usages": [
         {
-          "kind": "read",
-          "file": "apps/katei/src/config.js",
-          "line": 14,
-          "scope": "app",
-          "snippet": "sessionSecret: requireNonEmptyEnv('KATEI_SESSION_SECRET', env.KATEI_SESSION_SECRET),"
-        },
-        {
-          "kind": "validation",
+          "kind": "requiredHelper",
           "file": "apps/katei/src/config.js",
           "line": 14,
           "scope": "app",

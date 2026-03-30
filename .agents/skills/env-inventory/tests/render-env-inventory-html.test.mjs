@@ -28,6 +28,7 @@ async function copyFixtureRepo() {
 
 test("renderEnvInventoryHtml highlights config warnings, fallback groups, gaps, and dynamic access", () => {
   const report = {
+    schemaVersion: "1.1",
     app: {
       name: "demo",
       path: "apps/demo",
@@ -48,7 +49,7 @@ test("renderEnvInventoryHtml highlights config warnings, fallback groups, gaps, 
     summary: {
       totalVariables: 3,
       totalDefinitions: 2,
-      totalUsages: 4,
+      totalUsages: 3,
       secretLikeCount: 1,
       publicLikeCount: 1,
       dynamicAccessCount: 1,
@@ -70,11 +71,11 @@ test("renderEnvInventoryHtml highlights config warnings, fallback groups, gaps, 
         ],
         usages: [
           {
-            kind: "validation",
+            kind: "requiredHelper",
             file: "apps/demo/src/config/env.js",
             line: 4,
             scope: "app",
-            snippet: "APP_SECRET: source.APP_SECRET",
+            snippet: "APP_SECRET: requireNonEmptyEnv(\"APP_SECRET\", env.APP_SECRET)",
           },
         ],
       },
@@ -138,10 +139,14 @@ test("renderEnvInventoryHtml highlights config warnings, fallback groups, gaps, 
   assert.match(html, /# Demo app secret/);
   assert.match(html, /<div class="env-inventory-snippet">\s*<div class="text-sm leading-6 text-muted"># Demo app secret<\/div>\s*<code class="env-inventory-inline-code">APP_SECRET=replace-me<\/code>/);
   assert.match(html, /Config warning:/);
+  assert.match(html, /Required helper/);
+  assert.match(html, /No fallback allowed/);
   assert.match(html, /No fallback observed/);
   assert.match(html, /Fallbacks observed/);
   assert.match(html, /Missing example\/docs/);
   assert.match(html, /Dynamic env access/);
+  assert.match(html, /option value="required-helper">Required helper<\/option>/);
+  assert.match(html, /data-variable-status="required-helper"/);
   assert.match(html, /apps\/demo\/docs\/env-inventory\.html/);
   assert.doesNotMatch(html, /Config found/);
   assert.doesNotMatch(html, /Back to board/);

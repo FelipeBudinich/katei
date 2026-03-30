@@ -80,6 +80,7 @@ test("generateEnvInventory reports app-local, shared-package, grounded root, def
     configPath: DEFAULT_CONFIG_RELATIVE,
   });
 
+  assert.equal(report.schemaVersion, "1.1");
   assert.equal(report.app.outputPath, "apps/app-a/docs/env-inventory.json");
   assert.ok(report.variables.some((entry) => entry.name === "APP_A_TOKEN" && entry.definitions.some((definition) => definition.kind === "envFile")));
   assert.ok(report.variables.some((entry) => entry.name === "APP_A_TOKEN" && entry.definitions.some((definition) => definition.snippet === "APP_A_TOKEN=replace-me" && definition.comment === "# Example token for local docs")));
@@ -90,7 +91,16 @@ test("generateEnvInventory reports app-local, shared-package, grounded root, def
   assert.ok(report.variables.some((entry) => entry.name === "APP_A_DEPLOY_NAME" && entry.definitions.length === 0));
   assert.ok(report.variables.some((entry) => entry.name === "APP_A_DEPLOY_NAME" && entry.usages.some((usage) => usage.kind === "default")));
   assert.ok(report.variables.some((entry) => entry.name === "COMPOSE_ONLY" && entry.definitions.length === 0));
-  assert.ok(report.variables.some((entry) => entry.name === "APP_A_RUNTIME_SECRET" && entry.usages.some((usage) => usage.kind === "validation")));
+  assert.ok(report.variables.some((entry) => entry.name === "APP_A_RUNTIME_SECRET" && entry.usages.some((usage) => usage.kind === "requiredHelper")));
+  assert.deepEqual(
+    report.variables
+      .find((entry) => entry.name === "APP_A_RUNTIME_SECRET")
+      .usages
+      .filter((usage) => usage.file === "apps/app-a/src/config/env.js")
+      .map((usage) => usage.kind),
+    ["requiredHelper"]
+  );
+  assert.ok(report.variables.some((entry) => entry.name === "APP_A_VALIDATED_ONLY" && entry.usages.some((usage) => usage.kind === "validation")));
   assert.ok(report.dynamicAccesses.some((entry) => entry.file === "apps/app-a/src/config/env.js"));
   assert.equal(report.variables.some((entry) => entry.name === "UNGROUNDED_ROOT"), false);
   assert.equal(report.variables.some((entry) => entry.name === "GITHUB_OUTPUT"), false);
