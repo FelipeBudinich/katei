@@ -36,6 +36,10 @@ test('GET / renders the landing page for anonymous users', async () => {
   assert.equal(response.status, 200);
   assert.match(response.text, /Private tester preview/);
   assert.match(response.text, /google-identity-script/);
+  assert.doesNotMatch(response.text, /\/vendor\/easymde\/easymde\.min\.css/);
+  assert.doesNotMatch(response.text, /\/vendor\/marked\/marked\.umd\.js/);
+  assert.doesNotMatch(response.text, /\/vendor\/dompurify\/purify\.min\.js/);
+  assert.doesNotMatch(response.text, /\/vendor\/easymde\/easymde\.min\.js/);
 });
 
 test('GET / redirects authenticated users to /boards', async () => {
@@ -75,6 +79,10 @@ test('GET /boards renders the workspace shell and viewer bootstrap for authentic
   assert.match(response.text, /data-workspace-viewer-sub-value="sub_123"/);
   assert.match(response.text, /Logout/);
   assert.match(response.text, /Tester/);
+  assert.match(response.text, /<link rel="stylesheet" href="\/vendor\/easymde\/easymde\.min\.css">/);
+  assert.match(response.text, /<script defer src="\/vendor\/marked\/marked\.umd\.js"><\/script>/);
+  assert.match(response.text, /<script defer src="\/vendor\/dompurify\/purify\.min\.js"><\/script>/);
+  assert.match(response.text, /<script defer src="\/vendor\/easymde\/easymde\.min\.js"><\/script>/);
 });
 
 test('POST /auth/google returns 400 when the request body is invalid', async () => {

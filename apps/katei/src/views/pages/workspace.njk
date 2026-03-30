@@ -1,5 +1,12 @@
 {% extends "layouts/base.njk" %}
 
+{% block head %}
+  <link rel="stylesheet" href="/vendor/easymde/easymde.min.css">
+  <script defer src="/vendor/marked/marked.umd.js"></script>
+  <script defer src="/vendor/dompurify/purify.min.js"></script>
+  <script defer src="/vendor/easymde/easymde.min.js"></script>
+{% endblock %}
+
 {% block body %}
   {% include "partials/workspace-shell.njk" %}
 {% endblock %}
