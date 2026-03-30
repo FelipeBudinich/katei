@@ -7,6 +7,7 @@ import {
   createSessionPayload,
   createSignedSessionCookieValue
 } from '../src/auth/session_cookie.js';
+import { KATEI_UI_LOCALE_COOKIE_NAME } from '../src/i18n/request_ui_locale.js';
 
 const WORKSPACE_VENDOR_ASSET_PATHS = [
   '/vendor/easymde/easymde.min.css',
@@ -41,12 +42,64 @@ test('GET / renders the landing page for anonymous users', async () => {
   const response = await request(app).get('/');
 
   assert.equal(response.status, 200);
+  assert.match(response.text, /<html lang="en" data-ui-locale="en">/);
   assert.match(response.text, /Private tester preview/);
   assert.match(response.text, /google-identity-script/);
 
   for (const assetPath of WORKSPACE_VENDOR_ASSET_PATHS) {
     assert.doesNotMatch(response.text, new RegExp(escapeForRegex(assetPath)));
   }
+});
+
+test('GET / uses Accept-Language when no query param or UI locale cookie is present', async () => {
+  const app = createTestApp({
+    googleTokenVerifier: async () => ({ sub: 'sub_123' })
+  });
+
+  const response = await request(app)
+    .get('/')
+    .set('Accept-Language', 'ja-JP, en-US;q=0.8');
+
+  assert.equal(response.status, 200);
+  assert.match(response.text, /<html lang="ja" data-ui-locale="ja">/);
+});
+
+test('GET /?lang=ja sets the document language and persists the UI locale cookie', async () => {
+  const app = createTestApp({
+    googleTokenVerifier: async () => ({ sub: 'sub_123' })
+  });
+
+  const response = await request(app).get('/?lang=ja');
+
+  assert.equal(response.status, 200);
+  assert.match(response.text, /<html lang="ja" data-ui-locale="ja">/);
+  assert.match(findSetCookie(response, KATEI_UI_LOCALE_COOKIE_NAME) ?? '', /katei_ui_locale=ja/);
+});
+
+test('GET / can reuse a persisted supported UI locale cookie', async () => {
+  const app = createTestApp({
+    googleTokenVerifier: async () => ({ sub: 'sub_123' })
+  });
+  const firstResponse = await request(app).get('/?lang=ja');
+  const uiLocaleCookie = findSetCookie(firstResponse, KATEI_UI_LOCALE_COOKIE_NAME);
+  const response = await request(app)
+    .get('/')
+    .set('Cookie', uiLocaleCookie);
+
+  assert.equal(response.status, 200);
+  assert.match(response.text, /<html lang="ja" data-ui-locale="ja">/);
+});
+
+test('GET / falls back safely when the requested UI locale is unsupported', async () => {
+  const app = createTestApp({
+    googleTokenVerifier: async () => ({ sub: 'sub_123' })
+  });
+
+  const response = await request(app).get('/?lang=fr-FR');
+
+  assert.equal(response.status, 200);
+  assert.match(response.text, /<html lang="en" data-ui-locale="en">/);
+  assert.equal(findSetCookie(response, KATEI_UI_LOCALE_COOKIE_NAME), null);
 });
 
 test('GET / redirects authenticated users to /boards', async () => {
@@ -256,4 +309,8 @@ test('GET /health still returns { ok: true }', async () => {
 
 function escapeForRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function findSetCookie(response, cookieName) {
+  return response.headers['set-cookie']?.find((value) => value.startsWith(`${cookieName}=`)) ?? null;
 }

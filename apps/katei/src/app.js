@@ -7,6 +7,7 @@ import cookieParser from 'cookie-parser';
 import { createRuntimeConfig } from './config.js';
 import { createGoogleIdTokenVerifier } from './auth/verify_google_id_token.js';
 import { createAttachSessionMiddleware } from './middleware/attach_session.js';
+import { createAttachUiLocaleMiddleware } from './middleware/attach_ui_locale.js';
 import { createWebRouter } from './routes/web.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -35,6 +36,7 @@ export function createApp({ env = process.env, googleTokenVerifier } = {}) {
   app.use(express.json());
   app.use(express.urlencoded({ extended: false }));
   app.use(cookieParser());
+  app.use(createAttachUiLocaleMiddleware(config));
   app.use(express.static(path.join(appRoot, 'public')));
 
   if (stimulusDistPath) {
