@@ -3,18 +3,29 @@ import { postWorkspaceImport, readLocalV4Workspace } from '../lib/workspace_impo
 import { WorkspaceRepository } from './workspace_repository.js';
 
 export class HttpWorkspaceRepository extends WorkspaceRepository {
-  constructor({ fetchImpl = globalThis.fetch?.bind(globalThis), viewerSub, storage = globalThis.localStorage } = {}) {
+  constructor({
+    fetchImpl = globalThis.fetch?.bind(globalThis),
+    viewerSub,
+    storage = globalThis.localStorage,
+    document = globalThis.document
+  } = {}) {
     super();
     this.fetchImpl = resolveFetch(fetchImpl);
     this.viewerSub = normalizeViewerSub(viewerSub);
     this.storage = storage ?? null;
+    this.document = document ?? null;
     this.meta = null;
+    this.hasConsumedBootstrap = false;
   }
 
   async loadWorkspace() {
-    let payload = await this.#requestWorkspace('/api/workspace', {
-      method: 'GET'
-    }, 'Unable to load workspace.');
+    let payload = this.#consumeBootstrapPayload();
+
+    if (!payload) {
+      payload = await this.#requestWorkspace('/api/workspace', {
+        method: 'GET'
+      }, 'Unable to load workspace.');
+    }
 
     if (payload.meta?.isPristine) {
       const localWorkspace = readLocalV4Workspace(this.storage, this.viewerSub);
@@ -79,6 +90,37 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
 
     this.meta = data.meta ?? null;
     return data;
+  }
+
+  #consumeBootstrapPayload() {
+    if (this.hasConsumedBootstrap) {
+      return null;
+    }
+
+    this.hasConsumedBootstrap = true;
+
+    if (!this.document || typeof this.document.getElementById !== 'function') {
+      return null;
+    }
+
+    const bootstrapElement = this.document.getElementById('workspace-bootstrap');
+
+    if (!bootstrapElement?.textContent) {
+      return null;
+    }
+
+    try {
+      const payload = JSON.parse(bootstrapElement.textContent);
+
+      if (!validateWorkspaceShape(payload?.workspace)) {
+        return null;
+      }
+
+      this.meta = payload.meta ?? null;
+      return payload;
+    } catch (error) {
+      return null;
+    }
   }
 }
 

@@ -26,3 +26,7 @@
   {% include "partials/confirm-dialog.njk" %}
   {% include "partials/board-templates.njk" %}
 </main>
+
+{% if workspaceBootstrapJson %}
+  <script type="application/json" id="workspace-bootstrap">{{ workspaceBootstrapJson | safe }}</script>
+{% endif %}

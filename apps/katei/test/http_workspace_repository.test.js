@@ -142,6 +142,59 @@ test('HttpWorkspaceRepository skips import when local v4 data is invalid', async
   assert.equal(fetchDouble.calls[0].url, '/api/workspace');
 });
 
+test('HttpWorkspaceRepository prefers bootstrap payload on first load and consumes it once', async () => {
+  const bootstrapWorkspace = createCard(createEmptyWorkspace(), 'main', {
+    title: 'Bootstrap task',
+    detailsMarkdown: 'Server-rendered before client hydration',
+    priority: 'important'
+  });
+  const networkWorkspace = createCard(createEmptyWorkspace(), 'main', {
+    title: 'Fetched task',
+    detailsMarkdown: 'Loaded after bootstrap is consumed',
+    priority: 'urgent'
+  });
+  const fetchDouble = createFetchDouble([
+    createJsonResponse(createWorkspaceApiPayload(networkWorkspace, {
+      revision: 4,
+      updatedAt: '2026-04-03T12:00:00.000Z',
+      lastChangedBy: 'sub_123',
+      isPristine: false
+    }))
+  ]);
+  const repository = new HttpWorkspaceRepository({
+    fetchImpl: fetchDouble.fetch,
+    viewerSub: 'sub_123',
+    storage: null,
+    document: createDocumentDouble({
+      'workspace-bootstrap': JSON.stringify(
+        createWorkspaceApiPayload(bootstrapWorkspace, {
+          revision: 3,
+          updatedAt: '2026-04-03T11:00:00.000Z',
+          lastChangedBy: 'sub_123',
+          isPristine: false
+        })
+      )
+    })
+  });
+
+  const firstLoad = await repository.loadWorkspace();
+
+  assert.deepEqual(firstLoad, bootstrapWorkspace);
+  assert.deepEqual(repository.meta, {
+    revision: 3,
+    updatedAt: '2026-04-03T11:00:00.000Z',
+    lastChangedBy: 'sub_123',
+    isPristine: false
+  });
+  assert.equal(fetchDouble.calls.length, 0);
+
+  const secondLoad = await repository.loadWorkspace();
+
+  assert.deepEqual(secondLoad, networkWorkspace);
+  assert.equal(fetchDouble.calls.length, 1);
+  assert.equal(fetchDouble.calls[0].url, '/api/workspace');
+});
+
 function createWorkspaceApiPayload(workspace, meta = {}) {
   return {
     ok: true,
@@ -198,6 +251,18 @@ function createStorageDouble(initialEntries = {}) {
     },
     removeItem(key) {
       entries.delete(key);
+    }
+  };
+}
+
+function createDocumentDouble(initialTextById = {}) {
+  const elements = new Map(
+    Object.entries(initialTextById).map(([id, textContent]) => [id, { textContent }])
+  );
+
+  return {
+    getElementById(id) {
+      return elements.get(id) ?? null;
     }
   };
 }

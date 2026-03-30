@@ -13,7 +13,7 @@ export function createWebRouter({ config, verifyGoogleIdToken, workspaceRecordRe
   const requireApiSession = createRequireSessionMiddleware();
 
   router.use(createPublicRouter({ config }));
-  router.use(createBoardsRouter({ requireSession: requireBoardSession }));
+  router.use(createBoardsRouter({ requireSession: requireBoardSession, workspaceRecordRepository }));
   router.use(createWorkspaceApiRouter({ requireSession: requireApiSession, workspaceRecordRepository }));
   router.use(createAuthRouter({ config, verifyGoogleIdToken, requireSession: requireApiSession }));
 

@@ -33,7 +33,7 @@ function createTestApp({ env = {}, googleTokenVerifier, workspaceRecordRepositor
       ...env
     },
     googleTokenVerifier,
-    workspaceRecordRepository
+    workspaceRecordRepository: workspaceRecordRepository ?? createWorkspaceRecordRepositoryDouble()
   });
 }
 
@@ -156,22 +156,61 @@ test('GET /boards redirects anonymous users to /', async () => {
   assert.equal(response.headers.location, '/');
 });
 
-test('GET /boards renders the workspace shell and viewer bootstrap for authenticated users', async () => {
+test('GET /boards renders the server workspace and bootstrap payload for authenticated users', async () => {
+  const workspace = createCard(createEmptyWorkspace(), 'main', {
+    title: 'Ship launch checklist',
+    detailsMarkdown: 'Owner: Mina </script><img src=x onerror=1>',
+    priority: 'urgent'
+  });
+  workspace.boards.main.title = 'Roadmap alpha';
+  const record = createUpdatedWorkspaceRecord(
+    createInitialWorkspaceRecord('sub_123', {
+      now: '2026-04-02T10:00:00.000Z'
+    }),
+    {
+      workspace,
+      actor: { id: 'sub_123' },
+      now: '2026-04-02T11:00:00.000Z'
+    }
+  );
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([record]);
   const app = createTestApp({
-    googleTokenVerifier: async () => ({ sub: 'sub_123' })
+    googleTokenVerifier: async () => ({ sub: 'sub_123' }),
+    workspaceRecordRepository
   });
 
   const response = await request(app)
     .get('/boards')
     .set('Cookie', createSessionCookieHeader({ sub: 'sub_123', name: 'Tester' }));
+  const bootstrapPayload = readWorkspaceBootstrapPayload(response.text);
 
   assert.equal(response.status, 200);
   assert.match(response.text, /data-workspace-viewer-sub-value="sub_123"/);
   assert.match(response.text, /Logout/);
   assert.match(response.text, /Tester/);
+  assert.match(response.text, /Roadmap alpha/);
+  assert.match(response.text, /Ship launch checklist/);
+  assert.match(response.text, /Owner: Mina/);
   assert.match(response.text, /data-card-field="preview"/);
   assert.match(response.text, /data-workspace-target="viewCardBody"/);
   assert.match(response.text, /markdown-rendered/);
+  assert.match(response.text, /<script type="application\/json" id="workspace-bootstrap">/);
+  assert.doesNotMatch(response.text, /<\/script><img src=x onerror=1>/);
+  assert.deepEqual(bootstrapPayload, {
+    workspace,
+    meta: {
+      revision: 1,
+      updatedAt: '2026-04-02T11:00:00.000Z',
+      lastChangedBy: 'sub_123',
+      isPristine: false
+    }
+  });
+  assert.equal(bootstrapPayload.workspace.boards.main.title, 'Roadmap alpha');
+  assert.equal(
+    bootstrapPayload.workspace.boards.main.cards[Object.keys(bootstrapPayload.workspace.boards.main.cards)[0]].title,
+    'Ship launch checklist'
+  );
+  assert.deepEqual(workspaceRecordRepository.loadCalls, ['sub_123']);
 
   for (const assetPath of WORKSPACE_VENDOR_ASSET_PATHS) {
     assert.match(response.text, new RegExp(escapeForRegex(assetPath)));
@@ -571,6 +610,16 @@ function escapeForRegex(value) {
 
 function findSetCookie(response, cookieName) {
   return response.headers['set-cookie']?.find((value) => value.startsWith(`${cookieName}=`)) ?? null;
+}
+
+function readWorkspaceBootstrapPayload(html) {
+  const match = html.match(/<script type="application\/json" id="workspace-bootstrap">([\s\S]*?)<\/script>/);
+
+  if (!match) {
+    throw new Error('Workspace bootstrap payload was not rendered.');
+  }
+
+  return JSON.parse(match[1]);
 }
 
 function createWorkspaceRecordRepositoryDouble(initialRecords = []) {
