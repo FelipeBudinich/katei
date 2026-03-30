@@ -52,6 +52,11 @@ test('GET / renders the landing page for anonymous users', async () => {
   for (const assetPath of WORKSPACE_VENDOR_ASSET_PATHS) {
     assert.doesNotMatch(response.text, new RegExp(escapeForRegex(assetPath)));
   }
+
+  assert.match(response.text, /id="landing-ui-locale-picker"/);
+  assert.match(response.text, /<form method="get" action="\/" class="ui-locale-picker">/);
+  assert.match(response.text, /<option value="en" selected>\s*English\s*<\/option>/);
+  assert.match(response.text, /UI language/);
 });
 
 test('GET / localizes landing page chrome for es-CL', async () => {
@@ -106,6 +111,7 @@ test('GET / can reuse a persisted supported UI locale cookie', async () => {
 
   assert.equal(response.status, 200);
   assert.match(response.text, /<html lang="ja" data-ui-locale="ja">/);
+  assert.match(response.text, /<option value="ja" selected>\s*日本語\s*<\/option>/);
 });
 
 test('GET / falls back safely when the requested UI locale is unsupported', async () => {
@@ -169,6 +175,8 @@ test('GET /boards renders the workspace shell and viewer bootstrap for authentic
   assert.match(response.text, /<script defer src="\/vendor\/marked\/marked\.umd\.js"><\/script>/);
   assert.match(response.text, /<script defer src="\/vendor\/dompurify\/purify\.min\.js"><\/script>/);
   assert.match(response.text, /<script defer src="\/vendor\/easymde\/easymde\.min\.js"><\/script>/);
+  assert.match(response.text, /id="board-options-ui-locale-picker"/);
+  assert.match(response.text, /<form method="get" action="\/boards" class="ui-locale-picker">/);
 });
 
 test('GET /boards localizes server-rendered chrome for ja without changing user-authored viewer content', async () => {
@@ -190,6 +198,8 @@ test('GET /boards localizes server-rendered chrome for ja without changing user-
   assert.match(response.text, />\s*バックログ\s*</);
   assert.match(response.text, /aria-label="0 件のカード"/);
   assert.doesNotMatch(response.text, />Backlog</);
+  assert.match(response.text, /<option value="ja" selected>\s*日本語\s*<\/option>/);
+  assert.match(response.text, /UI言語/);
 });
 
 test('buildWorkspacePageModel localizes fixed labels without rewriting user-authored workspace content', () => {

@@ -13,6 +13,12 @@
     data-landing-redirect-url-value="{{ redirectUrl }}"
   >
     <section class="landing-hero paper-panel">
+      <div class="landing-utility-row">
+        {% include "partials/ui-locale-badge.njk" %}
+        {% set uiLocalePickerId = 'landing-ui-locale-picker' %}
+        {% include "partials/ui-locale-picker.njk" %}
+      </div>
+
       <div class="landing-copy">
         <p class="landing-eyebrow">{{ t('landing.eyebrow') }}</p>
         <h1 class="font-serif text-5xl leading-none text-strong sm:text-6xl">過程</h1>

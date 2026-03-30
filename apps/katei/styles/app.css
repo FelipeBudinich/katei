@@ -69,6 +69,19 @@
     gap: 0.85rem;
   }
 
+  .landing-utility-row,
+  .ui-locale-control-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: end;
+    justify-content: space-between;
+  }
+
+  .landing-utility-row {
+    grid-column: 1 / -1;
+  }
+
   .landing-eyebrow {
     font-size: var(--text-xs);
     line-height: var(--text-xs--line-height);
@@ -97,6 +110,72 @@
   .landing-status {
     min-height: 1.5rem;
     color: var(--color-danger);
+  }
+
+  .ui-locale-badge {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.55rem 0.8rem;
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-2xl);
+    background-color: color-mix(in srgb, var(--color-bg-muted) 74%, white 26%);
+  }
+
+  .ui-locale-badge-label,
+  .ui-locale-picker-label {
+    font-size: var(--text-xs);
+    line-height: var(--text-xs--line-height);
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+  }
+
+  .ui-locale-badge-value {
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+    color: var(--color-text-strong);
+  }
+
+  .ui-locale-picker {
+    display: grid;
+    gap: 0.4rem;
+    min-width: min(100%, 14rem);
+  }
+
+  .ui-locale-picker-select-wrap {
+    position: relative;
+  }
+
+  .ui-locale-picker-select-wrap::after {
+    content: "▾";
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-end: 0.9rem;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+  }
+
+  .ui-locale-picker-select {
+    appearance: none;
+    width: 100%;
+    min-height: 2.75rem;
+    padding: 0.7rem 2.5rem 0.7rem 0.9rem;
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-xl);
+    background:
+      linear-gradient(180deg, color-mix(in srgb, var(--color-bg-column) 82%, white 18%), color-mix(in srgb, var(--color-bg-canvas) 92%, white 8%));
+    color: var(--color-text-strong);
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+  }
+
+  .ui-locale-picker-select:focus {
+    outline: 2px solid color-mix(in srgb, var(--ref-accent-yellow) 55%, var(--color-border-strong));
+    outline-offset: 2px;
   }
 
   .top-bar-actions {

@@ -29,6 +29,12 @@
       </button>
     </div>
 
+    <div class="ui-locale-control-row mt-4">
+      {% include "partials/ui-locale-badge.njk" %}
+      {% set uiLocalePickerId = 'board-options-ui-locale-picker' %}
+      {% include "partials/ui-locale-picker.njk" %}
+    </div>
+
     <section class="mt-6 space-y-3">
       <p class="field-label text-sm font-semibold">{{ t('boardOptionsDialog.switchBoardLabel') }}</p>
       <ul class="space-y-3" data-board-options-target="boardList"></ul>

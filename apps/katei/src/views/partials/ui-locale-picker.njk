@@ -1,0 +1,18 @@
+<form method="get" action="{{ uiLocalePickerAction or '/' }}" class="ui-locale-picker">
+  <label class="ui-locale-picker-label" for="{{ uiLocalePickerId or 'ui-locale-picker' }}">{{ t('uiLocale.label') }}</label>
+  <div class="ui-locale-picker-select-wrap">
+    <select
+      id="{{ uiLocalePickerId or 'ui-locale-picker' }}"
+      name="lang"
+      class="ui-locale-picker-select"
+      aria-label="{{ t('uiLocale.label') }}"
+      onchange="this.form.submit()"
+    >
+      {% for uiLocaleOption in uiLocaleOptions %}
+        <option value="{{ uiLocaleOption.value }}"{% if uiLocaleOption.selected %} selected{% endif %}>
+          {{ uiLocaleOption.label }}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+</form>

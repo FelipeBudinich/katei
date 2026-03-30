@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   DEFAULT_UI_LOCALE,
   canonicalizeUiLocale,
+  getUiLocaleLabel,
   parseAcceptLanguage,
   resolveSupportedUiLocale
 } from '../public/js/i18n/locales.js';
@@ -39,6 +40,13 @@ test('resolveSupportedUiLocale maps exact and language-only inputs to supported 
   assert.equal(resolveSupportedUiLocale('es'), 'es-CL');
   assert.equal(resolveSupportedUiLocale('ja-JP'), 'ja');
   assert.equal(resolveSupportedUiLocale('fr-FR'), null);
+});
+
+test('getUiLocaleLabel returns locale names in the active UI language', () => {
+  assert.equal(getUiLocaleLabel('es-CL', 'en'), 'Spanish (Chile)');
+  assert.equal(getUiLocaleLabel('ja', 'es-CL'), 'Japonés');
+  assert.equal(getUiLocaleLabel('en', 'ja'), '英語');
+  assert.equal(getUiLocaleLabel('fr-FR', 'ja'), 'fr-FR');
 });
 
 test('parseAcceptLanguage keeps canonical preference order and ignores unsupported noise', () => {

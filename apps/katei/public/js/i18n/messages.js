@@ -35,6 +35,9 @@ const EN_MESSAGES = freezeCatalog({
     signingOut: 'Signing out...',
     signOutUnavailable: 'Unable to sign out right now.'
   },
+  uiLocale: {
+    label: 'UI language'
+  },
   workspace: {
     viewerSignedIn: 'Signed in',
     boardOptions: 'Options',
@@ -205,6 +208,9 @@ const ES_CL_MESSAGES = freezeCatalog({
     signingOut: 'Cerrando sesión...',
     signOutUnavailable: 'No se pudo cerrar sesión en este momento.'
   },
+  uiLocale: {
+    label: 'Idioma de la interfaz'
+  },
   workspace: {
     viewerSignedIn: 'Sesión iniciada',
     boardOptions: 'Opciones',
@@ -374,6 +380,9 @@ const JA_MESSAGES = freezeCatalog({
   session: {
     signingOut: 'ログアウトしています...',
     signOutUnavailable: '現在はログアウトできません。'
+  },
+  uiLocale: {
+    label: 'UI言語'
   },
   workspace: {
     viewerSignedIn: 'サインイン済み',

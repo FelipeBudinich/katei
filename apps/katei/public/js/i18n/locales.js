@@ -3,6 +3,23 @@ export const DEFAULT_UI_LOCALE = 'en';
 
 const SUPPORTED_UI_LOCALE_SET = new Set(SUPPORTED_UI_LOCALES);
 const UI_LOCALE_BY_LANGUAGE = buildUiLocaleByLanguageMap();
+const UI_LOCALE_LABELS = Object.freeze({
+  en: Object.freeze({
+    en: 'English',
+    'es-CL': 'Spanish (Chile)',
+    ja: 'Japanese'
+  }),
+  'es-CL': Object.freeze({
+    en: 'Inglés',
+    'es-CL': 'Español (Chile)',
+    ja: 'Japonés'
+  }),
+  ja: Object.freeze({
+    en: '英語',
+    'es-CL': 'スペイン語（チリ）',
+    ja: '日本語'
+  })
+});
 
 export function canonicalizeUiLocale(input) {
   const normalizedInput = normalizeLocaleInput(input);
@@ -30,6 +47,19 @@ export function resolveSupportedUiLocale(input) {
   }
 
   return UI_LOCALE_BY_LANGUAGE.get(getLanguageSubtag(canonicalLocale)) ?? null;
+}
+
+export function getUiLocaleLabel(locale, uiLocale = DEFAULT_UI_LOCALE) {
+  const resolvedLocale = resolveSupportedUiLocale(locale);
+  const resolvedUiLocale = resolveSupportedUiLocale(uiLocale) ?? DEFAULT_UI_LOCALE;
+
+  if (!resolvedLocale) {
+    return String(locale ?? '');
+  }
+
+  return UI_LOCALE_LABELS[resolvedUiLocale]?.[resolvedLocale]
+    ?? UI_LOCALE_LABELS[DEFAULT_UI_LOCALE]?.[resolvedLocale]
+    ?? resolvedLocale;
 }
 
 export function parseAcceptLanguage(headerValue) {
