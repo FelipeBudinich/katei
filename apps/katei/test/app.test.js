@@ -8,6 +8,13 @@ import {
   createSignedSessionCookieValue
 } from '../src/auth/session_cookie.js';
 
+const WORKSPACE_VENDOR_ASSET_PATHS = [
+  '/vendor/easymde/easymde.min.css',
+  '/vendor/easymde/easymde.min.js',
+  '/vendor/marked/marked.umd.js',
+  '/vendor/dompurify/purify.min.js'
+];
+
 function createTestApp({ env = {}, googleTokenVerifier } = {}) {
   return createApp({
     env: {
@@ -36,10 +43,10 @@ test('GET / renders the landing page for anonymous users', async () => {
   assert.equal(response.status, 200);
   assert.match(response.text, /Private tester preview/);
   assert.match(response.text, /google-identity-script/);
-  assert.doesNotMatch(response.text, /\/vendor\/easymde\/easymde\.min\.css/);
-  assert.doesNotMatch(response.text, /\/vendor\/marked\/marked\.umd\.js/);
-  assert.doesNotMatch(response.text, /\/vendor\/dompurify\/purify\.min\.js/);
-  assert.doesNotMatch(response.text, /\/vendor\/easymde\/easymde\.min\.js/);
+
+  for (const assetPath of WORKSPACE_VENDOR_ASSET_PATHS) {
+    assert.doesNotMatch(response.text, new RegExp(escapeForRegex(assetPath)));
+  }
 });
 
 test('GET / redirects authenticated users to /boards', async () => {
@@ -82,6 +89,11 @@ test('GET /boards renders the workspace shell and viewer bootstrap for authentic
   assert.match(response.text, /data-card-field="preview"/);
   assert.match(response.text, /data-workspace-target="viewCardBody"/);
   assert.match(response.text, /markdown-rendered/);
+
+  for (const assetPath of WORKSPACE_VENDOR_ASSET_PATHS) {
+    assert.match(response.text, new RegExp(escapeForRegex(assetPath)));
+  }
+
   assert.match(response.text, /<link rel="stylesheet" href="\/vendor\/easymde\/easymde\.min\.css">/);
   assert.match(response.text, /<script defer src="\/vendor\/marked\/marked\.umd\.js"><\/script>/);
   assert.match(response.text, /<script defer src="\/vendor\/dompurify\/purify\.min\.js"><\/script>/);
@@ -241,3 +253,7 @@ test('GET /health still returns { ok: true }', async () => {
   assert.equal(response.status, 200);
   assert.deepEqual(response.body, { ok: true });
 });
+
+function escapeForRegex(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}

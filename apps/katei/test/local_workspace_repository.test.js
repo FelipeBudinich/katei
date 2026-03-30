@@ -12,16 +12,21 @@ test('createWorkspaceStorageKey scopes workspace storage by verified Google sub'
 });
 
 test('LocalWorkspaceRepository reads and writes only the viewer-scoped workspace key', async () => {
+  const legacyWorkspaceV2 = JSON.stringify({ legacy: 'v2' });
+  const legacyWorkspaceV3 = JSON.stringify({ legacy: 'v3' });
   const storage = createStorageDouble({
-    'katei.workspace.v3:sub_123': JSON.stringify({ legacy: true })
+    'katei.workspace.v2': legacyWorkspaceV2,
+    'katei.workspace.v3:sub_123': legacyWorkspaceV3
   });
   const repository = new LocalWorkspaceRepository(storage, 'sub_123');
   const workspace = createEmptyWorkspace();
+  const workspaceStorageKey = createWorkspaceStorageKey('sub_123');
 
   await repository.saveWorkspace(workspace);
 
-  assert.deepEqual(JSON.parse(storage.getItem('katei.workspace.v4:sub_123')), workspace);
-  assert.equal(storage.getItem('katei.workspace.v3:sub_123'), JSON.stringify({ legacy: true }));
+  assert.deepEqual(JSON.parse(storage.getItem(workspaceStorageKey)), workspace);
+  assert.equal(storage.getItem('katei.workspace.v2'), legacyWorkspaceV2);
+  assert.equal(storage.getItem('katei.workspace.v3:sub_123'), legacyWorkspaceV3);
   assert.deepEqual(await repository.loadWorkspace(), workspace);
 });
 
