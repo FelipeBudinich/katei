@@ -77,11 +77,17 @@ hanmoto-board/
 │       ├── src/
 │       │   ├── auth/
 │       │   │   └── …
+│       │   ├── data/
+│       │   │   └── …
+│       │   ├── i18n/
+│       │   │   └── …
 │       │   ├── middleware/
 │       │   │   └── …
 │       │   ├── routes/
 │       │   │   └── …
 │       │   ├── views/
+│       │   │   └── …
+│       │   ├── workspaces/
 │       │   │   └── …
 │       │   ├── app.js
 │       │   ├── config.js
@@ -91,10 +97,17 @@ hanmoto-board/
 │       ├── test/
 │       │   ├── allowlist.test.js
 │       │   ├── app.test.js
+│       │   ├── config.test.js
 │       │   ├── google_identity.test.js
+│       │   ├── http_workspace_repository.test.js
+│       │   ├── i18n.test.js
 │       │   ├── landing_controller_connection.test.js
 │       │   ├── local_workspace_repository.test.js
-│       │   └── session_cookie.test.js
+│       │   ├── markdown.test.js
+│       │   ├── mongo_client.test.js
+│       │   ├── mongo_workspace_record_repository.test.js
+│       │   ├── session_cookie.test.js
+│       │   └── workspace.test.js
 │       ├── .env.example
 │       ├── package.json
 │       └── Procfile
