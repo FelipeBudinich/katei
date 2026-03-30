@@ -79,6 +79,9 @@ test('GET /boards renders the workspace shell and viewer bootstrap for authentic
   assert.match(response.text, /data-workspace-viewer-sub-value="sub_123"/);
   assert.match(response.text, /Logout/);
   assert.match(response.text, /Tester/);
+  assert.match(response.text, /data-card-field="preview"/);
+  assert.match(response.text, /data-workspace-target="viewCardBody"/);
+  assert.match(response.text, /markdown-rendered/);
   assert.match(response.text, /<link rel="stylesheet" href="\/vendor\/easymde\/easymde\.min\.css">/);
   assert.match(response.text, /<script defer src="\/vendor\/marked\/marked\.umd\.js"><\/script>/);
   assert.match(response.text, /<script defer src="\/vendor\/dompurify\/purify\.min\.js"><\/script>/);

@@ -6,6 +6,7 @@ import {
   getColumnTitle,
   PRIORITY_LABELS
 } from '../domain/workspace.js';
+import { renderMarkdownInto } from '../lib/markdown.js';
 import { LocalWorkspaceRepository } from '../repositories/local_workspace_repository.js';
 import { renderBoardState } from '../renderers/board_renderer.js';
 import { WorkspaceService } from '../services/workspace_service.js';
@@ -26,7 +27,7 @@ export default class extends Controller {
     'announcer',
     'viewDialog',
     'viewCardTitle',
-    'viewCardDescription',
+    'viewCardBody',
     'viewCardPrioritySection',
     'viewCardPriority',
     'viewCardUpdated',
@@ -398,7 +399,11 @@ export default class extends Controller {
     const shouldShowPriority = columnId !== 'done' && columnId !== 'archived';
 
     this.viewCardTitleTarget.textContent = card.title;
-    this.viewCardDescriptionTarget.textContent = card.detailsMarkdown || 'No details added.';
+    if (card.detailsMarkdown) {
+      renderMarkdownInto(this.viewCardBodyTarget, card.detailsMarkdown);
+    } else {
+      this.viewCardBodyTarget.textContent = 'No details added.';
+    }
     this.viewCardPrioritySectionTarget.hidden = !shouldShowPriority;
     this.viewCardPriorityTarget.textContent = shouldShowPriority ? PRIORITY_LABELS[card.priority] : '';
     this.viewCardUpdatedTarget.textContent = timestampFormatter.format(new Date(card.updatedAt));

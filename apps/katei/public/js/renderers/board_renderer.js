@@ -1,3 +1,4 @@
+import { markdownToPreviewText } from '../lib/markdown.js';
 import { sortCardIdsForColumn } from '../domain/workspace.js';
 
 const timestampFormatter = new Intl.DateTimeFormat(undefined, {
@@ -93,10 +94,11 @@ function createCardElement({ board, card, columnId, templates }) {
     titleElement.textContent = card.title;
   }
 
-  const descriptionElement = cardNode.querySelector('[data-card-field="description"]');
-  if (descriptionElement) {
-    descriptionElement.textContent = card.detailsMarkdown;
-    descriptionElement.classList.toggle('hidden', !card.detailsMarkdown);
+  const previewElement = cardNode.querySelector('[data-card-field="preview"]');
+  if (previewElement) {
+    const previewText = markdownToPreviewText(card.detailsMarkdown);
+    previewElement.textContent = previewText;
+    previewElement.classList.toggle('hidden', !previewText);
   }
 
   const metaElement = cardNode.querySelector('[data-card-field="meta"]');
