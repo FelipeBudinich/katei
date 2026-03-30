@@ -22,6 +22,40 @@ export default class extends Controller {
     'moveOption'
   ];
 
+  connect() {
+    this.editor = null;
+  }
+
+  disconnect() {
+    this.editor?.toTextArea();
+    this.editor?.cleanup();
+    this.editor = null;
+  }
+
+  ensureEditor() {
+    if (this.editor) {
+      return this.editor;
+    }
+
+    if (!window.EasyMDE) {
+      throw new Error('EasyMDE is unavailable.');
+    }
+
+    this.editor = new window.EasyMDE({
+      element: this.markdownInputTarget,
+      forceSync: true,
+      autoRefresh: { delay: 200 },
+      autoDownloadFontAwesome: false,
+      autosave: { enabled: false },
+      status: false,
+      spellChecker: false,
+      nativeSpellcheck: false,
+      toolbar: createMarkdownToolbar(window.EasyMDE)
+    });
+
+    return this.editor;
+  }
+
   openFromEvent(event) {
     const { mode, boardId, card, columnId } = event.detail;
     const isEditMode = mode === 'edit';
@@ -38,7 +72,7 @@ export default class extends Controller {
     this.targetColumnIdInputTarget.value = targetColumnId;
     this.priorityInputTarget.value = card?.priority ?? 'important';
     this.titleInputTarget.value = card?.title ?? '';
-    this.markdownInputTarget.value = card?.detailsMarkdown ?? '';
+    this.ensureEditor().value(card?.detailsMarkdown ?? '');
     this.headingTarget.textContent = isEditMode ? 'Edit card' : 'New card';
     this.syncPriorityOptions();
     this.syncEditActions({
@@ -52,7 +86,10 @@ export default class extends Controller {
       this.dialogTarget.showModal();
     }
 
-    requestAnimationFrame(() => this.titleInputTarget.focus());
+    requestAnimationFrame(() => {
+      this.editor?.codemirror?.refresh();
+      this.titleInputTarget.focus();
+    });
   }
 
   backdropClose(event) {
@@ -159,4 +196,31 @@ export default class extends Controller {
         : columnTitle;
     }
   }
+}
+
+function createMarkdownToolbar(EasyMDE) {
+  return [
+    createToolbarButton('bold', 'Bold', EasyMDE.toggleBold),
+    createToolbarButton('italic', 'Italic', EasyMDE.toggleItalic),
+    createToolbarButton('heading-2', 'H2', EasyMDE.toggleHeading2),
+    '|',
+    createToolbarButton('quote', 'Quote', EasyMDE.toggleBlockquote),
+    createToolbarButton('unordered-list', 'Bullets', EasyMDE.toggleUnorderedList),
+    createToolbarButton('ordered-list', 'Numbers', EasyMDE.toggleOrderedList),
+    '|',
+    createToolbarButton('code', 'Code', EasyMDE.toggleCodeBlock),
+    createToolbarButton('link', 'Link', EasyMDE.drawLink),
+    '|',
+    createToolbarButton('preview', 'Preview', EasyMDE.togglePreview, { noDisable: true })
+  ];
+}
+
+function createToolbarButton(name, text, action, overrides = {}) {
+  return {
+    name,
+    action,
+    text,
+    title: text,
+    ...overrides
+  };
 }
