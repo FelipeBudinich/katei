@@ -1,5 +1,7 @@
 import { Controller } from '/vendor/stimulus/stimulus.js';
 import { isLandingControllerConnected } from '/js/controllers/landing_controller_connection.js';
+import { getBrowserTranslator } from '/js/i18n/browser.js';
+import { localizeErrorMessage } from '/js/i18n/errors.js';
 import {
   EMPTY_GOOGLE_BUTTON_SLOT_ERROR_CODE,
   assertValidGoogleClientId,
@@ -19,10 +21,11 @@ export default class extends Controller {
   };
 
   connect() {
+    this.t = getBrowserTranslator();
     this.isSubmitting = false;
     this.initializeGoogleIdentity().catch((error) => {
       console.error('Failed to initialize Google Identity Services.', error);
-      this.showStatus('Google sign-in is unavailable right now.');
+      this.showStatus(this.t('landing.status.googleUnavailable'));
     });
   }
 
@@ -33,7 +36,7 @@ export default class extends Controller {
       clientId = assertValidGoogleClientId(this.googleClientIdValue);
     } catch (error) {
       console.error('GIS client ID validation failed', error);
-      this.showStatus('Google client ID is missing.');
+      this.showStatus(this.t('landing.status.missingClientId'));
       return;
     }
 
@@ -43,7 +46,7 @@ export default class extends Controller {
       googleIdentity = await waitForGoogleIdentity();
     } catch (error) {
       console.error('GIS readiness failed', error);
-      this.showStatus('Google Identity Services did not load.');
+      this.showStatus(this.t('landing.status.gisDidNotLoad'));
       return;
     }
 
@@ -60,7 +63,7 @@ export default class extends Controller {
       });
     } catch (error) {
       console.error('GIS initialize failed', error);
-      this.showStatus('Google sign-in could not be initialized for this origin.');
+      this.showStatus(this.t('landing.status.initOriginUnavailable'));
       return;
     }
 
@@ -69,10 +72,10 @@ export default class extends Controller {
     } catch (error) {
       if (error?.code === EMPTY_GOOGLE_BUTTON_SLOT_ERROR_CODE) {
         console.error('GIS renderButton produced an empty slot', error);
-        this.showStatus('Google sign-in button was not rendered. Check the allowed JavaScript origins for this client ID.');
+        this.showStatus(this.t('landing.status.buttonNotRenderedDetailed'));
       } else {
         console.error('GIS renderButton failed', error);
-        this.showStatus('Google sign-in button could not be rendered.');
+        this.showStatus(this.t('landing.status.buttonNotRendered'));
       }
       return;
     }
@@ -90,7 +93,7 @@ export default class extends Controller {
     const credential = credentialResponse?.credential;
 
     if (typeof credential !== 'string' || !credential.trim()) {
-      this.showStatus('Google sign-in did not return a credential.');
+      this.showStatus(this.t('landing.status.missingCredential'));
       return;
     }
 
@@ -112,13 +115,13 @@ export default class extends Controller {
       const data = await parseJsonResponse(response);
 
       if (!response.ok) {
-        throw new Error(data?.error || 'Unable to sign in with Google.');
+        throw new Error(data?.error || this.t('errors.signInUnavailable'));
       }
 
       window.location.assign(data?.redirectTo || this.redirectUrlValue);
     } catch (error) {
       console.error('Google sign-in failed.', error);
-      this.showStatus(error instanceof Error ? error.message : 'Unable to sign in with Google.');
+      this.showStatus(localizeErrorMessage(error, this.t, { fallbackKey: 'errors.signInUnavailable' }));
       this.loadingTarget.hidden = true;
       this.buttonTarget.dataset.state = 'idle';
       this.isSubmitting = false;

@@ -8,6 +8,12 @@ import {
 } from '../public/js/i18n/locales.js';
 import { createTranslator } from '../public/js/i18n/translate.js';
 import {
+  createBrowserDateTimeFormatter,
+  getBrowserTranslator,
+  resolveBrowserUiLocale
+} from '../public/js/i18n/browser.js';
+import { localizeErrorMessage } from '../public/js/i18n/errors.js';
+import {
   KATEI_UI_LOCALE_COOKIE_NAME,
   resolveRequestUiLocale
 } from '../src/i18n/request_ui_locale.js';
@@ -51,12 +57,60 @@ test('createTranslator resolves dot-path keys, interpolates values, and falls ba
   assert.equal(translate('common.missingKey'), 'common.missingKey');
 });
 
+test('browser locale helpers resolve the active UI locale from the document and expose a browser translator', () => {
+  const japaneseDocument = {
+    documentElement: {
+      dataset: { uiLocale: 'ja' },
+      lang: 'en'
+    }
+  };
+  const spanishDocument = {
+    documentElement: {
+      dataset: {},
+      lang: 'es-CL'
+    }
+  };
+  const fallbackDocument = {
+    documentElement: {
+      dataset: { uiLocale: 'fr-FR' },
+      lang: 'fr-FR'
+    }
+  };
+
+  assert.equal(resolveBrowserUiLocale(japaneseDocument), 'ja');
+  assert.equal(resolveBrowserUiLocale(spanishDocument), 'es-CL');
+  assert.equal(resolveBrowserUiLocale(fallbackDocument), 'en');
+  assert.equal(getBrowserTranslator(spanishDocument)('common.close'), 'Cerrar');
+});
+
+test('createBrowserDateTimeFormatter uses the current UI locale', () => {
+  const formatter = createBrowserDateTimeFormatter(undefined, {
+    documentElement: {
+      dataset: { uiLocale: 'ja' },
+      lang: 'en'
+    }
+  });
+
+  assert.match(formatter.resolvedOptions().locale, /^ja\b/i);
+});
+
 test('workspace label helpers translate stable workspace ids and counts', () => {
   const translate = createTranslator('es-CL');
 
   assert.equal(getColumnDisplayLabel('backlog', translate), 'Pendientes');
   assert.equal(getPriorityDisplayLabel('urgent', translate), 'Urgente');
   assert.equal(formatCardCount(3, translate), '3 tarjetas');
+});
+
+test('localizeErrorMessage translates known current UI errors and falls back safely', () => {
+  const translate = createTranslator('es-CL');
+
+  assert.equal(
+    localizeErrorMessage(new Error('Unable to verify the Google credential.'), translate),
+    'No se pudo verificar la credencial de Google.'
+  );
+  assert.equal(localizeErrorMessage(new Error('Custom exploded.'), translate), 'Custom exploded.');
+  assert.equal(localizeErrorMessage(null, translate), 'Algo salió mal.');
 });
 
 test('resolveRequestUiLocale checks query, then cookie, then Accept-Language, then default English', () => {

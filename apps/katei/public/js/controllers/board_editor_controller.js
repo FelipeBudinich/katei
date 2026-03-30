@@ -1,7 +1,12 @@
 import { Controller } from '/vendor/stimulus/stimulus.js';
+import { getBrowserTranslator } from '/js/i18n/browser.js';
 
 export default class extends Controller {
   static targets = ['dialog', 'form', 'heading', 'modeInput', 'boardIdInput', 'titleInput', 'submitButton'];
+
+  connect() {
+    this.t = getBrowserTranslator();
+  }
 
   openFromEvent(event) {
     const { mode, board } = event.detail;
@@ -11,8 +16,8 @@ export default class extends Controller {
     this.modeInputTarget.value = mode;
     this.boardIdInputTarget.value = board?.id ?? '';
     this.titleInputTarget.value = isRenameMode ? board?.title ?? '' : '';
-    this.headingTarget.textContent = isRenameMode ? 'Rename board' : 'New board';
-    this.submitButtonTarget.textContent = isRenameMode ? 'Save Board' : 'Create Board';
+    this.headingTarget.textContent = isRenameMode ? this.t('boardEditor.renameHeading') : this.t('boardEditor.newHeading');
+    this.submitButtonTarget.textContent = isRenameMode ? this.t('boardEditor.saveButton') : this.t('boardEditor.createButton');
 
     if (!this.dialogTarget.open) {
       this.dialogTarget.showModal();

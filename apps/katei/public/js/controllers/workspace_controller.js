@@ -2,19 +2,15 @@ import { Controller } from '/vendor/stimulus/stimulus.js';
 import {
   findColumnIdByCardId,
   getActiveBoard,
-  getCollapsedColumnsForBoard,
-  getColumnTitle,
-  PRIORITY_LABELS
+  getCollapsedColumnsForBoard
 } from '../domain/workspace.js';
+import { createBrowserDateTimeFormatter, getBrowserTranslator } from '../i18n/browser.js';
+import { localizeErrorMessage } from '../i18n/errors.js';
+import { getColumnDisplayLabel, getPriorityDisplayLabel } from '../i18n/workspace_labels.js';
 import { renderMarkdownInto } from '../lib/markdown.js';
 import { LocalWorkspaceRepository } from '../repositories/local_workspace_repository.js';
 import { renderBoardState } from '../renderers/board_renderer.js';
 import { WorkspaceService } from '../services/workspace_service.js';
-
-const timestampFormatter = new Intl.DateTimeFormat(undefined, {
-  dateStyle: 'medium',
-  timeStyle: 'short'
-});
 
 export default class extends Controller {
   static values = {
@@ -38,9 +34,12 @@ export default class extends Controller {
   ];
 
   connect() {
+    this.t = getBrowserTranslator();
+    this.dateTimeFormatter = createBrowserDateTimeFormatter();
+
     if (!this.hasViewerSubValue || !this.viewerSubValue.trim()) {
       console.error('Workspace viewer sub is missing.');
-      this.announce('Unable to load this workspace.');
+      this.announce(this.t('workspace.status.loadUnavailable'));
       return;
     }
 
@@ -93,7 +92,12 @@ export default class extends Controller {
 
     await this.runAction(
       () => this.service.setColumnCollapsed(board.id, columnId, nextCollapsedState),
-      `${getColumnTitle(columnId)} ${nextCollapsedState ? 'collapsed' : 'expanded'}.`
+      this.t(
+        nextCollapsedState
+          ? 'workspace.announcements.columnCollapsed'
+          : 'workspace.announcements.columnExpanded',
+        { column: getColumnDisplayLabel(columnId, this.t) }
+      )
     );
   }
 
@@ -114,20 +118,23 @@ export default class extends Controller {
 
   async handleBoardSwitch(event) {
     const { boardId } = event.detail;
-    const boardTitle = this.workspace?.boards?.[boardId]?.title ?? 'board';
+    const boardTitle = this.workspace?.boards?.[boardId]?.title ?? this.t('workspace.fallbackBoardTitle');
 
-    await this.runAction(() => this.service.setActiveBoard(boardId), `Switched to ${boardTitle}.`);
+    await this.runAction(
+      () => this.service.setActiveBoard(boardId),
+      this.t('workspace.announcements.switchedBoard', { title: boardTitle })
+    );
   }
 
   async handleBoardEditorSave(event) {
     const { mode, boardId, title } = event.detail;
 
     if (mode === 'rename') {
-      await this.runAction(() => this.service.renameBoard(boardId, title), 'Board renamed.');
+      await this.runAction(() => this.service.renameBoard(boardId, title), this.t('workspace.announcements.boardRenamed'));
       return;
     }
 
-    await this.runAction(() => this.service.createBoard({ title }), 'Board created.');
+    await this.runAction(() => this.service.createBoard({ title }), this.t('workspace.announcements.boardCreated'));
   }
 
   confirmDeleteBoard(event) {
@@ -143,9 +150,9 @@ export default class extends Controller {
       confirmation: {
         type: 'delete-board',
         boardId,
-        title: 'Delete board?',
-        message: `This action cannot be undone. "${board.title}" will be removed permanently.`,
-        confirmLabel: 'Delete board'
+        title: this.t('workspace.confirmations.deleteBoardTitle'),
+        message: this.t('workspace.confirmations.deleteBoardMessage', { title: board.title }),
+        confirmLabel: this.t('workspace.confirmations.deleteBoardConfirm')
       }
     });
   }
@@ -163,9 +170,9 @@ export default class extends Controller {
       confirmation: {
         type: 'reset-board',
         boardId,
-        title: 'Reset board?',
-        message: `This will clear all cards from "${board.title}" and keep the board itself.`,
-        confirmLabel: 'Reset board'
+        title: this.t('workspace.confirmations.resetBoardTitle'),
+        message: this.t('workspace.confirmations.resetBoardMessage', { title: board.title }),
+        confirmLabel: this.t('workspace.confirmations.resetBoardConfirm')
       }
     });
   }
@@ -245,11 +252,11 @@ export default class extends Controller {
         }
 
         return nextWorkspace;
-      }, 'Card updated.');
+      }, this.t('workspace.announcements.cardUpdated'));
       return;
     }
 
-    await this.runAction(() => this.service.createCard(boardId, input), 'Card created.');
+    await this.runAction(() => this.service.createCard(boardId, input), this.t('workspace.announcements.cardCreated'));
   }
 
   deleteCard(event) {
@@ -268,9 +275,9 @@ export default class extends Controller {
         type: 'delete-card',
         boardId,
         cardId,
-        title: 'Delete card?',
-        message: `This action cannot be undone. "${card.title}" will be removed permanently.`,
-        confirmLabel: 'Delete'
+        title: this.t('workspace.confirmations.deleteCardTitle'),
+        message: this.t('workspace.confirmations.deleteCardMessage', { title: card.title }),
+        confirmLabel: this.t('workspace.confirmations.deleteCardConfirm')
       }
     });
   }
@@ -282,11 +289,13 @@ export default class extends Controller {
 
       await this.runAction(
         () => this.service.moveCard(nextBoardId, cardId, sourceColumnId, targetColumnId),
-        `Moved card to ${getColumnTitle(targetColumnId)}.`
+        this.t('workspace.announcements.movedCard', {
+          column: getColumnDisplayLabel(targetColumnId, this.t)
+        })
       );
     } catch (error) {
       console.error('Failed to move card.', error);
-      this.announce('Unable to move card.');
+      this.announce(this.t('workspace.status.moveUnavailable'));
     }
   }
 
@@ -303,8 +312,7 @@ export default class extends Controller {
       return true;
     } catch (error) {
       console.error(error);
-      const message = error instanceof Error ? error.message : 'Something went wrong.';
-      this.announce(message);
+      this.announce(localizeErrorMessage(error, this.t));
       return false;
     }
   }
@@ -321,7 +329,9 @@ export default class extends Controller {
         boardTitle: this.boardTitleTarget,
         desktopColumns: this.desktopColumnsTarget
       },
-      templates: this.templates
+      templates: this.templates,
+      t: this.t,
+      dateTimeFormatter: this.dateTimeFormatter
     });
 
     this.dispatchWorkspaceEvent('sync-board-options', {
@@ -402,11 +412,11 @@ export default class extends Controller {
     if (card.detailsMarkdown) {
       renderMarkdownInto(this.viewCardBodyTarget, card.detailsMarkdown);
     } else {
-      this.viewCardBodyTarget.textContent = 'No details added.';
+      this.viewCardBodyTarget.textContent = this.t('workspace.view.noDetails');
     }
     this.viewCardPrioritySectionTarget.hidden = !shouldShowPriority;
-    this.viewCardPriorityTarget.textContent = shouldShowPriority ? PRIORITY_LABELS[card.priority] : '';
-    this.viewCardUpdatedTarget.textContent = timestampFormatter.format(new Date(card.updatedAt));
+    this.viewCardPriorityTarget.textContent = shouldShowPriority ? getPriorityDisplayLabel(card.priority, this.t) : '';
+    this.viewCardUpdatedTarget.textContent = this.dateTimeFormatter.format(new Date(card.updatedAt));
   }
 
   async confirmPendingAction(event) {
@@ -427,17 +437,17 @@ export default class extends Controller {
     if (confirmation.type === 'delete-card') {
       success = await this.runAction(
         () => this.service.deleteCard(confirmation.boardId, confirmation.cardId),
-        'Card deleted.'
+        this.t('workspace.announcements.cardDeleted')
       );
     } else if (confirmation.type === 'delete-board') {
       success = await this.runAction(
         () => this.service.deleteBoard(confirmation.boardId),
-        'Board deleted.'
+        this.t('workspace.announcements.boardDeleted')
       );
     } else if (confirmation.type === 'reset-board') {
       success = await this.runAction(
         () => this.service.resetBoard(confirmation.boardId),
-        'Board reset.'
+        this.t('workspace.announcements.boardReset')
       );
     }
 

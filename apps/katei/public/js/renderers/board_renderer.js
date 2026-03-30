@@ -1,15 +1,16 @@
 import { markdownToPreviewText } from '../lib/markdown.js';
 import { sortCardIdsForColumn } from '../domain/workspace.js';
-import { createTranslator } from '../i18n/translate.js';
+import { createBrowserDateTimeFormatter, getBrowserTranslator } from '../i18n/browser.js';
 import { formatCardCount, getColumnDisplayLabel } from '../i18n/workspace_labels.js';
 
-const timestampFormatter = new Intl.DateTimeFormat(undefined, {
-  dateStyle: 'medium',
-  timeStyle: 'short'
-});
-
-export function renderBoardState({ board, collapsedColumns = {}, regions, templates }) {
-  const t = getUiTranslator();
+export function renderBoardState({
+  board,
+  collapsedColumns = {},
+  regions,
+  templates,
+  t = getBrowserTranslator(),
+  dateTimeFormatter = createBrowserDateTimeFormatter()
+}) {
 
   if (regions.boardTitle) {
     regions.boardTitle.textContent = board.title;
@@ -17,11 +18,13 @@ export function renderBoardState({ board, collapsedColumns = {}, regions, templa
 
   replaceRegionChildren(
     regions.desktopColumns,
-    board.columnOrder.map((columnId) => createColumnPanel({ board, columnId, collapsedColumns, templates, t }))
+    board.columnOrder.map((columnId) =>
+      createColumnPanel({ board, columnId, collapsedColumns, templates, t, dateTimeFormatter })
+    )
   );
 }
 
-function createColumnPanel({ board, columnId, collapsedColumns, templates, t }) {
+function createColumnPanel({ board, columnId, collapsedColumns, templates, t, dateTimeFormatter }) {
   const column = board.columns[columnId];
   const columnNode = cloneTemplate(templates.columnTemplate);
   const isCollapsed = Boolean(collapsedColumns[columnId]);
@@ -73,7 +76,8 @@ function createColumnPanel({ board, columnId, collapsedColumns, templates, t }) 
             board,
             card: board.cards[cardId],
             columnId,
-            templates
+            templates,
+            dateTimeFormatter
           })
         );
       }
@@ -83,7 +87,7 @@ function createColumnPanel({ board, columnId, collapsedColumns, templates, t }) 
   return columnNode;
 }
 
-function createCardElement({ board, card, columnId, templates }) {
+function createCardElement({ board, card, columnId, templates, dateTimeFormatter }) {
   const cardNode = cloneTemplate(templates.cardTemplate);
   cardNode.dataset.cardId = card.id;
   cardNode.dataset.columnId = columnId;
@@ -108,7 +112,7 @@ function createCardElement({ board, card, columnId, templates }) {
 
   const metaElement = cardNode.querySelector('[data-card-field="meta"]');
   if (metaElement) {
-    metaElement.textContent = timestampFormatter.format(new Date(card.updatedAt));
+    metaElement.textContent = dateTimeFormatter.format(new Date(card.updatedAt));
   }
 
   for (const button of cardNode.querySelectorAll('[data-card-id]')) {
@@ -132,9 +136,4 @@ function replaceRegionChildren(region, nodes) {
 
 function cloneTemplate(template) {
   return template.content.firstElementChild.cloneNode(true);
-}
-
-function getUiTranslator() {
-  const uiLocale = globalThis.document?.documentElement?.dataset?.uiLocale;
-  return createTranslator(uiLocale);
 }

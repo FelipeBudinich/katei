@@ -1,4 +1,5 @@
 import { Controller } from '/vendor/stimulus/stimulus.js';
+import { getBrowserTranslator } from '/js/i18n/browser.js';
 
 export default class extends Controller {
   static targets = [
@@ -23,6 +24,7 @@ export default class extends Controller {
   ];
 
   connect() {
+    this.t = getBrowserTranslator();
     this.editor = null;
   }
 
@@ -50,7 +52,7 @@ export default class extends Controller {
       status: false,
       spellChecker: false,
       nativeSpellcheck: false,
-      toolbar: createMarkdownToolbar(window.EasyMDE)
+      toolbar: createMarkdownToolbar(window.EasyMDE, this.t)
     });
 
     return this.editor;
@@ -73,7 +75,7 @@ export default class extends Controller {
     this.priorityInputTarget.value = card?.priority ?? 'important';
     this.titleInputTarget.value = card?.title ?? '';
     this.ensureEditor().value(card?.detailsMarkdown ?? '');
-    this.headingTarget.textContent = isEditMode ? 'Edit card' : 'New card';
+    this.headingTarget.textContent = isEditMode ? this.t('cardEditor.editHeading') : this.t('cardEditor.newHeading');
     this.syncPriorityOptions();
     this.syncEditActions({
       isEditMode,
@@ -192,26 +194,26 @@ export default class extends Controller {
       button.disabled = isSelectedColumn;
       button.setAttribute('aria-disabled', String(isSelectedColumn));
       button.textContent = isSelectedColumn
-        ? `${columnTitle} (${isCurrentColumn ? 'Current' : 'Selected'})`
+        ? `${columnTitle} (${this.t(isCurrentColumn ? 'cardEditor.moveStateCurrent' : 'cardEditor.moveStateSelected')})`
         : columnTitle;
     }
   }
 }
 
-function createMarkdownToolbar(EasyMDE) {
+function createMarkdownToolbar(EasyMDE, t) {
   return [
-    createToolbarButton('bold', 'Bold', EasyMDE.toggleBold),
-    createToolbarButton('italic', 'Italic', EasyMDE.toggleItalic),
-    createToolbarButton('heading-2', 'H2', EasyMDE.toggleHeading2),
+    createToolbarButton('bold', t('cardEditor.markdownToolbar.bold'), EasyMDE.toggleBold),
+    createToolbarButton('italic', t('cardEditor.markdownToolbar.italic'), EasyMDE.toggleItalic),
+    createToolbarButton('heading-2', t('cardEditor.markdownToolbar.heading'), EasyMDE.toggleHeading2),
     '|',
-    createToolbarButton('quote', 'Quote', EasyMDE.toggleBlockquote),
-    createToolbarButton('unordered-list', 'Bullets', EasyMDE.toggleUnorderedList),
-    createToolbarButton('ordered-list', 'Numbers', EasyMDE.toggleOrderedList),
+    createToolbarButton('quote', t('cardEditor.markdownToolbar.quote'), EasyMDE.toggleBlockquote),
+    createToolbarButton('unordered-list', t('cardEditor.markdownToolbar.bullets'), EasyMDE.toggleUnorderedList),
+    createToolbarButton('ordered-list', t('cardEditor.markdownToolbar.numbers'), EasyMDE.toggleOrderedList),
     '|',
-    createToolbarButton('code', 'Code', EasyMDE.toggleCodeBlock),
-    createToolbarButton('link', 'Link', EasyMDE.drawLink),
+    createToolbarButton('code', t('cardEditor.markdownToolbar.code'), EasyMDE.toggleCodeBlock),
+    createToolbarButton('link', t('cardEditor.markdownToolbar.link'), EasyMDE.drawLink),
     '|',
-    createToolbarButton('preview', 'Preview', EasyMDE.togglePreview, { noDisable: true })
+    createToolbarButton('preview', t('cardEditor.markdownToolbar.preview'), EasyMDE.togglePreview, { noDisable: true })
   ];
 }
 

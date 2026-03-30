@@ -1,9 +1,11 @@
 import { Controller } from '/vendor/stimulus/stimulus.js';
+import { getBrowserTranslator } from '/js/i18n/browser.js';
 
 export default class extends Controller {
   static targets = ['dialog', 'summary', 'boardList', 'boardItemTemplate', 'deleteButton'];
 
   connect() {
+    this.t = getBrowserTranslator();
     this.workspace = null;
     this.restoreFocusElement = null;
   }
@@ -116,7 +118,7 @@ export default class extends Controller {
       return;
     }
 
-    this.summaryTarget.textContent = `Active board: ${this.activeBoard.title}`;
+    this.summaryTarget.textContent = this.t('boardOptionsDialog.summaryActive', { title: this.activeBoard.title });
     this.deleteButtonTarget.hidden = this.workspace.boardOrder.length === 1;
 
     const items = this.workspace.boardOrder.map((boardId) => this.createBoardListItem(boardId));
@@ -132,7 +134,9 @@ export default class extends Controller {
     const switchButton = item.querySelector('[data-board-options-field="switchButton"]');
 
     titleElement.textContent = board.title;
-    stateElement.textContent = isActive ? 'Active board' : 'Available';
+    stateElement.textContent = isActive
+      ? this.t('boardOptionsDialog.stateActive')
+      : this.t('boardOptionsDialog.stateAvailable');
     switchButton.dataset.boardId = boardId;
     switchButton.hidden = isActive;
 

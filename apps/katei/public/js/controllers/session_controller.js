@@ -1,4 +1,6 @@
 import { Controller } from '/vendor/stimulus/stimulus.js';
+import { getBrowserTranslator } from '/js/i18n/browser.js';
+import { localizeErrorMessage } from '/js/i18n/errors.js';
 import { markDisableAutoSelectPending } from '/js/utils/google_identity.js';
 
 export default class extends Controller {
@@ -10,6 +12,7 @@ export default class extends Controller {
   };
 
   connect() {
+    this.t = getBrowserTranslator();
     this.isSubmitting = false;
   }
 
@@ -21,7 +24,7 @@ export default class extends Controller {
     }
 
     this.isSubmitting = true;
-    this.statusTarget.textContent = 'Signing out…';
+    this.statusTarget.textContent = this.t('session.signingOut');
 
     try {
       const response = await fetch(this.authUrlValue, {
@@ -34,15 +37,16 @@ export default class extends Controller {
       const data = await parseJsonResponse(response);
 
       if (!response.ok) {
-        throw new Error(data?.error || 'Unable to sign out.');
+        throw new Error(data?.error || this.t('errors.signOutUnavailable'));
       }
 
       markDisableAutoSelectPending();
       window.location.assign(data?.redirectTo || this.redirectUrlValue);
     } catch (error) {
       console.error('Sign-out failed.', error);
-      this.statusTarget.textContent =
-        error instanceof Error ? error.message : 'Unable to sign out right now.';
+      this.statusTarget.textContent = localizeErrorMessage(error, this.t, {
+        fallbackKey: 'session.signOutUnavailable'
+      });
       this.isSubmitting = false;
     }
   }
