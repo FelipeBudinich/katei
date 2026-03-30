@@ -3,6 +3,8 @@ const DEFAULT_SESSION_TTL_SECONDS = 60 * 60 * 24 * 30;
 export function createRuntimeConfig(env = process.env) {
   const nodeEnv = normalizeOptionalString(env.NODE_ENV) || 'development';
   const appBaseUrl = normalizeOptionalString(env.APP_BASE_URL);
+  const mongoUri = normalizeOptionalString(env.MONGODB_URI);
+  const mongoDbName = normalizeOptionalString(env.MONGODB_DB_NAME);
 
   return {
     nodeEnv,
@@ -12,7 +14,9 @@ export function createRuntimeConfig(env = process.env) {
     googleAllowlistSubs: parseAllowlistSubs(env.GOOGLE_ALLOWLIST_SUBS),
     sessionTtlSeconds: parseSessionTtlSeconds(env.SESSION_TTL_SECONDS),
     appBaseUrl,
-    appOrigin: appBaseUrl ? new URL(appBaseUrl).origin : null
+    appOrigin: appBaseUrl ? new URL(appBaseUrl).origin : null,
+    mongoUri,
+    mongoDbName
   };
 }
 
