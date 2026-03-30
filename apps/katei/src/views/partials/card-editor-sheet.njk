@@ -9,9 +9,9 @@
 
     <div class="dialog-header-row mt-4">
       <div>
-        <h2 class="font-serif text-3xl text-strong" data-card-editor-target="heading">New card</h2>
+        <h2 class="font-serif text-3xl text-strong" data-card-editor-target="heading">{{ t('cardEditor.newHeading') }}</h2>
       </div>
-      <button type="button" class="touch-button-secondary" data-action="card-editor#close">Close</button>
+      <button type="button" class="touch-button-secondary" data-action="card-editor#close">{{ t('common.close') }}</button>
     </div>
 
     <form class="mt-6 space-y-4" data-card-editor-target="form" data-action="submit->card-editor#submit">
@@ -23,32 +23,32 @@
       <input type="hidden" name="priority" value="important" data-card-editor-target="priorityInput">
 
       <label class="block space-y-2">
-        <span class="field-label text-sm font-semibold">Title</span>
+        <span class="field-label text-sm font-semibold">{{ t('cardEditor.titleLabel') }}</span>
         <input
           type="text"
           name="title"
           class="field-control"
-          placeholder="What needs doing?"
+          placeholder="{{ t('cardEditor.titlePlaceholder') }}"
           required
           data-card-editor-target="titleInput"
         >
       </label>
 
       <label class="block space-y-2">
-        <span class="field-label text-sm font-semibold">Details</span>
+        <span class="field-label text-sm font-semibold">{{ t('cardEditor.detailsLabel') }}</span>
         <textarea
           name="detailsMarkdown"
           rows="8"
           class="field-control"
-          placeholder="Optional context, notes, or next steps."
+          placeholder="{{ t('cardEditor.detailsPlaceholder') }}"
           data-card-editor-target="markdownInput"
         ></textarea>
       </label>
 
       <section class="space-y-3 pt-2" data-card-editor-target="prioritySection">
-        <p class="field-label text-sm font-semibold">Priority</p>
+        <p class="field-label text-sm font-semibold">{{ t('cardEditor.priorityLabel') }}</p>
 
-        <div class="priority-dot-group" role="group" aria-label="Priority">
+        <div class="priority-dot-group" role="group" aria-label="{{ t('cardEditor.priorityGroupAriaLabel') }}">
           {% for priority in priorityDefinitions %}
             <button
               type="button"
@@ -69,7 +69,7 @@
 
       <section class="space-y-3 pt-2" hidden data-card-editor-target="editActions">
         <div class="space-y-2">
-          <p class="field-label text-sm font-semibold">Task Status</p>
+          <p class="field-label text-sm font-semibold">{{ t('cardEditor.statusLabel') }}</p>
           <div class="action-wrap-grid mt-3" data-card-move-options>
             {% for targetColumn in columnDefinitions %}
               <button
@@ -98,13 +98,13 @@
             class="touch-button-danger"
             data-action="card-editor#closeForAction workspace#deleteCard"
           >
-            Delete
+            {{ t('cardEditor.deleteButton') }}
           </button>
         </template>
       </section>
 
       <div class="dialog-actions pt-2">
-        <button type="submit" class="touch-button-primary">Save Card</button>
+        <button type="submit" class="touch-button-primary">{{ t('cardEditor.saveButton') }}</button>
       </div>
     </form>
   </div>

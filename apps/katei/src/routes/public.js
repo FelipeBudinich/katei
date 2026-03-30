@@ -18,8 +18,10 @@ export function createPublicRouter({ config }) {
       return;
     }
 
+    const { t } = response.locals;
+
     response.render('pages/landing', {
-      pageTitle: `${APP_TITLE} · Sign in`,
+      pageTitle: t('pageTitles.landing', { appTitle: APP_TITLE }),
       bodyClass: 'app-shell landing-shell',
       googleClientId: config.googleClientId,
       authUrl: '/auth/google',
@@ -56,4 +58,3 @@ function sendGeneratedDoc(response, next, filePath) {
     next(error);
   });
 }
-

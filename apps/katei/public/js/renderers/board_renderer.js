@@ -1,5 +1,7 @@
 import { markdownToPreviewText } from '../lib/markdown.js';
 import { sortCardIdsForColumn } from '../domain/workspace.js';
+import { createTranslator } from '../i18n/translate.js';
+import { formatCardCount, getColumnDisplayLabel } from '../i18n/workspace_labels.js';
 
 const timestampFormatter = new Intl.DateTimeFormat(undefined, {
   dateStyle: 'medium',
@@ -7,26 +9,29 @@ const timestampFormatter = new Intl.DateTimeFormat(undefined, {
 });
 
 export function renderBoardState({ board, collapsedColumns = {}, regions, templates }) {
+  const t = getUiTranslator();
+
   if (regions.boardTitle) {
     regions.boardTitle.textContent = board.title;
   }
 
   replaceRegionChildren(
     regions.desktopColumns,
-    board.columnOrder.map((columnId) => createColumnPanel({ board, columnId, collapsedColumns, templates }))
+    board.columnOrder.map((columnId) => createColumnPanel({ board, columnId, collapsedColumns, templates, t }))
   );
 }
 
-function createColumnPanel({ board, columnId, collapsedColumns, templates }) {
+function createColumnPanel({ board, columnId, collapsedColumns, templates, t }) {
   const column = board.columns[columnId];
   const columnNode = cloneTemplate(templates.columnTemplate);
   const isCollapsed = Boolean(collapsedColumns[columnId]);
+  const columnDisplayLabel = getColumnDisplayLabel(columnId, t);
   columnNode.dataset.columnId = column.id;
   columnNode.dataset.collapsed = String(isCollapsed);
 
   const titleElement = columnNode.querySelector('[data-column-field="title"]');
   if (titleElement) {
-    titleElement.textContent = column.title;
+    titleElement.textContent = columnDisplayLabel;
   }
 
   const countElement = columnNode.querySelector('[data-column-field="count"]');
@@ -36,7 +41,7 @@ function createColumnPanel({ board, columnId, collapsedColumns, templates }) {
 
   const countChipElement = columnNode.querySelector('.count-chip');
   if (countChipElement) {
-    countChipElement.setAttribute('aria-label', `${column.cardIds.length} cards`);
+    countChipElement.setAttribute('aria-label', formatCardCount(column.cardIds.length, t));
   }
 
   const toggleElement = columnNode.querySelector('[data-column-toggle]');
@@ -127,4 +132,9 @@ function replaceRegionChildren(region, nodes) {
 
 function cloneTemplate(template) {
   return template.content.firstElementChild.cloneNode(true);
+}
+
+function getUiTranslator() {
+  const uiLocale = globalThis.document?.documentElement?.dataset?.uiLocale;
+  return createTranslator(uiLocale);
 }

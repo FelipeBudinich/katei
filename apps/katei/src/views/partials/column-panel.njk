@@ -10,8 +10,10 @@
       aria-expanded="{{ 'false' if isCollapsed else 'true' }}"
       aria-controls="column-panel-body-{{ column.id }}"
     >
-      <span class="column-header-toggle-title font-serif text-2xl text-strong" data-column-field="title">{{ column.title }}</span>
-      <span class="count-chip px-3 py-1 text-sm font-medium" aria-label="{{ column.cardIds.length }} cards">
+      <span class="column-header-toggle-title font-serif text-2xl text-strong" data-column-field="title">
+        {{ columnDisplayTitles[column.id] or column.title }}
+      </span>
+      <span class="count-chip px-3 py-1 text-sm font-medium" aria-label="{{ t('workspace.cardCount', { count: column.cardIds.length }) }}">
         <span data-column-field="count">{{ column.cardIds.length }}</span>
         <span class="count-chip-icon" aria-hidden="true"></span>
       </span>

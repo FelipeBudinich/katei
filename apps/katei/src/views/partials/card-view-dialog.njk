@@ -11,7 +11,9 @@
         <div class="space-y-2" data-workspace-target="viewCardPrioritySection">
           <dd class="text-sm leading-6 text-strong" data-workspace-target="viewCardPriority"></dd>
         </div>
-        <h2 class="font-serif text-3xl text-strong" data-workspace-target="viewCardTitle">Card title</h2>
+        <h2 class="font-serif text-3xl text-strong" data-workspace-target="viewCardTitle">
+          {{ t('cardViewDialog.titlePlaceholder') }}
+        </h2>
       </div>
 
       <button
@@ -20,18 +22,18 @@
         data-view-dialog-initial-focus
         data-action="workspace#closeViewDialog"
       >
-        Close
+        {{ t('common.close') }}
       </button>
     </div>
 
     <dl class="mt-6 space-y-4">
       <div class="space-y-2">
-        <dt class="field-label text-sm font-semibold">Details</dt>
+        <dt class="field-label text-sm font-semibold">{{ t('cardViewDialog.detailsLabel') }}</dt>
         <dd class="markdown-rendered text-sm leading-6 text-muted" data-workspace-target="viewCardBody"></dd>
       </div>
 
       <div class="space-y-2">
-        <dt class="field-label text-sm font-semibold">Updated</dt>
+        <dt class="field-label text-sm font-semibold">{{ t('cardViewDialog.updatedLabel') }}</dt>
         <dd class="text-sm leading-6 text-muted" data-workspace-target="viewCardUpdated"></dd>
       </div>
     </dl>

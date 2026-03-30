@@ -11,6 +11,11 @@ import {
   KATEI_UI_LOCALE_COOKIE_NAME,
   resolveRequestUiLocale
 } from '../src/i18n/request_ui_locale.js';
+import {
+  formatCardCount,
+  getColumnDisplayLabel,
+  getPriorityDisplayLabel
+} from '../public/js/i18n/workspace_labels.js';
 
 test('DEFAULT_UI_LOCALE is English', () => {
   assert.equal(DEFAULT_UI_LOCALE, 'en');
@@ -41,9 +46,17 @@ test('createTranslator resolves dot-path keys, interpolates values, and falls ba
   const translate = createTranslator('ja-JP');
 
   assert.equal(translate.locale, 'ja');
-  assert.equal(translate('common.close'), 'Close');
-  assert.equal(translate('common.welcomeUser', { name: 'Mina' }), 'Welcome, Mina.');
+  assert.equal(translate('common.close'), '閉じる');
+  assert.equal(translate('common.welcomeUser', { name: 'Mina' }), 'Minaさん、ようこそ。');
   assert.equal(translate('common.missingKey'), 'common.missingKey');
+});
+
+test('workspace label helpers translate stable workspace ids and counts', () => {
+  const translate = createTranslator('es-CL');
+
+  assert.equal(getColumnDisplayLabel('backlog', translate), 'Pendientes');
+  assert.equal(getPriorityDisplayLabel('urgent', translate), 'Urgente');
+  assert.equal(formatCardCount(3, translate), '3 tarjetas');
 });
 
 test('resolveRequestUiLocale checks query, then cookie, then Accept-Language, then default English', () => {

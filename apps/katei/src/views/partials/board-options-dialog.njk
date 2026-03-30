@@ -14,8 +14,8 @@
 
     <div class="dialog-header-row mt-4">
       <div class="min-w-0 space-y-2">
-        <p class="field-label text-sm font-semibold">Boards</p>
-        <h2 class="font-serif text-3xl text-strong">Board options</h2>
+        <p class="field-label text-sm font-semibold">{{ t('boardOptionsDialog.sectionLabel') }}</p>
+        <h2 class="font-serif text-3xl text-strong">{{ t('boardOptionsDialog.heading') }}</h2>
         <p class="text-sm leading-6 text-muted" data-board-options-target="summary"></p>
       </div>
 
@@ -25,12 +25,12 @@
         data-board-options-initial-focus
         data-action="board-options#close"
       >
-        Close
+        {{ t('common.close') }}
       </button>
     </div>
 
     <section class="mt-6 space-y-3">
-      <p class="field-label text-sm font-semibold">Switch board</p>
+      <p class="field-label text-sm font-semibold">{{ t('boardOptionsDialog.switchBoardLabel') }}</p>
       <ul class="space-y-3" data-board-options-target="boardList"></ul>
     </section>
 
@@ -38,8 +38,10 @@
       <li class="paper-panel px-4 py-4">
         <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
           <div class="min-w-0 space-y-1">
-            <p class="text-base text-strong" data-board-options-field="title">Board title</p>
-            <p class="text-xs uppercase tracking-[0.24em] text-subtle" data-board-options-field="state">Active</p>
+            <p class="text-base text-strong" data-board-options-field="title">{{ t('boardOptionsDialog.boardTitlePlaceholder') }}</p>
+            <p class="text-xs uppercase tracking-[0.24em] text-subtle" data-board-options-field="state">
+              {{ t('boardOptionsDialog.activeStatePlaceholder') }}
+            </p>
           </div>
 
           <button
@@ -48,16 +50,22 @@
             data-board-options-field="switchButton"
             data-action="board-options#switchBoard"
           >
-            Switch
+            {{ t('boardOptionsDialog.switchButton') }}
           </button>
         </div>
       </li>
     </template>
 
     <div class="dialog-actions mt-6">
-      <button type="button" class="touch-button-primary" data-action="board-options#createBoard">New Board</button>
-      <button type="button" class="touch-button-secondary" data-action="board-options#renameBoard">Rename Board</button>
-      <button type="button" class="touch-button-secondary" data-action="board-options#resetBoard">Reset Board</button>
+      <button type="button" class="touch-button-primary" data-action="board-options#createBoard">
+        {{ t('boardOptionsDialog.newBoard') }}
+      </button>
+      <button type="button" class="touch-button-secondary" data-action="board-options#renameBoard">
+        {{ t('boardOptionsDialog.renameBoard') }}
+      </button>
+      <button type="button" class="touch-button-secondary" data-action="board-options#resetBoard">
+        {{ t('boardOptionsDialog.resetBoard') }}
+      </button>
       <button
         type="button"
         class="touch-button-danger"
@@ -65,7 +73,7 @@
         data-board-options-target="deleteButton"
         data-action="board-options#deleteBoard"
       >
-        Delete Board
+        {{ t('boardOptionsDialog.deleteBoard') }}
       </button>
     </div>
 
@@ -75,7 +83,7 @@
       data-session-auth-url-value="/auth/logout"
       data-session-redirect-url-value="/"
     >
-      <button type="button" class="touch-button-secondary" data-action="session#logout">Logout</button>
+      <button type="button" class="touch-button-secondary" data-action="session#logout">{{ t('common.logout') }}</button>
       <p class="sr-only" aria-live="polite" data-session-target="status"></p>
     </div>
   </div>

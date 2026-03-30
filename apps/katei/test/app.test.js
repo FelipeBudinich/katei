@@ -7,7 +7,10 @@ import {
   createSessionPayload,
   createSignedSessionCookieValue
 } from '../src/auth/session_cookie.js';
+import { createEmptyWorkspace } from '../public/js/domain/workspace.js';
 import { KATEI_UI_LOCALE_COOKIE_NAME } from '../src/i18n/request_ui_locale.js';
+import { createTranslator } from '../public/js/i18n/translate.js';
+import { buildWorkspacePageModel } from '../src/routes/boards.js';
 
 const WORKSPACE_VENDOR_ASSET_PATHS = [
   '/vendor/easymde/easymde.min.css',
@@ -49,6 +52,21 @@ test('GET / renders the landing page for anonymous users', async () => {
   for (const assetPath of WORKSPACE_VENDOR_ASSET_PATHS) {
     assert.doesNotMatch(response.text, new RegExp(escapeForRegex(assetPath)));
   }
+});
+
+test('GET / localizes landing page chrome for es-CL', async () => {
+  const app = createTestApp({
+    googleTokenVerifier: async () => ({ sub: 'sub_123' })
+  });
+
+  const response = await request(app).get('/?lang=es-CL');
+
+  assert.equal(response.status, 200);
+  assert.match(response.text, /<html lang="es-CL" data-ui-locale="es-CL">/);
+  assert.match(response.text, /Vista previa privada para testers/);
+  assert.match(response.text, /Entra a tus tableros/);
+  assert.match(response.text, /Inicia sesión con Google/);
+  assert.doesNotMatch(response.text, /Private tester preview/);
 });
 
 test('GET / uses Accept-Language when no query param or UI locale cookie is present', async () => {
@@ -151,6 +169,57 @@ test('GET /boards renders the workspace shell and viewer bootstrap for authentic
   assert.match(response.text, /<script defer src="\/vendor\/marked\/marked\.umd\.js"><\/script>/);
   assert.match(response.text, /<script defer src="\/vendor\/dompurify\/purify\.min\.js"><\/script>/);
   assert.match(response.text, /<script defer src="\/vendor\/easymde\/easymde\.min\.js"><\/script>/);
+});
+
+test('GET /boards localizes server-rendered chrome for ja without changing user-authored viewer content', async () => {
+  const app = createTestApp({
+    googleTokenVerifier: async () => ({ sub: 'sub_123' })
+  });
+
+  const response = await request(app)
+    .get('/boards?lang=ja')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_123', name: 'Tester' }));
+
+  assert.equal(response.status, 200);
+  assert.match(response.text, /<html lang="ja" data-ui-locale="ja">/);
+  assert.match(response.text, /サインイン済み/);
+  assert.match(response.text, />\s*オプション\s*</);
+  assert.match(response.text, />\s*カードを追加\s*</);
+  assert.match(response.text, /data-workspace-target="boardTitle">過程</);
+  assert.match(response.text, />Tester</);
+  assert.match(response.text, />\s*バックログ\s*</);
+  assert.match(response.text, /aria-label="0 件のカード"/);
+  assert.doesNotMatch(response.text, />Backlog</);
+});
+
+test('buildWorkspacePageModel localizes fixed labels without rewriting user-authored workspace content', () => {
+  const workspace = createEmptyWorkspace();
+  const board = workspace.boards[workspace.ui.activeBoardId];
+  const cardId = 'card_user_1';
+
+  board.title = 'Roadmap alpha';
+  board.cards[cardId] = {
+    id: cardId,
+    title: 'Ship launch checklist',
+    detailsMarkdown: 'Owner: Mina',
+    priority: 'urgent',
+    createdAt: '2026-03-30T10:00:00.000Z',
+    updatedAt: '2026-03-30T11:00:00.000Z'
+  };
+  board.columns.backlog.cardIds = [cardId];
+
+  const viewModel = buildWorkspacePageModel(
+    { sub: 'sub_123', name: 'Tester' },
+    createTranslator('ja'),
+    workspace
+  );
+
+  assert.equal(viewModel.board.title, 'Roadmap alpha');
+  assert.equal(viewModel.workspace.boards[board.id].columns.backlog.title, 'Backlog');
+  assert.equal(viewModel.workspace.boards[board.id].cards[cardId].title, 'Ship launch checklist');
+  assert.equal(viewModel.workspace.boards[board.id].cards[cardId].detailsMarkdown, 'Owner: Mina');
+  assert.equal(viewModel.columnDefinitions.find((column) => column.id === 'backlog')?.title, 'バックログ');
+  assert.equal(viewModel.priorityDefinitions.find((priority) => priority.id === 'urgent')?.label, '緊急');
 });
 
 test('POST /auth/google returns 400 when the request body is invalid', async () => {
