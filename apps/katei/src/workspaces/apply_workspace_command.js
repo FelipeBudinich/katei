@@ -13,6 +13,7 @@ import {
   normalizeBoardInvite,
   normalizeBoardMembership
 } from '../../public/js/domain/board_collaboration.js';
+import { canonicalizeContentLocale } from '../../public/js/domain/board_language_policy.js';
 import {
   canActorAdminBoard,
   canActorEditBoard,
@@ -26,6 +27,11 @@ import {
   projectWorkspaceWithLegacyCardContent,
   upsertCardContentVariant
 } from '../../public/js/domain/card_localization.js';
+import {
+  clearCardLocaleRequest,
+  getOpenLocalizationRequest,
+  requestCardLocale
+} from '../../public/js/domain/card_localization_requests.js';
 import {
   cloneWorkspace,
   createCollapsedColumns,
@@ -139,6 +145,12 @@ function applyCommandToWorkspace({ workspace, command, context }) {
       return applyCardCreate(workspace, command, context);
     case 'card.update':
       return applyCardUpdate(workspace, command, context);
+    case 'card.locale.upsert':
+      return applyCardLocaleUpsert(workspace, command, context);
+    case 'card.locale.request':
+      return applyCardLocaleRequest(workspace, command, context);
+    case 'card.locale.request.clear':
+      return applyCardLocaleRequestClear(workspace, command, context);
     case 'card.delete':
       return applyCardDelete(workspace, command, context);
     case 'card.move':
@@ -666,6 +678,155 @@ function applyCardUpdate(workspace, command, context) {
   };
 }
 
+function applyCardLocaleUpsert(workspace, command, context) {
+  const currentBoard = getBoard(workspace, command.payload.boardId);
+  const actor = assertAuthenticatedHumanActor(
+    context.actor,
+    'You must be signed in to modify localized card content.'
+  );
+  assertActorCanEditBoard(currentBoard, actor);
+  const currentCard = getCard(currentBoard, command.payload.cardId);
+  const locale = normalizeCommandLocale(command.payload.locale);
+  assertBoardSupportsLocale(currentBoard, locale);
+  const currentStoredVariant = getStoredCardLocaleVariant(currentCard, locale);
+  const openRequest = getOpenLocalizationRequest(currentCard, locale);
+  const nextTitle = normalizeCardTitle(command.payload.title);
+  const nextDetailsMarkdown = normalizeDetailsMarkdown(command.payload.detailsMarkdown);
+
+  if (
+    currentStoredVariant &&
+    currentStoredVariant.title === nextTitle &&
+    currentStoredVariant.detailsMarkdown === nextDetailsMarkdown &&
+    !openRequest
+  ) {
+    return {
+      workspace,
+      result: createCommandResult(command, {
+        noOp: true,
+        boardId: currentBoard.id,
+        cardId: currentCard.id,
+        locale
+      })
+    };
+  }
+
+  const nextWorkspace = cloneWorkspace(workspace);
+  const board = getBoard(nextWorkspace, command.payload.boardId);
+  const card = getCard(board, command.payload.cardId);
+  const provenance = createCardContentProvenance({
+    actor,
+    timestamp: context.now,
+    includesHumanInput: true
+  });
+  let nextCard = upsertCardContentVariant(
+    {
+      ...stripLegacyCardAliases(card),
+      updatedAt: context.now
+    },
+    locale,
+    {
+      title: nextTitle,
+      detailsMarkdown: nextDetailsMarkdown
+    },
+    provenance
+  );
+
+  nextCard = clearCardLocaleRequest(nextCard, locale);
+  board.cards[nextCard.id] = nextCard;
+  board.updatedAt = context.now;
+
+  return {
+    workspace: nextWorkspace,
+    result: createCommandResult(command, {
+      boardId: board.id,
+      cardId: nextCard.id,
+      locale
+    })
+  };
+}
+
+function applyCardLocaleRequest(workspace, command, context) {
+  const currentBoard = getBoard(workspace, command.payload.boardId);
+  const actor = assertAuthenticatedHumanActor(
+    context.actor,
+    'You must be signed in to request localized card content.'
+  );
+  assertActorCanEditBoard(currentBoard, actor);
+  const currentCard = getCard(currentBoard, command.payload.cardId);
+  const locale = normalizeCommandLocale(command.payload.locale);
+  assertBoardSupportsLocale(currentBoard, locale);
+  const selectedVariant = getStoredCardLocaleVariant(currentCard, locale);
+  const openRequest = getOpenLocalizationRequest(currentCard, locale);
+
+  if (selectedVariant || openRequest) {
+    return {
+      workspace,
+      result: createCommandResult(command, {
+        noOp: true,
+        boardId: currentBoard.id,
+        cardId: currentCard.id,
+        locale
+      })
+    };
+  }
+
+  const nextWorkspace = cloneWorkspace(workspace);
+  const board = getBoard(nextWorkspace, command.payload.boardId);
+  const card = getCard(board, command.payload.cardId);
+  board.cards[card.id] = requestCardLocale(card, locale, actor, context.now);
+  board.cards[card.id].updatedAt = context.now;
+  board.updatedAt = context.now;
+
+  return {
+    workspace: nextWorkspace,
+    result: createCommandResult(command, {
+      boardId: board.id,
+      cardId: card.id,
+      locale
+    })
+  };
+}
+
+function applyCardLocaleRequestClear(workspace, command, context) {
+  const currentBoard = getBoard(workspace, command.payload.boardId);
+  const actor = assertAuthenticatedHumanActor(
+    context.actor,
+    'You must be signed in to clear localized card requests.'
+  );
+  assertActorCanEditBoard(currentBoard, actor);
+  const currentCard = getCard(currentBoard, command.payload.cardId);
+  const locale = normalizeCommandLocale(command.payload.locale);
+  const openRequest = getOpenLocalizationRequest(currentCard, locale);
+
+  if (!openRequest) {
+    return {
+      workspace,
+      result: createCommandResult(command, {
+        noOp: true,
+        boardId: currentBoard.id,
+        cardId: currentCard.id,
+        locale
+      })
+    };
+  }
+
+  const nextWorkspace = cloneWorkspace(workspace);
+  const board = getBoard(nextWorkspace, command.payload.boardId);
+  const card = getCard(board, command.payload.cardId);
+  board.cards[card.id] = clearCardLocaleRequest(card, locale);
+  board.cards[card.id].updatedAt = context.now;
+  board.updatedAt = context.now;
+
+  return {
+    workspace: nextWorkspace,
+    result: createCommandResult(command, {
+      boardId: board.id,
+      cardId: card.id,
+      locale
+    })
+  };
+}
+
 function applyCardDelete(workspace, command, context) {
   const currentBoard = getBoard(workspace, command.payload.boardId);
   assertActorCanEditBoard(currentBoard, context.actor);
@@ -1062,6 +1223,38 @@ function stripLegacyCardAliases(card) {
   delete canonicalCard.detailsMarkdown;
 
   return canonicalCard;
+}
+
+function normalizeCommandLocale(locale) {
+  const normalizedLocale = canonicalizeContentLocale(locale);
+
+  if (!normalizedLocale) {
+    throw new Error('Card locale is invalid.');
+  }
+
+  return normalizedLocale;
+}
+
+function assertBoardSupportsLocale(board, locale) {
+  if (!board?.languagePolicy?.supportedLocales?.includes(locale)) {
+    throw new Error('Card locale is not supported by this board.');
+  }
+}
+
+function getStoredCardLocaleVariant(card, locale) {
+  const storedVariant = locale ? card?.contentByLocale?.[locale] : null;
+
+  if (!storedVariant || typeof storedVariant !== 'object') {
+    return null;
+  }
+
+  return {
+    title: typeof storedVariant.title === 'string' ? storedVariant.title : '',
+    detailsMarkdown:
+      typeof storedVariant.detailsMarkdown === 'string'
+        ? storedVariant.detailsMarkdown
+        : ''
+  };
 }
 
 function stripActorKey(membership) {

@@ -366,6 +366,255 @@ test('card.update changes updatedAt only and preserves createdAt', () => {
   });
 });
 
+test('admin and editor can upsert a selected locale without changing other locale variants', () => {
+  for (const role of ['admin', 'editor']) {
+    const workspace = createWorkspaceWithCard({
+      memberships: [createMembership({ id: 'viewer_123', role })]
+    });
+    workspace.boards.main.languagePolicy = {
+      sourceLocale: 'en',
+      defaultLocale: 'en',
+      supportedLocales: ['en', 'ja'],
+      requiredLocales: ['en']
+    };
+    workspace.boards.main.cards.card_1.localeRequests = {
+      ja: {
+        locale: 'ja',
+        status: 'open',
+        requestedBy: { type: 'human', id: 'viewer_admin' },
+        requestedAt: '2026-03-31T09:45:00.000Z'
+      }
+    };
+
+    const { workspace: nextWorkspace, result } = applyWorkspaceCommand({
+      record: createRecord(workspace, 0),
+      command: {
+        clientMutationId: `locale_upsert_${role}`,
+        type: 'card.locale.upsert',
+        payload: {
+          boardId: 'main',
+          cardId: 'card_1',
+          locale: 'ja',
+          title: '日本語タイトル',
+          detailsMarkdown: '日本語本文'
+        }
+      },
+      expectedRevision: 0,
+      context: createContext({
+        now: '2026-03-31T11:00:00.000Z'
+      })
+    });
+
+    assert.equal(result.locale, 'ja');
+    assert.equal(nextWorkspace.boards.main.updatedAt, '2026-03-31T11:00:00.000Z');
+    assert.equal(nextWorkspace.boards.main.cards.card_1.updatedAt, '2026-03-31T11:00:00.000Z');
+    assert.deepEqual(nextWorkspace.boards.main.cards.card_1.contentByLocale.en, {
+      title: 'Existing card',
+      detailsMarkdown: 'Existing details',
+      provenance: {
+        actor: {
+          type: 'human',
+          id: 'viewer_admin'
+        },
+        timestamp: '2026-03-31T09:30:00.000Z',
+        includesHumanInput: true
+      }
+    });
+    assert.deepEqual(nextWorkspace.boards.main.cards.card_1.contentByLocale.ja, {
+      title: '日本語タイトル',
+      detailsMarkdown: '日本語本文',
+      provenance: {
+        actor: {
+          type: 'human',
+          id: 'viewer_123'
+        },
+        timestamp: '2026-03-31T11:00:00.000Z',
+        includesHumanInput: true
+      }
+    });
+    assert.deepEqual(nextWorkspace.boards.main.cards.card_1.localeRequests, {});
+  }
+});
+
+test('viewer cannot upsert, request, or clear localized card content', () => {
+  const workspace = createWorkspaceWithCard({
+    memberships: [createMembership({ id: 'viewer_123', role: 'viewer' })]
+  });
+  workspace.boards.main.languagePolicy = {
+    sourceLocale: 'en',
+    defaultLocale: 'en',
+    supportedLocales: ['en', 'ja'],
+    requiredLocales: ['en']
+  };
+  workspace.boards.main.cards.card_1.localeRequests = {
+    ja: {
+      locale: 'ja',
+      status: 'open',
+      requestedBy: { type: 'human', id: 'viewer_admin' },
+      requestedAt: '2026-03-31T09:45:00.000Z'
+    }
+  };
+
+  for (const command of [
+    {
+      clientMutationId: 'locale_upsert_viewer',
+      type: 'card.locale.upsert',
+      payload: {
+        boardId: 'main',
+        cardId: 'card_1',
+        locale: 'ja',
+        title: '日本語タイトル',
+        detailsMarkdown: '日本語本文'
+      }
+    },
+    {
+      clientMutationId: 'locale_request_viewer',
+      type: 'card.locale.request',
+      payload: {
+        boardId: 'main',
+        cardId: 'card_1',
+        locale: 'ja'
+      }
+    },
+    {
+      clientMutationId: 'locale_clear_viewer',
+      type: 'card.locale.request.clear',
+      payload: {
+        boardId: 'main',
+        cardId: 'card_1',
+        locale: 'ja'
+      }
+    }
+  ]) {
+    assertPermissionError(
+      () =>
+        applyWorkspaceCommand({
+          record: createRecord(workspace, 0),
+          command,
+          expectedRevision: 0,
+          context: createContext()
+        }),
+      /modify this board/i
+    );
+  }
+});
+
+test('card.locale.request creates an open request and duplicate requests become no-ops', () => {
+  const workspace = createWorkspaceWithCard({
+    memberships: [createMembership({ id: 'viewer_123', role: 'editor' })]
+  });
+  workspace.boards.main.languagePolicy = {
+    sourceLocale: 'en',
+    defaultLocale: 'en',
+    supportedLocales: ['en', 'ja'],
+    requiredLocales: ['en']
+  };
+
+  const initialResult = applyWorkspaceCommand({
+    record: createRecord(workspace, 0),
+    command: {
+      clientMutationId: 'locale_request_1',
+      type: 'card.locale.request',
+      payload: {
+        boardId: 'main',
+        cardId: 'card_1',
+        locale: 'ja'
+      }
+    },
+    expectedRevision: 0,
+    context: createContext({
+      now: '2026-03-31T11:00:00.000Z'
+    })
+  });
+
+  assert.equal(initialResult.workspace.boards.main.updatedAt, '2026-03-31T11:00:00.000Z');
+  assert.equal(initialResult.workspace.boards.main.cards.card_1.updatedAt, '2026-03-31T11:00:00.000Z');
+  assert.deepEqual(initialResult.workspace.boards.main.cards.card_1.localeRequests, {
+    ja: {
+      locale: 'ja',
+      status: 'open',
+      requestedBy: {
+        type: 'human',
+        id: 'viewer_123'
+      },
+      requestedAt: '2026-03-31T11:00:00.000Z'
+    }
+  });
+
+  const duplicateResult = applyWorkspaceCommand({
+    record: createRecord(initialResult.workspace, 1),
+    command: {
+      clientMutationId: 'locale_request_2',
+      type: 'card.locale.request',
+      payload: {
+        boardId: 'main',
+        cardId: 'card_1',
+        locale: 'ja'
+      }
+    },
+    expectedRevision: 1,
+    context: createContext({
+      now: '2026-03-31T12:00:00.000Z'
+    })
+  });
+
+  assert.equal(duplicateResult.result.noOp, true);
+  assert.equal(duplicateResult.activityEvent, null);
+  assert.deepEqual(duplicateResult.workspace.boards.main.cards.card_1.localeRequests, {
+    ja: {
+      locale: 'ja',
+      status: 'open',
+      requestedBy: {
+        type: 'human',
+        id: 'viewer_123'
+      },
+      requestedAt: '2026-03-31T11:00:00.000Z'
+    }
+  });
+});
+
+test('card.locale.request.clear removes the open request and updates timestamps', () => {
+  const workspace = createWorkspaceWithCard({
+    memberships: [createMembership({ id: 'viewer_123', role: 'editor' })]
+  });
+  workspace.boards.main.languagePolicy = {
+    sourceLocale: 'en',
+    defaultLocale: 'en',
+    supportedLocales: ['en', 'ja'],
+    requiredLocales: ['en']
+  };
+  workspace.boards.main.cards.card_1.localeRequests = {
+    ja: {
+      locale: 'ja',
+      status: 'open',
+      requestedBy: { type: 'human', id: 'viewer_admin' },
+      requestedAt: '2026-03-31T09:45:00.000Z'
+    }
+  };
+
+  const { workspace: nextWorkspace, result } = applyWorkspaceCommand({
+    record: createRecord(workspace, 0),
+    command: {
+      clientMutationId: 'locale_clear_1',
+      type: 'card.locale.request.clear',
+      payload: {
+        boardId: 'main',
+        cardId: 'card_1',
+        locale: 'ja'
+      }
+    },
+    expectedRevision: 0,
+    context: createContext({
+      now: '2026-03-31T11:00:00.000Z'
+    })
+  });
+
+  assert.equal(result.locale, 'ja');
+  assert.equal(nextWorkspace.boards.main.updatedAt, '2026-03-31T11:00:00.000Z');
+  assert.equal(nextWorkspace.boards.main.cards.card_1.updatedAt, '2026-03-31T11:00:00.000Z');
+  assert.deepEqual(nextWorkspace.boards.main.cards.card_1.localeRequests, {});
+});
+
 test('card.move changes the correct source and target columns', () => {
   const createdWorkspace = applyWorkspaceCommand({
     record: createRecord(),

@@ -8,6 +8,8 @@
   data-workspace-viewer-email-value="{{ viewer.email or '' }}"
   data-action="
     card-editor:save->workspace#handleCardEditorSave
+    card-editor:request-locale->workspace#handleCardLocaleRequest
+    card-editor:clear-locale-request->workspace#handleCardLocaleRequestClear
     board-editor:save->workspace#handleBoardEditorSave
     board-options:switch-board->workspace#handleBoardSwitch
     board-options:create-board->workspace#openCreateBoard

@@ -212,3 +212,61 @@ test('listCardLocaleStatuses keeps requested visibility for present locales and 
     }
   ]);
 });
+
+test('listCardLocaleStatuses turns a requested locale into present once content exists for it', () => {
+  const board = {
+    languagePolicy: {
+      sourceLocale: 'en',
+      defaultLocale: 'en',
+      supportedLocales: ['en', 'ja'],
+      requiredLocales: ['en']
+    }
+  };
+  const card = {
+    id: 'card_5',
+    title: 'Legacy English title',
+    detailsMarkdown: 'Legacy English details',
+    contentByLocale: {
+      ja: {
+        title: '日本語タイトル',
+        detailsMarkdown: '日本語本文',
+        provenance: null
+      }
+    },
+    localeRequests: {
+      ja: {
+        locale: 'ja',
+        requestedBy: { type: 'human', id: 'viewer_123' },
+        requestedAt: '2026-03-31T15:00:00.000Z'
+      }
+    }
+  };
+
+  assert.deepEqual(listCardLocaleStatuses(board, card), [
+    {
+      locale: 'en',
+      status: 'present',
+      hasContent: true,
+      isRequested: false,
+      isSourceLocale: true,
+      isDefaultLocale: true,
+      isRequired: true,
+      request: null
+    },
+    {
+      locale: 'ja',
+      status: 'present',
+      hasContent: true,
+      isRequested: true,
+      isSourceLocale: false,
+      isDefaultLocale: false,
+      isRequired: false,
+      request: {
+        locale: 'ja',
+        status: 'open',
+        requestedBy: { type: 'human', id: 'viewer_123' },
+        requestedAt: '2026-03-31T15:00:00.000Z'
+      }
+    }
+  ]);
+});

@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createCardContentProvenance } from '../public/js/domain/card_localization.js';
-import { createLocalizedCardViewState } from '../public/js/controllers/card_editor_locale_view.js';
+import {
+  createLocalizedCardEditorUiState,
+  createLocalizedCardViewState
+} from '../public/js/controllers/card_editor_locale_view.js';
 
 test('locale dropdown state uses the board supported locales and defaults to the board default locale', () => {
   const board = createBoard();
@@ -86,6 +89,92 @@ test('locale status state keeps present, requested, and missing locales visible 
   ]);
 });
 
+test('request button appears when the selected locale is missing and the actor can edit', () => {
+  const uiState = createLocalizedCardEditorUiState({
+    board: createBoardWithFrench(),
+    card: createCard(),
+    selectedLocale: 'fr',
+    mode: 'edit',
+    canEditLocalizedContent: true,
+    currentActorRole: 'editor'
+  });
+
+  assert.equal(uiState.showRequestLocaleButton, true);
+  assert.equal(uiState.showClearLocaleRequestButton, false);
+  assert.deepEqual(uiState.localeEditSummaryState, {
+    key: 'cardEditor.missingLocaleValue',
+    locale: 'fr'
+  });
+});
+
+test('clear-request button appears when the selected locale is already requested and editable', () => {
+  const uiState = createLocalizedCardEditorUiState({
+    board: createBoard(),
+    card: createCard(),
+    selectedLocale: 'ja',
+    mode: 'edit',
+    canEditLocalizedContent: true,
+    currentActorRole: 'admin'
+  });
+
+  assert.equal(uiState.showRequestLocaleButton, false);
+  assert.equal(uiState.showClearLocaleRequestButton, true);
+  assert.deepEqual(uiState.localeEditSummaryState, {
+    key: 'cardEditor.requestedLocaleValue',
+    locale: 'ja'
+  });
+});
+
+test('viewers stay read-only in the localized card dialog state', () => {
+  const uiState = createLocalizedCardEditorUiState({
+    board: createBoard(),
+    card: createCard(),
+    selectedLocale: 'en',
+    mode: 'view',
+    canEditLocalizedContent: false,
+    currentActorRole: 'viewer'
+  });
+
+  assert.equal(uiState.isReadOnly, true);
+  assert.equal(uiState.showSaveControls, false);
+  assert.equal(uiState.showRequestLocaleButton, false);
+  assert.equal(uiState.showClearLocaleRequestButton, false);
+  assert.equal(uiState.showReadOnlyNotice, true);
+  assert.deepEqual(uiState.localeEditSummaryState, {
+    key: 'cardEditor.viewingLocaleValue',
+    locale: 'en'
+  });
+});
+
+test('switching locale updates request and save control state together', () => {
+  const editableRequestedState = createLocalizedCardEditorUiState({
+    board: createBoard(),
+    card: createCard(),
+    selectedLocale: 'ja',
+    mode: 'edit',
+    canEditLocalizedContent: true,
+    currentActorRole: 'editor'
+  });
+  const editablePresentState = createLocalizedCardEditorUiState({
+    board: createBoard(),
+    card: createCard(),
+    selectedLocale: 'es-CL',
+    mode: 'edit',
+    canEditLocalizedContent: true,
+    currentActorRole: 'editor'
+  });
+
+  assert.equal(editableRequestedState.showSaveControls, true);
+  assert.equal(editableRequestedState.showClearLocaleRequestButton, true);
+  assert.equal(editablePresentState.showSaveControls, true);
+  assert.equal(editablePresentState.showRequestLocaleButton, false);
+  assert.equal(editablePresentState.showClearLocaleRequestButton, false);
+  assert.deepEqual(editablePresentState.localeEditSummaryState, {
+    key: 'cardEditor.editingLocaleValue',
+    locale: 'es-CL'
+  });
+});
+
 function createBoard() {
   return {
     id: 'board_localized',
@@ -94,6 +183,16 @@ function createBoard() {
       defaultLocale: 'es-CL',
       supportedLocales: ['en', 'es-CL', 'ja'],
       requiredLocales: ['en', 'ja']
+    }
+  };
+}
+
+function createBoardWithFrench() {
+  return {
+    ...createBoard(),
+    languagePolicy: {
+      ...createBoard().languagePolicy,
+      supportedLocales: ['en', 'es-CL', 'ja', 'fr']
     }
   };
 }

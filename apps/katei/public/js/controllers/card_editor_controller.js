@@ -7,7 +7,10 @@ import {
   shouldShowDeleteForStage,
   shouldShowPriorityForStage
 } from './stage_ui.js';
-import { createLocalizedCardViewState, resolveCardLocaleSelection } from './card_editor_locale_view.js';
+import {
+  createLocalizedCardEditorUiState,
+  resolveCardLocaleSelection
+} from './card_editor_locale_view.js';
 import { canonicalizeContentLocale } from '../domain/board_language_policy.js';
 
 export default class extends Controller {
@@ -29,6 +32,10 @@ export default class extends Controller {
     'localeSelect',
     'localeSummary',
     'localeFallbackNotice',
+    'localeEditSummary',
+    'localeReadOnlyNotice',
+    'requestLocaleButton',
+    'clearLocaleRequestButton',
     'localeStatusRegion',
     'localeStatusTemplate',
     'editActions',
@@ -48,6 +55,9 @@ export default class extends Controller {
     this.mode = 'create';
     this.selectedLocale = null;
     this.isReadOnlyLocaleView = false;
+    this.currentActorRole = null;
+    this.canEditLocalizedContent = false;
+    this.localizedEditorUiState = null;
     this.triggerElement = null;
   }
 
@@ -83,7 +93,19 @@ export default class extends Controller {
   }
 
   openFromEvent(event) {
-    const { mode, boardId, board, card, stageId, columnId, requestedLocale, locale, triggerElement } = event.detail;
+    const {
+      mode,
+      boardId,
+      board,
+      card,
+      stageId,
+      columnId,
+      requestedLocale,
+      locale,
+      triggerElement,
+      currentActorRole,
+      canEditLocalizedContent
+    } = event.detail;
     const nextMode = resolveCardDialogMode(mode);
     const isEditMode = nextMode === 'edit';
     const nextStageId =
@@ -97,12 +119,14 @@ export default class extends Controller {
     this.board = board ?? null;
     this.card = card ?? null;
     this.mode = nextMode;
-    this.isReadOnlyLocaleView = nextMode === 'view';
+    this.currentActorRole = currentActorRole ?? null;
+    this.canEditLocalizedContent = Boolean(canEditLocalizedContent);
+    this.isReadOnlyLocaleView = nextMode === 'view' || !this.canEditLocalizedContent;
     this.selectedLocale = resolveCardLocaleSelection({
       board,
       preferredLocale: requestedLocale ?? locale
     });
-    this.triggerElement = triggerElement ?? null;
+    this.triggerElement = triggerElement ?? this.triggerElement ?? null;
     this.modeInputTarget.value = nextMode;
     this.boardIdInputTarget.value = boardId ?? '';
     this.cardIdInputTarget.value = nextCardId;
@@ -177,6 +201,11 @@ export default class extends Controller {
 
   selectColumn(event) {
     event.preventDefault();
+
+    if (this.isReadOnlyLocaleView) {
+      return;
+    }
+
     this.targetColumnIdInputTarget.value =
       event.currentTarget.dataset.targetStageId ??
       event.currentTarget.dataset.targetColumnId ??
@@ -203,6 +232,7 @@ export default class extends Controller {
         mode: formData.get('mode'),
         boardId: formData.get('boardId'),
         cardId: formData.get('cardId'),
+        locale: this.selectedLocale,
         sourceStageId: formData.get('sourceColumnId'),
         targetStageId: formData.get('targetColumnId'),
         sourceColumnId: formData.get('sourceColumnId'),
@@ -218,6 +248,40 @@ export default class extends Controller {
     this.closeDialog();
   }
 
+  requestSelectedLocale(event) {
+    event.preventDefault();
+
+    if (this.isReadOnlyLocaleView || !this.card || !this.selectedLocale) {
+      return;
+    }
+
+    this.dispatch('request-locale', {
+      detail: {
+        mode: this.mode,
+        boardId: this.boardIdInputTarget.value,
+        cardId: this.cardIdInputTarget.value,
+        locale: this.selectedLocale
+      }
+    });
+  }
+
+  clearSelectedLocaleRequest(event) {
+    event.preventDefault();
+
+    if (this.isReadOnlyLocaleView || !this.card || !this.selectedLocale) {
+      return;
+    }
+
+    this.dispatch('clear-locale-request', {
+      detail: {
+        mode: this.mode,
+        boardId: this.boardIdInputTarget.value,
+        cardId: this.cardIdInputTarget.value,
+        locale: this.selectedLocale
+      }
+    });
+  }
+
   closeDialog() {
     if (this.dialogTarget.open) {
       this.dialogTarget.close();
@@ -231,13 +295,17 @@ export default class extends Controller {
   }
 
   syncLocalizedCardView() {
-    const localizedView = createLocalizedCardViewState({
+    const localizedView = createLocalizedCardEditorUiState({
       board: this.board,
       card: this.card,
-      selectedLocale: this.selectedLocale
+      selectedLocale: this.selectedLocale,
+      mode: this.mode,
+      currentActorRole: this.currentActorRole,
+      canEditLocalizedContent: this.canEditLocalizedContent
     });
     const variant = localizedView.variant;
 
+    this.localizedEditorUiState = localizedView;
     this.selectedLocale = localizedView.selectedLocale;
     this.titleInputTarget.value = variant?.title ?? '';
     this.ensureEditor().value(variant?.detailsMarkdown ?? '');
@@ -283,10 +351,11 @@ export default class extends Controller {
 
   syncEditActions({ isEditMode, cardId, sourceStageId, targetStageId }) {
     const shouldShowPrioritySection = shouldShowPriorityForStage(targetStageId);
-    const shouldShowDeleteAction = isEditMode && shouldShowDeleteForStage(this.board, sourceStageId);
+    const canMutateCard = isEditMode && !this.isReadOnlyLocaleView;
+    const shouldShowDeleteAction = canMutateCard && shouldShowDeleteForStage(this.board, sourceStageId);
 
     this.prioritySectionTarget.hidden = !shouldShowPrioritySection;
-    this.editActionsTarget.hidden = !isEditMode;
+    this.editActionsTarget.hidden = !canMutateCard;
     this.deleteActionsTarget.hidden = !shouldShowDeleteAction;
     this.deleteActionRegionTarget.replaceChildren();
 
@@ -326,6 +395,7 @@ export default class extends Controller {
     this.renderLocaleSelector(localizedView);
     this.renderLocaleSummary(localizedView);
     this.renderFallbackNotice(localizedView.variant, localizedView);
+    this.renderLocaleEditingState(localizedView);
     this.renderLocaleStatuses(localizedView);
   }
 
@@ -389,6 +459,28 @@ export default class extends Controller {
     );
   }
 
+  renderLocaleEditingState(localizedView) {
+    const localeEditSummaryState = localizedView.localeEditSummaryState;
+
+    this.localeEditSummaryTarget.textContent = localeEditSummaryState
+      ? this.t(localeEditSummaryState.key, { locale: localeEditSummaryState.locale })
+      : '';
+    this.localeReadOnlyNoticeTarget.hidden = !localizedView.showReadOnlyNotice;
+
+    if (!this.localeReadOnlyNoticeTarget.hidden) {
+      this.localeReadOnlyNoticeTarget.textContent = this.t(
+        this.canEditLocalizedContent
+          ? 'cardEditor.localeReadOnlyNotice'
+          : 'cardEditor.viewerReadOnlyNotice'
+      );
+    } else {
+      this.localeReadOnlyNoticeTarget.textContent = '';
+    }
+
+    this.requestLocaleButtonTarget.hidden = !localizedView.showRequestLocaleButton;
+    this.clearLocaleRequestButtonTarget.hidden = !localizedView.showClearLocaleRequestButton;
+  }
+
   renderLocaleStatuses(localizedView) {
     const statusItems = localizedView.localeStatuses.map((entry) => {
       const node = this.localeStatusTemplateTarget.content.firstElementChild.cloneNode(true);
@@ -440,6 +532,9 @@ export default class extends Controller {
     this.mode = 'create';
     this.selectedLocale = null;
     this.isReadOnlyLocaleView = false;
+    this.currentActorRole = null;
+    this.canEditLocalizedContent = false;
+    this.localizedEditorUiState = null;
     this.triggerElement = null;
   }
 }

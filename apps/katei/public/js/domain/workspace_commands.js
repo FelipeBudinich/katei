@@ -1,5 +1,6 @@
 import { normalizeBoardSchemaInput } from './board_schema.js';
 import { canonicalizeBoardRole, normalizeBoardActor } from './board_collaboration.js';
+import { canonicalizeContentLocale } from './board_language_policy.js';
 import { PRIORITY_ORDER } from './workspace_read_model.js';
 import { validateWorkspaceShape } from './workspace_validation.js';
 
@@ -17,6 +18,9 @@ export const WORKSPACE_COMMAND_TYPES = Object.freeze([
   'board.member.remove',
   'card.create',
   'card.update',
+  'card.locale.upsert',
+  'card.locale.request',
+  'card.locale.request.clear',
   'card.delete',
   'card.move',
   'ui.activeBoard.set',
@@ -109,6 +113,11 @@ function validatePayload(type, payload) {
       return validateCardCreatePayload(payload);
     case 'card.update':
       return validateCardUpdatePayload(payload);
+    case 'card.locale.upsert':
+      return validateCardLocaleUpsertPayload(payload);
+    case 'card.locale.request':
+    case 'card.locale.request.clear':
+      return validateCardLocaleRequestPayload(type, payload);
     case 'card.delete':
       return validateCardIdentityPayload(type, payload);
     case 'card.move':
@@ -307,6 +316,42 @@ function validateCardIdentityPayload(type, payload) {
   return requireNonEmptyString(payload.cardId, `${type} payload.cardId is required.`);
 }
 
+function validateCardLocaleUpsertPayload(payload) {
+  const identityValidation = validateCardIdentityPayload('card.locale.upsert', payload);
+
+  if (!identityValidation.isValid) {
+    return identityValidation;
+  }
+
+  const localeValidation = requireContentLocale(payload.locale, 'card.locale.upsert payload.locale must be a valid locale.');
+
+  if (!localeValidation.isValid) {
+    return localeValidation;
+  }
+
+  const titleValidation = requireNonEmptyString(payload.title, 'card.locale.upsert payload.title is required.');
+
+  if (!titleValidation.isValid) {
+    return titleValidation;
+  }
+
+  if (typeof payload.detailsMarkdown !== 'string') {
+    return invalid('card.locale.upsert payload.detailsMarkdown must be a string.');
+  }
+
+  return valid();
+}
+
+function validateCardLocaleRequestPayload(type, payload) {
+  const identityValidation = validateCardIdentityPayload(type, payload);
+
+  if (!identityValidation.isValid) {
+    return identityValidation;
+  }
+
+  return requireContentLocale(payload.locale, `${type} payload.locale must be a valid locale.`);
+}
+
 function validateCardMovePayload(payload) {
   const identityValidation = validateCardIdentityPayload('card.move', payload);
 
@@ -422,6 +467,14 @@ function requireTargetActor(value, errorMessage) {
 
 function requireInviteEmail(value, errorMessage) {
   if (!isValidEmailLike(value)) {
+    return invalid(errorMessage);
+  }
+
+  return valid();
+}
+
+function requireContentLocale(value, errorMessage) {
+  if (!canonicalizeContentLocale(value)) {
     return invalid(errorMessage);
   }
 

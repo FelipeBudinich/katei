@@ -20,12 +20,18 @@ import {
   performWorkspaceInviteDecision
 } from './workspace_collaboration_actions.js';
 import {
+  buildCardEditorMutationPlan,
+  createCardLocaleRequestAction,
+  createRuntimeCardDialogState,
+  executeWorkspaceCardEditorPlan,
+  executeWorkspaceServiceAction
+} from './workspace_card_dialog.js';
+import {
   getBoardStageTitle,
   getDefaultBoardStageId,
   resolveBoardStageId,
   shouldShowPriorityForStage
 } from './stage_ui.js';
-import { createRuntimeCardDialogState } from './workspace_card_dialog.js';
 
 export default class extends Controller {
   static values = {
@@ -291,6 +297,8 @@ export default class extends Controller {
       mode: 'create',
       boardId: this.activeBoard.id,
       board: this.activeBoard,
+      currentActorRole: this.activeBoardCollaborationState?.currentRole ?? null,
+      canEditLocalizedContent: this.canEditActiveBoard,
       stageId: getDefaultBoardStageId(this.activeBoard),
       triggerElement: event?.currentTarget ?? null
     });
@@ -324,7 +332,9 @@ export default class extends Controller {
       boardId: board.id,
       board,
       ...createRuntimeCardDialogState(card, board, {
-        requestedLocale: button.dataset.requestedLocale ?? button.dataset.locale ?? null
+        requestedLocale: button.dataset.requestedLocale ?? button.dataset.locale ?? null,
+        currentActorRole: this.activeBoardCollaborationState?.currentRole ?? null,
+        canEditLocalizedContent: this.canEditActiveBoard
       }),
       stageId,
       columnId: stageId,
@@ -357,7 +367,9 @@ export default class extends Controller {
       boardId: board.id,
       board,
       ...createRuntimeCardDialogState(card, board, {
-        requestedLocale: button.dataset.requestedLocale ?? button.dataset.locale ?? null
+        requestedLocale: button.dataset.requestedLocale ?? button.dataset.locale ?? null,
+        currentActorRole: this.activeBoardCollaborationState?.currentRole ?? null,
+        canEditLocalizedContent: this.canEditActiveBoard
       }),
       stageId,
       columnId: stageId,
@@ -370,6 +382,7 @@ export default class extends Controller {
       mode,
       boardId,
       cardId,
+      locale,
       sourceStageId,
       targetStageId,
       sourceColumnId,
@@ -380,19 +393,73 @@ export default class extends Controller {
     const nextTargetStageId = targetStageId || targetColumnId;
 
     if (mode === 'edit') {
-      await this.runAction(async () => {
-        let nextWorkspace = await this.service.updateCard(boardId, cardId, input);
+      const board = boardId ? this.workspace?.boards?.[boardId] : null;
+      const card = board?.cards?.[cardId] ?? null;
+      const plan = buildCardEditorMutationPlan({
+        mode,
+        board,
+        card,
+        boardId,
+        cardId,
+        locale,
+        input,
+        sourceStageId: nextSourceStageId,
+        targetStageId: nextTargetStageId
+      });
 
-        if (nextSourceStageId && nextTargetStageId && nextSourceStageId !== nextTargetStageId) {
-          nextWorkspace = await this.service.moveCard(boardId, cardId, nextSourceStageId, nextTargetStageId);
-        }
+      if (plan.operations.length < 1) {
+        return;
+      }
 
-        return nextWorkspace;
-      }, this.t('workspace.announcements.cardUpdated'));
+      await this.runAction(
+        () => executeWorkspaceCardEditorPlan(this.service, plan),
+        this.t(
+          plan.includesLocalizedUpsert
+            ? 'workspace.announcements.localizedContentUpdated'
+            : 'workspace.announcements.cardUpdated'
+        )
+      );
       return;
     }
 
     await this.runAction(() => this.service.createCard(boardId, input), this.t('workspace.announcements.cardCreated'));
+  }
+
+  async handleCardLocaleRequest(event) {
+    const action = createCardLocaleRequestAction(event.detail);
+    const success = await this.runAction(
+      () => executeWorkspaceServiceAction(this.service, action),
+      this.t('workspace.announcements.localeRequested')
+    );
+
+    if (success) {
+      this.refreshCardEditor({
+        boardId: event.detail?.boardId,
+        cardId: event.detail?.cardId,
+        locale: event.detail?.locale,
+        mode: 'edit'
+      });
+    }
+  }
+
+  async handleCardLocaleRequestClear(event) {
+    const action = createCardLocaleRequestAction({
+      ...event.detail,
+      clear: true
+    });
+    const success = await this.runAction(
+      () => executeWorkspaceServiceAction(this.service, action),
+      this.t('workspace.announcements.localeRequestCleared')
+    );
+
+    if (success) {
+      this.refreshCardEditor({
+        boardId: event.detail?.boardId,
+        cardId: event.detail?.cardId,
+        locale: event.detail?.locale,
+        mode: 'edit'
+      });
+    }
   }
 
   deleteCard(event) {
@@ -675,5 +742,30 @@ export default class extends Controller {
 
   dispatchWorkspaceEvent(name, detail) {
     window.dispatchEvent(new CustomEvent(`workspace:${name}`, { detail }));
+  }
+
+  refreshCardEditor({ boardId, cardId, locale, mode = 'edit' } = {}) {
+    const board = boardId ? this.workspace?.boards?.[boardId] : null;
+    const card = board?.cards?.[cardId] ?? null;
+
+    if (!board || !card) {
+      return;
+    }
+
+    const boardState = getBoardCollaborationState(board, this.viewerActor);
+    const stageId = resolveBoardStageId(board, { cardId });
+
+    this.dispatchWorkspaceEvent('open-card-editor', {
+      mode,
+      boardId: board.id,
+      board,
+      ...createRuntimeCardDialogState(card, board, {
+        requestedLocale: locale,
+        currentActorRole: boardState?.currentRole ?? null,
+        canEditLocalizedContent: boardState?.canEdit ?? false
+      }),
+      stageId,
+      columnId: stageId
+    });
   }
 }

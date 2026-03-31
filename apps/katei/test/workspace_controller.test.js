@@ -15,7 +15,11 @@ import {
   performWorkspaceCollaboratorAction,
   performWorkspaceInviteDecision
 } from '../public/js/controllers/workspace_collaboration_actions.js';
-import { createRuntimeCardDialogState } from '../public/js/controllers/workspace_card_dialog.js';
+import {
+  buildCardEditorMutationPlan,
+  createCardLocaleRequestAction,
+  createRuntimeCardDialogState
+} from '../public/js/controllers/workspace_card_dialog.js';
 
 test('resolveBoardStageId accepts stage ids and legacy column ids for the active board flow', () => {
   const board = createBoardWithCustomStages();
@@ -242,16 +246,22 @@ test('openEdit and openView card dialog state preserves raw localized card data 
   };
 
   const editState = createRuntimeCardDialogState(card, board, {
-    requestedLocale: 'ja'
+    requestedLocale: 'ja',
+    currentActorRole: 'editor',
+    canEditLocalizedContent: true
   });
   const viewState = createRuntimeCardDialogState(card, board, {
-    requestedLocale: 'en'
+    requestedLocale: 'en',
+    currentActorRole: 'viewer',
+    canEditLocalizedContent: false
   });
 
   assert.equal(editState.card, card);
   assert.deepEqual(editState.card.contentByLocale, card.contentByLocale);
   assert.deepEqual(editState.card.localeRequests, card.localeRequests);
   assert.equal(editState.requestedLocale, 'ja');
+  assert.equal(editState.currentActorRole, 'editor');
+  assert.equal(editState.canEditLocalizedContent, true);
   assert.deepEqual(editState.displayVariant, {
     locale: 'es-CL',
     title: 'Titulo por defecto',
@@ -263,6 +273,8 @@ test('openEdit and openView card dialog state preserves raw localized card data 
 
   assert.equal(viewState.card, card);
   assert.equal(viewState.requestedLocale, 'en');
+  assert.equal(viewState.currentActorRole, 'viewer');
+  assert.equal(viewState.canEditLocalizedContent, false);
   assert.deepEqual(viewState.displayVariant, {
     locale: 'en',
     title: 'English source',
@@ -271,6 +283,137 @@ test('openEdit and openView card dialog state preserves raw localized card data 
     isFallback: false,
     source: 'localized'
   });
+});
+
+test('localized save planning calls upsertCardLocale first and keeps priority and stage updates alongside it', () => {
+  const board = createBoardWithCustomStages();
+  const card = {
+    id: 'card_localized',
+    priority: 'important',
+    updatedAt: '2026-03-31T11:00:00.000Z',
+    contentByLocale: {
+      en: {
+        title: 'English source',
+        detailsMarkdown: 'English details',
+        provenance: null
+      }
+    },
+    localeRequests: {
+      ja: {
+        locale: 'ja',
+        status: 'open',
+        requestedBy: { type: 'human', id: 'viewer_123' },
+        requestedAt: '2026-03-31T12:00:00.000Z'
+      }
+    }
+  };
+
+  board.languagePolicy = {
+    sourceLocale: 'en',
+    defaultLocale: 'en',
+    supportedLocales: ['en', 'ja'],
+    requiredLocales: ['en']
+  };
+
+  const plan = buildCardEditorMutationPlan({
+    mode: 'edit',
+    board,
+    card,
+    boardId: 'main',
+    cardId: 'card_localized',
+    locale: 'ja',
+    input: {
+      title: '日本語タイトル',
+      detailsMarkdown: '日本語本文',
+      priority: 'urgent'
+    },
+    sourceStageId: 'review',
+    targetStageId: 'qa'
+  });
+
+  assert.equal(plan.includesLocalizedUpsert, true);
+  assert.deepEqual(plan.operations, [
+    {
+      method: 'upsertCardLocale',
+      args: [
+        'main',
+        'card_localized',
+        'ja',
+        {
+          title: '日本語タイトル',
+          detailsMarkdown: '日本語本文'
+        }
+      ]
+    },
+    {
+      method: 'updateCard',
+      args: [
+        'main',
+        'card_localized',
+        {
+          priority: 'urgent'
+        }
+      ]
+    },
+    {
+      method: 'moveCard',
+      args: ['main', 'card_localized', 'review', 'qa']
+    }
+  ]);
+});
+
+test('create mode planning still uses createCard without regressing the old flow', () => {
+  const plan = buildCardEditorMutationPlan({
+    mode: 'create',
+    boardId: 'main',
+    input: {
+      title: 'Create me',
+      detailsMarkdown: 'Still source-locale pinned for now',
+      priority: 'important'
+    }
+  });
+
+  assert.equal(plan.includesLocalizedUpsert, false);
+  assert.deepEqual(plan.operations, [
+    {
+      method: 'createCard',
+      args: [
+        'main',
+        {
+          title: 'Create me',
+          detailsMarkdown: 'Still source-locale pinned for now',
+          priority: 'important'
+        }
+      ]
+    }
+  ]);
+});
+
+test('locale request and clear flows call the matching service methods', () => {
+  assert.deepEqual(
+    createCardLocaleRequestAction({
+      boardId: 'main',
+      cardId: 'card_1',
+      locale: 'ja'
+    }),
+    {
+      method: 'requestCardLocale',
+      args: ['main', 'card_1', 'ja']
+    }
+  );
+
+  assert.deepEqual(
+    createCardLocaleRequestAction({
+      boardId: 'main',
+      cardId: 'card_1',
+      locale: 'ja',
+      clear: true
+    }),
+    {
+      method: 'clearCardLocaleRequest',
+      args: ['main', 'card_1', 'ja']
+    }
+  );
 });
 
 function createBoardWithCustomStages() {

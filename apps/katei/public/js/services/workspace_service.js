@@ -137,6 +137,32 @@ export class WorkspaceService {
     });
   }
 
+  async upsertCardLocale(boardId, cardId, locale, input) {
+    return this.#applyCommand('card.locale.upsert', {
+      boardId,
+      cardId,
+      locale,
+      title: input?.title,
+      detailsMarkdown: input?.detailsMarkdown
+    });
+  }
+
+  async requestCardLocale(boardId, cardId, locale) {
+    return this.#applyCommand('card.locale.request', {
+      boardId,
+      cardId,
+      locale
+    });
+  }
+
+  async clearCardLocaleRequest(boardId, cardId, locale) {
+    return this.#applyCommand('card.locale.request.clear', {
+      boardId,
+      cardId,
+      locale
+    });
+  }
+
   async deleteCard(boardId, cardId) {
     return this.#applyCommand('card.delete', {
       boardId,

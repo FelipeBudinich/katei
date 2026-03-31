@@ -299,6 +299,48 @@ test('WorkspaceService updateCard calls repository.applyCommand and returns work
   });
 });
 
+test('WorkspaceService upsertCardLocale calls repository.applyCommand and returns workspace', async () => {
+  await assertServiceCommand({
+    action: (service) =>
+      service.upsertCardLocale('main', 'card_1', 'es-CL', {
+        title: 'Titulo actualizado',
+        detailsMarkdown: 'Detalle actualizado'
+      }),
+    expectedType: 'card.locale.upsert',
+    expectedPayload: {
+      boardId: 'main',
+      cardId: 'card_1',
+      locale: 'es-CL',
+      title: 'Titulo actualizado',
+      detailsMarkdown: 'Detalle actualizado'
+    }
+  });
+});
+
+test('WorkspaceService requestCardLocale calls repository.applyCommand and returns workspace', async () => {
+  await assertServiceCommand({
+    action: (service) => service.requestCardLocale('main', 'card_1', 'ja'),
+    expectedType: 'card.locale.request',
+    expectedPayload: {
+      boardId: 'main',
+      cardId: 'card_1',
+      locale: 'ja'
+    }
+  });
+});
+
+test('WorkspaceService clearCardLocaleRequest calls repository.applyCommand and returns workspace', async () => {
+  await assertServiceCommand({
+    action: (service) => service.clearCardLocaleRequest('main', 'card_1', 'ja'),
+    expectedType: 'card.locale.request.clear',
+    expectedPayload: {
+      boardId: 'main',
+      cardId: 'card_1',
+      locale: 'ja'
+    }
+  });
+});
+
 test('WorkspaceService deleteCard calls repository.applyCommand and returns workspace', async () => {
   await assertServiceCommand({
     action: (service) => service.deleteCard('main', 'card_1'),

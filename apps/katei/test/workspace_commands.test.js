@@ -15,6 +15,9 @@ test('isWorkspaceCommandType accepts known command types and rejects unknown one
   assert.equal(isWorkspaceCommandType('board.update'), true);
   assert.equal(isWorkspaceCommandType('board.invite.create'), true);
   assert.equal(isWorkspaceCommandType('board.member.remove'), true);
+  assert.equal(isWorkspaceCommandType('card.locale.upsert'), true);
+  assert.equal(isWorkspaceCommandType('card.locale.request'), true);
+  assert.equal(isWorkspaceCommandType('card.locale.request.clear'), true);
   assert.equal(isWorkspaceCommandType('card.move'), true);
   assert.equal(isWorkspaceCommandType('board.archive'), false);
 });
@@ -152,11 +155,40 @@ test('validateWorkspaceCommand accepts valid command envelopes', () => {
     },
     {
       clientMutationId: 'm14',
+      type: 'card.locale.upsert',
+      payload: {
+        boardId: 'main',
+        cardId: 'card_1',
+        locale: 'es_cl',
+        title: 'Titulo actualizado',
+        detailsMarkdown: 'Detalle actualizado'
+      }
+    },
+    {
+      clientMutationId: 'm15',
+      type: 'card.locale.request',
+      payload: {
+        boardId: 'main',
+        cardId: 'card_1',
+        locale: 'ja'
+      }
+    },
+    {
+      clientMutationId: 'm16',
+      type: 'card.locale.request.clear',
+      payload: {
+        boardId: 'main',
+        cardId: 'card_1',
+        locale: 'ja'
+      }
+    },
+    {
+      clientMutationId: 'm17',
       type: 'card.delete',
       payload: { boardId: 'main', cardId: 'card_1' }
     },
     {
-      clientMutationId: 'm15',
+      clientMutationId: 'm18',
       type: 'card.move',
       payload: {
         boardId: 'main',
@@ -166,12 +198,12 @@ test('validateWorkspaceCommand accepts valid command envelopes', () => {
       }
     },
     {
-      clientMutationId: 'm16',
+      clientMutationId: 'm19',
       type: 'ui.activeBoard.set',
       payload: { boardId: 'main' }
     },
     {
-      clientMutationId: 'm17',
+      clientMutationId: 'm20',
       type: 'ui.columnCollapsed.set',
       payload: {
         boardId: 'main',
@@ -257,6 +289,62 @@ test('validateWorkspaceCommand rejects invalid collaboration payloads', () => {
         targetActor: {
           type: 'human'
         }
+      }
+    }),
+    false
+  );
+});
+
+test('validateWorkspaceCommand rejects invalid localized card payloads', () => {
+  assert.equal(
+    validateWorkspaceCommand({
+      clientMutationId: 'l1',
+      type: 'card.locale.upsert',
+      payload: {
+        boardId: 'main',
+        cardId: 'card_1',
+        locale: 'not a locale',
+        title: 'Titulo',
+        detailsMarkdown: 'Detalle'
+      }
+    }),
+    false
+  );
+
+  assert.equal(
+    validateWorkspaceCommand({
+      clientMutationId: 'l2',
+      type: 'card.locale.upsert',
+      payload: {
+        boardId: 'main',
+        cardId: 'card_1',
+        locale: 'es-CL',
+        detailsMarkdown: 'Detalle'
+      }
+    }),
+    false
+  );
+
+  assert.equal(
+    validateWorkspaceCommand({
+      clientMutationId: 'l3',
+      type: 'card.locale.request',
+      payload: {
+        boardId: 'main',
+        cardId: 'card_1',
+        locale: '???'
+      }
+    }),
+    false
+  );
+
+  assert.equal(
+    validateWorkspaceCommand({
+      clientMutationId: 'l4',
+      type: 'card.locale.request.clear',
+      payload: {
+        boardId: 'main',
+        locale: 'ja'
       }
     }),
     false

@@ -21,11 +21,56 @@ export function createLocalizedCardViewState({ board, card, selectedLocale = nul
     renderedLocale: variant?.locale ?? null,
     variant,
     localeStatuses,
+    selectedStatus,
     presentCount: localeStatuses.filter((entry) => entry.hasContent).length,
     requestedCount: localeStatuses.filter((entry) => entry.isRequested).length,
     missingCount: localeStatuses.filter((entry) => !entry.hasContent && !entry.isRequested).length,
     isMissingSelectedLocale: Boolean(resolvedSelectedLocale && !selectedStatus?.hasContent),
     noLocalizedContent: variant == null
+  };
+}
+
+export function createLocalizedCardEditorUiState({
+  board,
+  card,
+  selectedLocale = null,
+  mode = 'create',
+  canEditLocalizedContent = false,
+  currentActorRole = null
+} = {}) {
+  const localizedView = createLocalizedCardViewState({ board, card, selectedLocale });
+  const isReadOnly = mode === 'view' || !canEditLocalizedContent;
+  const selectedStatus = localizedView.selectedStatus;
+  const hasCard = Boolean(card);
+  const hasSelectedLocale = Boolean(localizedView.selectedLocale);
+  const canRequestSelectedLocale =
+    hasCard &&
+    !isReadOnly &&
+    hasSelectedLocale &&
+    !selectedStatus?.hasContent &&
+    !selectedStatus?.isRequested;
+  const canClearSelectedLocaleRequest =
+    hasCard &&
+    !isReadOnly &&
+    hasSelectedLocale &&
+    Boolean(selectedStatus?.isRequested);
+
+  return {
+    ...localizedView,
+    mode,
+    currentActorRole,
+    canEditLocalizedContent: Boolean(canEditLocalizedContent),
+    isReadOnly,
+    showSaveControls: !isReadOnly,
+    showReadOnlyNotice: hasCard && isReadOnly,
+    showRequestLocaleButton: canRequestSelectedLocale,
+    showClearLocaleRequestButton: canClearSelectedLocaleRequest,
+    localeEditSummaryState: resolveLocaleEditSummaryState({
+      hasCard,
+      isReadOnly,
+      selectedStatus,
+      selectedLocale: localizedView.selectedLocale
+    })
   };
 }
 
@@ -71,4 +116,36 @@ function getSupportedCardLocales(languagePolicy, localeStatuses = []) {
   }
 
   return locales;
+}
+
+function resolveLocaleEditSummaryState({ hasCard, isReadOnly, selectedStatus, selectedLocale }) {
+  if (!hasCard || !selectedLocale) {
+    return null;
+  }
+
+  if (isReadOnly) {
+    return {
+      key: 'cardEditor.viewingLocaleValue',
+      locale: selectedLocale
+    };
+  }
+
+  if (selectedStatus?.isRequested && !selectedStatus?.hasContent) {
+    return {
+      key: 'cardEditor.requestedLocaleValue',
+      locale: selectedLocale
+    };
+  }
+
+  if (!selectedStatus?.hasContent) {
+    return {
+      key: 'cardEditor.missingLocaleValue',
+      locale: selectedLocale
+    };
+  }
+
+  return {
+    key: 'cardEditor.editingLocaleValue',
+    locale: selectedLocale
+  };
 }
