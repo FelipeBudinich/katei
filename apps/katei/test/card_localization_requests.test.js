@@ -19,9 +19,12 @@ test('listCardLocaleStatuses derives present, requested, and missing locales fro
   };
   const card = {
     id: 'card_1',
-    title: 'Legacy English title',
-    detailsMarkdown: 'Legacy English details',
     contentByLocale: {
+      en: {
+        title: 'English source',
+        detailsMarkdown: 'English details',
+        provenance: null
+      },
       es_cl: {
         title: 'Titulo en español',
         detailsMarkdown: 'Detalle en español',
@@ -109,10 +112,10 @@ test('requestCardLocale and clearCardLocaleRequest manage canonical locale reque
   assert.deepEqual(clearedCard.localeRequests, {});
 });
 
-test('requestCardLocale rewrites legacy localizationRequests into canonical localeRequests', () => {
+test('requestCardLocale preserves existing canonical locale requests when adding a new one', () => {
   const card = {
     id: 'card_3',
-    localizationRequests: {
+    localeRequests: {
       ja: {
         locale: 'ja',
         requestedBy: { type: 'human', id: 'viewer_123' },
@@ -128,7 +131,6 @@ test('requestCardLocale rewrites legacy localizationRequests into canonical loca
     '2026-03-31T13:00:00.000Z'
   );
 
-  assert.equal(requestedCard.localizationRequests, undefined);
   assert.deepEqual(requestedCard.localeRequests, {
     ja: {
       locale: 'ja',
@@ -156,9 +158,12 @@ test('listCardLocaleStatuses keeps requested visibility for present locales and 
   };
   const card = {
     id: 'card_4',
-    title: 'Legacy English title',
-    detailsMarkdown: 'Legacy English details',
     contentByLocale: {
+      en: {
+        title: 'English source',
+        detailsMarkdown: 'English details',
+        provenance: null
+      },
       'es-CL': {
         title: 'Titulo en español',
         detailsMarkdown: 'Detalle en español',
@@ -224,9 +229,12 @@ test('listCardLocaleStatuses turns a requested locale into present once content 
   };
   const card = {
     id: 'card_5',
-    title: 'Legacy English title',
-    detailsMarkdown: 'Legacy English details',
     contentByLocale: {
+      en: {
+        title: 'English source',
+        detailsMarkdown: 'English details',
+        provenance: null
+      },
       ja: {
         title: '日本語タイトル',
         detailsMarkdown: '日本語本文',

@@ -1023,8 +1023,10 @@ test('buildWorkspacePageModel localizes fixed labels without rewriting user-auth
 
   assert.equal(viewModel.board.title, 'Roadmap alpha');
   assert.equal(viewModel.workspace.boards[board.id].stages.backlog.title, 'Backlog');
-  assert.equal(viewModel.workspace.boards[board.id].cards[cardId].title, 'Ship launch checklist');
-  assert.equal(viewModel.workspace.boards[board.id].cards[cardId].detailsMarkdown, 'Owner: Mina');
+  assert.equal(viewModel.board.cards[cardId].title, 'Ship launch checklist');
+  assert.equal(viewModel.board.cards[cardId].detailsMarkdown, 'Owner: Mina');
+  assert.equal(viewModel.workspace.boards[board.id].cards[cardId].contentByLocale.en.title, 'Ship launch checklist');
+  assert.equal(viewModel.workspace.boards[board.id].cards[cardId].contentByLocale.en.detailsMarkdown, 'Owner: Mina');
   assert.equal(viewModel.columnDefinitions.find((column) => column.id === 'backlog')?.title, 'バックログ');
   assert.equal(viewModel.priorityDefinitions.find((priority) => priority.id === 'urgent')?.label, '緊急');
 });

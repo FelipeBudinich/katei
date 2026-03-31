@@ -1,8 +1,7 @@
 import { createBoardId, createCardId } from '../utils/id.js';
 import {
   createCardContentProvenance,
-  getCardContentVariant,
-  projectWorkspaceWithLegacyCardContent,
+  getStoredCardContentVariant,
   upsertCardContentVariant
 } from './card_localization.js';
 import {
@@ -161,7 +160,7 @@ export function createCard(workspace, boardId, input) {
   board.stages[initialStageId].cardIds = [...board.stages[initialStageId].cardIds, cardId];
   board.updatedAt = timestamp;
 
-  return projectWorkspaceWithLegacyCardContent(nextWorkspace);
+  return nextWorkspace;
 }
 
 export function updateCard(workspace, boardId, cardId, updates) {
@@ -170,18 +169,17 @@ export function updateCard(workspace, boardId, cardId, updates) {
   const card = getCard(board, cardId);
   const timestamp = createTimestamp();
   const sourceLocale = board.languagePolicy.sourceLocale;
-  const currentVariant = getCardContentVariant(card, sourceLocale, board);
+  const currentVariant = getStoredCardContentVariant(card, sourceLocale);
   const nextTitle = hasOwn(updates, 'title')
     ? normalizeCardTitle(updates.title)
     : (currentVariant?.title ?? '');
   const nextDetailsMarkdown = hasOwn(updates, 'detailsMarkdown')
     ? normalizeDetailsMarkdown(updates.detailsMarkdown)
     : (currentVariant?.detailsMarkdown ?? '');
-  const canonicalCard = stripLegacyCardAliases(card);
 
   board.cards[cardId] = upsertCardContentVariant(
     {
-      ...canonicalCard,
+      ...card,
       priority: hasOwn(updates, 'priority') ? normalizePriority(updates.priority) : card.priority,
       updatedAt: timestamp
     },
@@ -201,11 +199,11 @@ export function updateCard(workspace, boardId, cardId, updates) {
   );
   board.cards[cardId] = {
     ...board.cards[cardId],
-    priority: hasOwn(updates, 'priority') ? normalizePriority(updates.priority) : card.priority,
+    priority: hasOwn(updates, 'priority') ? normalizePriority(updates.priority) : card.priority
   };
   board.updatedAt = timestamp;
 
-  return projectWorkspaceWithLegacyCardContent(nextWorkspace);
+  return nextWorkspace;
 }
 
 export function deleteCard(workspace, boardId, cardId) {
@@ -282,15 +280,4 @@ function createClearedStages(board) {
       }
     ])
   );
-}
-
-function stripLegacyCardAliases(card) {
-  const canonicalCard = {
-    ...card
-  };
-
-  delete canonicalCard.title;
-  delete canonicalCard.detailsMarkdown;
-
-  return canonicalCard;
 }

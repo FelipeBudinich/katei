@@ -187,6 +187,17 @@ test('migrateWorkspaceSnapshot preserves existing locale requests and seeds empt
             id: 'card_missing_requests',
             title: 'No requests yet'
           }),
+          card_legacy_alias_requests: createLegacyCard({
+            id: 'card_legacy_alias_requests',
+            title: 'Legacy alias request',
+            localizationRequests: {
+              ja: {
+                locale: 'ja',
+                requestedBy: { type: 'human', id: 'sub_translator_ja' },
+                requestedAt: '2026-03-31T11:30:00.000Z'
+              }
+            }
+          }),
           card_existing_requests: createLegacyCard({
             id: 'card_existing_requests',
             title: 'Translation requested',
@@ -209,6 +220,14 @@ test('migrateWorkspaceSnapshot preserves existing locale requests and seeds empt
   });
 
   assert.deepEqual(migratedWorkspace.boards.main.cards.card_missing_requests.localeRequests, {});
+  assert.deepEqual(migratedWorkspace.boards.main.cards.card_legacy_alias_requests.localeRequests, {
+    ja: {
+      locale: 'ja',
+      status: 'open',
+      requestedBy: { type: 'human', id: 'sub_translator_ja' },
+      requestedAt: '2026-03-31T11:30:00.000Z'
+    }
+  });
   assert.deepEqual(migratedWorkspace.boards.main.cards.card_existing_requests.localeRequests, {
     es: {
       locale: 'es',
@@ -480,7 +499,8 @@ function createLegacyCard({
   createdAt = '2026-03-31T09:00:00.000Z',
   updatedAt = '2026-03-31T10:00:00.000Z',
   contentByLocale = undefined,
-  localeRequests = undefined
+  localeRequests = undefined,
+  localizationRequests = undefined
 } = {}) {
   return {
     id,
@@ -490,6 +510,7 @@ function createLegacyCard({
     createdAt,
     updatedAt,
     ...(contentByLocale === undefined ? {} : { contentByLocale: structuredClone(contentByLocale) }),
-    ...(localeRequests === undefined ? {} : { localeRequests: structuredClone(localeRequests) })
+    ...(localeRequests === undefined ? {} : { localeRequests: structuredClone(localeRequests) }),
+    ...(localizationRequests === undefined ? {} : { localizationRequests: structuredClone(localizationRequests) })
   };
 }

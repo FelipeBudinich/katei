@@ -11,9 +11,16 @@ import {
 test('getCardContentVariant reads explicit localized variants and listCardLocales canonicalizes keys', () => {
   const card = {
     id: 'card_1',
-    title: 'Legacy English title',
-    detailsMarkdown: 'Legacy English details',
     contentByLocale: {
+      en: {
+        title: 'English source',
+        detailsMarkdown: 'English details',
+        provenance: createCardContentProvenance({
+          actor: { type: 'human', id: 'viewer_123' },
+          timestamp: '2026-03-31T09:30:00.000Z',
+          includesHumanInput: true
+        })
+      },
       ja: {
         title: '日本語タイトル',
         detailsMarkdown: '日本語本文',
@@ -35,7 +42,7 @@ test('getCardContentVariant reads explicit localized variants and listCardLocale
     }
   };
 
-  assert.deepEqual(listCardLocales(card), ['es-CL', 'ja']);
+  assert.deepEqual(listCardLocales(card), ['en', 'es-CL', 'ja']);
   assert.deepEqual(
     getCardContentVariant(card, 'ja', {
       languagePolicy: {
@@ -58,28 +65,21 @@ test('getCardContentVariant reads explicit localized variants and listCardLocale
   );
 });
 
-test('getCardContentVariant falls back to legacy card content when no localized variant exists', () => {
+test('getCardContentVariant returns null when a card has not been normalized to localized content', () => {
   const card = {
     id: 'card_1',
     title: 'Legacy English title',
     detailsMarkdown: 'Legacy English details'
   };
 
-  assert.deepEqual(
+  assert.equal(
     getCardContentVariant(card, 'en', {
       languagePolicy: {
         sourceLocale: 'en',
         defaultLocale: 'en'
       }
     }),
-    {
-      locale: 'en',
-      title: 'Legacy English title',
-      detailsMarkdown: 'Legacy English details',
-      provenance: null,
-      isFallback: true,
-      source: 'legacy'
-    }
+    null
   );
 });
 
@@ -248,9 +248,16 @@ test('getMissingRequiredLocales detects only the required locales still missing'
   };
   const card = {
     id: 'card_1',
-    title: 'Legacy English title',
-    detailsMarkdown: 'Legacy English details',
     contentByLocale: {
+      en: {
+        title: 'English source',
+        detailsMarkdown: 'English details',
+        provenance: createCardContentProvenance({
+          actor: { type: 'human', id: 'viewer_123' },
+          timestamp: '2026-03-31T09:30:00.000Z',
+          includesHumanInput: true
+        })
+      },
       ja: {
         title: '日本語タイトル',
         detailsMarkdown: '日本語本文',

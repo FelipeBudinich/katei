@@ -373,7 +373,7 @@ test('card.update changes updatedAt only and preserves createdAt', () => {
 
   assert.equal(workspace.boards.main.cards.card_srv001.createdAt, '2026-03-31T10:00:00.000Z');
   assert.equal(workspace.boards.main.cards.card_srv001.updatedAt, '2026-03-31T11:00:00.000Z');
-  assert.equal(workspace.boards.main.cards.card_srv001.title, 'Updated title');
+  assert.equal(workspace.boards.main.cards.card_srv001.contentByLocale.en.title, 'Updated title');
   assert.deepEqual(workspace.boards.main.cards.card_srv001.contentByLocale.en.provenance, {
     actor: {
       type: 'human',

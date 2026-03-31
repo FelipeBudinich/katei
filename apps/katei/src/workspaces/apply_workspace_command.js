@@ -23,9 +23,7 @@ import {
 } from '../../public/js/domain/board_permissions.js';
 import {
   createCardContentProvenance,
-  getCardContentVariant,
   getStoredCardContentVariant,
-  projectWorkspaceWithLegacyCardContent,
   upsertCardContentVariant
 } from '../../public/js/domain/card_localization.js';
 import {
@@ -105,7 +103,7 @@ export function applyWorkspaceCommand({
       });
 
   return {
-    workspace: projectWorkspaceWithLegacyCardContent(workspace),
+    workspace,
     result,
     activityEvent
   };
@@ -622,7 +620,7 @@ function applyCardUpdate(workspace, command, context) {
   assertActorCanEditBoard(currentBoard, context.actor);
   const currentCard = getCard(currentBoard, command.payload.cardId);
   const sourceLocale = currentBoard.languagePolicy.sourceLocale;
-  const currentVariant = getCardContentVariant(currentCard, sourceLocale, currentBoard);
+  const currentVariant = getStoredCardContentVariant(currentCard, sourceLocale);
 
   const nextTitle = hasOwn(command.payload, 'title')
     ? normalizeCardTitle(command.payload.title)
@@ -654,7 +652,7 @@ function applyCardUpdate(workspace, command, context) {
   const card = getCard(board, command.payload.cardId);
   board.cards[card.id] = upsertCardContentVariant(
     {
-      ...stripLegacyCardAliases(card),
+      ...card,
       priority: nextPriority,
       updatedAt: context.now
     },
@@ -745,7 +743,7 @@ function applyCardLocaleUpsert(workspace, command, context) {
   });
   let nextCard = upsertCardContentVariant(
     {
-      ...stripLegacyCardAliases(card),
+      ...card,
       updatedAt: context.now
     },
     locale,
@@ -1256,17 +1254,6 @@ function createClearedStages(board) {
       }
     ])
   );
-}
-
-function stripLegacyCardAliases(card) {
-  const canonicalCard = {
-    ...card
-  };
-
-  delete canonicalCard.title;
-  delete canonicalCard.detailsMarkdown;
-
-  return canonicalCard;
 }
 
 function normalizeCommandLocale(locale) {

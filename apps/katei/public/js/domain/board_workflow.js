@@ -160,25 +160,6 @@ export function validateBoardTemplates(board) {
   return true;
 }
 
-export function projectWorkspaceWithLegacyColumns(workspace) {
-  if (!isPlainObject(workspace) || !isPlainObject(workspace.boards)) {
-    return workspace;
-  }
-
-  const projectedWorkspace = structuredClone(workspace);
-
-  for (const board of Object.values(projectedWorkspace.boards)) {
-    if (!isPlainObject(board) || !Array.isArray(board.stageOrder) || !isPlainObject(board.stages)) {
-      continue;
-    }
-
-    board.columnOrder = [...board.stageOrder];
-    board.columns = structuredClone(board.stages);
-  }
-
-  return projectedWorkspace;
-}
-
 export function stripLegacyColumnAliasesFromWorkspace(workspace) {
   if (!isPlainObject(workspace) || !isPlainObject(workspace.boards)) {
     return workspace;

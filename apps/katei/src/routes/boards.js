@@ -1,6 +1,5 @@
 import { Router } from 'express';
-import { projectWorkspaceWithLegacyColumns } from '../../public/js/domain/board_workflow.js';
-import { projectWorkspaceWithLegacyCardContent } from '../../public/js/domain/card_localization.js';
+import { getBoardCardContentVariant } from '../../public/js/domain/card_localization.js';
 import { migrateWorkspaceSnapshot } from '../../public/js/domain/workspace_migrations.js';
 import {
   APP_TITLE,
@@ -46,9 +45,7 @@ export function createBoardsRouter({ requireSession, workspaceRecordRepository }
 
 export function buildWorkspacePageModel(viewer, t, workspace = createEmptyWorkspace(), workspaceMeta = null) {
   const normalizedWorkspace = migrateWorkspaceSnapshot(workspace);
-  const projectedWorkspace = projectWorkspaceWithLegacyColumns(
-    projectWorkspaceWithLegacyCardContent(normalizedWorkspace)
-  );
+  const activeBoard = getProjectedActiveBoard(normalizedWorkspace);
   const columnDisplayTitles = buildColumnDisplayTitles(t);
   const columnDefinitions = COLUMN_ORDER.map((id) => ({
     id,
@@ -60,8 +57,8 @@ export function buildWorkspacePageModel(viewer, t, workspace = createEmptyWorksp
   }));
 
   return {
-    workspace: projectedWorkspace,
-    board: getProjectedActiveBoard(projectedWorkspace),
+    workspace: normalizedWorkspace,
+    board: buildServerRenderedBoard(activeBoard),
     columnDefinitions,
     columnDisplayTitles,
     priorityDefinitions,
@@ -76,6 +73,30 @@ export function buildWorkspacePageModel(viewer, t, workspace = createEmptyWorksp
         })
       : null
   };
+}
+
+function buildServerRenderedBoard(board) {
+  if (!board || typeof board !== 'object') {
+    return board;
+  }
+
+  const nextBoard = structuredClone(board);
+
+  if (!nextBoard.cards || typeof nextBoard.cards !== 'object') {
+    return nextBoard;
+  }
+
+  for (const [cardId, card] of Object.entries(nextBoard.cards)) {
+    const content = getBoardCardContentVariant(card, board);
+
+    nextBoard.cards[cardId] = {
+      ...card,
+      title: content?.title ?? '',
+      detailsMarkdown: content?.detailsMarkdown ?? ''
+    };
+  }
+
+  return nextBoard;
 }
 
 function getProjectedActiveBoard(workspace) {

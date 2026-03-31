@@ -21,8 +21,8 @@ export default class extends Controller {
     'modeInput',
     'boardIdInput',
     'cardIdInput',
-    'sourceColumnIdInput',
-    'targetColumnIdInput',
+    'sourceStageIdInput',
+    'targetStageIdInput',
     'prioritySection',
     'priorityInput',
     'priorityOption',
@@ -130,8 +130,8 @@ export default class extends Controller {
     this.modeInputTarget.value = nextMode;
     this.boardIdInputTarget.value = boardId ?? '';
     this.cardIdInputTarget.value = nextCardId;
-    this.sourceColumnIdInputTarget.value = sourceStageId;
-    this.targetColumnIdInputTarget.value = targetStageId;
+    this.sourceStageIdInputTarget.value = sourceStageId;
+    this.targetStageIdInputTarget.value = targetStageId;
     this.priorityInputTarget.value = card?.priority ?? 'important';
     this.ensureEditor().value('');
     this.syncLocalizedCardView();
@@ -199,22 +199,21 @@ export default class extends Controller {
     this.syncPriorityOptions();
   }
 
-  selectColumn(event) {
+  selectStage(event) {
     event.preventDefault();
 
     if (this.isReadOnlyLocaleView) {
       return;
     }
 
-    this.targetColumnIdInputTarget.value =
+    this.targetStageIdInputTarget.value =
       event.currentTarget.dataset.targetStageId ??
-      event.currentTarget.dataset.targetColumnId ??
-      this.targetColumnIdInputTarget.value;
+      this.targetStageIdInputTarget.value;
     this.syncEditActions({
       isEditMode: this.modeInputTarget.value === 'edit',
       cardId: this.cardIdInputTarget.value,
-      sourceStageId: this.sourceColumnIdInputTarget.value,
-      targetStageId: this.targetColumnIdInputTarget.value
+      sourceStageId: this.sourceStageIdInputTarget.value,
+      targetStageId: this.targetStageIdInputTarget.value
     });
   }
 
@@ -233,10 +232,8 @@ export default class extends Controller {
         boardId: formData.get('boardId'),
         cardId: formData.get('cardId'),
         locale: this.selectedLocale,
-        sourceStageId: formData.get('sourceColumnId'),
-        targetStageId: formData.get('targetColumnId'),
-        sourceColumnId: formData.get('sourceColumnId'),
-        targetColumnId: formData.get('targetColumnId'),
+        sourceStageId: formData.get('sourceStageId'),
+        targetStageId: formData.get('targetStageId'),
         input: {
           title: formData.get('title'),
           detailsMarkdown: formData.get('detailsMarkdown'),
@@ -339,9 +336,7 @@ export default class extends Controller {
     const moveOptionButtons = getStageMoveOptions(board, sourceStageId).map(({ id, title }) => {
       const button = this.moveOptionTemplateTarget.content.firstElementChild.cloneNode(true);
       button.dataset.targetStageId = id;
-      button.dataset.targetColumnId = id;
       button.dataset.stageTitle = title;
-      button.dataset.columnTitle = title;
       button.textContent = title;
       return button;
     });
@@ -367,10 +362,10 @@ export default class extends Controller {
     }
 
     for (const button of this.getMoveOptionButtons()) {
-      const buttonTargetStageId = button.dataset.targetStageId ?? button.dataset.targetColumnId;
+      const buttonTargetStageId = button.dataset.targetStageId;
       const isSelectedStage = buttonTargetStageId === targetStageId;
       const isCurrentStage = buttonTargetStageId === sourceStageId;
-      const stageTitle = button.dataset.stageTitle ?? button.dataset.columnTitle ?? '';
+      const stageTitle = button.dataset.stageTitle ?? '';
       button.disabled = isSelectedStage;
       button.setAttribute('aria-disabled', String(isSelectedStage));
       button.textContent = isSelectedStage

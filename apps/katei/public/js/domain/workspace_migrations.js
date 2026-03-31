@@ -164,7 +164,7 @@ export function migrateCardToLocalizedContent(card, board, { now = null } = {}) 
   }
 
   migratedCard.contentByLocale = nextContentByLocale;
-  migratedCard.localeRequests = normalizeCardLocaleRequests(migratedCard);
+  migratedCard.localeRequests = migrateLegacyCardLocaleRequests(migratedCard);
   delete migratedCard.title;
   delete migratedCard.detailsMarkdown;
   delete migratedCard.localizationRequests;
@@ -227,6 +227,22 @@ export function seedBoardOwnerMembership(collaboration, { ownerActor = null, joi
   });
 
   return migratedCollaboration;
+}
+
+function migrateLegacyCardLocaleRequests(card) {
+  if (isPlainObject(card?.localeRequests)) {
+    return normalizeCardLocaleRequests({
+      localeRequests: card.localeRequests
+    });
+  }
+
+  if (isPlainObject(card?.localizationRequests)) {
+    return normalizeCardLocaleRequests({
+      localeRequests: card.localizationRequests
+    });
+  }
+
+  return {};
 }
 
 function isPlainObject(value) {

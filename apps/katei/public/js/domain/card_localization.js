@@ -55,18 +55,7 @@ export function getCardContentVariant(card, locale, board) {
     });
   }
 
-  if (!hasLegacyCardContent(card)) {
-    return null;
-  }
-
-  return {
-    locale: requestedLocale ?? languagePolicy?.defaultLocale ?? languagePolicy?.sourceLocale ?? null,
-    title: typeof card?.title === 'string' ? card.title : '',
-    detailsMarkdown: typeof card?.detailsMarkdown === 'string' ? card.detailsMarkdown : '',
-    provenance: null,
-    isFallback: true,
-    source: 'legacy'
-  };
+  return null;
 }
 
 export function getStoredCardContentVariant(card, locale) {
@@ -163,39 +152,6 @@ export function validateCardContentByLocale(card, board) {
   return seenLocales.has(languagePolicy.sourceLocale);
 }
 
-export function projectWorkspaceWithLegacyCardContent(workspace) {
-  if (!isPlainObject(workspace) || !isPlainObject(workspace.boards)) {
-    return workspace;
-  }
-
-  const projectedWorkspace = structuredClone(workspace);
-
-  for (const board of Object.values(projectedWorkspace.boards)) {
-    if (!isPlainObject(board) || !isPlainObject(board.cards)) {
-      continue;
-    }
-
-    for (const card of Object.values(board.cards)) {
-      if (!isPlainObject(card)) {
-        continue;
-      }
-
-      const projectedVariant = getBoardCardContentVariant(card, board);
-
-      if (!projectedVariant) {
-        delete card.title;
-        delete card.detailsMarkdown;
-        continue;
-      }
-
-      card.title = projectedVariant.title;
-      card.detailsMarkdown = projectedVariant.detailsMarkdown;
-    }
-  }
-
-  return projectedWorkspace;
-}
-
 export function stripLegacyCardContentAliasesFromWorkspace(workspace) {
   if (!isPlainObject(workspace) || !isPlainObject(workspace.boards)) {
     return workspace;
@@ -279,13 +235,6 @@ function normalizeVariantPatch(patch) {
   }
 
   return normalizedPatch;
-}
-
-function hasLegacyCardContent(card) {
-  const title = typeof card?.title === 'string' ? card.title.trim() : '';
-  const detailsMarkdown = typeof card?.detailsMarkdown === 'string' ? card.detailsMarkdown.trim() : '';
-
-  return title.length > 0 || detailsMarkdown.length > 0;
 }
 
 function cloneValue(value) {

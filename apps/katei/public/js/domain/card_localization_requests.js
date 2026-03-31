@@ -60,7 +60,6 @@ export function requestCardLocale(card, locale, actor, now) {
   };
 
   const nextCard = isPlainObject(card) ? structuredClone(card) : {};
-  delete nextCard.localizationRequests;
   nextCard.localeRequests = nextRequests;
 
   return nextCard;
@@ -72,7 +71,6 @@ export function clearCardLocaleRequest(card, locale) {
 
   if (!Object.prototype.hasOwnProperty.call(value, normalizedLocale)) {
     const nextCard = isPlainObject(card) ? structuredClone(card) : {};
-    delete nextCard.localizationRequests;
     nextCard.localeRequests = value;
     return nextCard;
   }
@@ -84,7 +82,6 @@ export function clearCardLocaleRequest(card, locale) {
 
   delete nextRequests[normalizedLocale];
 
-  delete nextCard.localizationRequests;
   nextCard.localeRequests = nextRequests;
 
   return nextCard;
@@ -92,7 +89,7 @@ export function clearCardLocaleRequest(card, locale) {
 
 export function normalizeCardLocaleRequests(card) {
   const requests = {};
-  const rawRequests = readLocalizationRequests(card);
+  const rawRequests = readLocaleRequests(card);
 
   if (!isPlainObject(rawRequests)) {
     return requests;
@@ -115,11 +112,7 @@ export function validateCardLocaleRequests(card) {
     return false;
   }
 
-  if (card?.localizationRequests != null && !isPlainObject(card.localizationRequests)) {
-    return false;
-  }
-
-  const rawRequests = readLocalizationRequests(card);
+  const rawRequests = readLocaleRequests(card);
 
   if (rawRequests == null) {
     return true;
@@ -178,12 +171,8 @@ function listContentLocales(card) {
   return locales;
 }
 
-function hasCardLocaleContent(card, locale, languagePolicy) {
-  if (hasLocalizedContentVariant(card, locale)) {
-    return true;
-  }
-
-  return languagePolicy?.sourceLocale === locale && hasLegacyCardContent(card);
+function hasCardLocaleContent(card, locale, _languagePolicy) {
+  return hasLocalizedContentVariant(card, locale);
 }
 
 function hasLocalizedContentVariant(card, locale) {
@@ -237,21 +226,13 @@ function normalizeLocalizationRequest(locale, request) {
   };
 }
 
-function readLocalizationRequests(card) {
+function readLocaleRequests(card) {
   if (isPlainObject(card?.localeRequests)) {
     return structuredClone(card.localeRequests);
   }
 
-  if (isPlainObject(card?.localizationRequests)) {
-    return structuredClone(card.localizationRequests);
-  }
-
   if (card?.localeRequests != null) {
     return card.localeRequests;
-  }
-
-  if (card?.localizationRequests != null) {
-    return card.localizationRequests;
   }
 
   return null;
@@ -259,12 +240,6 @@ function readLocalizationRequests(card) {
 
 function getContentByLocaleRecord(card) {
   return isPlainObject(card?.contentByLocale) ? card.contentByLocale : {};
-}
-
-function hasLegacyCardContent(card) {
-  const title = normalizeOptionalString(card?.title);
-  const detailsMarkdown = normalizeOptionalString(card?.detailsMarkdown);
-  return title.length > 0 || detailsMarkdown.length > 0;
 }
 
 function canonicalizeRequiredLocale(locale) {

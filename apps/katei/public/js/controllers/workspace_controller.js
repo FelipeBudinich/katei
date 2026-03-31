@@ -337,7 +337,6 @@ export default class extends Controller {
         canEditLocalizedContent: this.canEditActiveBoard
       }),
       stageId,
-      columnId: stageId,
       triggerElement: button
     });
   }
@@ -372,7 +371,6 @@ export default class extends Controller {
         canEditLocalizedContent: this.canEditActiveBoard
       }),
       stageId,
-      columnId: stageId,
       triggerElement: button
     });
   }
@@ -385,12 +383,8 @@ export default class extends Controller {
       locale,
       sourceStageId,
       targetStageId,
-      sourceColumnId,
-      targetColumnId,
       input
     } = event.detail;
-    const nextSourceStageId = sourceStageId || sourceColumnId;
-    const nextTargetStageId = targetStageId || targetColumnId;
 
     if (mode === 'edit') {
       const board = boardId ? this.workspace?.boards?.[boardId] : null;
@@ -403,8 +397,8 @@ export default class extends Controller {
         cardId,
         locale,
         input,
-        sourceStageId: nextSourceStageId,
-        targetStageId: nextTargetStageId
+        sourceStageId,
+        targetStageId
       });
 
       if (plan.operations.length < 1) {
@@ -797,8 +791,7 @@ export default class extends Controller {
         currentActorRole: boardState?.currentRole ?? null,
         canEditLocalizedContent: boardState?.canEdit ?? false
       }),
-      stageId,
-      columnId: stageId
+      stageId
     });
   }
 }

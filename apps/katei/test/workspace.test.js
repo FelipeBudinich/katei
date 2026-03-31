@@ -19,8 +19,6 @@ test('createCard stores detailsMarkdown on new cards', () => {
   const board = nextWorkspace.boards.main;
   const [cardId] = board.stages.backlog.cardIds;
 
-  assert.equal(board.cards[cardId].detailsMarkdown, '## Launch\n\n- confirm copy');
-  assert.equal(board.cards[cardId].title, 'Write launch notes');
   assert.deepEqual(board.cards[cardId].contentByLocale.en.title, 'Write launch notes');
   assert.deepEqual(board.cards[cardId].contentByLocale.en.detailsMarkdown, '## Launch\n\n- confirm copy');
   assert.deepEqual(board.cards[cardId].localeRequests, {});
@@ -39,8 +37,6 @@ test('updateCard updates detailsMarkdown on existing cards', () => {
     detailsMarkdown: 'Updated **markdown**'
   });
 
-  assert.equal(nextWorkspace.boards.main.cards[cardId].detailsMarkdown, 'Updated **markdown**');
-  assert.equal(nextWorkspace.boards.main.cards[cardId].title, 'Write launch notes');
   assert.equal(
     nextWorkspace.boards.main.cards[cardId].contentByLocale.en.detailsMarkdown,
     'Updated **markdown**'

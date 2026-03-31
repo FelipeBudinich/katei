@@ -18,8 +18,8 @@
       <input type="hidden" name="mode" value="create" data-card-editor-target="modeInput">
       <input type="hidden" name="boardId" value="" data-card-editor-target="boardIdInput">
       <input type="hidden" name="cardId" value="" data-card-editor-target="cardIdInput">
-      <input type="hidden" name="sourceColumnId" value="" data-card-editor-target="sourceColumnIdInput">
-      <input type="hidden" name="targetColumnId" value="backlog" data-card-editor-target="targetColumnIdInput">
+      <input type="hidden" name="sourceStageId" value="" data-card-editor-target="sourceStageIdInput">
+      <input type="hidden" name="targetStageId" value="backlog" data-card-editor-target="targetStageIdInput">
       <input type="hidden" name="priority" value="important" data-card-editor-target="priorityInput">
 
       <section class="space-y-3" hidden data-card-editor-target="localeSection">
@@ -132,10 +132,8 @@
               class="touch-button-secondary"
               data-card-editor-target="moveOption"
               data-stage-title=""
-              data-column-title=""
               data-target-stage-id=""
-              data-target-column-id=""
-              data-action="card-editor#selectColumn"
+              data-action="card-editor#selectStage"
             ></button>
           </template>
         </div>
