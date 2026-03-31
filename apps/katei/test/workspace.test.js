@@ -1,11 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { createEmptyWorkspace } from '../public/js/domain/workspace_read_model.js';
+import { findColumnIdByCardId, getActiveBoard, getCollapsedColumnsForBoard } from '../public/js/domain/workspace_selectors.js';
+import { validateWorkspaceShape } from '../public/js/domain/workspace_validation.js';
 import {
   createCard,
-  createEmptyWorkspace,
-  updateCard,
-  validateWorkspaceShape
-} from '../public/js/domain/workspace.js';
+  setColumnCollapsed,
+  updateCard
+} from '../public/js/domain/workspace_mutations.js';
 
 test('createCard stores detailsMarkdown on new cards', () => {
   const workspace = createEmptyWorkspace();
@@ -64,4 +66,33 @@ test('validateWorkspaceShape rejects legacy cards that only use description', ()
   board.columns.backlog.cardIds.push('card_legacy');
 
   assert.equal(validateWorkspaceShape(workspace), false);
+});
+
+test('getActiveBoard returns the active board from the read model', () => {
+  const workspace = createEmptyWorkspace();
+
+  assert.equal(getActiveBoard(workspace).id, 'main');
+});
+
+test('findColumnIdByCardId returns the containing column id', () => {
+  const workspace = createCard(createEmptyWorkspace(), 'main', {
+    title: 'Trace card location',
+    priority: 'normal'
+  });
+  const board = workspace.boards.main;
+  const [cardId] = board.columns.backlog.cardIds;
+
+  assert.equal(findColumnIdByCardId(board, cardId), 'backlog');
+  assert.equal(findColumnIdByCardId(board, 'missing_card'), null);
+});
+
+test('getCollapsedColumnsForBoard merges stored state with default column flags', () => {
+  const workspace = setColumnCollapsed(createEmptyWorkspace(), 'main', 'doing', true);
+
+  assert.deepEqual(getCollapsedColumnsForBoard(workspace, 'main'), {
+    backlog: false,
+    doing: true,
+    done: false,
+    archived: false
+  });
 });

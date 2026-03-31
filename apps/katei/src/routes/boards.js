@@ -3,9 +3,9 @@ import {
   APP_TITLE,
   COLUMN_ORDER,
   PRIORITY_ORDER,
-  createEmptyWorkspace,
-  getActiveBoard
-} from '../../public/js/domain/workspace.js';
+  createEmptyWorkspace
+} from '../../public/js/domain/workspace_read_model.js';
+import { getActiveBoard } from '../../public/js/domain/workspace_selectors.js';
 import { getColumnDisplayLabel, getPriorityDisplayLabel } from '../../public/js/i18n/workspace_labels.js';
 
 export function createBoardsRouter({ requireSession, workspaceRecordRepository }) {

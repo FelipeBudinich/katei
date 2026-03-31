@@ -1,5 +1,6 @@
 import { WorkspaceRepository } from './workspace_repository.js';
-import { createEmptyWorkspace, validateWorkspaceShape } from '../domain/workspace.js';
+import { createEmptyWorkspace } from '../domain/workspace_read_model.js';
+import { validateWorkspaceShape } from '../domain/workspace_validation.js';
 
 export const WORKSPACE_STORAGE_PREFIX = 'katei.workspace.v4:';
 

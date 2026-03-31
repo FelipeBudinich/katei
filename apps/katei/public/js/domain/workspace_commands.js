@@ -1,8 +1,8 @@
 import {
   COLUMN_ORDER,
-  PRIORITY_ORDER,
-  validateWorkspaceShape
-} from './workspace.js';
+  PRIORITY_ORDER
+} from './workspace_read_model.js';
+import { validateWorkspaceShape } from './workspace_validation.js';
 
 export const WORKSPACE_COMMAND_TYPES = Object.freeze([
   'board.create',

@@ -1,4 +1,4 @@
-import { validateWorkspaceShape } from '../domain/workspace.js';
+import { validateWorkspaceShape } from '../domain/workspace_validation.js';
 import { createWorkspaceStorageKey } from '../repositories/local_workspace_repository.js';
 
 export function readLocalV4Workspace(storage = globalThis.localStorage, viewerSub) {

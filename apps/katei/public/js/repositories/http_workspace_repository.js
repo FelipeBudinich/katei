@@ -1,4 +1,4 @@
-import { validateWorkspaceShape } from '../domain/workspace.js';
+import { validateWorkspaceShape } from '../domain/workspace_validation.js';
 import { postWorkspaceImport, readLocalV4Workspace } from '../lib/workspace_import.js';
 import { WorkspaceRepository } from './workspace_repository.js';
 

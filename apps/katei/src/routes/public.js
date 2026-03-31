@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Router } from 'express';
-import { APP_TITLE } from '../../public/js/domain/workspace.js';
+import { APP_TITLE } from '../../public/js/domain/workspace_read_model.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

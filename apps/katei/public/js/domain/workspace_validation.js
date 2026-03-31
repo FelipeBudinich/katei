@@ -1,0 +1,204 @@
+import {
+  COLUMN_ORDER,
+  COLUMN_TITLES,
+  PRIORITY_ORDER,
+  WORKSPACE_ID,
+  WORKSPACE_VERSION
+} from './workspace_read_model.js';
+
+export function validateWorkspaceShape(value) {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  if (value.version !== WORKSPACE_VERSION || value.workspaceId !== WORKSPACE_ID) {
+    return false;
+  }
+
+  if (!value.ui || !isValidBoardId(value.ui.activeBoardId, value.boards)) {
+    return false;
+  }
+
+  if (
+    value.ui.collapsedColumnsByBoard != null &&
+    !isValidCollapsedColumnsByBoard(value.ui.collapsedColumnsByBoard, value.boards)
+  ) {
+    return false;
+  }
+
+  if (!Array.isArray(value.boardOrder) || value.boardOrder.length < 1) {
+    return false;
+  }
+
+  if (!value.boards || typeof value.boards !== 'object') {
+    return false;
+  }
+
+  if (Object.keys(value.boards).length !== value.boardOrder.length) {
+    return false;
+  }
+
+  for (const boardId of value.boardOrder) {
+    const board = value.boards[boardId];
+
+    if (!isValidBoard(board, boardId)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+export function normalizeBoardTitle(value) {
+  const normalized = String(value ?? '').trim();
+
+  if (!normalized) {
+    throw new Error('Board title is required.');
+  }
+
+  return normalized;
+}
+
+export function normalizeCardTitle(value) {
+  const normalized = String(value ?? '').trim();
+
+  if (!normalized) {
+    throw new Error('Card title is required.');
+  }
+
+  return normalized;
+}
+
+export function normalizeDetailsMarkdown(value) {
+  return String(value ?? '').trim();
+}
+
+export function normalizePriority(value) {
+  if (!isValidPriority(value)) {
+    throw new Error(`Invalid priority: ${value}`);
+  }
+
+  return value;
+}
+
+export function isValidPriority(value) {
+  return PRIORITY_ORDER.includes(value);
+}
+
+export function isValidColumnId(columnId) {
+  return COLUMN_ORDER.includes(columnId);
+}
+
+export function assertValidColumnId(columnId) {
+  if (!isValidColumnId(columnId)) {
+    throw new Error(`Invalid column id: ${columnId}`);
+  }
+}
+
+export function isValidBoardId(boardId, boards) {
+  return Boolean(typeof boardId === 'string' && boards && typeof boards === 'object' && boards[boardId]);
+}
+
+export function assertValidBoardId(boardId, boards) {
+  if (!isValidBoardId(boardId, boards)) {
+    throw new Error('Board not found.');
+  }
+}
+
+function isValidBoard(board, boardId) {
+  if (!board || typeof board !== 'object' || board.id !== boardId) {
+    return false;
+  }
+
+  if (typeof board.title !== 'string' || !board.title.trim()) {
+    return false;
+  }
+
+  if (typeof board.createdAt !== 'string' || typeof board.updatedAt !== 'string') {
+    return false;
+  }
+
+  if (!Array.isArray(board.columnOrder) || board.columnOrder.join('|') !== COLUMN_ORDER.join('|')) {
+    return false;
+  }
+
+  if (!board.columns || typeof board.columns !== 'object' || !board.cards || typeof board.cards !== 'object') {
+    return false;
+  }
+
+  const seenCardIds = new Set();
+
+  for (const columnId of COLUMN_ORDER) {
+    const column = board.columns[columnId];
+
+    if (!column || column.id !== columnId || column.title !== COLUMN_TITLES[columnId]) {
+      return false;
+    }
+
+    if (!Array.isArray(column.cardIds)) {
+      return false;
+    }
+
+    for (const cardId of column.cardIds) {
+      if (typeof cardId !== 'string' || seenCardIds.has(cardId)) {
+        return false;
+      }
+
+      const card = board.cards[cardId];
+
+      if (!isValidCard(card, cardId)) {
+        return false;
+      }
+
+      seenCardIds.add(cardId);
+    }
+  }
+
+  if (Object.keys(board.cards).length !== seenCardIds.size) {
+    return false;
+  }
+
+  return true;
+}
+
+function isValidCard(card, cardId) {
+  return Boolean(
+    card &&
+      typeof card === 'object' &&
+      card.id === cardId &&
+      typeof card.title === 'string' &&
+      card.title.trim() &&
+      typeof card.detailsMarkdown === 'string' &&
+      typeof card.createdAt === 'string' &&
+      typeof card.updatedAt === 'string' &&
+      isValidPriority(card.priority)
+  );
+}
+
+function isValidCollapsedColumnsByBoard(value, boards) {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  for (const boardId of Object.keys(value)) {
+    if (!boards[boardId] || !isValidCollapsedColumns(value[boardId])) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function isValidCollapsedColumns(value) {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  for (const columnId of COLUMN_ORDER) {
+    if (value[columnId] != null && typeof value[columnId] !== 'boolean') {
+      return false;
+    }
+  }
+
+  return true;
+}

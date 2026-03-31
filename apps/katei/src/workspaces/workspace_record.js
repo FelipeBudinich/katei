@@ -1,9 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import {
   cloneWorkspace,
-  createEmptyWorkspace,
-  validateWorkspaceShape
-} from '../../public/js/domain/workspace.js';
+  createEmptyWorkspace
+} from '../../public/js/domain/workspace_read_model.js';
+import { validateWorkspaceShape } from '../../public/js/domain/workspace_validation.js';
 
 export const WORKSPACE_RECORD_COLLECTION_NAME = 'workspace_records';
 

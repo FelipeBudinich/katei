@@ -9,7 +9,7 @@ import {
   setColumnCollapsed,
   setActiveBoard,
   updateCard
-} from '../domain/workspace.js';
+} from '../domain/workspace_mutations.js';
 
 export class WorkspaceService {
   constructor(repository) {

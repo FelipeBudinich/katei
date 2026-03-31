@@ -1,5 +1,5 @@
 import { createApp } from './app.js';
-import { APP_TITLE } from '../public/js/domain/workspace.js';
+import { APP_TITLE } from '../public/js/domain/workspace_read_model.js';
 
 const app = createApp();
 const port = Number(process.env.PORT) || 3000;

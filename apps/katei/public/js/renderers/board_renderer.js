@@ -1,5 +1,5 @@
 import { markdownToPreviewText } from '../lib/markdown.js';
-import { sortCardIdsForColumn } from '../domain/workspace.js';
+import { sortCardIdsForColumn } from '../domain/workspace_selectors.js';
 import { createBrowserDateTimeFormatter, getBrowserTranslator } from '../i18n/browser.js';
 import { formatCardCount, getColumnDisplayLabel } from '../i18n/workspace_labels.js';
 

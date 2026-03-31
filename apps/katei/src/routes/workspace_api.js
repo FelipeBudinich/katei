@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { validateWorkspaceShape } from '../../public/js/domain/workspace.js';
+import { validateWorkspaceShape } from '../../public/js/domain/workspace_validation.js';
 import {
   WorkspaceImportConflictError,
   WorkspaceRevisionConflictError
