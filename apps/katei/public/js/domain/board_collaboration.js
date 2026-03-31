@@ -1,12 +1,12 @@
 const BOARD_ROLES = Object.freeze(['admin', 'editor', 'viewer']);
-const BOARD_INVITE_STATUSES = Object.freeze(['accepted', 'pending', 'revoked', 'expired']);
+const BOARD_INVITE_STATUSES = Object.freeze(['accepted', 'declined', 'pending', 'revoked', 'expired']);
 
 export function createBoardCollaboration({ creator = null, joinedAt = null } = {}) {
   const collaboration = {
     memberships: [],
     invites: []
   };
-  const actor = normalizeActor(creator);
+  const actor = normalizeBoardActor(creator);
 
   if (!actor) {
     return collaboration;
@@ -66,6 +66,11 @@ export function normalizeBoardCollaboration(board) {
 export function canonicalizeBoardRole(role) {
   const normalizedRole = normalizeOptionalString(role).toLowerCase();
   return BOARD_ROLES.includes(normalizedRole) ? normalizedRole : null;
+}
+
+export function canonicalizeBoardInviteStatus(status) {
+  const normalizedStatus = normalizeOptionalString(status).toLowerCase();
+  return BOARD_INVITE_STATUSES.includes(normalizedStatus) ? normalizedStatus : null;
 }
 
 export function validateBoardMemberships(board) {
@@ -133,14 +138,14 @@ export function listPendingBoardInvites(board) {
     .map((invite) => structuredClone(invite));
 }
 
-function normalizeBoardMembership(membership) {
+export function normalizeBoardMembership(membership) {
   if (!isPlainObject(membership)) {
     return null;
   }
 
-  const actor = normalizeActor(membership.actor);
+  const actor = normalizeBoardActor(membership.actor);
   const role = canonicalizeBoardRole(membership.role);
-  const invitedBy = membership.invitedBy == null ? null : normalizeActor(membership.invitedBy);
+  const invitedBy = membership.invitedBy == null ? null : normalizeBoardActor(membership.invitedBy);
 
   if (!actor || !role || (membership.invitedBy != null && !invitedBy)) {
     return null;
@@ -157,11 +162,11 @@ function normalizeBoardMembership(membership) {
     role,
     ...(joinedAt ? { joinedAt } : {}),
     ...(invitedBy ? { invitedBy } : {}),
-    actorKey: createActorKey(actor)
+    actorKey: createBoardActorKey(actor)
   };
 }
 
-function normalizeBoardInvite(invite) {
+export function normalizeBoardInvite(invite) {
   if (!isPlainObject(invite)) {
     return null;
   }
@@ -169,9 +174,9 @@ function normalizeBoardInvite(invite) {
   const id = normalizeOptionalString(invite.id);
   const role = canonicalizeBoardRole(invite.role);
   const status = canonicalizeBoardInviteStatus(invite.status);
-  const targetActor = normalizeActor(invite.actor ?? invite.invitee ?? null);
+  const targetActor = normalizeBoardActor(invite.actor ?? invite.invitee ?? null);
   const targetEmail = normalizeEmail(invite.email ?? invite.inviteeEmail ?? null);
-  const invitedBy = invite.invitedBy == null ? null : normalizeActor(invite.invitedBy);
+  const invitedBy = invite.invitedBy == null ? null : normalizeBoardActor(invite.invitedBy);
 
   if (!id || !role || !status || (!targetActor && !targetEmail) || (invite.invitedBy != null && !invitedBy)) {
     return null;
@@ -202,12 +207,7 @@ function normalizeBoardInvite(invite) {
   };
 }
 
-function canonicalizeBoardInviteStatus(status) {
-  const normalizedStatus = normalizeOptionalString(status).toLowerCase();
-  return BOARD_INVITE_STATUSES.includes(normalizedStatus) ? normalizedStatus : null;
-}
-
-function normalizeActor(actor) {
+export function normalizeBoardActor(actor) {
   if (!isPlainObject(actor)) {
     return null;
   }
@@ -229,8 +229,19 @@ function normalizeActor(actor) {
   };
 }
 
-function createActorKey(actor) {
-  return `${actor.type}:${actor.id}`;
+export function cloneBoardActor(actor) {
+  const normalizedActor = normalizeBoardActor(actor);
+  return normalizedActor ? structuredClone(normalizedActor) : null;
+}
+
+export function createBoardActorKey(actor) {
+  const normalizedActor = normalizeBoardActor(actor);
+  return normalizedActor ? `${normalizedActor.type}:${normalizedActor.id}` : null;
+}
+
+export function boardActorsMatch(leftActor, rightActor) {
+  const leftActorKey = createBoardActorKey(leftActor);
+  return Boolean(leftActorKey && leftActorKey === createBoardActorKey(rightActor));
 }
 
 function readBoardMemberships(board) {

@@ -608,7 +608,7 @@ test('POST /api/workspace/commands routes mutations by workspaceId for accessibl
   sharedWorkspace.boards.main.collaboration.memberships = [
     {
       actor: { type: 'human', id: 'sub_collab' },
-      role: 'editor'
+      role: 'admin'
     }
   ];
   const sharedRecord = createInitialWorkspaceRecord('sub_owner', {
@@ -643,6 +643,118 @@ test('POST /api/workspace/commands routes mutations by workspaceId for accessibl
   assert.equal(response.body.activeWorkspace.workspaceId, 'workspace_shared_2');
   assert.equal(response.body.workspace.boards.main.title, 'Shared board renamed');
   assert.equal(workspaceRecordRepository.replaceRecordCalls[0].record.workspaceId, 'workspace_shared_2');
+});
+
+test('POST /api/workspace/commands returns 403 for unauthorized collaboration commands', async () => {
+  const sharedWorkspace = createEmptyWorkspace({
+    workspaceId: 'workspace_shared_permissions',
+    creator: { type: 'human', id: 'sub_owner' }
+  });
+  sharedWorkspace.boards.main.collaboration.memberships.push({
+    actor: { type: 'human', id: 'sub_editor' },
+    role: 'editor'
+  });
+  const sharedRecord = createInitialWorkspaceRecord('sub_owner', {
+    workspaceId: 'workspace_shared_permissions',
+    now: '2026-04-02T10:00:00.000Z'
+  });
+  sharedRecord.isHomeWorkspace = false;
+  sharedRecord.workspace = sharedWorkspace;
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord]);
+  const app = createTestApp({
+    googleTokenVerifier: async () => ({ sub: 'sub_editor' }),
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .post('/api/workspace/commands')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_editor' }))
+    .send({
+      workspaceId: 'workspace_shared_permissions',
+      command: {
+        clientMutationId: 'shared_invite_forbidden',
+        type: 'board.invite.create',
+        payload: {
+          boardId: 'main',
+          email: 'invitee@example.com',
+          role: 'viewer'
+        }
+      },
+      expectedRevision: 0
+    });
+
+  assert.equal(response.status, 403);
+  assert.deepEqual(response.body, {
+    ok: false,
+    error: 'You do not have permission to administer this board.'
+  });
+  assert.equal(workspaceRecordRepository.replaceRecordCalls.length, 0);
+});
+
+test('POST /api/workspace/commands accepts matching-email invites and persists the actor email', async () => {
+  const sharedWorkspace = createEmptyWorkspace({
+    workspaceId: 'workspace_shared_invite_accept',
+    creator: { type: 'human', id: 'sub_owner' }
+  });
+  sharedWorkspace.boards.main.collaboration.invites = [
+    {
+      id: 'invite_1',
+      email: 'invitee@example.com',
+      role: 'editor',
+      status: 'pending',
+      invitedBy: { type: 'human', id: 'sub_owner' },
+      invitedAt: '2026-04-02T09:00:00.000Z'
+    }
+  ];
+  const sharedRecord = createInitialWorkspaceRecord('sub_owner', {
+    workspaceId: 'workspace_shared_invite_accept',
+    now: '2026-04-02T10:00:00.000Z'
+  });
+  sharedRecord.isHomeWorkspace = false;
+  sharedRecord.workspace = sharedWorkspace;
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord]);
+  const app = createTestApp({
+    googleTokenVerifier: async () => ({ sub: 'sub_invited' }),
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .post('/api/workspace/commands')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_invited', email: 'invitee@example.com', name: 'Invitee' }))
+    .send({
+      workspaceId: 'workspace_shared_invite_accept',
+      command: {
+        clientMutationId: 'shared_invite_accept',
+        type: 'board.invite.accept',
+        payload: {
+          boardId: 'main',
+          inviteId: 'invite_1'
+        }
+      },
+      expectedRevision: 0
+    });
+
+  assert.equal(response.status, 200);
+  assert.equal(response.body.workspace.boards.main.collaboration.invites[0].status, 'accepted');
+  assert.equal(response.body.workspace.boards.main.collaboration.invites[0].respondedAt, response.body.meta.updatedAt);
+  assert.deepEqual(response.body.workspace.boards.main.collaboration.memberships.at(-1), {
+    actor: {
+      type: 'human',
+      id: 'sub_invited',
+      email: 'invitee@example.com',
+      displayName: 'Invitee'
+    },
+    role: 'editor',
+    joinedAt: response.body.meta.updatedAt,
+    invitedBy: {
+      type: 'human',
+      id: 'sub_owner'
+    }
+  });
+  assert.equal(
+    workspaceRecordRepository.replaceRecordCalls[0].record.workspace.boards.main.collaboration.memberships.at(-1).actor.email,
+    'invitee@example.com'
+  );
 });
 
 test('POST /api/workspace/commands replays duplicate clientMutationId safely without duplicating work', async () => {

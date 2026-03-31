@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { migrateWorkspaceSnapshot } from '../../public/js/domain/workspace_migrations.js';
 import { validateWorkspaceShape } from '../../public/js/domain/workspace_validation.js';
-import { applyWorkspaceCommand } from '../workspaces/apply_workspace_command.js';
+import { applyWorkspaceCommand, WorkspaceCommandPermissionError } from '../workspaces/apply_workspace_command.js';
 import { createDefaultMutationContext } from '../workspaces/mutation_context.js';
 import {
   createWorkspaceRecord,
@@ -169,6 +169,14 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
 
       if (error instanceof WorkspaceRevisionConflictError || error?.code === 'WORKSPACE_REVISION_CONFLICT') {
         response.status(409).json({
+          ok: false,
+          error: error.message
+        });
+        return;
+      }
+
+      if (error instanceof WorkspaceCommandPermissionError || error?.code === 'WORKSPACE_COMMAND_FORBIDDEN') {
+        response.status(403).json({
           ok: false,
           error: error.message
         });

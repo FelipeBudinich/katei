@@ -55,6 +55,50 @@ export class WorkspaceService {
     });
   }
 
+  async inviteBoardMember(boardId, email, role) {
+    return this.#applyCommand('board.invite.create', {
+      boardId,
+      email,
+      role
+    });
+  }
+
+  async revokeBoardInvite(boardId, inviteId) {
+    return this.#applyCommand('board.invite.revoke', {
+      boardId,
+      inviteId
+    });
+  }
+
+  async acceptBoardInvite(boardId, inviteId) {
+    return this.#applyCommand('board.invite.accept', {
+      boardId,
+      inviteId
+    });
+  }
+
+  async declineBoardInvite(boardId, inviteId) {
+    return this.#applyCommand('board.invite.decline', {
+      boardId,
+      inviteId
+    });
+  }
+
+  async setBoardMemberRole(boardId, actor, role) {
+    return this.#applyCommand('board.member.role.set', {
+      boardId,
+      targetActor: actor,
+      role
+    });
+  }
+
+  async removeBoardMember(boardId, actor) {
+    return this.#applyCommand('board.member.remove', {
+      boardId,
+      targetActor: actor
+    });
+  }
+
   async createCard(boardId, input) {
     return this.#applyCommand('card.create', {
       boardId,

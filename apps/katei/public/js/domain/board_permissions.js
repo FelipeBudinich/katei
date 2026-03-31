@@ -1,7 +1,11 @@
-import { canonicalizeBoardRole } from './board_collaboration.js';
+import {
+  canonicalizeBoardRole,
+  createBoardActorKey,
+  normalizeBoardMembership
+} from './board_collaboration.js';
 
 export function getBoardMembershipForActor(board, actor) {
-  const actorKey = createActorKey(actor);
+  const actorKey = createBoardActorKey(actor);
 
   if (!actorKey) {
     return null;
@@ -18,38 +22,39 @@ export function getBoardMembershipForActor(board, actor) {
   return null;
 }
 
+export function requireBoardMembershipForActor(board, actor) {
+  const membership = getBoardMembershipForActor(board, actor);
+
+  if (!membership) {
+    throw new Error('Board access denied.');
+  }
+
+  return membership;
+}
+
 export function canActorReadBoard(board, actor) {
   const membership = getBoardMembershipForActor(board, actor);
   return membership != null;
 }
 
 export function canActorEditBoard(board, actor) {
-  const role = getBoardMembershipForActor(board, actor)?.role ?? null;
-  return role === 'admin' || role === 'editor';
+  return isBoardEditorLikeRole(getBoardMembershipForActor(board, actor));
 }
 
 export function canActorAdminBoard(board, actor) {
-  return getBoardMembershipForActor(board, actor)?.role === 'admin';
+  return isBoardAdminMembership(getBoardMembershipForActor(board, actor));
 }
 
-function normalizeBoardMembership(membership) {
-  if (!isPlainObject(membership)) {
-    return null;
-  }
+export function isBoardAdminMembership(membership) {
+  return canonicalizeBoardRole(membership?.role) === 'admin';
+}
 
-  const actor = normalizeActor(membership.actor);
-  const role = canonicalizeBoardRole(membership.role);
+export function isBoardEditorLikeRole(roleOrMembership) {
+  const role = canonicalizeBoardRole(
+    typeof roleOrMembership === 'string' ? roleOrMembership : roleOrMembership?.role
+  );
 
-  if (!actor || !role) {
-    return null;
-  }
-
-  return {
-    ...structuredClone(membership),
-    actor,
-    role,
-    actorKey: createActorKey(actor)
-  };
+  return role === 'admin' || role === 'editor';
 }
 
 function stripActorKey(membership) {
@@ -72,32 +77,4 @@ function readBoardMemberships(board) {
   }
 
   return [];
-}
-
-function normalizeActor(actor) {
-  if (!isPlainObject(actor)) {
-    return null;
-  }
-
-  const type = normalizeOptionalString(actor.type).toLowerCase();
-  const id = normalizeOptionalString(actor.id);
-
-  if (!['human', 'agent', 'system'].includes(type) || !id) {
-    return null;
-  }
-
-  return { type, id };
-}
-
-function createActorKey(actor) {
-  const normalizedActor = normalizeActor(actor);
-  return normalizedActor ? `${normalizedActor.type}:${normalizedActor.id}` : null;
-}
-
-function normalizeOptionalString(value) {
-  return typeof value === 'string' ? value.trim() : '';
-}
-
-function isPlainObject(value) {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }

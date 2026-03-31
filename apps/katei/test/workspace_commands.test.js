@@ -13,6 +13,8 @@ import {
 test('isWorkspaceCommandType accepts known command types and rejects unknown ones', () => {
   assert.equal(isWorkspaceCommandType('board.create'), true);
   assert.equal(isWorkspaceCommandType('board.update'), true);
+  assert.equal(isWorkspaceCommandType('board.invite.create'), true);
+  assert.equal(isWorkspaceCommandType('board.member.remove'), true);
   assert.equal(isWorkspaceCommandType('card.move'), true);
   assert.equal(isWorkspaceCommandType('board.archive'), false);
 });
@@ -74,6 +76,63 @@ test('validateWorkspaceCommand accepts valid command envelopes', () => {
     },
     {
       clientMutationId: 'm6',
+      type: 'board.invite.create',
+      payload: {
+        boardId: 'main',
+        email: 'invitee@example.com',
+        role: ' Editor '
+      }
+    },
+    {
+      clientMutationId: 'm7',
+      type: 'board.invite.revoke',
+      payload: {
+        boardId: 'main',
+        inviteId: 'invite_1'
+      }
+    },
+    {
+      clientMutationId: 'm8',
+      type: 'board.invite.accept',
+      payload: {
+        boardId: 'main',
+        inviteId: 'invite_1'
+      }
+    },
+    {
+      clientMutationId: 'm9',
+      type: 'board.invite.decline',
+      payload: {
+        boardId: 'main',
+        inviteId: 'invite_1'
+      }
+    },
+    {
+      clientMutationId: 'm10',
+      type: 'board.member.role.set',
+      payload: {
+        boardId: 'main',
+        targetActor: {
+          type: 'human',
+          id: 'viewer_123',
+          email: 'viewer@example.com'
+        },
+        role: 'viewer'
+      }
+    },
+    {
+      clientMutationId: 'm11',
+      type: 'board.member.remove',
+      payload: {
+        boardId: 'main',
+        targetActor: {
+          type: 'human',
+          id: 'viewer_123'
+        }
+      }
+    },
+    {
+      clientMutationId: 'm12',
       type: 'card.create',
       payload: {
         boardId: 'main',
@@ -83,7 +142,7 @@ test('validateWorkspaceCommand accepts valid command envelopes', () => {
       }
     },
     {
-      clientMutationId: 'm7',
+      clientMutationId: 'm13',
       type: 'card.update',
       payload: {
         boardId: 'main',
@@ -92,12 +151,12 @@ test('validateWorkspaceCommand accepts valid command envelopes', () => {
       }
     },
     {
-      clientMutationId: 'm8',
+      clientMutationId: 'm14',
       type: 'card.delete',
       payload: { boardId: 'main', cardId: 'card_1' }
     },
     {
-      clientMutationId: 'm9',
+      clientMutationId: 'm15',
       type: 'card.move',
       payload: {
         boardId: 'main',
@@ -107,12 +166,12 @@ test('validateWorkspaceCommand accepts valid command envelopes', () => {
       }
     },
     {
-      clientMutationId: 'm10',
+      clientMutationId: 'm16',
       type: 'ui.activeBoard.set',
       payload: { boardId: 'main' }
     },
     {
-      clientMutationId: 'm11',
+      clientMutationId: 'm17',
       type: 'ui.columnCollapsed.set',
       payload: {
         boardId: 'main',
@@ -134,6 +193,71 @@ test('validateWorkspaceCommand rejects unknown command types', () => {
       clientMutationId: 'm1',
       type: 'board.archive',
       payload: {}
+    }),
+    false
+  );
+});
+
+test('validateWorkspaceCommand rejects invalid collaboration payloads', () => {
+  assert.equal(
+    validateWorkspaceCommand({
+      clientMutationId: 'c1',
+      type: 'board.invite.create',
+      payload: {
+        boardId: 'main',
+        email: 'not-an-email',
+        role: 'editor'
+      }
+    }),
+    false
+  );
+
+  assert.equal(
+    validateWorkspaceCommand({
+      clientMutationId: 'c2',
+      type: 'board.invite.create',
+      payload: {
+        boardId: 'main',
+        email: 'invitee@example.com',
+        role: 'owner'
+      }
+    }),
+    false
+  );
+
+  assert.equal(
+    validateWorkspaceCommand({
+      clientMutationId: 'c3',
+      type: 'board.invite.accept',
+      payload: {
+        boardId: 'main'
+      }
+    }),
+    false
+  );
+
+  assert.equal(
+    validateWorkspaceCommand({
+      clientMutationId: 'c4',
+      type: 'board.member.role.set',
+      payload: {
+        boardId: 'main',
+        role: 'admin'
+      }
+    }),
+    false
+  );
+
+  assert.equal(
+    validateWorkspaceCommand({
+      clientMutationId: 'c5',
+      type: 'board.member.remove',
+      payload: {
+        boardId: 'main',
+        targetActor: {
+          type: 'human'
+        }
+      }
     }),
     false
   );

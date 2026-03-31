@@ -1,4 +1,5 @@
 import { normalizeBoardSchemaInput } from './board_schema.js';
+import { canonicalizeBoardRole, normalizeBoardActor } from './board_collaboration.js';
 import { PRIORITY_ORDER } from './workspace_read_model.js';
 import { validateWorkspaceShape } from './workspace_validation.js';
 
@@ -8,6 +9,12 @@ export const WORKSPACE_COMMAND_TYPES = Object.freeze([
   'board.rename',
   'board.delete',
   'board.reset',
+  'board.invite.create',
+  'board.invite.revoke',
+  'board.invite.accept',
+  'board.invite.decline',
+  'board.member.role.set',
+  'board.member.remove',
   'card.create',
   'card.update',
   'card.delete',
@@ -88,6 +95,16 @@ function validatePayload(type, payload) {
     case 'board.reset':
     case 'ui.activeBoard.set':
       return requireBoardId(payload, `${type} payload.boardId is required.`);
+    case 'board.invite.create':
+      return validateBoardInviteCreatePayload(payload);
+    case 'board.invite.revoke':
+    case 'board.invite.accept':
+    case 'board.invite.decline':
+      return validateBoardInviteIdentityPayload(type, payload);
+    case 'board.member.role.set':
+      return validateBoardMemberRoleSetPayload(payload);
+    case 'board.member.remove':
+      return validateBoardMemberRemovePayload(payload);
     case 'card.create':
       return validateCardCreatePayload(payload);
     case 'card.update':
@@ -137,6 +154,64 @@ function validateBoardScopedTitlePayload(type, payload) {
   }
 
   return requireNonEmptyString(payload.title, `${type} payload.title is required.`);
+}
+
+function validateBoardInviteCreatePayload(payload) {
+  const boardIdValidation = requireBoardId(payload, 'board.invite.create payload.boardId is required.');
+
+  if (!boardIdValidation.isValid) {
+    return boardIdValidation;
+  }
+
+  const emailValidation = requireInviteEmail(payload?.email, 'board.invite.create payload.email is required.');
+
+  if (!emailValidation.isValid) {
+    return emailValidation;
+  }
+
+  return requireBoardRole(payload?.role, 'board.invite.create payload.role must be admin, editor, or viewer.');
+}
+
+function validateBoardInviteIdentityPayload(type, payload) {
+  const boardIdValidation = requireBoardId(payload, `${type} payload.boardId is required.`);
+
+  if (!boardIdValidation.isValid) {
+    return boardIdValidation;
+  }
+
+  return requireNonEmptyString(payload?.inviteId, `${type} payload.inviteId is required.`);
+}
+
+function validateBoardMemberRoleSetPayload(payload) {
+  const boardIdValidation = requireBoardId(payload, 'board.member.role.set payload.boardId is required.');
+
+  if (!boardIdValidation.isValid) {
+    return boardIdValidation;
+  }
+
+  const targetActorValidation = requireTargetActor(
+    payload?.targetActor,
+    'board.member.role.set payload.targetActor must be a valid actor.'
+  );
+
+  if (!targetActorValidation.isValid) {
+    return targetActorValidation;
+  }
+
+  return requireBoardRole(payload?.role, 'board.member.role.set payload.role must be admin, editor, or viewer.');
+}
+
+function validateBoardMemberRemovePayload(payload) {
+  const boardIdValidation = requireBoardId(payload, 'board.member.remove payload.boardId is required.');
+
+  if (!boardIdValidation.isValid) {
+    return boardIdValidation;
+  }
+
+  return requireTargetActor(
+    payload?.targetActor,
+    'board.member.remove payload.targetActor must be a valid actor.'
+  );
 }
 
 function validateOptionalBoardSchemaPayload(payload, type) {
@@ -329,6 +404,30 @@ function requireBoardId(payload, errorMessage) {
   return requireNonEmptyString(payload?.boardId, errorMessage);
 }
 
+function requireBoardRole(value, errorMessage) {
+  if (!canonicalizeBoardRole(value)) {
+    return invalid(errorMessage);
+  }
+
+  return valid();
+}
+
+function requireTargetActor(value, errorMessage) {
+  if (!normalizeBoardActor(value)) {
+    return invalid(errorMessage);
+  }
+
+  return valid();
+}
+
+function requireInviteEmail(value, errorMessage) {
+  if (!isValidEmailLike(value)) {
+    return invalid(errorMessage);
+  }
+
+  return valid();
+}
+
 function hasBoardSchemaFields(payload) {
   return Boolean(
     payload &&
@@ -362,6 +461,10 @@ function isNonEmptyString(value) {
 
 function isNonNegativeInteger(value) {
   return Number.isInteger(value) && value >= 0;
+}
+
+function isValidEmailLike(value) {
+  return typeof value === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
 
 function isPlainObject(value) {

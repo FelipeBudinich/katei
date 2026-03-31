@@ -142,6 +142,94 @@ test('WorkspaceService setColumnCollapsed calls repository.applyCommand and retu
   });
 });
 
+test('WorkspaceService inviteBoardMember calls repository.applyCommand and returns workspace', async () => {
+  await assertServiceCommand({
+    action: (service) => service.inviteBoardMember('main', 'invitee@example.com', 'editor'),
+    expectedType: 'board.invite.create',
+    expectedPayload: {
+      boardId: 'main',
+      email: 'invitee@example.com',
+      role: 'editor'
+    }
+  });
+});
+
+test('WorkspaceService revokeBoardInvite calls repository.applyCommand and returns workspace', async () => {
+  await assertServiceCommand({
+    action: (service) => service.revokeBoardInvite('main', 'invite_1'),
+    expectedType: 'board.invite.revoke',
+    expectedPayload: {
+      boardId: 'main',
+      inviteId: 'invite_1'
+    }
+  });
+});
+
+test('WorkspaceService acceptBoardInvite calls repository.applyCommand and returns workspace', async () => {
+  await assertServiceCommand({
+    action: (service) => service.acceptBoardInvite('main', 'invite_1'),
+    expectedType: 'board.invite.accept',
+    expectedPayload: {
+      boardId: 'main',
+      inviteId: 'invite_1'
+    }
+  });
+});
+
+test('WorkspaceService declineBoardInvite calls repository.applyCommand and returns workspace', async () => {
+  await assertServiceCommand({
+    action: (service) => service.declineBoardInvite('main', 'invite_1'),
+    expectedType: 'board.invite.decline',
+    expectedPayload: {
+      boardId: 'main',
+      inviteId: 'invite_1'
+    }
+  });
+});
+
+test('WorkspaceService setBoardMemberRole calls repository.applyCommand and returns workspace', async () => {
+  await assertServiceCommand({
+    action: (service) =>
+      service.setBoardMemberRole(
+        'main',
+        {
+          type: 'human',
+          id: 'viewer_123',
+          email: 'viewer@example.com'
+        },
+        'viewer'
+      ),
+    expectedType: 'board.member.role.set',
+    expectedPayload: {
+      boardId: 'main',
+      targetActor: {
+        type: 'human',
+        id: 'viewer_123',
+        email: 'viewer@example.com'
+      },
+      role: 'viewer'
+    }
+  });
+});
+
+test('WorkspaceService removeBoardMember calls repository.applyCommand and returns workspace', async () => {
+  await assertServiceCommand({
+    action: (service) =>
+      service.removeBoardMember('main', {
+        type: 'human',
+        id: 'viewer_123'
+      }),
+    expectedType: 'board.member.remove',
+    expectedPayload: {
+      boardId: 'main',
+      targetActor: {
+        type: 'human',
+        id: 'viewer_123'
+      }
+    }
+  });
+});
+
 test('WorkspaceService createCard calls repository.applyCommand and returns workspace', async () => {
   await assertServiceCommand({
     action: (service) =>

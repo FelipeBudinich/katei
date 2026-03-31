@@ -1,9 +1,25 @@
+import { randomUUID } from 'node:crypto';
 import { assertValidWorkspaceCommand } from '../../public/js/domain/workspace_commands.js';
 import {
   assertBoardSchemaCompatibleWithBoard,
   normalizeBoardSchemaInput,
   serializeBoardSchemaInput
 } from '../../public/js/domain/board_schema.js';
+import {
+  canonicalizeBoardRole,
+  createBoardActorKey,
+  normalizeBoardActor,
+  normalizeBoardCollaboration,
+  normalizeBoardInvite,
+  normalizeBoardMembership
+} from '../../public/js/domain/board_collaboration.js';
+import {
+  canActorAdminBoard,
+  canActorEditBoard,
+  canActorReadBoard,
+  getBoardMembershipForActor,
+  isBoardAdminMembership
+} from '../../public/js/domain/board_permissions.js';
 import {
   createCardContentProvenance,
   getCardContentVariant,
@@ -23,7 +39,6 @@ import {
   getCollapsedColumnsForBoard
 } from '../../public/js/domain/workspace_selectors.js';
 import {
-  assertValidBoardId,
   assertValidColumnId,
   normalizeBoardTitle,
   normalizeCardTitle,
@@ -37,6 +52,14 @@ import {
   createWorkspaceRecord
 } from './workspace_record.js';
 import { WorkspaceRevisionConflictError } from './workspace_record_repository.js';
+
+export class WorkspaceCommandPermissionError extends Error {
+  constructor(message = 'You do not have permission to perform this action.') {
+    super(message);
+    this.name = 'WorkspaceCommandPermissionError';
+    this.code = 'WORKSPACE_COMMAND_FORBIDDEN';
+  }
+}
 
 export function applyWorkspaceCommand({
   record,
@@ -96,8 +119,20 @@ function applyCommandToWorkspace({ workspace, command, context }) {
       return applyBoardUpdate(workspace, command, context);
     case 'board.rename':
       return applyBoardRename(workspace, command, context);
+    case 'board.invite.create':
+      return applyBoardInviteCreate(workspace, command, context);
+    case 'board.invite.revoke':
+      return applyBoardInviteRevoke(workspace, command, context);
+    case 'board.invite.accept':
+      return applyBoardInviteAccept(workspace, command, context);
+    case 'board.invite.decline':
+      return applyBoardInviteDecline(workspace, command, context);
+    case 'board.member.role.set':
+      return applyBoardMemberRoleSet(workspace, command, context);
+    case 'board.member.remove':
+      return applyBoardMemberRemove(workspace, command, context);
     case 'board.delete':
-      return applyBoardDelete(workspace, command);
+      return applyBoardDelete(workspace, command, context);
     case 'board.reset':
       return applyBoardReset(workspace, command, context);
     case 'card.create':
@@ -109,15 +144,16 @@ function applyCommandToWorkspace({ workspace, command, context }) {
     case 'card.move':
       return applyCardMove(workspace, command, context);
     case 'ui.activeBoard.set':
-      return applySetActiveBoard(workspace, command);
+      return applySetActiveBoard(workspace, command, context);
     case 'ui.columnCollapsed.set':
-      return applySetColumnCollapsed(workspace, command);
+      return applySetColumnCollapsed(workspace, command, context);
     default:
       throw new Error(`Unsupported workspace command type: ${command.type}`);
   }
 }
 
 function applyBoardCreate(workspace, command, context) {
+  assertAuthenticatedHumanActor(context.actor, 'You must be signed in to create a board.');
   const nextWorkspace = cloneWorkspace(workspace);
   const boardId = context.createBoardId();
   const board = createWorkspaceBoard({
@@ -161,6 +197,7 @@ function applyBoardCreate(workspace, command, context) {
 function applyBoardUpdate(workspace, command, context) {
   const normalizedTitle = normalizeBoardTitle(command.payload.title);
   const currentBoard = getBoard(workspace, command.payload.boardId);
+  assertActorCanAdminBoard(currentBoard, context.actor);
   const normalizedSchema = normalizeBoardSchemaInput({
     languagePolicy: command.payload.languagePolicy,
     stageDefinitions: command.payload.stageDefinitions,
@@ -205,6 +242,7 @@ function applyBoardUpdate(workspace, command, context) {
 function applyBoardRename(workspace, command, context) {
   const normalizedTitle = normalizeBoardTitle(command.payload.title);
   const currentBoard = getBoard(workspace, command.payload.boardId);
+  assertActorCanAdminBoard(currentBoard, context.actor);
 
   if (currentBoard.title === normalizedTitle) {
     return {
@@ -229,7 +267,227 @@ function applyBoardRename(workspace, command, context) {
   };
 }
 
-function applyBoardDelete(workspace, command) {
+function applyBoardInviteCreate(workspace, command, context) {
+  const currentBoard = getBoard(workspace, command.payload.boardId);
+  assertActorCanAdminBoard(currentBoard, context.actor);
+  const invitedBy = normalizeBoardActor(context.actor);
+  const invite = normalizeBoardInvite({
+    id: createBoardInviteId(),
+    email: command.payload.email,
+    role: canonicalizeBoardRole(command.payload.role),
+    status: 'pending',
+    ...(invitedBy ? { invitedBy } : {}),
+    invitedAt: context.now
+  });
+
+  if (!invite) {
+    throw new Error('Board invite is invalid.');
+  }
+
+  const nextWorkspace = cloneWorkspace(workspace);
+  const board = getBoard(nextWorkspace, command.payload.boardId);
+  const collaboration = ensureBoardCollaboration(board);
+  collaboration.invites = [...collaboration.invites, invite];
+  board.updatedAt = context.now;
+
+  return {
+    workspace: nextWorkspace,
+    result: createCommandResult(command, {
+      boardId: board.id,
+      inviteId: invite.id,
+      email: invite.email,
+      role: invite.role
+    })
+  };
+}
+
+function applyBoardInviteRevoke(workspace, command, context) {
+  const currentBoard = getBoard(workspace, command.payload.boardId);
+  assertActorCanAdminBoard(currentBoard, context.actor);
+  const currentInvite = findBoardInvite(currentBoard, command.payload.inviteId);
+  const pendingInvite = findPendingInvite(currentBoard, command.payload.inviteId, context.now);
+
+  if (!currentInvite) {
+    throw new Error('Board invite not found.');
+  }
+
+  if (resolveInviteStatus(currentInvite, context.now) === 'revoked') {
+    return {
+      workspace,
+      result: createCommandResult(command, {
+        noOp: true,
+        boardId: currentBoard.id,
+        inviteId: currentInvite.id
+      })
+    };
+  }
+
+  if (!pendingInvite) {
+    assertInvitePending(currentInvite, context.now);
+  }
+
+  const nextWorkspace = cloneWorkspace(workspace);
+  const board = getBoard(nextWorkspace, command.payload.boardId);
+  updateInviteStatus(board, command.payload.inviteId, 'revoked', context.now);
+  board.updatedAt = context.now;
+
+  return {
+    workspace: nextWorkspace,
+    result: createCommandResult(command, {
+      boardId: board.id,
+      inviteId: command.payload.inviteId
+    })
+  };
+}
+
+function applyBoardInviteAccept(workspace, command, context) {
+  const currentBoard = getBoard(workspace, command.payload.boardId);
+  const actor = assertAuthenticatedHumanActor(context.actor, 'You must be signed in to accept a board invite.');
+  const currentInvite = findBoardInvite(currentBoard, command.payload.inviteId);
+  const pendingInvite = findPendingInvite(currentBoard, command.payload.inviteId, context.now);
+
+  if (!currentInvite || !emailsMatchInvite(actor, currentInvite)) {
+    throw new WorkspaceCommandPermissionError('You do not have permission to respond to this invite.');
+  }
+
+  if (!pendingInvite) {
+    assertInvitePending(currentInvite, context.now);
+  }
+
+  const nextWorkspace = cloneWorkspace(workspace);
+  const board = getBoard(nextWorkspace, command.payload.boardId);
+  updateInviteStatus(board, command.payload.inviteId, 'accepted', context.now);
+
+  if (!getBoardMembershipForActor(board, actor)) {
+    upsertBoardMembership(board, {
+      actor,
+      role: currentInvite.role,
+      joinedAt: context.now,
+      ...(currentInvite.invitedBy ? { invitedBy: currentInvite.invitedBy } : {})
+    });
+  }
+
+  board.updatedAt = context.now;
+
+  return {
+    workspace: nextWorkspace,
+    result: createCommandResult(command, {
+      boardId: board.id,
+      inviteId: command.payload.inviteId,
+      role: currentInvite.role
+    })
+  };
+}
+
+function applyBoardInviteDecline(workspace, command, context) {
+  const currentBoard = getBoard(workspace, command.payload.boardId);
+  const actor = assertAuthenticatedHumanActor(context.actor, 'You must be signed in to decline a board invite.');
+  const currentInvite = findBoardInvite(currentBoard, command.payload.inviteId);
+  const pendingInvite = findPendingInvite(currentBoard, command.payload.inviteId, context.now);
+
+  if (!currentInvite || !emailsMatchInvite(actor, currentInvite)) {
+    throw new WorkspaceCommandPermissionError('You do not have permission to respond to this invite.');
+  }
+
+  if (!pendingInvite) {
+    assertInvitePending(currentInvite, context.now);
+  }
+
+  const nextWorkspace = cloneWorkspace(workspace);
+  const board = getBoard(nextWorkspace, command.payload.boardId);
+  updateInviteStatus(board, command.payload.inviteId, 'declined', context.now);
+  board.updatedAt = context.now;
+
+  return {
+    workspace: nextWorkspace,
+    result: createCommandResult(command, {
+      boardId: board.id,
+      inviteId: command.payload.inviteId
+    })
+  };
+}
+
+function applyBoardMemberRoleSet(workspace, command, context) {
+  const currentBoard = getBoard(workspace, command.payload.boardId);
+  assertActorCanAdminBoard(currentBoard, context.actor);
+  const targetActor = normalizeTargetActor(command.payload.targetActor);
+  const currentMembership = getBoardMembershipForActor(currentBoard, targetActor);
+  const nextRole = canonicalizeBoardRole(command.payload.role);
+
+  if (!currentMembership) {
+    throw new Error('Board member not found.');
+  }
+
+  if (!nextRole) {
+    throw new Error('Board member role is invalid.');
+  }
+
+  if (currentMembership.role === nextRole) {
+    return {
+      workspace,
+      result: createCommandResult(command, {
+        noOp: true,
+        boardId: currentBoard.id,
+        targetActor,
+        role: nextRole
+      })
+    };
+  }
+
+  if (isBoardAdminMembership(currentMembership) && nextRole !== 'admin' && countAdminMemberships(currentBoard) === 1) {
+    throw new Error('Cannot demote the last board admin.');
+  }
+
+  const nextWorkspace = cloneWorkspace(workspace);
+  const board = getBoard(nextWorkspace, command.payload.boardId);
+  upsertBoardMembership(board, {
+    ...currentMembership,
+    role: nextRole
+  });
+  board.updatedAt = context.now;
+
+  return {
+    workspace: nextWorkspace,
+    result: createCommandResult(command, {
+      boardId: board.id,
+      targetActor,
+      role: nextRole
+    })
+  };
+}
+
+function applyBoardMemberRemove(workspace, command, context) {
+  const currentBoard = getBoard(workspace, command.payload.boardId);
+  assertActorCanAdminBoard(currentBoard, context.actor);
+  const targetActor = normalizeTargetActor(command.payload.targetActor);
+  const currentMembership = getBoardMembershipForActor(currentBoard, targetActor);
+
+  if (!currentMembership) {
+    throw new Error('Board member not found.');
+  }
+
+  if (isBoardAdminMembership(currentMembership) && countAdminMemberships(currentBoard) === 1) {
+    throw new Error('Cannot remove the last board admin.');
+  }
+
+  const nextWorkspace = cloneWorkspace(workspace);
+  const board = getBoard(nextWorkspace, command.payload.boardId);
+  removeBoardMembership(board, targetActor);
+  board.updatedAt = context.now;
+
+  return {
+    workspace: nextWorkspace,
+    result: createCommandResult(command, {
+      boardId: board.id,
+      targetActor
+    })
+  };
+}
+
+function applyBoardDelete(workspace, command, context) {
+  const currentBoard = getBoard(workspace, command.payload.boardId);
+  assertActorCanAdminBoard(currentBoard, context.actor);
+
   if (workspace.boardOrder.length === 1) {
     throw new Error('Cannot delete the last remaining board.');
   }
@@ -263,6 +521,7 @@ function applyBoardDelete(workspace, command) {
 
 function applyBoardReset(workspace, command, context) {
   const currentBoard = getBoard(workspace, command.payload.boardId);
+  assertActorCanAdminBoard(currentBoard, context.actor);
 
   if (isBoardResetNoOp(currentBoard)) {
     return {
@@ -300,6 +559,8 @@ function applyBoardReset(workspace, command, context) {
 }
 
 function applyCardCreate(workspace, command, context) {
+  const currentBoard = getBoard(workspace, command.payload.boardId);
+  assertActorCanEditBoard(currentBoard, context.actor);
   const nextWorkspace = cloneWorkspace(workspace);
   const board = getBoard(nextWorkspace, command.payload.boardId);
   const cardId = context.createCardId();
@@ -341,6 +602,7 @@ function applyCardCreate(workspace, command, context) {
 
 function applyCardUpdate(workspace, command, context) {
   const currentBoard = getBoard(workspace, command.payload.boardId);
+  assertActorCanEditBoard(currentBoard, context.actor);
   const currentCard = getCard(currentBoard, command.payload.cardId);
   const sourceLocale = currentBoard.languagePolicy.sourceLocale;
   const currentVariant = getCardContentVariant(currentCard, sourceLocale, currentBoard);
@@ -405,6 +667,9 @@ function applyCardUpdate(workspace, command, context) {
 }
 
 function applyCardDelete(workspace, command, context) {
+  const currentBoard = getBoard(workspace, command.payload.boardId);
+  assertActorCanEditBoard(currentBoard, context.actor);
+  getCard(currentBoard, command.payload.cardId);
   const nextWorkspace = cloneWorkspace(workspace);
   const board = getBoard(nextWorkspace, command.payload.boardId);
   const card = getCard(board, command.payload.cardId);
@@ -431,6 +696,7 @@ function applyCardDelete(workspace, command, context) {
 function applyCardMove(workspace, command, context) {
   const { boardId, cardId, sourceColumnId, targetColumnId } = command.payload;
   const currentBoard = getBoard(workspace, boardId);
+  assertActorCanEditBoard(currentBoard, context.actor);
   assertValidColumnId(sourceColumnId, currentBoard);
   assertValidColumnId(targetColumnId, currentBoard);
   getCard(currentBoard, cardId);
@@ -477,8 +743,9 @@ function applyCardMove(workspace, command, context) {
   };
 }
 
-function applySetActiveBoard(workspace, command) {
-  assertValidBoardId(command.payload.boardId, workspace.boards);
+function applySetActiveBoard(workspace, command, context) {
+  const currentBoard = getBoard(workspace, command.payload.boardId);
+  assertActorCanReadBoard(currentBoard, context.actor);
 
   if (workspace.ui.activeBoardId === command.payload.boardId) {
     return {
@@ -501,9 +768,10 @@ function applySetActiveBoard(workspace, command) {
   };
 }
 
-function applySetColumnCollapsed(workspace, command) {
+function applySetColumnCollapsed(workspace, command, context) {
   const { boardId, columnId, isCollapsed } = command.payload;
   const board = getBoard(workspace, boardId);
+  assertActorCanReadBoard(board, context.actor);
   assertValidColumnId(columnId, board);
 
   const currentCollapsedColumns = getCollapsedColumnsForBoard(workspace, boardId);
@@ -533,6 +801,173 @@ function applySetColumnCollapsed(workspace, command) {
       isCollapsed: Boolean(isCollapsed)
     })
   };
+}
+
+function assertAuthenticatedHumanActor(actor, errorMessage) {
+  const normalizedActor = normalizeBoardActor(actor);
+
+  if (normalizedActor?.type !== 'human') {
+    throw new WorkspaceCommandPermissionError(errorMessage);
+  }
+
+  return normalizedActor;
+}
+
+function assertActorCanReadBoard(board, actor) {
+  const membership = getBoardMembershipForActor(board, actor);
+
+  if (!membership || !canActorReadBoard(board, actor)) {
+    throw new WorkspaceCommandPermissionError('You do not have permission to access this board.');
+  }
+
+  return membership;
+}
+
+function assertActorCanEditBoard(board, actor) {
+  if (!canActorEditBoard(board, actor)) {
+    throw new WorkspaceCommandPermissionError('You do not have permission to modify this board.');
+  }
+}
+
+function assertActorCanAdminBoard(board, actor) {
+  if (!canActorAdminBoard(board, actor)) {
+    throw new WorkspaceCommandPermissionError('You do not have permission to administer this board.');
+  }
+}
+
+function normalizeTargetActor(actor) {
+  const normalizedActor = normalizeBoardActor(actor);
+
+  if (!normalizedActor) {
+    throw new Error('Board member target actor is invalid.');
+  }
+
+  return normalizedActor;
+}
+
+function findBoardInvite(board, inviteId) {
+  const normalizedInviteId = typeof inviteId === 'string' ? inviteId.trim() : '';
+
+  if (!normalizedInviteId) {
+    return null;
+  }
+
+  return normalizeBoardCollaboration(board).invites.find((invite) => invite.id === normalizedInviteId) ?? null;
+}
+
+function findPendingInvite(board, inviteId, now) {
+  const invite = findBoardInvite(board, inviteId);
+  return invite && resolveInviteStatus(invite, now) === 'pending' ? invite : null;
+}
+
+function emailsMatchInvite(actor, invite) {
+  const normalizedActor = normalizeBoardActor(actor);
+  return Boolean(normalizedActor?.email && invite?.email && normalizedActor.email === invite.email);
+}
+
+function countAdminMemberships(board) {
+  return normalizeBoardCollaboration(board).memberships.filter((membership) => isBoardAdminMembership(membership)).length;
+}
+
+function upsertBoardMembership(board, membership) {
+  const collaboration = ensureBoardCollaboration(board);
+  const normalizedMembership = normalizeBoardMembership(membership);
+
+  if (!normalizedMembership) {
+    throw new Error('Board membership is invalid.');
+  }
+
+  const actorKey = createBoardActorKey(normalizedMembership.actor);
+  const storedMembership = stripActorKey(normalizedMembership);
+  const existingIndex = collaboration.memberships.findIndex(
+    (currentMembership) => createBoardActorKey(currentMembership?.actor) === actorKey
+  );
+
+  if (existingIndex === -1) {
+    collaboration.memberships = [...collaboration.memberships, storedMembership];
+    return storedMembership;
+  }
+
+  collaboration.memberships = collaboration.memberships.map((currentMembership, index) =>
+    index === existingIndex ? storedMembership : currentMembership
+  );
+
+  return storedMembership;
+}
+
+function removeBoardMembership(board, actor) {
+  const collaboration = ensureBoardCollaboration(board);
+  const actorKey = createBoardActorKey(actor);
+
+  if (!actorKey) {
+    throw new Error('Board member target actor is invalid.');
+  }
+
+  collaboration.memberships = collaboration.memberships.filter(
+    (membership) => createBoardActorKey(membership?.actor) !== actorKey
+  );
+}
+
+function updateInviteStatus(board, inviteId, status, respondedAt) {
+  const collaboration = ensureBoardCollaboration(board);
+  const normalizedStatus = typeof status === 'string' ? status.trim().toLowerCase() : '';
+  const inviteIndex = collaboration.invites.findIndex((invite) => invite?.id === inviteId);
+
+  if (inviteIndex === -1) {
+    throw new Error('Board invite not found.');
+  }
+
+  const normalizedInvite = normalizeBoardInvite({
+    ...collaboration.invites[inviteIndex],
+    status: normalizedStatus,
+    ...(respondedAt ? { respondedAt } : {})
+  });
+
+  if (!normalizedInvite) {
+    throw new Error('Board invite is invalid.');
+  }
+
+  collaboration.invites = collaboration.invites.map((invite, index) => (index === inviteIndex ? normalizedInvite : invite));
+
+  return normalizedInvite;
+}
+
+function ensureBoardCollaboration(board) {
+  board.collaboration = normalizeBoardCollaboration(board);
+  delete board.memberships;
+  delete board.invites;
+  return board.collaboration;
+}
+
+function resolveInviteStatus(invite, now) {
+  if (invite?.status !== 'pending') {
+    return invite?.status ?? null;
+  }
+
+  if (invite?.expiresAt && typeof now === 'string' && invite.expiresAt <= now) {
+    return 'expired';
+  }
+
+  return invite.status;
+}
+
+function assertInvitePending(invite, now) {
+  if (resolveInviteStatus(invite, now) === 'pending') {
+    return invite;
+  }
+
+  switch (resolveInviteStatus(invite, now)) {
+    case 'accepted':
+      throw new Error('Board invite has already been accepted.');
+    case 'declined':
+      throw new Error('Board invite has already been declined.');
+    case 'revoked':
+      throw new Error('Board invite has been revoked.');
+    case 'expired':
+      throw new Error('Board invite has expired.');
+    default:
+      throw new Error('Board invite is not pending.');
+  }
 }
 
 function applyNormalizedSchemaToBoard(board, normalizedSchema, { preserveCardIdsFrom = null } = {}) {
@@ -627,4 +1062,18 @@ function stripLegacyCardAliases(card) {
   delete canonicalCard.detailsMarkdown;
 
   return canonicalCard;
+}
+
+function stripActorKey(membership) {
+  const normalizedMembership = {
+    ...membership
+  };
+
+  delete normalizedMembership.actorKey;
+
+  return normalizedMembership;
+}
+
+function createBoardInviteId() {
+  return `invite_${randomUUID().replaceAll('-', '').slice(0, 12)}`;
 }
