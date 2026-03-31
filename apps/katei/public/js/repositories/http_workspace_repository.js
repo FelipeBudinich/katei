@@ -75,6 +75,20 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
     return payload.workspace;
   }
 
+  async applyCommand(command) {
+    return this.#requestWorkspace(
+      '/api/workspace/commands',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          command,
+          expectedRevision: this.revision ?? 0
+        })
+      },
+      'Unable to apply workspace command.'
+    );
+  }
+
   async #requestWorkspace(url, options, fallbackMessage) {
     const response = await this.fetchImpl(url, {
       credentials: 'same-origin',

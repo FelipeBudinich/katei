@@ -251,6 +251,95 @@ test('HttpWorkspaceRepository sends the bootstrapped revision on save', async ()
   assert.equal(repository.revision, 6);
 });
 
+test('HttpWorkspaceRepository applyCommand sends expectedRevision and updates local meta state', async () => {
+  const commandWorkspace = createCard(createEmptyWorkspace(), 'main', {
+    title: 'Command result',
+    detailsMarkdown: 'Applied by the server',
+    priority: 'urgent'
+  });
+  const repository = new HttpWorkspaceRepository({
+    fetchImpl: createFetchDouble([
+      createJsonResponse(createWorkspaceApiPayload(commandWorkspace, {
+        revision: 8,
+        updatedAt: '2026-04-03T15:00:00.000Z',
+        lastChangedBy: 'sub_123',
+        isPristine: false
+      }, {
+        clientMutationId: 'm1',
+        type: 'card.create',
+        noOp: false,
+        cardId: 'card_server_1'
+      }))
+    ]).fetch,
+    viewerSub: 'sub_123',
+    storage: null,
+    document: createDocumentDouble({
+      'workspace-bootstrap': JSON.stringify(
+        createWorkspaceApiPayload(createEmptyWorkspace(), {
+          revision: 7,
+          updatedAt: '2026-04-03T14:00:00.000Z',
+          lastChangedBy: 'sub_123',
+          isPristine: false
+        })
+      )
+    })
+  });
+
+  await repository.loadWorkspace();
+  const fetchDouble = createFetchDouble([
+    createJsonResponse(createWorkspaceApiPayload(commandWorkspace, {
+      revision: 8,
+      updatedAt: '2026-04-03T15:00:00.000Z',
+      lastChangedBy: 'sub_123',
+      isPristine: false
+    }, {
+      clientMutationId: 'm1',
+      type: 'card.create',
+      noOp: false,
+      cardId: 'card_server_1'
+    }))
+  ]);
+  repository.fetchImpl = fetchDouble.fetch;
+
+  const payload = await repository.applyCommand({
+    clientMutationId: 'm1',
+    type: 'card.create',
+    payload: {
+      boardId: 'main',
+      title: 'Command result',
+      priority: 'urgent'
+    }
+  });
+
+  assert.deepEqual(payload.result, {
+    clientMutationId: 'm1',
+    type: 'card.create',
+    noOp: false,
+    cardId: 'card_server_1'
+  });
+  assert.deepEqual(repository.meta, {
+    revision: 8,
+    updatedAt: '2026-04-03T15:00:00.000Z',
+    lastChangedBy: 'sub_123',
+    isPristine: false
+  });
+  assert.equal(repository.revision, 8);
+  assert.equal(fetchDouble.calls[0].url, '/api/workspace/commands');
+  assert.equal(fetchDouble.calls[0].options.method, 'POST');
+  assert.deepEqual(JSON.parse(fetchDouble.calls[0].options.body), {
+    command: {
+      clientMutationId: 'm1',
+      type: 'card.create',
+      payload: {
+        boardId: 'main',
+        title: 'Command result',
+        priority: 'urgent'
+      }
+    },
+    expectedRevision: 7
+  });
+});
+
 test('HttpWorkspaceRepository surfaces revision conflicts with a friendly error', async () => {
   const workspace = createEmptyWorkspace();
   const fetchDouble = createFetchDouble([
@@ -274,8 +363,48 @@ test('HttpWorkspaceRepository surfaces revision conflicts with a friendly error'
   );
 });
 
-function createWorkspaceApiPayload(workspace, meta = {}) {
-  return {
+test('HttpWorkspaceRepository rejects invalid applyCommand responses', async () => {
+  const fetchDouble = createFetchDouble([
+    createJsonResponse({
+      ok: true,
+      workspace: {
+        version: -1
+      },
+      meta: {
+        revision: 1,
+        updatedAt: '2026-04-03T15:00:00.000Z',
+        lastChangedBy: 'sub_123',
+        isPristine: false
+      },
+      result: {
+        clientMutationId: 'm1',
+        type: 'board.create',
+        noOp: false
+      }
+    })
+  ]);
+  const repository = new HttpWorkspaceRepository({
+    fetchImpl: fetchDouble.fetch,
+    viewerSub: 'sub_123',
+    storage: null
+  });
+
+  await assert.rejects(
+    repository.applyCommand({
+      clientMutationId: 'm1',
+      type: 'board.create',
+      payload: {
+        title: 'Broken response'
+      }
+    }),
+    {
+      message: 'Workspace API returned an invalid workspace.'
+    }
+  );
+});
+
+function createWorkspaceApiPayload(workspace, meta = {}, result = undefined) {
+  const payload = {
     ok: true,
     workspace,
     meta: {
@@ -285,6 +414,12 @@ function createWorkspaceApiPayload(workspace, meta = {}) {
       isPristine: meta.isPristine ?? true
     }
   };
+
+  if (result !== undefined) {
+    payload.result = result;
+  }
+
+  return payload;
 }
 
 function createJsonResponse(body, status = 200) {
