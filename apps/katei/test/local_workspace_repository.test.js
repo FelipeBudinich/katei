@@ -47,8 +47,13 @@ test('LocalWorkspaceRepository rejects stored cards that still use the legacy de
     [createWorkspaceStorageKey('sub_123')]: JSON.stringify(workspace)
   });
   const repository = new LocalWorkspaceRepository(storage, 'sub_123');
+  const loadedWorkspace = await repository.loadWorkspace();
+  const fallbackWorkspace = createEmptyWorkspace();
 
-  assert.deepEqual(await repository.loadWorkspace(), createEmptyWorkspace());
+  fallbackWorkspace.boards.main.createdAt = loadedWorkspace.boards.main.createdAt;
+  fallbackWorkspace.boards.main.updatedAt = loadedWorkspace.boards.main.updatedAt;
+
+  assert.deepEqual(loadedWorkspace, fallbackWorkspace);
 });
 
 function createStorageDouble(initialEntries = {}) {

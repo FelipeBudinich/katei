@@ -1,4 +1,4 @@
-{% for columnId in board.columnOrder %}
-  {% set column = board.columns[columnId] %}
+{% for columnId in board.stageOrder %}
+  {% set column = board.stages[columnId] %}
   {% include "partials/column-panel.njk" %}
 {% endfor %}

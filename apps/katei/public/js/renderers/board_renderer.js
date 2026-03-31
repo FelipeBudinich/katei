@@ -2,7 +2,29 @@ import { markdownToPreviewText } from '../lib/markdown.js';
 import { getBoardCardContentVariant } from '../domain/card_localization.js';
 import { sortCardIdsForColumn } from '../domain/workspace_selectors.js';
 import { createBrowserDateTimeFormatter, getBrowserTranslator } from '../i18n/browser.js';
-import { formatCardCount, getColumnDisplayLabel } from '../i18n/workspace_labels.js';
+import { formatCardCount } from '../i18n/workspace_labels.js';
+
+export function getBoardRenderStages(board) {
+  if (!Array.isArray(board?.stageOrder) || !board?.stages || typeof board.stages !== 'object') {
+    return [];
+  }
+
+  return board.stageOrder
+    .map((stageId) => ({
+      stageId,
+      stage: board.stages[stageId]
+    }))
+    .filter(({ stageId, stage }) => typeof stageId === 'string' && stage?.id === stageId);
+}
+
+export function getCardRenderState(board, card) {
+  const content = getBoardCardContentVariant(card, board);
+
+  return {
+    title: content?.title ?? '',
+    previewText: markdownToPreviewText(content?.detailsMarkdown ?? '')
+  };
+}
 
 export function renderBoardState({
   board,
@@ -19,46 +41,46 @@ export function renderBoardState({
 
   replaceRegionChildren(
     regions.desktopColumns,
-    board.columnOrder.map((columnId) =>
-      createColumnPanel({ board, columnId, collapsedColumns, templates, t, dateTimeFormatter })
+    getBoardRenderStages(board).map(({ stageId, stage }) =>
+      createStagePanel({ board, stageId, stage, collapsedColumns, templates, t, dateTimeFormatter })
     )
   );
 }
 
-function createColumnPanel({ board, columnId, collapsedColumns, templates, t, dateTimeFormatter }) {
-  const column = board.columns[columnId];
+function createStagePanel({ board, stageId, stage, collapsedColumns, templates, t, dateTimeFormatter }) {
   const columnNode = cloneTemplate(templates.columnTemplate);
-  const isCollapsed = Boolean(collapsedColumns[columnId]);
-  const columnDisplayLabel = getColumnDisplayLabel(columnId, t);
-  columnNode.dataset.columnId = column.id;
+  const isCollapsed = Boolean(collapsedColumns[stageId]);
+  columnNode.dataset.stageId = stage.id;
+  columnNode.dataset.columnId = stage.id;
   columnNode.dataset.collapsed = String(isCollapsed);
 
   const titleElement = columnNode.querySelector('[data-column-field="title"]');
   if (titleElement) {
-    titleElement.textContent = columnDisplayLabel;
+    titleElement.textContent = stage.title;
   }
 
   const countElement = columnNode.querySelector('[data-column-field="count"]');
   if (countElement) {
-    countElement.textContent = String(column.cardIds.length);
+    countElement.textContent = String(stage.cardIds.length);
   }
 
   const countChipElement = columnNode.querySelector('.count-chip');
   if (countChipElement) {
-    countChipElement.setAttribute('aria-label', formatCardCount(column.cardIds.length, t));
+    countChipElement.setAttribute('aria-label', formatCardCount(stage.cardIds.length, t));
   }
 
   const toggleElement = columnNode.querySelector('[data-column-toggle]');
   const bodyElement = columnNode.querySelector('.column-panel-body');
 
   if (toggleElement) {
-    toggleElement.dataset.columnId = column.id;
+    toggleElement.dataset.stageId = stage.id;
+    toggleElement.dataset.columnId = stage.id;
     toggleElement.setAttribute('aria-expanded', String(!isCollapsed));
   }
 
   if (bodyElement) {
-    bodyElement.id = `column-panel-body-${column.id}`;
-    bodyElement.hidden = isCollapsed || column.cardIds.length === 0;
+    bodyElement.id = `column-panel-body-${stage.id}`;
+    bodyElement.hidden = isCollapsed || stage.cardIds.length === 0;
 
     if (toggleElement) {
       toggleElement.setAttribute('aria-controls', bodyElement.id);
@@ -70,13 +92,13 @@ function createColumnPanel({ board, columnId, collapsedColumns, templates, t, da
   if (cardsContainer) {
     cardsContainer.innerHTML = '';
 
-    if (column.cardIds.length) {
-      for (const cardId of sortCardIdsForColumn(board, columnId)) {
+    if (stage.cardIds.length) {
+      for (const cardId of sortCardIdsForColumn(board, stageId)) {
         cardsContainer.appendChild(
           createCardElement({
             board,
             card: board.cards[cardId],
-            columnId,
+            stageId,
             templates,
             dateTimeFormatter
           })
@@ -88,11 +110,12 @@ function createColumnPanel({ board, columnId, collapsedColumns, templates, t, da
   return columnNode;
 }
 
-function createCardElement({ board, card, columnId, templates, dateTimeFormatter }) {
+function createCardElement({ board, card, stageId, templates, dateTimeFormatter }) {
   const cardNode = cloneTemplate(templates.cardTemplate);
-  const content = getBoardCardContentVariant(card, board);
+  const renderState = getCardRenderState(board, card);
   cardNode.dataset.cardId = card.id;
-  cardNode.dataset.columnId = columnId;
+  cardNode.dataset.stageId = stageId;
+  cardNode.dataset.columnId = stageId;
 
   if (card.priority) {
     cardNode.dataset.priority = card.priority;
@@ -102,14 +125,13 @@ function createCardElement({ board, card, columnId, templates, dateTimeFormatter
 
   const titleElement = cardNode.querySelector('[data-card-field="title"]');
   if (titleElement) {
-    titleElement.textContent = content?.title ?? '';
+    titleElement.textContent = renderState.title;
   }
 
   const previewElement = cardNode.querySelector('[data-card-field="preview"]');
   if (previewElement) {
-    const previewText = markdownToPreviewText(content?.detailsMarkdown ?? '');
-    previewElement.textContent = previewText;
-    previewElement.classList.toggle('hidden', !previewText);
+    previewElement.textContent = renderState.previewText;
+    previewElement.classList.toggle('hidden', !renderState.previewText);
   }
 
   const metaElement = cardNode.querySelector('[data-card-field="meta"]');
@@ -121,8 +143,9 @@ function createCardElement({ board, card, columnId, templates, dateTimeFormatter
     button.dataset.cardId = card.id;
   }
 
-  for (const button of cardNode.querySelectorAll('[data-column-id]')) {
-    button.dataset.columnId = columnId;
+  for (const button of cardNode.querySelectorAll('[data-column-id], [data-stage-id]')) {
+    button.dataset.stageId = stageId;
+    button.dataset.columnId = stageId;
   }
 
   return cardNode;

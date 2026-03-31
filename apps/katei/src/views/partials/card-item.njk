@@ -1,4 +1,4 @@
-<article class="card-item" data-card-id="{{ card.id }}" data-column-id="{{ columnId }}" data-priority="{{ card.priority }}">
+<article class="card-item" data-card-id="{{ card.id }}" data-stage-id="{{ columnId }}" data-column-id="{{ columnId }}" data-priority="{{ card.priority }}">
   <header class="card-item-toolbar">
     <button
       type="button"
@@ -6,6 +6,7 @@
       aria-label="{{ t('cardItem.editAriaLabel') }}"
       data-action="workspace#openEdit"
       data-card-id="{{ card.id }}"
+      data-stage-id="{{ columnId }}"
       data-column-id="{{ columnId }}"
     >
       <span class="card-item-action-icon" aria-hidden="true"></span>
@@ -19,6 +20,7 @@
       aria-label="{{ t('cardItem.viewAriaLabel') }}"
       data-action="workspace#openView"
       data-card-id="{{ card.id }}"
+      data-stage-id="{{ columnId }}"
       data-column-id="{{ columnId }}"
     >
       <span class="card-item-view-icon" aria-hidden="true"></span>

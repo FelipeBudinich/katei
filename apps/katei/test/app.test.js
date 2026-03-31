@@ -244,9 +244,8 @@ test('GET /boards localizes server-rendered chrome for ja without changing user-
   assert.match(response.text, />\s*カードを追加\s*</);
   assert.match(response.text, /data-workspace-target="boardTitle">過程</);
   assert.match(response.text, />Tester</);
-  assert.match(response.text, />\s*バックログ\s*</);
+  assert.match(response.text, />\s*Backlog\s*</);
   assert.match(response.text, /aria-label="0 件のカード"/);
-  assert.doesNotMatch(response.text, />Backlog</);
   assert.match(response.text, /<option value="ja" selected>\s*日本語\s*<\/option>/);
   assert.match(response.text, /UI言語/);
 });

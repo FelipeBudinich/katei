@@ -1,17 +1,22 @@
 import { Controller } from '/vendor/stimulus/stimulus.js';
 import {
-  findColumnIdByCardId,
   getBoardCardContentVariant,
   getActiveBoard,
   getCollapsedColumnsForBoard
 } from '../domain/workspace.js';
 import { createBrowserDateTimeFormatter, getBrowserTranslator } from '../i18n/browser.js';
 import { localizeErrorMessage } from '../i18n/errors.js';
-import { getColumnDisplayLabel, getPriorityDisplayLabel } from '../i18n/workspace_labels.js';
+import { getPriorityDisplayLabel } from '../i18n/workspace_labels.js';
 import { renderMarkdownInto } from '../lib/markdown.js';
 import { HttpWorkspaceRepository } from '../repositories/http_workspace_repository.js';
 import { renderBoardState } from '../renderers/board_renderer.js';
 import { WorkspaceService } from '../services/workspace_service.js';
+import {
+  getBoardStageTitle,
+  getDefaultBoardStageId,
+  resolveBoardStageId,
+  shouldShowPriorityForStage
+} from './stage_ui.js';
 
 export default class extends Controller {
   static values = {
@@ -88,22 +93,25 @@ export default class extends Controller {
       return;
     }
 
-    const columnId = event.currentTarget.dataset.columnId;
+    const stageId = resolveBoardStageId(board, {
+      stageId: event.currentTarget.dataset.stageId,
+      columnId: event.currentTarget.dataset.columnId
+    });
 
-    if (!columnId) {
+    if (!stageId) {
       return;
     }
 
     const collapsedColumns = getCollapsedColumnsForBoard(this.workspace, board.id);
-    const nextCollapsedState = !collapsedColumns[columnId];
+    const nextCollapsedState = !collapsedColumns[stageId];
 
     await this.runAction(
-      () => this.service.setColumnCollapsed(board.id, columnId, nextCollapsedState),
+      () => this.service.setColumnCollapsed(board.id, stageId, nextCollapsedState),
       this.t(
         nextCollapsedState
           ? 'workspace.announcements.columnCollapsed'
           : 'workspace.announcements.columnExpanded',
-        { column: getColumnDisplayLabel(columnId, this.t) }
+        { column: getBoardStageTitle(board, stageId) }
       )
     );
   }
@@ -191,7 +199,9 @@ export default class extends Controller {
 
     this.dispatchWorkspaceEvent('open-card-editor', {
       mode: 'create',
-      boardId: this.activeBoard.id
+      boardId: this.activeBoard.id,
+      board: this.activeBoard,
+      stageId: getDefaultBoardStageId(this.activeBoard)
     });
   }
 
@@ -204,18 +214,24 @@ export default class extends Controller {
 
     const button = event.currentTarget;
     const cardId = button.dataset.cardId;
-    const columnId = button.dataset.columnId || findColumnIdByCardId(board, cardId);
+    const stageId = resolveBoardStageId(board, {
+      stageId: button.dataset.stageId,
+      columnId: button.dataset.columnId,
+      cardId
+    });
     const card = board.cards[cardId];
 
-    if (!card || !columnId) {
+    if (!card || !stageId) {
       return;
     }
 
     this.dispatchWorkspaceEvent('open-card-editor', {
       mode: 'edit',
       boardId: board.id,
+      board,
       card: createRuntimeCardViewModel(card, board),
-      columnId
+      stageId,
+      columnId: stageId
     });
   }
 
@@ -228,15 +244,19 @@ export default class extends Controller {
 
     const button = event.currentTarget;
     const cardId = button.dataset.cardId;
-    const columnId = button.dataset.columnId || findColumnIdByCardId(board, cardId);
+    const stageId = resolveBoardStageId(board, {
+      stageId: button.dataset.stageId,
+      columnId: button.dataset.columnId,
+      cardId
+    });
     const card = board.cards[cardId];
 
-    if (!card || !columnId) {
+    if (!card || !stageId) {
       return;
     }
 
     this.viewTriggerElement = button;
-    this.syncViewDialog({ board, card, columnId });
+    this.syncViewDialog({ board, card, stageId });
 
     if (!this.viewDialogTarget.open) {
       this.viewDialogTarget.showModal();
@@ -248,14 +268,25 @@ export default class extends Controller {
   }
 
   async handleCardEditorSave(event) {
-    const { mode, boardId, cardId, sourceColumnId, targetColumnId, input } = event.detail;
+    const {
+      mode,
+      boardId,
+      cardId,
+      sourceStageId,
+      targetStageId,
+      sourceColumnId,
+      targetColumnId,
+      input
+    } = event.detail;
+    const nextSourceStageId = sourceStageId || sourceColumnId;
+    const nextTargetStageId = targetStageId || targetColumnId;
 
     if (mode === 'edit') {
       await this.runAction(async () => {
         let nextWorkspace = await this.service.updateCard(boardId, cardId, input);
 
-        if (sourceColumnId && targetColumnId && sourceColumnId !== targetColumnId) {
-          nextWorkspace = await this.service.moveCard(boardId, cardId, sourceColumnId, targetColumnId);
+        if (nextSourceStageId && nextTargetStageId && nextSourceStageId !== nextTargetStageId) {
+          nextWorkspace = await this.service.moveCard(boardId, cardId, nextSourceStageId, nextTargetStageId);
         }
 
         return nextWorkspace;
@@ -293,13 +324,27 @@ export default class extends Controller {
 
   async moveCardTo(event) {
     try {
-      const { cardId, boardId, sourceColumnId, targetColumnId } = event.currentTarget.dataset;
+      const {
+        cardId,
+        boardId,
+        sourceStageId,
+        targetStageId,
+        sourceColumnId,
+        targetColumnId
+      } = event.currentTarget.dataset;
       const nextBoardId = boardId || this.activeBoard?.id;
+      const board = nextBoardId ? this.workspace?.boards?.[nextBoardId] : null;
+      const nextSourceStageId = sourceStageId || sourceColumnId;
+      const nextTargetStageId = targetStageId || targetColumnId;
+
+      if (!board || !nextSourceStageId || !nextTargetStageId) {
+        return;
+      }
 
       await this.runAction(
-        () => this.service.moveCard(nextBoardId, cardId, sourceColumnId, targetColumnId),
+        () => this.service.moveCard(nextBoardId, cardId, nextSourceStageId, nextTargetStageId),
         this.t('workspace.announcements.movedCard', {
-          column: getColumnDisplayLabel(targetColumnId, this.t)
+          column: getBoardStageTitle(board, nextTargetStageId)
         })
       );
     } catch (error) {
@@ -414,8 +459,8 @@ export default class extends Controller {
     this.confirmTriggerElement = null;
   }
 
-  syncViewDialog({ board, card, columnId }) {
-    const shouldShowPriority = columnId !== 'done' && columnId !== 'archived';
+  syncViewDialog({ board, card, stageId }) {
+    const shouldShowPriority = shouldShowPriorityForStage(stageId);
     const content = getBoardCardContentVariant(card, board);
 
     this.viewCardTitleTarget.textContent = content?.title ?? '';

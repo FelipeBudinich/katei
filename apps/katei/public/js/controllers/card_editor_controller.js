@@ -1,5 +1,12 @@
 import { Controller } from '/vendor/stimulus/stimulus.js';
-import { getBrowserTranslator } from '/js/i18n/browser.js';
+import { getBrowserTranslator } from '../i18n/browser.js';
+import {
+  getDefaultBoardStageId,
+  getStageMoveOptions,
+  resolveBoardStageId,
+  shouldShowDeleteForStage,
+  shouldShowPriorityForStage
+} from './stage_ui.js';
 
 export default class extends Controller {
   static targets = [
@@ -20,7 +27,8 @@ export default class extends Controller {
     'deleteActions',
     'deleteActionRegion',
     'deleteButtonTemplate',
-    'moveOption'
+    'moveOptionRegion',
+    'moveOptionTemplate'
   ];
 
   connect() {
@@ -59,29 +67,32 @@ export default class extends Controller {
   }
 
   openFromEvent(event) {
-    const { mode, boardId, card, columnId } = event.detail;
+    const { mode, boardId, board, card, stageId, columnId } = event.detail;
     const isEditMode = mode === 'edit';
-    const nextColumnId = columnId ?? 'backlog';
+    const nextStageId =
+      resolveBoardStageId(board, { stageId, columnId, cardId: card?.id }) ??
+      getDefaultBoardStageId(board);
     const nextCardId = card?.id ?? '';
-    const sourceColumnId = isEditMode ? nextColumnId : '';
-    const targetColumnId = nextColumnId;
+    const sourceStageId = isEditMode ? nextStageId : '';
+    const targetStageId = nextStageId;
 
     this.formTarget.reset();
     this.modeInputTarget.value = mode;
     this.boardIdInputTarget.value = boardId ?? '';
     this.cardIdInputTarget.value = nextCardId;
-    this.sourceColumnIdInputTarget.value = sourceColumnId;
-    this.targetColumnIdInputTarget.value = targetColumnId;
+    this.sourceColumnIdInputTarget.value = sourceStageId;
+    this.targetColumnIdInputTarget.value = targetStageId;
     this.priorityInputTarget.value = card?.priority ?? 'important';
     this.titleInputTarget.value = card?.title ?? '';
     this.ensureEditor().value(card?.detailsMarkdown ?? '');
     this.headingTarget.textContent = isEditMode ? this.t('cardEditor.editHeading') : this.t('cardEditor.newHeading');
+    this.renderMoveOptions({ board, sourceStageId });
     this.syncPriorityOptions();
     this.syncEditActions({
       isEditMode,
       cardId: nextCardId,
-      sourceColumnId,
-      targetColumnId
+      sourceStageId,
+      targetStageId
     });
 
     if (!this.dialogTarget.open) {
@@ -120,12 +131,15 @@ export default class extends Controller {
 
   selectColumn(event) {
     event.preventDefault();
-    this.targetColumnIdInputTarget.value = event.currentTarget.dataset.targetColumnId ?? this.targetColumnIdInputTarget.value;
+    this.targetColumnIdInputTarget.value =
+      event.currentTarget.dataset.targetStageId ??
+      event.currentTarget.dataset.targetColumnId ??
+      this.targetColumnIdInputTarget.value;
     this.syncEditActions({
       isEditMode: this.modeInputTarget.value === 'edit',
       cardId: this.cardIdInputTarget.value,
-      sourceColumnId: this.sourceColumnIdInputTarget.value,
-      targetColumnId: this.targetColumnIdInputTarget.value
+      sourceStageId: this.sourceColumnIdInputTarget.value,
+      targetStageId: this.targetColumnIdInputTarget.value
     });
   }
 
@@ -139,6 +153,8 @@ export default class extends Controller {
         mode: formData.get('mode'),
         boardId: formData.get('boardId'),
         cardId: formData.get('cardId'),
+        sourceStageId: formData.get('sourceColumnId'),
+        targetStageId: formData.get('targetColumnId'),
         sourceColumnId: formData.get('sourceColumnId'),
         targetColumnId: formData.get('targetColumnId'),
         input: {
@@ -169,34 +185,51 @@ export default class extends Controller {
     }
   }
 
-  syncEditActions({ isEditMode, cardId, sourceColumnId, targetColumnId }) {
-    const shouldShowPrioritySection = targetColumnId !== 'done' && targetColumnId !== 'archived';
+  renderMoveOptions({ board, sourceStageId }) {
+    const moveOptionButtons = getStageMoveOptions(board, sourceStageId).map(({ id, title }) => {
+      const button = this.moveOptionTemplateTarget.content.firstElementChild.cloneNode(true);
+      button.dataset.targetStageId = id;
+      button.dataset.targetColumnId = id;
+      button.dataset.stageTitle = title;
+      button.dataset.columnTitle = title;
+      button.textContent = title;
+      return button;
+    });
+
+    this.moveOptionRegionTarget.replaceChildren(...moveOptionButtons);
+  }
+
+  syncEditActions({ isEditMode, cardId, sourceStageId, targetStageId }) {
+    const shouldShowPrioritySection = shouldShowPriorityForStage(targetStageId);
+    const shouldShowDeleteAction = isEditMode && shouldShowDeleteForStage(sourceStageId);
 
     this.prioritySectionTarget.hidden = !shouldShowPrioritySection;
     this.editActionsTarget.hidden = !isEditMode;
-    this.deleteActionsTarget.hidden = !isEditMode || sourceColumnId !== 'archived';
+    this.deleteActionsTarget.hidden = !shouldShowDeleteAction;
     this.deleteActionRegionTarget.replaceChildren();
 
-    if (isEditMode && sourceColumnId === 'archived') {
+    if (shouldShowDeleteAction) {
       const deleteButton = this.deleteButtonTemplateTarget.content.firstElementChild.cloneNode(true);
       deleteButton.dataset.cardId = cardId;
       deleteButton.dataset.boardId = this.boardIdInputTarget.value;
       this.deleteActionRegionTarget.append(deleteButton);
     }
 
-    for (const button of this.moveOptionTargets) {
-      const isSelectedColumn = button.dataset.targetColumnId === targetColumnId;
-      const isCurrentColumn = button.dataset.targetColumnId === sourceColumnId;
-      const isArchivedOption = button.dataset.targetColumnId === 'archived';
-      const canShowArchivedOption = sourceColumnId === 'done' || sourceColumnId === 'archived';
-      const columnTitle = button.dataset.columnTitle ?? '';
-      button.hidden = isArchivedOption && !canShowArchivedOption;
-      button.disabled = isSelectedColumn;
-      button.setAttribute('aria-disabled', String(isSelectedColumn));
-      button.textContent = isSelectedColumn
-        ? `${columnTitle} (${this.t(isCurrentColumn ? 'cardEditor.moveStateCurrent' : 'cardEditor.moveStateSelected')})`
-        : columnTitle;
+    for (const button of this.getMoveOptionButtons()) {
+      const buttonTargetStageId = button.dataset.targetStageId ?? button.dataset.targetColumnId;
+      const isSelectedStage = buttonTargetStageId === targetStageId;
+      const isCurrentStage = buttonTargetStageId === sourceStageId;
+      const stageTitle = button.dataset.stageTitle ?? button.dataset.columnTitle ?? '';
+      button.disabled = isSelectedStage;
+      button.setAttribute('aria-disabled', String(isSelectedStage));
+      button.textContent = isSelectedStage
+        ? `${stageTitle} (${this.t(isCurrentStage ? 'cardEditor.moveStateCurrent' : 'cardEditor.moveStateSelected')})`
+        : stageTitle;
     }
+  }
+
+  getMoveOptionButtons() {
+    return [...this.moveOptionRegionTarget.querySelectorAll('[data-card-editor-target="moveOption"]')];
   }
 }
 
