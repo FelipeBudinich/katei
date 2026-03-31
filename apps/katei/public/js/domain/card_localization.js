@@ -3,23 +3,43 @@ import {
   normalizeBoardLanguagePolicy
 } from './board_language_policy.js';
 
+export function createCardContentProvenance({
+  actor,
+  timestamp,
+  includesHumanInput = true
+} = {}) {
+  return {
+    actor: normalizeProvenanceActor(actor),
+    timestamp: normalizeIsoTimestamp(timestamp, 'Card content provenance timestamp is required.'),
+    includesHumanInput: Boolean(includesHumanInput)
+  };
+}
+
 export function getCardContentVariant(card, locale, board) {
   const requestedLocale = canonicalizeContentLocale(locale);
   const localizedContent = getLocalizedContentMap(card);
+  const languagePolicy = normalizeBoardLanguagePolicy(board?.languagePolicy ?? null);
+  const preferredLocales = [];
 
-  if (requestedLocale && localizedContent.has(requestedLocale)) {
-    return materializeVariant(localizedContent.get(requestedLocale), requestedLocale, {
-      isFallback: false,
-      source: 'localized'
-    });
+  if (requestedLocale) {
+    preferredLocales.push(requestedLocale);
   }
 
-  const languagePolicy = normalizeBoardLanguagePolicy(board?.languagePolicy ?? null);
-  const defaultLocale = languagePolicy?.defaultLocale ?? null;
+  if (languagePolicy?.defaultLocale && !preferredLocales.includes(languagePolicy.defaultLocale)) {
+    preferredLocales.push(languagePolicy.defaultLocale);
+  }
 
-  if (defaultLocale && localizedContent.has(defaultLocale)) {
-    return materializeVariant(localizedContent.get(defaultLocale), defaultLocale, {
-      isFallback: requestedLocale != null && requestedLocale !== defaultLocale,
+  if (languagePolicy?.sourceLocale && !preferredLocales.includes(languagePolicy.sourceLocale)) {
+    preferredLocales.push(languagePolicy.sourceLocale);
+  }
+
+  for (const preferredLocale of preferredLocales) {
+    if (!localizedContent.has(preferredLocale)) {
+      continue;
+    }
+
+    return materializeVariant(localizedContent.get(preferredLocale), preferredLocale, {
+      isFallback: requestedLocale != null && requestedLocale !== preferredLocale,
       source: 'localized'
     });
   }
@@ -38,7 +58,7 @@ export function getCardContentVariant(card, locale, board) {
   }
 
   return {
-    locale: requestedLocale ?? defaultLocale ?? null,
+    locale: requestedLocale ?? languagePolicy?.defaultLocale ?? languagePolicy?.sourceLocale ?? null,
     title: typeof card?.title === 'string' ? card.title : '',
     detailsMarkdown: typeof card?.detailsMarkdown === 'string' ? card.detailsMarkdown : '',
     provenance: null,
@@ -61,8 +81,8 @@ export function getMissingRequiredLocales(board, card) {
   const presentLocales = new Set(listCardLocales(card));
 
   // Legacy cards still store their base content outside localized variants.
-  if (languagePolicy.defaultLocale && hasLegacyCardContent(card)) {
-    presentLocales.add(languagePolicy.defaultLocale);
+  if (languagePolicy.sourceLocale && hasLegacyCardContent(card)) {
+    presentLocales.add(languagePolicy.sourceLocale);
   }
 
   return languagePolicy.requiredLocales.filter((locale) => !presentLocales.has(locale));
@@ -86,10 +106,102 @@ export function upsertCardContentVariant(card, locale, patch, provenance) {
       [normalizedLocale]: {
         ...currentVariant,
         ...nextPatch,
-        provenance: provenance === undefined ? currentVariant.provenance ?? null : cloneValue(provenance)
+        provenance:
+          provenance === undefined
+            ? currentVariant.provenance ?? null
+            : createCardContentProvenance(provenance)
       }
     }
   };
+}
+
+export function validateCardContentByLocale(card, board) {
+  const languagePolicy = normalizeBoardLanguagePolicy(board?.languagePolicy);
+
+  if (!languagePolicy) {
+    return false;
+  }
+
+  const contentByLocale = getContentByLocaleRecord(card);
+  const localeEntries = Object.entries(contentByLocale);
+
+  if (localeEntries.length < 1) {
+    return false;
+  }
+
+  const seenLocales = new Set();
+
+  for (const [rawLocale, rawVariant] of localeEntries) {
+    const locale = canonicalizeContentLocale(rawLocale);
+
+    if (!locale || locale !== rawLocale || seenLocales.has(locale) || !isValidLocalizedContentVariant(rawVariant)) {
+      return false;
+    }
+
+    seenLocales.add(locale);
+  }
+
+  return seenLocales.has(languagePolicy.sourceLocale);
+}
+
+export function projectWorkspaceWithLegacyCardContent(workspace) {
+  if (!isPlainObject(workspace) || !isPlainObject(workspace.boards)) {
+    return workspace;
+  }
+
+  const projectedWorkspace = structuredClone(workspace);
+
+  for (const board of Object.values(projectedWorkspace.boards)) {
+    if (!isPlainObject(board) || !isPlainObject(board.cards)) {
+      continue;
+    }
+
+    const preferredLocale = resolveLegacyProjectionLocale(board);
+
+    for (const card of Object.values(board.cards)) {
+      if (!isPlainObject(card)) {
+        continue;
+      }
+
+      const projectedVariant = getCardContentVariant(card, preferredLocale, board);
+
+      if (!projectedVariant) {
+        delete card.title;
+        delete card.detailsMarkdown;
+        continue;
+      }
+
+      card.title = projectedVariant.title;
+      card.detailsMarkdown = projectedVariant.detailsMarkdown;
+    }
+  }
+
+  return projectedWorkspace;
+}
+
+export function stripLegacyCardContentAliasesFromWorkspace(workspace) {
+  if (!isPlainObject(workspace) || !isPlainObject(workspace.boards)) {
+    return workspace;
+  }
+
+  const normalizedWorkspace = structuredClone(workspace);
+
+  for (const board of Object.values(normalizedWorkspace.boards)) {
+    if (!isPlainObject(board) || !isPlainObject(board.cards)) {
+      continue;
+    }
+
+    for (const card of Object.values(board.cards)) {
+      if (!isPlainObject(card)) {
+        continue;
+      }
+
+      delete card.title;
+      delete card.detailsMarkdown;
+    }
+  }
+
+  return normalizedWorkspace;
 }
 
 function getLocalizedContentMap(card) {
@@ -133,7 +245,7 @@ function normalizeStoredVariant(variant) {
     detailsMarkdown:
       typeof normalizedVariant.detailsMarkdown === 'string' ? normalizedVariant.detailsMarkdown : '',
     provenance: Object.prototype.hasOwnProperty.call(normalizedVariant, 'provenance')
-      ? cloneValue(normalizedVariant.provenance)
+      ? normalizeStoredProvenance(normalizedVariant.provenance)
       : null
   };
 }
@@ -161,6 +273,89 @@ function hasLegacyCardContent(card) {
 
 function cloneValue(value) {
   return value == null ? value : structuredClone(value);
+}
+
+function isValidLocalizedContentVariant(variant) {
+  return Boolean(
+    isPlainObject(variant) &&
+      typeof variant.title === 'string' &&
+      variant.title.trim() &&
+      typeof variant.detailsMarkdown === 'string' &&
+      isValidProvenance(variant.provenance)
+  );
+}
+
+function isValidProvenance(provenance) {
+  return Boolean(
+    isPlainObject(provenance) &&
+      isValidProvenanceActor(provenance.actor) &&
+      typeof provenance.timestamp === 'string' &&
+      !Number.isNaN(new Date(provenance.timestamp).getTime()) &&
+      typeof provenance.includesHumanInput === 'boolean'
+  );
+}
+
+function isValidProvenanceActor(actor) {
+  return Boolean(
+    isPlainObject(actor) &&
+      typeof actor.type === 'string' &&
+      ['human', 'agent', 'system'].includes(actor.type) &&
+      typeof actor.id === 'string' &&
+      actor.id.trim()
+  );
+}
+
+function normalizeStoredProvenance(provenance) {
+  if (!isPlainObject(provenance)) {
+    return null;
+  }
+
+  try {
+    return createCardContentProvenance(provenance);
+  } catch (error) {
+    return null;
+  }
+}
+
+function normalizeProvenanceActor(actor) {
+  if (!isPlainObject(actor)) {
+    throw new Error('Card content provenance actor is required.');
+  }
+
+  const type = normalizeRequiredString(actor.type, 'Card content provenance actor.type is required.');
+  const id = normalizeRequiredString(actor.id, 'Card content provenance actor.id is required.');
+
+  if (!['human', 'agent', 'system'].includes(type)) {
+    throw new Error(`Unsupported card content provenance actor.type: ${type}`);
+  }
+
+  return { type, id };
+}
+
+function normalizeIsoTimestamp(value, errorMessage) {
+  const normalizedValue = normalizeRequiredString(value, errorMessage);
+  const timestamp = new Date(normalizedValue);
+
+  if (Number.isNaN(timestamp.getTime())) {
+    throw new Error('Card content provenance timestamp must be an ISO timestamp.');
+  }
+
+  return timestamp.toISOString();
+}
+
+function normalizeRequiredString(value, errorMessage) {
+  const normalizedValue = typeof value === 'string' ? value.trim() : '';
+
+  if (!normalizedValue) {
+    throw new Error(errorMessage);
+  }
+
+  return normalizedValue;
+}
+
+function resolveLegacyProjectionLocale(board) {
+  const languagePolicy = normalizeBoardLanguagePolicy(board?.languagePolicy ?? null);
+  return languagePolicy?.defaultLocale ?? languagePolicy?.sourceLocale ?? null;
 }
 
 function isPlainObject(value) {

@@ -44,7 +44,7 @@ test('LocalWorkspaceRepository rejects stored cards that still use the legacy de
   };
   board.stages.backlog.cardIds.push('card_legacy');
   const storage = createStorageDouble({
-    'katei.workspace.v4:sub_123': JSON.stringify(workspace)
+    [createWorkspaceStorageKey('sub_123')]: JSON.stringify(workspace)
   });
   const repository = new LocalWorkspaceRepository(storage, 'sub_123');
 

@@ -1,5 +1,11 @@
 import { createBoardId, createCardId } from '../utils/id.js';
 import {
+  createCardContentProvenance,
+  getCardContentVariant,
+  projectWorkspaceWithLegacyCardContent,
+  upsertCardContentVariant
+} from './card_localization.js';
+import {
   DEFAULT_PRIORITY,
   cloneWorkspace,
   createCollapsedColumns,
@@ -123,19 +129,32 @@ export function createCard(workspace, boardId, input) {
   const timestamp = createTimestamp();
   const cardId = createCardId();
   const initialStageId = board.stageOrder[0];
+  const sourceLocale = board.languagePolicy.sourceLocale;
 
   board.cards[cardId] = {
     id: cardId,
-    title: normalizeCardTitle(input?.title),
-    detailsMarkdown: normalizeDetailsMarkdown(input?.detailsMarkdown),
     priority: normalizePriority(input?.priority ?? DEFAULT_PRIORITY),
     createdAt: timestamp,
-    updatedAt: timestamp
+    updatedAt: timestamp,
+    contentByLocale: {
+      [sourceLocale]: {
+        title: normalizeCardTitle(input?.title),
+        detailsMarkdown: normalizeDetailsMarkdown(input?.detailsMarkdown),
+        provenance: createCardContentProvenance({
+          actor: {
+            type: 'system',
+            id: 'browser-mutation'
+          },
+          timestamp,
+          includesHumanInput: true
+        })
+      }
+    }
   };
   board.stages[initialStageId].cardIds = [...board.stages[initialStageId].cardIds, cardId];
   board.updatedAt = timestamp;
 
-  return nextWorkspace;
+  return projectWorkspaceWithLegacyCardContent(nextWorkspace);
 }
 
 export function updateCard(workspace, boardId, cardId, updates) {
@@ -143,19 +162,43 @@ export function updateCard(workspace, boardId, cardId, updates) {
   const board = getBoard(nextWorkspace, boardId);
   const card = getCard(board, cardId);
   const timestamp = createTimestamp();
+  const sourceLocale = board.languagePolicy.sourceLocale;
+  const currentVariant = getCardContentVariant(card, sourceLocale, board);
+  const nextTitle = hasOwn(updates, 'title')
+    ? normalizeCardTitle(updates.title)
+    : (currentVariant?.title ?? '');
+  const nextDetailsMarkdown = hasOwn(updates, 'detailsMarkdown')
+    ? normalizeDetailsMarkdown(updates.detailsMarkdown)
+    : (currentVariant?.detailsMarkdown ?? '');
+  const canonicalCard = stripLegacyCardAliases(card);
 
+  board.cards[cardId] = upsertCardContentVariant(
+    {
+      ...canonicalCard,
+      priority: hasOwn(updates, 'priority') ? normalizePriority(updates.priority) : card.priority,
+      updatedAt: timestamp
+    },
+    sourceLocale,
+    {
+      title: nextTitle,
+      detailsMarkdown: nextDetailsMarkdown
+    },
+    {
+      actor: {
+        type: 'system',
+        id: 'browser-mutation'
+      },
+      timestamp,
+      includesHumanInput: true
+    }
+  );
   board.cards[cardId] = {
-    ...card,
-    title: hasOwn(updates, 'title') ? normalizeCardTitle(updates.title) : card.title,
-    detailsMarkdown: hasOwn(updates, 'detailsMarkdown')
-      ? normalizeDetailsMarkdown(updates.detailsMarkdown)
-      : card.detailsMarkdown,
+    ...board.cards[cardId],
     priority: hasOwn(updates, 'priority') ? normalizePriority(updates.priority) : card.priority,
-    updatedAt: timestamp
   };
   board.updatedAt = timestamp;
 
-  return nextWorkspace;
+  return projectWorkspaceWithLegacyCardContent(nextWorkspace);
 }
 
 export function deleteCard(workspace, boardId, cardId) {
@@ -232,4 +275,15 @@ function createClearedStages(board) {
       }
     ])
   );
+}
+
+function stripLegacyCardAliases(card) {
+  const canonicalCard = {
+    ...card
+  };
+
+  delete canonicalCard.title;
+  delete canonicalCard.detailsMarkdown;
+
+  return canonicalCard;
 }

@@ -87,18 +87,20 @@ test('validateBoardTemplates accepts synced templates and rejects malformed ones
     updatedAt: '2026-03-31T10:00:00.000Z'
   });
 
-  board.templates = [
-    {
-      id: 'template_1',
-      title: 'Reusable draft',
-      initialStageId: 'backlog'
-    }
-  ];
+  board.templates = {
+    default: [
+      {
+        id: 'template_1',
+        title: 'Reusable draft',
+        initialStageId: 'backlog'
+      }
+    ]
+  };
   board.stages.backlog.templateIds = ['template_1'];
 
   assert.equal(validateBoardTemplates(board), true);
 
-  board.templates[0].initialStageId = 'review';
+  board.templates.default[0].initialStageId = 'review';
 
   assert.equal(validateBoardTemplates(board), false);
 });

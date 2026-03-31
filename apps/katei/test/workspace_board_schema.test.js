@@ -11,11 +11,14 @@ test('default board creation includes stage order, stages, templates, and langua
   assert.deepEqual(Object.keys(board.stages), ['backlog', 'doing', 'done', 'archived']);
   assert.deepEqual(board.stages.backlog.allowedTransitionStageIds, ['doing', 'done']);
   assert.deepEqual(board.stages.done.allowedTransitionStageIds, ['backlog', 'doing', 'archived']);
-  assert.deepEqual(board.templates, []);
+  assert.deepEqual(board.templates, {
+    default: []
+  });
   assert.deepEqual(board.languagePolicy, {
-    defaultLocale: null,
-    requiredLocales: [],
-    allowedLocales: null
+    sourceLocale: 'en',
+    defaultLocale: 'en',
+    supportedLocales: ['en'],
+    requiredLocales: ['en']
   });
 });
 
@@ -32,17 +35,19 @@ test('validateBoardTemplates requires initial stage ids and stage template ids t
   const workspace = createEmptyWorkspace();
   const board = workspace.boards.main;
 
-  board.templates = [
-    {
-      id: 'template_1',
-      title: 'Research note',
-      initialStageId: 'backlog'
-    }
-  ];
+  board.templates = {
+    default: [
+      {
+        id: 'template_1',
+        title: 'Research note',
+        initialStageId: 'backlog'
+      }
+    ]
+  };
   board.stages.backlog.templateIds = ['template_1'];
 
   assert.equal(validateBoardTemplates(board), true);
 
-  board.templates[0].initialStageId = 'review';
+  board.templates.default[0].initialStageId = 'review';
   assert.equal(validateBoardTemplates(board), false);
 });

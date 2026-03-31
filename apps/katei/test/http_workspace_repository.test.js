@@ -1,12 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createCard, createEmptyWorkspace } from '../public/js/domain/workspace.js';
-import { readLocalV4Workspace } from '../public/js/lib/workspace_import.js';
+import {
+  createLegacyV4WorkspaceStorageKey,
+  readLocalV4Workspace
+} from '../public/js/lib/workspace_import.js';
 import {
   HttpWorkspaceRepository,
   WORKSPACE_CONFLICT_ERROR_MESSAGE
 } from '../public/js/repositories/http_workspace_repository.js';
-import { createWorkspaceStorageKey } from '../public/js/repositories/local_workspace_repository.js';
 
 test('HttpWorkspaceRepository loads workspace snapshots from the server API', async () => {
   const workspace = createEmptyWorkspace();
@@ -83,15 +85,20 @@ test('HttpWorkspaceRepository saves workspace snapshots to the server API', asyn
 });
 
 test('HttpWorkspaceRepository imports valid v4 local data when the server record is pristine', async () => {
-  const importedWorkspace = createCard(createEmptyWorkspace(), 'main', {
-    title: 'Imported task',
-    detailsMarkdown: 'Migrated from local storage',
-    priority: 'important'
-  });
   const pristineServerWorkspace = createEmptyWorkspace();
   const storage = createStorageDouble({
-    [createWorkspaceStorageKey('sub_123')]: JSON.stringify(importedWorkspace)
+    [createLegacyV4WorkspaceStorageKey('sub_123')]: JSON.stringify(
+      createLegacyV4Workspace({
+        title: 'Imported task',
+        detailsMarkdown: 'Migrated from local storage',
+        priority: 'important'
+      })
+    )
   });
+  const importedWorkspace = readLocalV4Workspace(storage, 'sub_123');
+
+  assert.notEqual(importedWorkspace, null);
+
   const fetchDouble = createFetchDouble([
     createJsonResponse(createWorkspaceApiPayload(pristineServerWorkspace)),
     createJsonResponse(createWorkspaceApiPayload(importedWorkspace, {
@@ -136,19 +143,24 @@ test('HttpWorkspaceRepository imports valid v4 local data when the server record
 });
 
 test('HttpWorkspaceRepository safely ignores a repeated import attempt once the server rejects it', async () => {
-  const localWorkspace = createCard(createEmptyWorkspace(), 'main', {
-    title: 'Local v4 task',
-    detailsMarkdown: 'Attempted import source',
-    priority: 'important'
+  const storage = createStorageDouble({
+    [createLegacyV4WorkspaceStorageKey('sub_123')]: JSON.stringify(
+      createLegacyV4Workspace({
+        title: 'Local v4 task',
+        detailsMarkdown: 'Attempted import source',
+        priority: 'important'
+      })
+    )
   });
+  const localWorkspace = readLocalV4Workspace(storage, 'sub_123');
   const canonicalServerWorkspace = createCard(createEmptyWorkspace(), 'main', {
     title: 'Canonical server task',
     detailsMarkdown: 'Already imported earlier',
     priority: 'urgent'
   });
-  const storage = createStorageDouble({
-    [createWorkspaceStorageKey('sub_123')]: JSON.stringify(localWorkspace)
-  });
+
+  assert.notEqual(localWorkspace, null);
+
   const fetchDouble = createFetchDouble([
     createJsonResponse(createWorkspaceApiPayload(createEmptyWorkspace())),
     createJsonResponse({
@@ -180,7 +192,7 @@ test('HttpWorkspaceRepository safely ignores a repeated import attempt once the 
 test('HttpWorkspaceRepository skips import when local v4 data is invalid', async () => {
   const serverWorkspace = createEmptyWorkspace();
   const storage = createStorageDouble({
-    [createWorkspaceStorageKey('sub_123')]: JSON.stringify({ version: -1 })
+    [createLegacyV4WorkspaceStorageKey('sub_123')]: JSON.stringify({ version: -1 })
   });
   const fetchDouble = createFetchDouble([
     createJsonResponse(createWorkspaceApiPayload(serverWorkspace))
@@ -471,6 +483,71 @@ function createWorkspaceApiPayload(workspace, meta = {}, result = undefined) {
   }
 
   return payload;
+}
+
+function createLegacyV4Workspace({
+  title = 'Legacy v4 card',
+  detailsMarkdown = '',
+  priority = 'important'
+} = {}) {
+  const workspace = createEmptyWorkspace();
+  const board = workspace.boards.main;
+
+  return {
+    version: 4,
+    workspaceId: workspace.workspaceId,
+    ui: structuredClone(workspace.ui),
+    boardOrder: [...workspace.boardOrder],
+    boards: {
+      [board.id]: {
+        id: board.id,
+        title: board.title,
+        createdAt: board.createdAt,
+        updatedAt: board.updatedAt,
+        columnOrder: ['backlog', 'doing', 'done', 'archived'],
+        columns: {
+          backlog: {
+            id: 'backlog',
+            title: 'Backlog',
+            cardIds: ['card_legacy_1'],
+            allowedTransitionStageIds: ['doing', 'done'],
+            templateIds: []
+          },
+          doing: {
+            id: 'doing',
+            title: 'Doing',
+            cardIds: [],
+            allowedTransitionStageIds: ['backlog', 'done'],
+            templateIds: []
+          },
+          done: {
+            id: 'done',
+            title: 'Done',
+            cardIds: [],
+            allowedTransitionStageIds: ['backlog', 'doing', 'archived'],
+            templateIds: []
+          },
+          archived: {
+            id: 'archived',
+            title: 'Archived',
+            cardIds: [],
+            allowedTransitionStageIds: ['backlog', 'doing', 'done'],
+            templateIds: []
+          }
+        },
+        cards: {
+          card_legacy_1: {
+            id: 'card_legacy_1',
+            title,
+            detailsMarkdown,
+            priority,
+            createdAt: '2026-04-03T09:00:00.000Z',
+            updatedAt: '2026-04-03T09:30:00.000Z'
+          }
+        }
+      }
+    }
+  };
 }
 
 function createJsonResponse(body, status = 200) {

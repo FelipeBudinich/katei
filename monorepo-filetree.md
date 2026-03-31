@@ -115,6 +115,7 @@ hanmoto-board/
 │       │   ├── workspace.test.js
 │       │   ├── workspace_board_schema.test.js
 │       │   ├── workspace_commands.test.js
+│       │   ├── workspace_migrations.test.js
 │       │   ├── workspace_record.test.js
 │       │   └── workspace_service.test.js
 │       ├── .env.example

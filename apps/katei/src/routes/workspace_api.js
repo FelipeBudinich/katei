@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { projectWorkspaceWithLegacyColumns } from '../../public/js/domain/board_workflow.js';
+import { projectWorkspaceWithLegacyCardContent } from '../../public/js/domain/card_localization.js';
 import { validateWorkspaceShape } from '../../public/js/domain/workspace_validation.js';
 import { applyWorkspaceCommand } from '../workspaces/apply_workspace_command.js';
 import { createDefaultMutationContext } from '../workspaces/mutation_context.js';
@@ -186,7 +187,7 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
 }
 
 function createWorkspaceApiResponse(record, result = undefined) {
-  const workspace = projectWorkspaceWithLegacyColumns(record.workspace);
+  const workspace = projectWorkspaceWithLegacyColumns(projectWorkspaceWithLegacyCardContent(record.workspace));
   const payload = {
     ok: true,
     workspace,

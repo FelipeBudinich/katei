@@ -1,6 +1,15 @@
 import { migrateWorkspaceSnapshot } from '../domain/workspace_migrations.js';
 import { validateWorkspaceShape } from '../domain/workspace_validation.js';
-import { createWorkspaceStorageKey } from '../repositories/local_workspace_repository.js';
+
+export const LEGACY_V4_WORKSPACE_STORAGE_PREFIX = 'katei.workspace.v4:';
+
+export function createLegacyV4WorkspaceStorageKey(viewerSub) {
+  if (typeof viewerSub !== 'string' || !viewerSub.trim()) {
+    throw new Error('A verified viewer sub is required for workspace storage.');
+  }
+
+  return `${LEGACY_V4_WORKSPACE_STORAGE_PREFIX}${viewerSub.trim()}`;
+}
 
 export function readLocalV4Workspace(storage = globalThis.localStorage, viewerSub) {
   if (!storage) {
@@ -8,7 +17,7 @@ export function readLocalV4Workspace(storage = globalThis.localStorage, viewerSu
   }
 
   try {
-    const rawValue = storage.getItem(createWorkspaceStorageKey(viewerSub));
+    const rawValue = storage.getItem(createLegacyV4WorkspaceStorageKey(viewerSub));
 
     if (!rawValue) {
       return null;

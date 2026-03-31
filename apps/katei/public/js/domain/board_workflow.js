@@ -36,7 +36,9 @@ export function createDefaultBoardStages() {
 }
 
 export function createDefaultBoardTemplates() {
-  return [];
+  return {
+    default: []
+  };
 }
 
 export function validateBoardStages(board) {
@@ -85,7 +87,7 @@ export function validateBoardTemplates(board) {
     return false;
   }
 
-  if (!Array.isArray(board.templates)) {
+  if (!isPlainObject(board.templates) || !Array.isArray(board.templates.default)) {
     return false;
   }
 
@@ -93,7 +95,7 @@ export function validateBoardTemplates(board) {
   const seenTemplateIds = new Set();
   const templateById = new Map();
 
-  for (const template of board.templates) {
+  for (const template of board.templates.default) {
     if (
       !isPlainObject(template) ||
       !isNonEmptyString(template.id) ||
@@ -175,6 +177,19 @@ export function stripLegacyColumnAliasesFromWorkspace(workspace) {
   }
 
   return normalizedWorkspace;
+}
+
+export function stripLegacyColumnAliasesFromBoard(board) {
+  if (!isPlainObject(board)) {
+    return board;
+  }
+
+  const normalizedBoard = structuredClone(board);
+
+  delete normalizedBoard.columnOrder;
+  delete normalizedBoard.columns;
+
+  return normalizedBoard;
 }
 
 function isPlainObject(value) {

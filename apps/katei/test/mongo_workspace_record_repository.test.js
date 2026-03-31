@@ -85,7 +85,10 @@ test('replaceWorkspaceSnapshot stores a validated full-workspace snapshot with m
       details: null
     }
   ]);
-  assert.equal(record.workspace.boards.main.cards[Object.keys(record.workspace.boards.main.cards)[0]].title, 'Ship launch checklist');
+  assert.equal(
+    record.workspace.boards.main.cards[Object.keys(record.workspace.boards.main.cards)[0]].contentByLocale.en.title,
+    'Ship launch checklist'
+  );
 
   const storedDocument = collection.getDocument('sub_123');
   assert.equal(storedDocument.revision, 1);
@@ -130,7 +133,7 @@ test('replaceWorkspaceSnapshot rejects invalid workspaces before saving', async 
   const repository = new MongoWorkspaceRecordRepository({ collection });
   const invalidWorkspace = {
     ...createEmptyWorkspace(),
-    version: -1
+    workspaceId: 'broken'
   };
 
   await assert.rejects(

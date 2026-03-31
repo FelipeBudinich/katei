@@ -2,16 +2,18 @@ const EMPTY_LOCALE_LIST = Object.freeze([]);
 
 export function createDefaultBoardLanguagePolicy() {
   return {
-    defaultLocale: null,
-    requiredLocales: [],
-    allowedLocales: null
+    sourceLocale: 'en',
+    defaultLocale: 'en',
+    supportedLocales: ['en'],
+    requiredLocales: ['en']
   };
 }
 
 export const DEFAULT_BOARD_LANGUAGE_POLICY = Object.freeze({
-  defaultLocale: null,
-  requiredLocales: EMPTY_LOCALE_LIST,
-  allowedLocales: null
+  sourceLocale: 'en',
+  defaultLocale: 'en',
+  supportedLocales: Object.freeze(['en']),
+  requiredLocales: Object.freeze(['en'])
 });
 
 export function canonicalizeContentLocale(input) {
@@ -41,10 +43,16 @@ export function normalizeBoardLanguagePolicy(policy) {
     return null;
   }
 
-  const defaultLocale =
-    policy.defaultLocale == null ? null : canonicalizeContentLocale(policy.defaultLocale);
+  const sourceLocale = canonicalizeContentLocale(policy.sourceLocale);
+  const defaultLocale = canonicalizeContentLocale(policy.defaultLocale);
 
-  if (policy.defaultLocale != null && !defaultLocale) {
+  if (!sourceLocale || !defaultLocale) {
+    return null;
+  }
+
+  const supportedLocales = normalizeLocaleList(policy.supportedLocales);
+
+  if (!supportedLocales) {
     return null;
   }
 
@@ -54,30 +62,24 @@ export function normalizeBoardLanguagePolicy(policy) {
     return null;
   }
 
-  const allowedLocales =
-    policy.allowedLocales == null ? null : normalizeLocaleList(policy.allowedLocales);
-
-  if (policy.allowedLocales != null && !allowedLocales) {
+  if (!supportedLocales.includes(sourceLocale) || !supportedLocales.includes(defaultLocale)) {
     return null;
   }
 
-  if (defaultLocale && allowedLocales && !allowedLocales.includes(defaultLocale)) {
-    return null;
-  }
-
-  if (allowedLocales && requiredLocales.some((locale) => !allowedLocales.includes(locale))) {
+  if (requiredLocales.some((locale) => !supportedLocales.includes(locale))) {
     return null;
   }
 
   return {
+    sourceLocale,
     defaultLocale,
+    supportedLocales: Object.freeze([...supportedLocales]),
     requiredLocales: Object.freeze([...requiredLocales]),
-    allowedLocales: allowedLocales ? Object.freeze([...allowedLocales]) : null
   };
 }
 
 export function validateBoardLanguagePolicy(policy) {
-  return normalizeBoardLanguagePolicy(policy) !== null;
+  return isPlainObject(policy) && normalizeBoardLanguagePolicy(policy) !== null;
 }
 
 function normalizeLocaleList(value, fallback = null) {

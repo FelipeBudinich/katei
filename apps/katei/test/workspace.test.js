@@ -21,6 +21,8 @@ test('createCard stores detailsMarkdown on new cards', () => {
 
   assert.equal(board.cards[cardId].detailsMarkdown, '## Launch\n\n- confirm copy');
   assert.equal(board.cards[cardId].title, 'Write launch notes');
+  assert.deepEqual(board.cards[cardId].contentByLocale.en.title, 'Write launch notes');
+  assert.deepEqual(board.cards[cardId].contentByLocale.en.detailsMarkdown, '## Launch\n\n- confirm copy');
   assert.equal(board.cards[cardId].priority, 'urgent');
 });
 
@@ -38,6 +40,10 @@ test('updateCard updates detailsMarkdown on existing cards', () => {
 
   assert.equal(nextWorkspace.boards.main.cards[cardId].detailsMarkdown, 'Updated **markdown**');
   assert.equal(nextWorkspace.boards.main.cards[cardId].title, 'Write launch notes');
+  assert.equal(
+    nextWorkspace.boards.main.cards[cardId].contentByLocale.en.detailsMarkdown,
+    'Updated **markdown**'
+  );
   assert.equal(nextWorkspace.boards.main.cards[cardId].priority, 'important');
 });
 

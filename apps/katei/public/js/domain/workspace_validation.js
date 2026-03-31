@@ -1,5 +1,6 @@
 import { validateBoardLanguagePolicy } from './board_language_policy.js';
 import { validateBoardStages, validateBoardTemplates } from './board_workflow.js';
+import { validateCardContentByLocale } from './card_localization.js';
 import {
   COLUMN_ORDER,
   PRIORITY_ORDER,
@@ -144,7 +145,7 @@ function isValidBoard(board, boardId) {
 
       const card = board.cards[cardId];
 
-      if (!isValidCard(card, cardId)) {
+      if (!isValidCard(card, cardId, board)) {
         return false;
       }
 
@@ -159,16 +160,14 @@ function isValidBoard(board, boardId) {
   return true;
 }
 
-function isValidCard(card, cardId) {
+function isValidCard(card, cardId, board) {
   return Boolean(
     card &&
       typeof card === 'object' &&
       card.id === cardId &&
-      typeof card.title === 'string' &&
-      card.title.trim() &&
-      typeof card.detailsMarkdown === 'string' &&
       typeof card.createdAt === 'string' &&
       typeof card.updatedAt === 'string' &&
+      validateCardContentByLocale(card, board) &&
       isValidPriority(card.priority)
   );
 }

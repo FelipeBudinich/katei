@@ -16,16 +16,18 @@ test('canonicalizeContentLocale normalizes content locales deterministically', (
 
 test('validateBoardLanguagePolicy accepts canonicalizable language policies', () => {
   const policy = {
+    sourceLocale: 'en',
     defaultLocale: 'es_cl',
-    requiredLocales: ['es-CL', 'ja'],
-    allowedLocales: ['ja', 'es_cl', 'en']
+    supportedLocales: ['ja', 'es_cl', 'en'],
+    requiredLocales: ['es-CL', 'ja']
   };
 
   assert.equal(validateBoardLanguagePolicy(policy), true);
   assert.deepEqual(normalizeBoardLanguagePolicy(policy), {
+    sourceLocale: 'en',
     defaultLocale: 'es-CL',
-    requiredLocales: ['es-CL', 'ja'],
-    allowedLocales: ['ja', 'es-CL', 'en']
+    supportedLocales: ['ja', 'es-CL', 'en'],
+    requiredLocales: ['es-CL', 'ja']
   });
 });
 
@@ -36,23 +38,30 @@ test('createDefaultBoardLanguagePolicy returns a fresh default object', () => {
   firstPolicy.requiredLocales.push('ja');
 
   assert.deepEqual(secondPolicy, {
-    defaultLocale: null,
-    requiredLocales: [],
-    allowedLocales: null
+    sourceLocale: 'en',
+    defaultLocale: 'en',
+    supportedLocales: ['en'],
+    requiredLocales: ['en']
   });
 });
 
 test('validateBoardLanguagePolicy rejects invalid language policies', () => {
+  assert.equal(validateBoardLanguagePolicy(null), false);
+
   assert.equal(
     validateBoardLanguagePolicy({
+      sourceLocale: 'en',
       defaultLocale: 'en',
-      allowedLocales: ['ja']
+      supportedLocales: ['ja']
     }),
     false
   );
 
   assert.equal(
     validateBoardLanguagePolicy({
+      sourceLocale: 'en',
+      defaultLocale: 'en',
+      supportedLocales: ['en', 'ja'],
       requiredLocales: ['ja', 'JA']
     }),
     false
@@ -60,6 +69,9 @@ test('validateBoardLanguagePolicy rejects invalid language policies', () => {
 
   assert.equal(
     validateBoardLanguagePolicy({
+      sourceLocale: 'en',
+      defaultLocale: 'en',
+      supportedLocales: ['en'],
       requiredLocales: ['not a locale']
     }),
     false

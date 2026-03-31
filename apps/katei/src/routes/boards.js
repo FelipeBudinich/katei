@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { projectWorkspaceWithLegacyColumns } from '../../public/js/domain/board_workflow.js';
+import { projectWorkspaceWithLegacyCardContent } from '../../public/js/domain/card_localization.js';
 import {
   APP_TITLE,
   COLUMN_ORDER,
@@ -34,7 +35,7 @@ export function createBoardsRouter({ requireSession, workspaceRecordRepository }
 }
 
 export function buildWorkspacePageModel(viewer, t, workspace = createEmptyWorkspace(), workspaceMeta = null) {
-  const projectedWorkspace = projectWorkspaceWithLegacyColumns(workspace);
+  const projectedWorkspace = projectWorkspaceWithLegacyColumns(projectWorkspaceWithLegacyCardContent(workspace));
   const columnDisplayTitles = buildColumnDisplayTitles(t);
   const columnDefinitions = COLUMN_ORDER.map((id) => ({
     id,

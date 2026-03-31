@@ -1,9 +1,11 @@
 import { WorkspaceRepository } from './workspace_repository.js';
+import { stripLegacyColumnAliasesFromWorkspace } from '../domain/board_workflow.js';
+import { stripLegacyCardContentAliasesFromWorkspace } from '../domain/card_localization.js';
 import { createEmptyWorkspace } from '../domain/workspace_read_model.js';
 import { migrateWorkspaceSnapshot } from '../domain/workspace_migrations.js';
 import { validateWorkspaceShape } from '../domain/workspace_validation.js';
 
-export const WORKSPACE_STORAGE_PREFIX = 'katei.workspace.v4:';
+export const WORKSPACE_STORAGE_PREFIX = 'katei.workspace.v5:';
 
 export function createWorkspaceStorageKey(viewerSub) {
   if (typeof viewerSub !== 'string' || !viewerSub.trim()) {
@@ -41,12 +43,16 @@ export class LocalWorkspaceRepository extends WorkspaceRepository {
   }
 
   async saveWorkspace(workspace) {
-    if (!validateWorkspaceShape(workspace)) {
+    const normalizedWorkspace = stripLegacyCardContentAliasesFromWorkspace(
+      stripLegacyColumnAliasesFromWorkspace(migrateWorkspaceSnapshot(workspace))
+    );
+
+    if (!validateWorkspaceShape(normalizedWorkspace)) {
       throw new Error('Cannot save an invalid workspace.');
     }
 
     if (this.storage) {
-      this.storage.setItem(this.storageKey, JSON.stringify(workspace));
+      this.storage.setItem(this.storageKey, JSON.stringify(normalizedWorkspace));
     }
 
     return workspace;

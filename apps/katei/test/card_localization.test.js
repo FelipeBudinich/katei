@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  createCardContentProvenance,
   getCardContentVariant,
   getMissingRequiredLocales,
   listCardLocales,
@@ -16,11 +17,20 @@ test('getCardContentVariant reads explicit localized variants and listCardLocale
       ja: {
         title: '日本語タイトル',
         detailsMarkdown: '日本語本文',
-        provenance: { source: 'human' }
+        provenance: {
+          actor: { type: 'human', id: 'viewer_123' },
+          timestamp: '2026-03-31T10:00:00.000Z',
+          includesHumanInput: true
+        }
       },
       es_cl: {
         title: 'Titulo en español',
-        detailsMarkdown: 'Detalle en español'
+        detailsMarkdown: 'Detalle en español',
+        provenance: {
+          actor: { type: 'agent', id: 'translator_1' },
+          timestamp: '2026-03-31T11:00:00.000Z',
+          includesHumanInput: false
+        }
       }
     }
   };
@@ -29,6 +39,7 @@ test('getCardContentVariant reads explicit localized variants and listCardLocale
   assert.deepEqual(
     getCardContentVariant(card, 'ja', {
       languagePolicy: {
+        sourceLocale: 'en',
         defaultLocale: 'en'
       }
     }),
@@ -36,7 +47,11 @@ test('getCardContentVariant reads explicit localized variants and listCardLocale
       locale: 'ja',
       title: '日本語タイトル',
       detailsMarkdown: '日本語本文',
-      provenance: { source: 'human' },
+      provenance: {
+        actor: { type: 'human', id: 'viewer_123' },
+        timestamp: '2026-03-31T10:00:00.000Z',
+        includesHumanInput: true
+      },
       isFallback: false,
       source: 'localized'
     }
@@ -53,6 +68,7 @@ test('getCardContentVariant falls back to legacy card content when no localized 
   assert.deepEqual(
     getCardContentVariant(card, 'en', {
       languagePolicy: {
+        sourceLocale: 'en',
         defaultLocale: 'en'
       }
     }),
@@ -80,7 +96,11 @@ test('upsertCardContentVariant adds and updates localized variants without mutat
       title: 'Titulo en español',
       detailsMarkdown: 'Detalle en español'
     },
-    { source: 'human' }
+    {
+      actor: { type: 'human', id: 'viewer_123' },
+      timestamp: '2026-03-31T12:00:00.000Z',
+      includesHumanInput: true
+    }
   );
 
   assert.equal(card.contentByLocale, undefined);
@@ -88,7 +108,11 @@ test('upsertCardContentVariant adds and updates localized variants without mutat
     'es-CL': {
       title: 'Titulo en español',
       detailsMarkdown: 'Detalle en español',
-      provenance: { source: 'human' }
+      provenance: {
+        actor: { type: 'human', id: 'viewer_123' },
+        timestamp: '2026-03-31T12:00:00.000Z',
+        includesHumanInput: true
+      }
     }
   });
 
@@ -98,20 +122,30 @@ test('upsertCardContentVariant adds and updates localized variants without mutat
     {
       detailsMarkdown: 'Detalle actualizado'
     },
-    { source: 'agent' }
+    {
+      actor: { type: 'agent', id: 'translator_1' },
+      timestamp: '2026-03-31T13:00:00.000Z',
+      includesHumanInput: false
+    }
   );
 
   assert.deepEqual(updatedCard.contentByLocale['es-CL'], {
     title: 'Titulo en español',
     detailsMarkdown: 'Detalle actualizado',
-    provenance: { source: 'agent' }
+    provenance: {
+      actor: { type: 'agent', id: 'translator_1' },
+      timestamp: '2026-03-31T13:00:00.000Z',
+      includesHumanInput: false
+    }
   });
 });
 
 test('getMissingRequiredLocales detects only the required locales still missing', () => {
   const board = {
     languagePolicy: {
+      sourceLocale: 'en',
       defaultLocale: 'en',
+      supportedLocales: ['en', 'ja', 'es-CL'],
       requiredLocales: ['en', 'ja', 'es-CL']
     }
   };
@@ -122,7 +156,12 @@ test('getMissingRequiredLocales detects only the required locales still missing'
     contentByLocale: {
       ja: {
         title: '日本語タイトル',
-        detailsMarkdown: '日本語本文'
+        detailsMarkdown: '日本語本文',
+        provenance: createCardContentProvenance({
+          actor: { type: 'human', id: 'viewer_123' },
+          timestamp: '2026-03-31T10:00:00.000Z',
+          includesHumanInput: true
+        })
       }
     }
   };

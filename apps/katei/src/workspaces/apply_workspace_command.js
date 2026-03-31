@@ -1,5 +1,11 @@
 import { assertValidWorkspaceCommand } from '../../public/js/domain/workspace_commands.js';
 import {
+  createCardContentProvenance,
+  getCardContentVariant,
+  projectWorkspaceWithLegacyCardContent,
+  upsertCardContentVariant
+} from '../../public/js/domain/card_localization.js';
+import {
   cloneWorkspace,
   createCollapsedColumns,
   createWorkspaceBoard,
@@ -60,7 +66,7 @@ export function applyWorkspaceCommand({
       });
 
   return {
-    workspace,
+    workspace: projectWorkspaceWithLegacyCardContent(workspace),
     result,
     activityEvent
   };
@@ -228,14 +234,27 @@ function applyCardCreate(workspace, command, context) {
   const board = getBoard(nextWorkspace, command.payload.boardId);
   const cardId = context.createCardId();
   const initialStageId = board.stageOrder[0];
+  const sourceLocale = board.languagePolicy.sourceLocale;
 
   board.cards[cardId] = {
     id: cardId,
-    title: normalizeCardTitle(command.payload.title),
-    detailsMarkdown: normalizeDetailsMarkdown(command.payload.detailsMarkdown),
     priority: normalizePriority(command.payload.priority ?? DEFAULT_PRIORITY),
     createdAt: context.now,
-    updatedAt: context.now
+    updatedAt: context.now,
+    contentByLocale: {
+      [sourceLocale]: {
+        title: normalizeCardTitle(command.payload.title),
+        detailsMarkdown: normalizeDetailsMarkdown(command.payload.detailsMarkdown),
+        provenance: createCardContentProvenance({
+          actor: context.actor ?? {
+            type: 'system',
+            id: 'command-engine'
+          },
+          timestamp: context.now,
+          includesHumanInput: true
+        })
+      }
+    }
   };
   board.stages[initialStageId].cardIds = [...board.stages[initialStageId].cardIds, cardId];
   board.updatedAt = context.now;
@@ -252,18 +271,22 @@ function applyCardCreate(workspace, command, context) {
 function applyCardUpdate(workspace, command, context) {
   const currentBoard = getBoard(workspace, command.payload.boardId);
   const currentCard = getCard(currentBoard, command.payload.cardId);
+  const sourceLocale = currentBoard.languagePolicy.sourceLocale;
+  const currentVariant = getCardContentVariant(currentCard, sourceLocale, currentBoard);
 
-  const nextTitle = hasOwn(command.payload, 'title') ? normalizeCardTitle(command.payload.title) : currentCard.title;
+  const nextTitle = hasOwn(command.payload, 'title')
+    ? normalizeCardTitle(command.payload.title)
+    : (currentVariant?.title ?? '');
   const nextDetailsMarkdown = hasOwn(command.payload, 'detailsMarkdown')
     ? normalizeDetailsMarkdown(command.payload.detailsMarkdown)
-    : currentCard.detailsMarkdown;
+    : (currentVariant?.detailsMarkdown ?? '');
   const nextPriority = hasOwn(command.payload, 'priority')
     ? normalizePriority(command.payload.priority)
     : currentCard.priority;
 
   if (
-    currentCard.title === nextTitle &&
-    currentCard.detailsMarkdown === nextDetailsMarkdown &&
+    currentVariant?.title === nextTitle &&
+    currentVariant?.detailsMarkdown === nextDetailsMarkdown &&
     currentCard.priority === nextPriority
   ) {
     return {
@@ -279,13 +302,26 @@ function applyCardUpdate(workspace, command, context) {
   const nextWorkspace = cloneWorkspace(workspace);
   const board = getBoard(nextWorkspace, command.payload.boardId);
   const card = getCard(board, command.payload.cardId);
-  board.cards[card.id] = {
-    ...card,
-    title: nextTitle,
-    detailsMarkdown: nextDetailsMarkdown,
-    priority: nextPriority,
-    updatedAt: context.now
-  };
+  board.cards[card.id] = upsertCardContentVariant(
+    {
+      ...stripLegacyCardAliases(card),
+      priority: nextPriority,
+      updatedAt: context.now
+    },
+    sourceLocale,
+    {
+      title: nextTitle,
+      detailsMarkdown: nextDetailsMarkdown
+    },
+    {
+      actor: context.actor ?? {
+        type: 'system',
+        id: 'command-engine'
+      },
+      timestamp: context.now,
+      includesHumanInput: true
+    }
+  );
   board.updatedAt = context.now;
 
   return {
@@ -467,4 +503,15 @@ function createClearedStages(board) {
       }
     ])
   );
+}
+
+function stripLegacyCardAliases(card) {
+  const canonicalCard = {
+    ...card
+  };
+
+  delete canonicalCard.title;
+  delete canonicalCard.detailsMarkdown;
+
+  return canonicalCard;
 }

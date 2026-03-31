@@ -1,9 +1,9 @@
 import { createDefaultBoardLanguagePolicy } from './board_language_policy.js';
 import { createDefaultBoardStages, createDefaultBoardTemplates } from './board_workflow.js';
 
-export const WORKSPACE_VERSION = 4;
+export const WORKSPACE_VERSION = 5;
 export const WORKSPACE_ID = 'main';
-export const STORAGE_KEY = 'katei.workspace.v4';
+export const STORAGE_KEY = 'katei.workspace.v5';
 export const APP_TITLE = '過程 (katei)';
 export const DEFAULT_BOARD_ID = 'main';
 export const DEFAULT_BOARD_TITLE = '過程';

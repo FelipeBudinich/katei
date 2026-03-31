@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { stripLegacyColumnAliasesFromWorkspace } from '../../public/js/domain/board_workflow.js';
+import { stripLegacyCardContentAliasesFromWorkspace } from '../../public/js/domain/card_localization.js';
 import {
   cloneWorkspace,
   createEmptyWorkspace
@@ -137,7 +138,9 @@ export function fromWorkspaceRecordDocument(document) {
 
 export function validateWorkspaceSnapshot(workspace) {
   const migratedWorkspace = migrateWorkspaceSnapshot(workspace);
-  const normalizedWorkspace = stripLegacyColumnAliasesFromWorkspace(migratedWorkspace);
+  const normalizedWorkspace = stripLegacyCardContentAliasesFromWorkspace(
+    stripLegacyColumnAliasesFromWorkspace(migratedWorkspace)
+  );
 
   if (!validateWorkspaceShape(normalizedWorkspace)) {
     throw new Error('Cannot save an invalid workspace.');
