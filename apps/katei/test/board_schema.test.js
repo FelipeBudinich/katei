@@ -19,12 +19,14 @@ test('normalizeBoardSchemaInput canonicalizes valid schema edits', () => {
       {
         id: 'backlog',
         title: 'Backlog',
-        allowedTransitionStageIds: ['review']
+        allowedTransitionStageIds: ['review'],
+        actionIds: ['card.delete']
       },
       {
         id: 'review',
         title: 'In Review',
-        allowedTransitionStageIds: ['backlog']
+        allowedTransitionStageIds: ['backlog'],
+        actionIds: []
       }
     ],
     templates: [
@@ -43,7 +45,22 @@ test('normalizeBoardSchemaInput canonicalizes valid schema edits', () => {
     requiredLocales: ['ja']
   });
   assert.deepEqual(normalizedSchema.stageOrder, ['backlog', 'review']);
+  assert.deepEqual(normalizedSchema.stageDefinitions, [
+    {
+      id: 'backlog',
+      title: 'Backlog',
+      allowedTransitionStageIds: ['review'],
+      actionIds: ['card.delete']
+    },
+    {
+      id: 'review',
+      title: 'In Review',
+      allowedTransitionStageIds: ['backlog'],
+      actionIds: []
+    }
+  ]);
   assert.deepEqual(normalizedSchema.stages.backlog.templateIds, ['starter']);
+  assert.deepEqual(normalizedSchema.stages.backlog.actionIds, ['card.delete']);
 });
 
 test('normalizeBoardSchemaInput rejects invalid locale policy, transitions, and template stages', () => {
@@ -115,6 +132,129 @@ test('normalizeBoardSchemaInput rejects invalid locale policy, transitions, and 
       }),
     /Template initial stage must reference an existing stage/
   );
+});
+
+test('normalizeBoardSchemaInput backfills missing archived actionIds and preserves explicit empties', () => {
+  const archivedDefaultSchema = normalizeBoardSchemaInput({
+    languagePolicy: {
+      sourceLocale: 'en',
+      defaultLocale: 'en',
+      supportedLocales: ['en'],
+      requiredLocales: ['en']
+    },
+    stageDefinitions: [
+      {
+        id: 'backlog',
+        title: 'Backlog',
+        allowedTransitionStageIds: ['archived']
+      },
+      {
+        id: 'archived',
+        title: 'Archived',
+        allowedTransitionStageIds: ['backlog']
+      }
+    ],
+    templates: []
+  });
+
+  assert.deepEqual(archivedDefaultSchema.stageDefinitions[1].actionIds, ['card.delete']);
+
+  const explicitEmptySchema = normalizeBoardSchemaInput({
+    languagePolicy: {
+      sourceLocale: 'en',
+      defaultLocale: 'en',
+      supportedLocales: ['en'],
+      requiredLocales: ['en']
+    },
+    stageDefinitions: [
+      {
+        id: 'archived',
+        title: 'Archived',
+        allowedTransitionStageIds: [],
+        actionIds: []
+      }
+    ],
+    templates: []
+  });
+
+  assert.deepEqual(explicitEmptySchema.stageDefinitions[0].actionIds, []);
+});
+
+test('normalizeBoardSchemaInput rejects invalid or duplicate stage action ids', () => {
+  assert.throws(
+    () =>
+      normalizeBoardSchemaInput({
+        languagePolicy: {
+          sourceLocale: 'en',
+          defaultLocale: 'en',
+          supportedLocales: ['en'],
+          requiredLocales: ['en']
+        },
+        stageDefinitions: [
+          {
+            id: 'backlog',
+            title: 'Backlog',
+            allowedTransitionStageIds: [],
+            actionIds: ['board.delete']
+          }
+        ],
+        templates: []
+      }),
+    /Stage actions must use known action ids/
+  );
+
+  assert.throws(
+    () =>
+      normalizeBoardSchemaInput({
+        languagePolicy: {
+          sourceLocale: 'en',
+          defaultLocale: 'en',
+          supportedLocales: ['en'],
+          requiredLocales: ['en']
+        },
+        stageDefinitions: [
+          {
+            id: 'archived',
+            title: 'Archived',
+            allowedTransitionStageIds: [],
+            actionIds: ['card.delete', 'card.delete']
+          }
+        ],
+        templates: []
+      }),
+    /Stage action ids must be unique/
+  );
+});
+
+test('serializeBoardSchemaInput includes stage action ids', () => {
+  const board = createEmptyWorkspace().boards.main;
+
+  assert.deepEqual(serializeBoardSchemaInput(board).stageDefinitions, [
+    {
+      id: 'backlog',
+      title: 'Backlog',
+      allowedTransitionStageIds: ['doing', 'done'],
+      actionIds: []
+    },
+    {
+      id: 'doing',
+      title: 'Doing',
+      allowedTransitionStageIds: ['backlog', 'done'],
+      actionIds: []
+    },
+    {
+      id: 'done',
+      title: 'Done',
+      allowedTransitionStageIds: ['backlog', 'doing', 'archived'],
+      actionIds: []
+    },
+    {
+      id: 'archived',
+      title: 'Archived',
+      allowedTransitionStageIds: ['backlog', 'doing', 'done'],
+      actionIds: ['card.delete']
+    }
+  ]);
 });
 
 test('assertBoardSchemaCompatibleWithBoard rejects removing occupied stages or changing source locale without content', () => {

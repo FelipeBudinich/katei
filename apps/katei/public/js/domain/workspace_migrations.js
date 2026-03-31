@@ -1,4 +1,5 @@
 import { createDefaultBoardLanguagePolicy, normalizeBoardLanguagePolicy } from './board_language_policy.js';
+import { getDefaultBoardStageActionIds, isValidBoardStageActionId } from './board_stage_actions.js';
 import { createDefaultBoardStages, createDefaultBoardTemplates } from './board_workflow.js';
 import { createCardContentProvenance } from './card_localization.js';
 import { WORKSPACE_ID, WORKSPACE_VERSION } from './workspace_read_model.js';
@@ -189,7 +190,10 @@ function migrateStageDefinition({ stageId, stageOrder, legacyStage, defaultStage
       normalizedLegacyStage.allowedTransitionStageIds,
       fallbackTransitions
     ).filter((targetStageId) => stageOrder.includes(targetStageId)),
-    templateIds: normalizeStringArray(normalizedLegacyStage.templateIds)
+    templateIds: normalizeStringArray(normalizedLegacyStage.templateIds),
+    actionIds: Object.prototype.hasOwnProperty.call(normalizedLegacyStage, 'actionIds')
+      ? normalizeStringArray(normalizedLegacyStage.actionIds).filter(isValidBoardStageActionId)
+      : getDefaultBoardStageActionIds(stageId)
   };
 }
 

@@ -21,7 +21,37 @@ test('createBoardEditorFormState serializes the current board schema for editing
 
   assert.equal(formState.title, '過程');
   assert.match(formState.stageDefinitions, /backlog \| Backlog \| doing, done/);
+  assert.match(formState.stageDefinitions, /archived \| Archived \| backlog, doing, done \| card\.delete/);
   assert.match(formState.templates, /starter \| Starter \| backlog/);
+});
+
+test('createBoardEditorFormState serializes a fourth stage segment only when actions exist', () => {
+  const board = createEmptyWorkspace().boards.main;
+
+  board.stageOrder = ['backlog', 'archive-bin'];
+  board.stages = {
+    backlog: {
+      id: 'backlog',
+      title: 'Backlog',
+      cardIds: [],
+      allowedTransitionStageIds: ['archive-bin'],
+      templateIds: [],
+      actionIds: []
+    },
+    'archive-bin': {
+      id: 'archive-bin',
+      title: 'Archive Bin',
+      cardIds: [],
+      allowedTransitionStageIds: [],
+      templateIds: [],
+      actionIds: ['card.delete']
+    }
+  };
+
+  const formState = createBoardEditorFormState(board);
+
+  assert.match(formState.stageDefinitions, /backlog \| Backlog \| archive-bin/);
+  assert.match(formState.stageDefinitions, /archive-bin \| Archive Bin \|  \| card\.delete/);
 });
 
 test('parseBoardEditorFormInput parses valid schema edits and generates template ids when omitted', () => {
@@ -46,12 +76,14 @@ test('parseBoardEditorFormInput parses valid schema edits and generates template
     {
       id: 'backlog',
       title: 'Backlog',
-      allowedTransitionStageIds: ['review']
+      allowedTransitionStageIds: ['review'],
+      actionIds: []
     },
     {
       id: 'review',
       title: 'Review',
-      allowedTransitionStageIds: ['backlog']
+      allowedTransitionStageIds: ['backlog'],
+      actionIds: []
     }
   ]);
   assert.deepEqual(parsedInput.templates, [
@@ -59,6 +91,43 @@ test('parseBoardEditorFormInput parses valid schema edits and generates template
       id: 'starter-template',
       title: 'Starter template',
       initialStageId: 'backlog'
+    }
+  ]);
+});
+
+test('parseBoardEditorFormInput accepts 2-, 3-, and 4-segment stage lines and preserves empty transitions before actions', () => {
+  const parsedInput = parseBoardEditorFormInput({
+    title: 'Editorial board',
+    sourceLocale: 'en',
+    defaultLocale: 'en',
+    supportedLocales: 'en',
+    requiredLocales: 'en',
+    stageDefinitions: [
+      'backlog | Backlog',
+      'archived | Archived | backlog',
+      'archive-bin | Archive Bin | | card.delete'
+    ].join('\n'),
+    templates: ''
+  });
+
+  assert.deepEqual(parsedInput.stageDefinitions, [
+    {
+      id: 'backlog',
+      title: 'Backlog',
+      allowedTransitionStageIds: [],
+      actionIds: []
+    },
+    {
+      id: 'archived',
+      title: 'Archived',
+      allowedTransitionStageIds: ['backlog'],
+      actionIds: ['card.delete']
+    },
+    {
+      id: 'archive-bin',
+      title: 'Archive Bin',
+      allowedTransitionStageIds: [],
+      actionIds: ['card.delete']
     }
   ]);
 });

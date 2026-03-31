@@ -17,28 +17,32 @@ test('createDefaultBoardStages returns the default workflow stages as fresh obje
       title: 'Backlog',
       cardIds: [],
       allowedTransitionStageIds: ['doing', 'done'],
-      templateIds: []
+      templateIds: [],
+      actionIds: []
     },
     {
       id: 'doing',
       title: 'Doing',
       cardIds: [],
       allowedTransitionStageIds: ['backlog', 'done'],
-      templateIds: []
+      templateIds: [],
+      actionIds: []
     },
     {
       id: 'done',
       title: 'Done',
       cardIds: [],
       allowedTransitionStageIds: ['backlog', 'doing', 'archived'],
-      templateIds: []
+      templateIds: [],
+      actionIds: []
     },
     {
       id: 'archived',
       title: 'Archived',
       cardIds: [],
       allowedTransitionStageIds: ['backlog', 'doing', 'done'],
-      templateIds: []
+      templateIds: [],
+      actionIds: ['card.delete']
     }
   ]);
 
@@ -83,6 +87,28 @@ test('validateBoardStages rejects duplicate stage ids or invalid stage definitio
   boardWithBadTitle.stages.doing.title = '';
 
   assert.equal(validateBoardStages(boardWithBadTitle), false);
+});
+
+test('validateBoardStages rejects unknown or duplicate stage action ids', () => {
+  const boardWithUnknownAction = createWorkspaceBoard({
+    id: 'main',
+    title: 'Main board',
+    createdAt: '2026-03-31T10:00:00.000Z',
+    updatedAt: '2026-03-31T10:00:00.000Z'
+  });
+  boardWithUnknownAction.stages.backlog.actionIds = ['board.delete'];
+
+  assert.equal(validateBoardStages(boardWithUnknownAction), false);
+
+  const boardWithDuplicateActions = createWorkspaceBoard({
+    id: 'main',
+    title: 'Main board',
+    createdAt: '2026-03-31T10:00:00.000Z',
+    updatedAt: '2026-03-31T10:00:00.000Z'
+  });
+  boardWithDuplicateActions.stages.archived.actionIds = ['card.delete', 'card.delete'];
+
+  assert.equal(validateBoardStages(boardWithDuplicateActions), false);
 });
 
 test('validateBoardTemplates accepts synced templates and rejects malformed ones', () => {
@@ -147,28 +173,32 @@ function createCustomWorkflowBoard() {
       title: 'Draft',
       cardIds: [],
       allowedTransitionStageIds: ['review'],
-      templateIds: []
+      templateIds: [],
+      actionIds: []
     },
     review: {
       id: 'review',
       title: 'Review',
       cardIds: [],
       allowedTransitionStageIds: ['draft', 'qa'],
-      templateIds: []
+      templateIds: [],
+      actionIds: []
     },
     qa: {
       id: 'qa',
       title: 'QA',
       cardIds: [],
       allowedTransitionStageIds: ['review', 'published'],
-      templateIds: []
+      templateIds: [],
+      actionIds: []
     },
     published: {
       id: 'published',
       title: 'Published',
       cardIds: [],
       allowedTransitionStageIds: ['qa'],
-      templateIds: []
+      templateIds: [],
+      actionIds: []
     }
   };
 

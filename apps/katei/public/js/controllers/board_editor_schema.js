@@ -8,12 +8,14 @@ export function createBoardEditorFormState(board = null) {
     ? (board.stageOrder ?? []).map((stageId) => ({
         id: stageId,
         title: board.stages?.[stageId]?.title ?? '',
-        allowedTransitionStageIds: [...(board.stages?.[stageId]?.allowedTransitionStageIds ?? [])]
+        allowedTransitionStageIds: [...(board.stages?.[stageId]?.allowedTransitionStageIds ?? [])],
+        actionIds: [...(board.stages?.[stageId]?.actionIds ?? [])]
       }))
     : createDefaultBoardStages().map((stage) => ({
         id: stage.id,
         title: stage.title,
-        allowedTransitionStageIds: [...stage.allowedTransitionStageIds]
+        allowedTransitionStageIds: [...stage.allowedTransitionStageIds],
+        actionIds: [...stage.actionIds]
       }));
   const templates = Array.isArray(board?.templates?.default) ? board.templates.default : [];
 
@@ -24,10 +26,7 @@ export function createBoardEditorFormState(board = null) {
     supportedLocales: baseLanguagePolicy.supportedLocales.join(', '),
     requiredLocales: baseLanguagePolicy.requiredLocales.join(', '),
     stageDefinitions: stageDefinitions
-      .map(
-        (stage) =>
-          `${stage.id} | ${stage.title} | ${stage.allowedTransitionStageIds.join(', ')}`
-      )
+      .map((stage) => serializeStageDefinition(stage))
       .join('\n'),
     templates: templates
       .map((template) => `${template.id} | ${template.title} | ${template.initialStageId}`)
@@ -71,17 +70,25 @@ function parseStageDefinitions(rawValue) {
   }
 
   return lines.map((line) => {
-    const segments = splitPipeSegments(line);
+    const segments = splitStagePipeSegments(line);
 
-    if (segments.length < 2 || segments.length > 3) {
-      throw new Error('Each stage must use "stage-id | Title | target-a, target-b".');
+    if (segments.length < 2 || segments.length > 4) {
+      throw new Error(
+        'Each stage must use "stage-id | Title", "stage-id | Title | target-a, target-b", or "stage-id | Title | target-a, target-b | action-a, action-b".'
+      );
     }
 
-    return {
+    const stageDefinition = {
       id: segments[0],
       title: segments[1],
       allowedTransitionStageIds: splitInlineList(segments[2] ?? '')
     };
+
+    if (segments.length === 4) {
+      stageDefinition.actionIds = splitInlineList(segments[3] ?? '');
+    }
+
+    return stageDefinition;
   });
 }
 
@@ -132,6 +139,10 @@ function splitPipeSegments(line) {
   return line.split('|').map((segment) => segment.trim()).filter((segment) => segment.length > 0);
 }
 
+function splitStagePipeSegments(line) {
+  return line.split('|').map((segment) => segment.trim());
+}
+
 function splitInlineList(value) {
   return String(value ?? '')
     .split(/[\n,]/)
@@ -154,4 +165,15 @@ function createTemplateIdFromTitle(title, usedTemplateIds, index) {
   }
 
   return nextId;
+}
+
+function serializeStageDefinition(stage) {
+  const transitions = stage.allowedTransitionStageIds.join(', ');
+  const actionIds = Array.isArray(stage.actionIds) ? stage.actionIds : [];
+
+  if (actionIds.length > 0) {
+    return `${stage.id} | ${stage.title} | ${transitions} | ${actionIds.join(', ')}`;
+  }
+
+  return `${stage.id} | ${stage.title} | ${transitions}`;
 }

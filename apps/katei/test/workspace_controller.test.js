@@ -49,21 +49,24 @@ function createBoardWithCustomStages() {
       title: 'Ready for Review',
       cardIds: [],
       allowedTransitionStageIds: ['qa', 'published'],
-      templateIds: []
+      templateIds: [],
+      actionIds: []
     },
     qa: {
       id: 'qa',
       title: 'QA Sweep',
       cardIds: [],
       allowedTransitionStageIds: ['review', 'published'],
-      templateIds: []
+      templateIds: [],
+      actionIds: []
     },
     published: {
       id: 'published',
       title: 'Published',
       cardIds: [],
       allowedTransitionStageIds: ['review'],
-      templateIds: []
+      templateIds: [],
+      actionIds: []
     }
   };
 

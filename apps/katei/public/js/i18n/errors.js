@@ -14,6 +14,8 @@ const KNOWN_ERROR_KEY_BY_MESSAGE = Object.freeze({
   'Stage titles are required.': 'errors.boardStageTitleRequired',
   'Stage transitions must use stage ids.': 'errors.boardTransitionsInvalid',
   'Stage transitions must reference existing stages.': 'errors.boardTransitionsMissingTarget',
+  'Stage actions must use known action ids.': 'errors.boardStageActionsInvalid',
+  'Stage action ids must be unique.': 'errors.boardStageActionIdsUnique',
   'Template ids are required.': 'errors.boardTemplateIdRequired',
   'Template ids must be unique.': 'errors.boardTemplateIdsUnique',
   'Template titles are required.': 'errors.boardTemplateTitleRequired',

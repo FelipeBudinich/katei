@@ -18,21 +18,24 @@ test('getBoardRenderStages follows board.stageOrder instead of fixed column orde
       title: 'Ready for Review',
       cardIds: [],
       allowedTransitionStageIds: ['writing', 'published'],
-      templateIds: []
+      templateIds: [],
+      actionIds: []
     },
     writing: {
       id: 'writing',
       title: 'Writing',
       cardIds: [],
       allowedTransitionStageIds: ['review', 'published'],
-      templateIds: []
+      templateIds: [],
+      actionIds: []
     },
     published: {
       id: 'published',
       title: 'Published',
       cardIds: [],
       allowedTransitionStageIds: ['review'],
-      templateIds: []
+      templateIds: [],
+      actionIds: []
     }
   };
 

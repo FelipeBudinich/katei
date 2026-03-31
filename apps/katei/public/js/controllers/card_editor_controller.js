@@ -34,12 +34,14 @@ export default class extends Controller {
   connect() {
     this.t = getBrowserTranslator();
     this.editor = null;
+    this.board = null;
   }
 
   disconnect() {
     this.editor?.toTextArea();
     this.editor?.cleanup();
     this.editor = null;
+    this.board = null;
   }
 
   ensureEditor() {
@@ -77,6 +79,7 @@ export default class extends Controller {
     const targetStageId = nextStageId;
 
     this.formTarget.reset();
+    this.board = board ?? null;
     this.modeInputTarget.value = mode;
     this.boardIdInputTarget.value = boardId ?? '';
     this.cardIdInputTarget.value = nextCardId;
@@ -172,6 +175,8 @@ export default class extends Controller {
     if (this.dialogTarget.open) {
       this.dialogTarget.close();
     }
+
+    this.board = null;
   }
 
   syncPriorityOptions() {
@@ -201,7 +206,7 @@ export default class extends Controller {
 
   syncEditActions({ isEditMode, cardId, sourceStageId, targetStageId }) {
     const shouldShowPrioritySection = shouldShowPriorityForStage(targetStageId);
-    const shouldShowDeleteAction = isEditMode && shouldShowDeleteForStage(sourceStageId);
+    const shouldShowDeleteAction = isEditMode && shouldShowDeleteForStage(this.board, sourceStageId);
 
     this.prioritySectionTarget.hidden = !shouldShowPrioritySection;
     this.editActionsTarget.hidden = !isEditMode;

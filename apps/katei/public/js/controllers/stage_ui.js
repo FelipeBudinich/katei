@@ -1,3 +1,5 @@
+import { stageSupportsAction } from '../domain/board_stage_actions.js';
+
 export function getDefaultBoardStageId(board, fallbackStageId = 'backlog') {
   if (Array.isArray(board?.stageOrder) && board.stageOrder.length > 0) {
     return board.stageOrder[0];
@@ -65,8 +67,8 @@ export function shouldShowPriorityForStage(stageId) {
   return stageId !== 'done' && stageId !== 'archived';
 }
 
-export function shouldShowDeleteForStage(stageId) {
-  return stageId === 'archived';
+export function shouldShowDeleteForStage(board, stageId) {
+  return stageSupportsAction(board, stageId, 'card.delete');
 }
 
 function isValidStageId(board, stageId) {

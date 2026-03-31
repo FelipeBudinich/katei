@@ -1,4 +1,8 @@
 import { normalizeBoardLanguagePolicy } from './board_language_policy.js';
+import {
+  getDefaultBoardStageActionIds,
+  normalizeBoardStageActionIds
+} from './board_stage_actions.js';
 import { isValidBoardStageId } from './board_workflow.js';
 
 export function normalizeBoardSchemaInput(input) {
@@ -20,7 +24,8 @@ export function normalizeBoardSchemaInput(input) {
         title: stage.title,
         cardIds: [],
         allowedTransitionStageIds: [...stage.allowedTransitionStageIds],
-        templateIds: []
+        templateIds: [],
+        actionIds: [...stage.actionIds]
       }
     ])
   );
@@ -52,7 +57,8 @@ export function serializeBoardSchemaInput(board) {
       ? board.stageOrder.map((stageId) => ({
           id: stageId,
           title: board.stages?.[stageId]?.title ?? '',
-          allowedTransitionStageIds: [...(board.stages?.[stageId]?.allowedTransitionStageIds ?? [])]
+          allowedTransitionStageIds: [...(board.stages?.[stageId]?.allowedTransitionStageIds ?? [])],
+          actionIds: [...(board.stages?.[stageId]?.actionIds ?? [])]
         }))
       : [],
     templates: Array.isArray(board?.templates?.default)
@@ -111,13 +117,17 @@ function normalizeStageDefinitions(value) {
     }
 
     seenStageIds.add(stageId);
+    const hasActionIds = isPlainObject(rawStage) && Object.prototype.hasOwnProperty.call(rawStage, 'actionIds');
     stageDefinitions.push({
       id: stageId,
       title: normalizeRequiredText(rawStage?.title, 'Stage titles are required.'),
       allowedTransitionStageIds: normalizeStringList(rawStage?.allowedTransitionStageIds, {
         allowEmpty: true,
         entryErrorMessage: 'Stage transitions must use stage ids.'
-      })
+      }),
+      actionIds: hasActionIds
+        ? normalizeBoardStageActionIds(rawStage.actionIds)
+        : getDefaultBoardStageActionIds(stageId)
     });
   }
 

@@ -20,6 +20,7 @@ test('migrateWorkspaceToV5 upgrades an empty legacy workspace to the v5 schema',
   assert.deepEqual(migratedBoard.stageOrder, ['backlog', 'doing', 'done', 'archived']);
   assert.equal(migratedBoard.columnOrder, undefined);
   assert.equal(migratedBoard.columns, undefined);
+  assert.deepEqual(migratedBoard.stages.archived.actionIds, ['card.delete']);
   assert.deepEqual(migratedBoard.templates, {
     default: []
   });
@@ -169,6 +170,27 @@ test('migrateWorkspaceSnapshot is idempotent across repeated runs', () => {
     now: '2026-03-31T12:00:00.000Z'
   });
 
+  assert.deepEqual(secondMigration, firstMigration);
+});
+
+test('migrateBoardToSchemaV7 backfills missing actionIds idempotently for normalized boards', () => {
+  const board = createEmptyWorkspace().boards.main;
+
+  for (const stageId of board.stageOrder) {
+    delete board.stages[stageId].actionIds;
+  }
+
+  const firstMigration = migrateBoardToSchemaV7(board, {
+    now: '2026-03-31T12:00:00.000Z'
+  });
+  const secondMigration = migrateBoardToSchemaV7(firstMigration, {
+    now: '2026-03-31T12:00:00.000Z'
+  });
+
+  assert.deepEqual(firstMigration.stages.backlog.actionIds, []);
+  assert.deepEqual(firstMigration.stages.doing.actionIds, []);
+  assert.deepEqual(firstMigration.stages.done.actionIds, []);
+  assert.deepEqual(firstMigration.stages.archived.actionIds, ['card.delete']);
   assert.deepEqual(secondMigration, firstMigration);
 });
 

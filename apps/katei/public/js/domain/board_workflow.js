@@ -1,40 +1,52 @@
+import {
+  getDefaultBoardStageActionIds,
+  isValidBoardStageActionId
+} from './board_stage_actions.js';
+
 const DEFAULT_BOARD_STAGES = Object.freeze([
   Object.freeze({
     id: 'backlog',
     title: 'Backlog',
     allowedTransitionStageIds: Object.freeze(['doing', 'done']),
-    templateIds: Object.freeze([])
+    templateIds: Object.freeze([]),
+    actionIds: Object.freeze(getDefaultBoardStageActionIds('backlog'))
   }),
   Object.freeze({
     id: 'doing',
     title: 'Doing',
     allowedTransitionStageIds: Object.freeze(['backlog', 'done']),
-    templateIds: Object.freeze([])
+    templateIds: Object.freeze([]),
+    actionIds: Object.freeze(getDefaultBoardStageActionIds('doing'))
   }),
   Object.freeze({
     id: 'done',
     title: 'Done',
     allowedTransitionStageIds: Object.freeze(['backlog', 'doing', 'archived']),
-    templateIds: Object.freeze([])
+    templateIds: Object.freeze([]),
+    actionIds: Object.freeze(getDefaultBoardStageActionIds('done'))
   }),
   Object.freeze({
     id: 'archived',
     title: 'Archived',
     allowedTransitionStageIds: Object.freeze(['backlog', 'doing', 'done']),
-    templateIds: Object.freeze([])
+    templateIds: Object.freeze([]),
+    actionIds: Object.freeze(getDefaultBoardStageActionIds('archived'))
   })
 ]);
 
 export const BOARD_STAGE_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 export function createDefaultBoardStages() {
-  return DEFAULT_BOARD_STAGES.map(({ id, title, allowedTransitionStageIds, templateIds }) => ({
-    id,
-    title,
-    cardIds: [],
-    allowedTransitionStageIds: [...allowedTransitionStageIds],
-    templateIds: [...templateIds]
-  }));
+  return DEFAULT_BOARD_STAGES.map(
+    ({ id, title, allowedTransitionStageIds, templateIds, actionIds }) => ({
+      id,
+      title,
+      cardIds: [],
+      allowedTransitionStageIds: [...allowedTransitionStageIds],
+      templateIds: [...templateIds],
+      actionIds: [...actionIds]
+    })
+  );
 }
 
 export function createDefaultBoardTemplates() {
@@ -75,7 +87,8 @@ export function validateBoardStages(board) {
       !isNonEmptyString(stage.title) ||
       !isStringArray(stage.cardIds) ||
       !isUniqueStringArray(stage.allowedTransitionStageIds) ||
-      !isUniqueStringArray(stage.templateIds)
+      !isUniqueStringArray(stage.templateIds) ||
+      !isValidStageActionIds(stage.actionIds)
     ) {
       return false;
     }
@@ -212,4 +225,12 @@ function isStringArray(value) {
 
 function isUniqueStringArray(value) {
   return isStringArray(value) && new Set(value).size === value.length && value.every(isNonEmptyString);
+}
+
+function isValidStageActionIds(value) {
+  return (
+    Array.isArray(value) &&
+    new Set(value).size === value.length &&
+    value.every((entry) => isNonEmptyString(entry) && isValidBoardStageActionId(entry))
+  );
 }

@@ -11,6 +11,7 @@ test('default board creation includes stage order, stages, templates, and langua
   assert.deepEqual(Object.keys(board.stages), ['backlog', 'doing', 'done', 'archived']);
   assert.deepEqual(board.stages.backlog.allowedTransitionStageIds, ['doing', 'done']);
   assert.deepEqual(board.stages.done.allowedTransitionStageIds, ['backlog', 'doing', 'archived']);
+  assert.deepEqual(board.stages.archived.actionIds, ['card.delete']);
   assert.deepEqual(board.templates, {
     default: []
   });
