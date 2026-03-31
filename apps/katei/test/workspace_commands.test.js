@@ -349,6 +349,40 @@ test('validateWorkspaceCommand rejects invalid localized card payloads', () => {
     }),
     false
   );
+
+  assert.equal(
+    validateWorkspaceCommand({
+      clientMutationId: 'l5',
+      type: 'card.locale.upsert',
+      payload: {
+        boardId: 'main',
+        cardId: 'card_1',
+        locale: 'ja',
+        title: 'Titulo',
+        detailsMarkdown: 'Detalle',
+        overrideHumanAuthoredContent: 'yes'
+      }
+    }),
+    false
+  );
+});
+
+test('validateWorkspaceCommand accepts a boolean overrideHumanAuthoredContent on card.locale.upsert', () => {
+  const command = {
+    clientMutationId: 'locale_override_1',
+    type: 'card.locale.upsert',
+    payload: {
+      boardId: 'main',
+      cardId: 'card_1',
+      locale: 'ja',
+      title: 'Titulo',
+      detailsMarkdown: 'Detalle',
+      overrideHumanAuthoredContent: true
+    }
+  };
+
+  assert.equal(validateWorkspaceCommand(command), true);
+  assert.doesNotThrow(() => assertValidWorkspaceCommand(command));
 });
 
 test('validateWorkspaceCommand rejects missing clientMutationId', () => {

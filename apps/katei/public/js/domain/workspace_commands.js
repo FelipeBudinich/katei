@@ -339,6 +339,13 @@ function validateCardLocaleUpsertPayload(payload) {
     return invalid('card.locale.upsert payload.detailsMarkdown must be a string.');
   }
 
+  if (
+    Object.prototype.hasOwnProperty.call(payload, 'overrideHumanAuthoredContent') &&
+    typeof payload.overrideHumanAuthoredContent !== 'boolean'
+  ) {
+    return invalid('card.locale.upsert payload.overrideHumanAuthoredContent must be a boolean.');
+  }
+
   return valid();
 }
 

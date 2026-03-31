@@ -24,9 +24,14 @@ import {
 import {
   createCardContentProvenance,
   getCardContentVariant,
+  getStoredCardContentVariant,
   projectWorkspaceWithLegacyCardContent,
   upsertCardContentVariant
 } from '../../public/js/domain/card_localization.js';
+import {
+  isHumanAuthoredVariant,
+  shouldBlockAutomatedLocaleOverwrite
+} from '../../public/js/domain/localized_content_guard.js';
 import {
   clearCardLocaleRequest,
   getOpenLocalizationRequest,
@@ -680,7 +685,7 @@ function applyCardUpdate(workspace, command, context) {
 
 function applyCardLocaleUpsert(workspace, command, context) {
   const currentBoard = getBoard(workspace, command.payload.boardId);
-  const actor = assertAuthenticatedHumanActor(
+  const actor = assertAuthenticatedActor(
     context.actor,
     'You must be signed in to modify localized card content.'
   );
@@ -688,10 +693,12 @@ function applyCardLocaleUpsert(workspace, command, context) {
   const currentCard = getCard(currentBoard, command.payload.cardId);
   const locale = normalizeCommandLocale(command.payload.locale);
   assertBoardSupportsLocale(currentBoard, locale);
-  const currentStoredVariant = getStoredCardLocaleVariant(currentCard, locale);
+  const currentStoredVariant = getExistingCardLocaleVariant(currentCard, locale);
   const openRequest = getOpenLocalizationRequest(currentCard, locale);
   const nextTitle = normalizeCardTitle(command.payload.title);
   const nextDetailsMarkdown = normalizeDetailsMarkdown(command.payload.detailsMarkdown);
+  const includesHumanInput = !isAutomatedActor(actor);
+  const overrideHumanAuthoredContent = command.payload.overrideHumanAuthoredContent === true;
 
   if (
     currentStoredVariant &&
@@ -710,13 +717,31 @@ function applyCardLocaleUpsert(workspace, command, context) {
     };
   }
 
+  if (
+    !shouldAllowAutomatedLocaleWrite({
+      existingVariant: currentStoredVariant,
+      actor,
+      includesHumanInput,
+      overrideHumanAuthoredContent
+    })
+  ) {
+    return {
+      workspace,
+      result: createBlockedAutomatedOverwriteResult(command, {
+        boardId: currentBoard.id,
+        cardId: currentCard.id,
+        locale
+      })
+    };
+  }
+
   const nextWorkspace = cloneWorkspace(workspace);
   const board = getBoard(nextWorkspace, command.payload.boardId);
   const card = getCard(board, command.payload.cardId);
   const provenance = createCardContentProvenance({
     actor,
     timestamp: context.now,
-    includesHumanInput: true
+    includesHumanInput
   });
   let nextCard = upsertCardContentVariant(
     {
@@ -755,7 +780,7 @@ function applyCardLocaleRequest(workspace, command, context) {
   const currentCard = getCard(currentBoard, command.payload.cardId);
   const locale = normalizeCommandLocale(command.payload.locale);
   assertBoardSupportsLocale(currentBoard, locale);
-  const selectedVariant = getStoredCardLocaleVariant(currentCard, locale);
+  const selectedVariant = getExistingCardLocaleVariant(currentCard, locale);
   const openRequest = getOpenLocalizationRequest(currentCard, locale);
 
   if (selectedVariant || openRequest) {
@@ -974,6 +999,16 @@ function assertAuthenticatedHumanActor(actor, errorMessage) {
   return normalizedActor;
 }
 
+function assertAuthenticatedActor(actor, errorMessage) {
+  const normalizedActor = normalizeBoardActor(actor);
+
+  if (!normalizedActor) {
+    throw new WorkspaceCommandPermissionError(errorMessage);
+  }
+
+  return normalizedActor;
+}
+
 function assertActorCanReadBoard(board, actor) {
   const membership = getBoardMembershipForActor(board, actor);
 
@@ -1157,6 +1192,15 @@ function createCommandResult(command, data = {}) {
   };
 }
 
+function createBlockedAutomatedOverwriteResult(command, data = {}) {
+  return createCommandResult(command, {
+    noOp: true,
+    blocked: true,
+    reason: 'human-authored-locale-protected',
+    ...data
+  });
+}
+
 function assertExpectedRevision(expectedRevision) {
   if (!Number.isInteger(expectedRevision) || expectedRevision < 0) {
     throw new Error('expectedRevision must be a non-negative integer.');
@@ -1241,20 +1285,40 @@ function assertBoardSupportsLocale(board, locale) {
   }
 }
 
-function getStoredCardLocaleVariant(card, locale) {
-  const storedVariant = locale ? card?.contentByLocale?.[locale] : null;
+function getExistingCardLocaleVariant(card, locale) {
+  return getStoredCardContentVariant(card, locale);
+}
 
-  if (!storedVariant || typeof storedVariant !== 'object') {
-    return null;
+function isAutomatedActor(actor) {
+  const normalizedActor = normalizeBoardActor(actor);
+  return normalizedActor?.type === 'agent' || normalizedActor?.type === 'system';
+}
+
+function shouldAllowAutomatedLocaleWrite({
+  existingVariant,
+  actor,
+  includesHumanInput,
+  overrideHumanAuthoredContent
+} = {}) {
+  if (!isAutomatedActor(actor) || includesHumanInput) {
+    return true;
   }
 
-  return {
-    title: typeof storedVariant.title === 'string' ? storedVariant.title : '',
-    detailsMarkdown:
-      typeof storedVariant.detailsMarkdown === 'string'
-        ? storedVariant.detailsMarkdown
-        : ''
-  };
+  if (!existingVariant || !isHumanAuthoredVariant(existingVariant)) {
+    return true;
+  }
+
+  if (overrideHumanAuthoredContent === true) {
+    return true;
+  }
+
+  return !shouldBlockAutomatedLocaleOverwrite({
+    existingVariant,
+    incomingProvenance: {
+      actor,
+      includesHumanInput
+    }
+  });
 }
 
 function stripActorKey(membership) {

@@ -40,6 +40,19 @@ test('isHumanAuthoredVariant distinguishes human-authored and automation-authore
     }),
     false
   );
+
+  assert.equal(
+    isHumanAuthoredVariant({
+      title: '',
+      detailsMarkdown: '',
+      provenance: {
+        actor: { type: 'human', id: 'viewer_123' },
+        timestamp: '2026-03-31T12:00:00.000Z',
+        includesHumanInput: true
+      }
+    }),
+    false
+  );
 });
 
 test('shouldBlockAutomatedLocaleOverwrite blocks only automated overwrites of human-authored variants', () => {
@@ -72,6 +85,26 @@ test('shouldBlockAutomatedLocaleOverwrite blocks only automated overwrites of hu
       }
     }),
     true
+  );
+
+  assert.equal(
+    shouldBlockAutomatedLocaleOverwrite({
+      existingVariant: {
+        title: '',
+        detailsMarkdown: '',
+        provenance: {
+          actor: { type: 'human', id: 'viewer_123' },
+          timestamp: '2026-03-31T09:00:00.000Z',
+          includesHumanInput: true
+        }
+      },
+      incomingProvenance: {
+        actor: { type: 'agent', id: 'translator_2' },
+        timestamp: '2026-03-31T11:00:00.000Z',
+        includesHumanInput: false
+      }
+    }),
+    false
   );
 
   assert.equal(

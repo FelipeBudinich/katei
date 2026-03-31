@@ -69,6 +69,22 @@ export function getCardContentVariant(card, locale, board) {
   };
 }
 
+export function getStoredCardContentVariant(card, locale) {
+  const normalizedLocale = canonicalizeContentLocale(locale);
+
+  if (!normalizedLocale) {
+    return null;
+  }
+
+  const storedVariant = getContentByLocaleRecord(card)[normalizedLocale];
+
+  if (!isPlainObject(storedVariant)) {
+    return null;
+  }
+
+  return normalizeStoredVariant(storedVariant);
+}
+
 export function getBoardCardContentVariant(card, board) {
   return getCardContentVariant(card, resolveBoardCardContentLocale(board), board);
 }

@@ -39,19 +39,19 @@ function createContext(overrides = {}) {
   });
 }
 
-function createActor({ id = 'viewer_123', email = null, name = null } = {}) {
+function createActor({ type = 'human', id = 'viewer_123', email = null, name = null } = {}) {
   return {
-    type: 'human',
+    type,
     id,
     ...(email ? { email } : {}),
     ...(name ? { name } : {})
   };
 }
 
-function createMembership({ id, role, email = null } = {}) {
+function createMembership({ type = 'human', id, role, email = null } = {}) {
   return {
     actor: {
-      type: 'human',
+      type,
       id,
       ...(email ? { email } : {})
     },
@@ -144,6 +144,24 @@ function createWorkspaceWithCard({ memberships } = {}) {
   };
   workspace.boards.main.stages.backlog.cardIds = ['card_1'];
   return workspace;
+}
+
+function createLocalizedVariant({
+  title,
+  detailsMarkdown,
+  actor = createActor({ id: 'viewer_admin' }),
+  timestamp = '2026-03-31T09:30:00.000Z',
+  includesHumanInput = actor.type === 'human'
+} = {}) {
+  return {
+    title,
+    detailsMarkdown,
+    provenance: {
+      actor,
+      timestamp,
+      includesHumanInput
+    }
+  };
 }
 
 function assertPermissionError(action, pattern = /permission/i) {
@@ -434,6 +452,295 @@ test('admin and editor can upsert a selected locale without changing other local
     });
     assert.deepEqual(nextWorkspace.boards.main.cards.card_1.localeRequests, {});
   }
+});
+
+test('human actors can overwrite an existing human-authored localized variant', () => {
+  const workspace = createWorkspaceWithCard({
+    memberships: [createMembership({ id: 'viewer_123', role: 'editor' })]
+  });
+  workspace.boards.main.languagePolicy = {
+    sourceLocale: 'en',
+    defaultLocale: 'en',
+    supportedLocales: ['en', 'ja'],
+    requiredLocales: ['en']
+  };
+  workspace.boards.main.cards.card_1.contentByLocale.ja = createLocalizedVariant({
+    title: '既存タイトル',
+    detailsMarkdown: '既存本文',
+    actor: createActor({ id: 'viewer_admin' }),
+    timestamp: '2026-03-31T09:45:00.000Z',
+    includesHumanInput: true
+  });
+
+  const { workspace: nextWorkspace, result } = applyWorkspaceCommand({
+    record: createRecord(workspace, 0),
+    command: {
+      clientMutationId: 'locale_upsert_human_overwrite',
+      type: 'card.locale.upsert',
+      payload: {
+        boardId: 'main',
+        cardId: 'card_1',
+        locale: 'ja',
+        title: '更新済みタイトル',
+        detailsMarkdown: '更新済み本文'
+      }
+    },
+    expectedRevision: 0,
+    context: createContext({
+      now: '2026-03-31T11:00:00.000Z'
+    })
+  });
+
+  assert.equal(result.noOp, false);
+  assert.equal(result.locale, 'ja');
+  assert.equal(nextWorkspace.boards.main.updatedAt, '2026-03-31T11:00:00.000Z');
+  assert.equal(nextWorkspace.boards.main.cards.card_1.updatedAt, '2026-03-31T11:00:00.000Z');
+  assert.deepEqual(nextWorkspace.boards.main.cards.card_1.contentByLocale.ja, {
+    title: '更新済みタイトル',
+    detailsMarkdown: '更新済み本文',
+    provenance: {
+      actor: {
+        type: 'human',
+        id: 'viewer_123'
+      },
+      timestamp: '2026-03-31T11:00:00.000Z',
+      includesHumanInput: true
+    }
+  });
+});
+
+test('agent and system actors receive stable blocked results when targeting human-authored localized variants', () => {
+  for (const actor of [
+    createActor({ type: 'agent', id: 'translator_agent' }),
+    createActor({ type: 'system', id: 'translation_system' })
+  ]) {
+    const workspace = createWorkspaceWithCard({
+      memberships: [
+        createMembership({ id: 'viewer_admin', role: 'admin' }),
+        createMembership({ type: actor.type, id: actor.id, role: 'editor' })
+      ]
+    });
+    workspace.boards.main.languagePolicy = {
+      sourceLocale: 'en',
+      defaultLocale: 'en',
+      supportedLocales: ['en', 'ja'],
+      requiredLocales: ['en']
+    };
+    workspace.boards.main.cards.card_1.contentByLocale.ja = createLocalizedVariant({
+      title: '人間のタイトル',
+      detailsMarkdown: '人間の本文',
+      actor: createActor({ id: 'viewer_admin' }),
+      timestamp: '2026-03-31T09:45:00.000Z',
+      includesHumanInput: true
+    });
+    const initialBoardUpdatedAt = workspace.boards.main.updatedAt;
+    const initialCardUpdatedAt = workspace.boards.main.cards.card_1.updatedAt;
+
+    const { workspace: nextWorkspace, result, activityEvent } = applyWorkspaceCommand({
+      record: createRecord(workspace, 0),
+      command: {
+        clientMutationId: `locale_block_${actor.type}`,
+        type: 'card.locale.upsert',
+        payload: {
+          boardId: 'main',
+          cardId: 'card_1',
+          locale: 'ja',
+          title: '自動更新タイトル',
+          detailsMarkdown: '自動更新本文'
+        }
+      },
+      expectedRevision: 0,
+      context: createContext({
+        actor,
+        now: '2026-03-31T11:00:00.000Z'
+      })
+    });
+
+    assert.deepEqual(result, {
+      clientMutationId: `locale_block_${actor.type}`,
+      type: 'card.locale.upsert',
+      noOp: true,
+      blocked: true,
+      reason: 'human-authored-locale-protected',
+      boardId: 'main',
+      cardId: 'card_1',
+      locale: 'ja'
+    });
+    assert.equal(activityEvent, null);
+    assert.equal(nextWorkspace.boards.main.updatedAt, initialBoardUpdatedAt);
+    assert.equal(nextWorkspace.boards.main.cards.card_1.updatedAt, initialCardUpdatedAt);
+    assert.deepEqual(nextWorkspace.boards.main.cards.card_1.contentByLocale.ja, workspace.boards.main.cards.card_1.contentByLocale.ja);
+  }
+});
+
+test('agent and system actors can create a missing localized variant', () => {
+  for (const actor of [
+    createActor({ type: 'agent', id: 'translator_agent' }),
+    createActor({ type: 'system', id: 'translation_system' })
+  ]) {
+    const workspace = createWorkspaceWithCard({
+      memberships: [
+        createMembership({ id: 'viewer_admin', role: 'admin' }),
+        createMembership({ type: actor.type, id: actor.id, role: 'editor' })
+      ]
+    });
+    workspace.boards.main.languagePolicy = {
+      sourceLocale: 'en',
+      defaultLocale: 'en',
+      supportedLocales: ['en', 'ja'],
+      requiredLocales: ['en']
+    };
+
+    const { workspace: nextWorkspace, result } = applyWorkspaceCommand({
+      record: createRecord(workspace, 0),
+      command: {
+        clientMutationId: `locale_create_${actor.type}`,
+        type: 'card.locale.upsert',
+        payload: {
+          boardId: 'main',
+          cardId: 'card_1',
+          locale: 'ja',
+          title: '自動生成タイトル',
+          detailsMarkdown: '自動生成本文'
+        }
+      },
+      expectedRevision: 0,
+      context: createContext({
+        actor,
+        now: '2026-03-31T11:00:00.000Z'
+      })
+    });
+
+    assert.equal(result.noOp, false);
+    assert.deepEqual(nextWorkspace.boards.main.cards.card_1.contentByLocale.ja, {
+      title: '自動生成タイトル',
+      detailsMarkdown: '自動生成本文',
+      provenance: {
+        actor: {
+          type: actor.type,
+          id: actor.id
+        },
+        timestamp: '2026-03-31T11:00:00.000Z',
+        includesHumanInput: false
+      }
+    });
+  }
+});
+
+test('agent and system actors can update automation-authored localized variants', () => {
+  for (const actor of [
+    createActor({ type: 'agent', id: 'translator_agent' }),
+    createActor({ type: 'system', id: 'translation_system' })
+  ]) {
+    const workspace = createWorkspaceWithCard({
+      memberships: [
+        createMembership({ id: 'viewer_admin', role: 'admin' }),
+        createMembership({ type: actor.type, id: actor.id, role: 'editor' })
+      ]
+    });
+    workspace.boards.main.languagePolicy = {
+      sourceLocale: 'en',
+      defaultLocale: 'en',
+      supportedLocales: ['en', 'ja'],
+      requiredLocales: ['en']
+    };
+    workspace.boards.main.cards.card_1.contentByLocale.ja = createLocalizedVariant({
+      title: '自動タイトル',
+      detailsMarkdown: '自動本文',
+      actor: createActor({ type: 'agent', id: 'seed_translator' }),
+      timestamp: '2026-03-31T09:45:00.000Z',
+      includesHumanInput: false
+    });
+
+    const { workspace: nextWorkspace, result } = applyWorkspaceCommand({
+      record: createRecord(workspace, 0),
+      command: {
+        clientMutationId: `locale_update_${actor.type}`,
+        type: 'card.locale.upsert',
+        payload: {
+          boardId: 'main',
+          cardId: 'card_1',
+          locale: 'ja',
+          title: '更新済み自動タイトル',
+          detailsMarkdown: '更新済み自動本文'
+        }
+      },
+      expectedRevision: 0,
+      context: createContext({
+        actor,
+        now: '2026-03-31T11:00:00.000Z'
+      })
+    });
+
+    assert.equal(result.noOp, false);
+    assert.deepEqual(nextWorkspace.boards.main.cards.card_1.contentByLocale.ja, {
+      title: '更新済み自動タイトル',
+      detailsMarkdown: '更新済み自動本文',
+      provenance: {
+        actor: {
+          type: actor.type,
+          id: actor.id
+        },
+        timestamp: '2026-03-31T11:00:00.000Z',
+        includesHumanInput: false
+      }
+    });
+  }
+});
+
+test('explicit override allows automation to overwrite a human-authored localized variant', () => {
+  const actor = createActor({ type: 'agent', id: 'translator_agent' });
+  const workspace = createWorkspaceWithCard({
+    memberships: [createMembership({ type: actor.type, id: actor.id, role: 'editor' })]
+  });
+  workspace.boards.main.languagePolicy = {
+    sourceLocale: 'en',
+    defaultLocale: 'en',
+    supportedLocales: ['en', 'ja'],
+    requiredLocales: ['en']
+  };
+  workspace.boards.main.cards.card_1.contentByLocale.ja = createLocalizedVariant({
+    title: '人間のタイトル',
+    detailsMarkdown: '人間の本文',
+    actor: createActor({ id: 'viewer_admin' }),
+    timestamp: '2026-03-31T09:45:00.000Z',
+    includesHumanInput: true
+  });
+
+  const { workspace: nextWorkspace, result } = applyWorkspaceCommand({
+    record: createRecord(workspace, 0),
+    command: {
+      clientMutationId: 'locale_override_agent',
+      type: 'card.locale.upsert',
+      payload: {
+        boardId: 'main',
+        cardId: 'card_1',
+        locale: 'ja',
+        title: '強制上書きタイトル',
+        detailsMarkdown: '強制上書き本文',
+        overrideHumanAuthoredContent: true
+      }
+    },
+    expectedRevision: 0,
+    context: createContext({
+      actor,
+      now: '2026-03-31T11:00:00.000Z'
+    })
+  });
+
+  assert.equal(result.noOp, false);
+  assert.deepEqual(nextWorkspace.boards.main.cards.card_1.contentByLocale.ja, {
+    title: '強制上書きタイトル',
+    detailsMarkdown: '強制上書き本文',
+    provenance: {
+      actor: {
+        type: 'agent',
+        id: 'translator_agent'
+      },
+      timestamp: '2026-03-31T11:00:00.000Z',
+      includesHumanInput: false
+    }
+  });
 });
 
 test('viewer cannot upsert, request, or clear localized card content', () => {
