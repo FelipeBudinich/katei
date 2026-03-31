@@ -57,6 +57,12 @@ test('validateBoardStages accepts boards that match the current workflow schema'
   assert.equal(validateBoardStages(board), true);
 });
 
+test('validateBoardStages accepts boards that define their own stages and transitions', () => {
+  const board = createCustomWorkflowBoard();
+
+  assert.equal(validateBoardStages(board), true);
+});
+
 test('validateBoardStages rejects duplicate stage ids or invalid stage definitions', () => {
   const board = createWorkspaceBoard({
     id: 'main',
@@ -104,3 +110,67 @@ test('validateBoardTemplates accepts synced templates and rejects malformed ones
 
   assert.equal(validateBoardTemplates(board), false);
 });
+
+test('validateBoardTemplates supports templates on board-defined stages and rejects unsynced stage references', () => {
+  const board = createCustomWorkflowBoard();
+
+  board.templates = {
+    default: [
+      {
+        id: 'review_pass',
+        title: 'Review pass',
+        initialStageId: 'review'
+      }
+    ]
+  };
+  board.stages.review.templateIds = ['review_pass'];
+
+  assert.equal(validateBoardTemplates(board), true);
+
+  board.stages.qa.templateIds = ['review_pass'];
+
+  assert.equal(validateBoardTemplates(board), false);
+});
+
+function createCustomWorkflowBoard() {
+  const board = createWorkspaceBoard({
+    id: 'board_custom',
+    title: 'Custom workflow',
+    createdAt: '2026-03-31T10:00:00.000Z',
+    updatedAt: '2026-03-31T10:00:00.000Z'
+  });
+
+  board.stageOrder = ['draft', 'review', 'qa', 'published'];
+  board.stages = {
+    draft: {
+      id: 'draft',
+      title: 'Draft',
+      cardIds: [],
+      allowedTransitionStageIds: ['review'],
+      templateIds: []
+    },
+    review: {
+      id: 'review',
+      title: 'Review',
+      cardIds: [],
+      allowedTransitionStageIds: ['draft', 'qa'],
+      templateIds: []
+    },
+    qa: {
+      id: 'qa',
+      title: 'QA',
+      cardIds: [],
+      allowedTransitionStageIds: ['review', 'published'],
+      templateIds: []
+    },
+    published: {
+      id: 'published',
+      title: 'Published',
+      cardIds: [],
+      allowedTransitionStageIds: ['qa'],
+      templateIds: []
+    }
+  };
+
+  return board;
+}

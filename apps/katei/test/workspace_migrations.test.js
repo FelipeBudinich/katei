@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { getCardContentVariant } from '../public/js/domain/card_localization.js';
 import { createEmptyWorkspace } from '../public/js/domain/workspace_read_model.js';
 import {
   migrateBoardToSchemaV7,
@@ -171,6 +172,83 @@ test('migrateWorkspaceSnapshot is idempotent across repeated runs', () => {
   assert.deepEqual(secondMigration, firstMigration);
 });
 
+test('migrateWorkspaceSnapshot normalizes version-5 snapshots that still use legacy board and card fields', () => {
+  const legacyWorkspace = createLegacyWorkspace({
+    version: 5,
+    boards: {
+      main: createLegacyBoard({
+        cards: {
+          card_1: {
+            id: 'card_1',
+            title: 'Legacy title',
+            detailsMarkdown: 'Legacy details',
+            priority: 'important',
+            createdAt: '2026-03-31T09:00:00.000Z',
+            updatedAt: '2026-03-31T10:00:00.000Z'
+          }
+        }
+      })
+    }
+  });
+
+  const migratedWorkspace = migrateWorkspaceSnapshot(legacyWorkspace, {
+    now: '2026-03-31T12:00:00.000Z'
+  });
+
+  assert.equal(migratedWorkspace.version, 5);
+  assert.equal(migratedWorkspace.boards.main.columnOrder, undefined);
+  assert.equal(migratedWorkspace.boards.main.columns, undefined);
+  assert.equal(migratedWorkspace.boards.main.cards.card_1.title, undefined);
+  assert.equal(migratedWorkspace.boards.main.cards.card_1.detailsMarkdown, undefined);
+  assert.equal(migratedWorkspace.boards.main.cards.card_1.contentByLocale.en.title, 'Legacy title');
+});
+
+test('migrateCardToLocalizedContent keeps existing localized variants authoritative over stale legacy aliases', () => {
+  const migratedCard = migrateCardToLocalizedContent(
+    {
+      id: 'card_1',
+      title: 'Stale legacy title',
+      detailsMarkdown: 'Stale legacy details',
+      priority: 'important',
+      createdAt: '2026-03-31T09:00:00.000Z',
+      updatedAt: '2026-03-31T10:00:00.000Z',
+      contentByLocale: {
+        en: {
+          title: 'Localized title',
+          detailsMarkdown: 'Localized details',
+          provenance: {
+            actor: { type: 'human', id: 'viewer_123' },
+            timestamp: '2026-03-31T10:00:00.000Z',
+            includesHumanInput: true
+          }
+        }
+      }
+    },
+    {
+      languagePolicy: {
+        sourceLocale: 'en',
+        defaultLocale: 'en',
+        supportedLocales: ['en'],
+        requiredLocales: ['en']
+      }
+    }
+  );
+
+  assert.equal(migratedCard.title, undefined);
+  assert.equal(migratedCard.detailsMarkdown, undefined);
+  assert.equal(
+    getCardContentVariant(migratedCard, 'en', {
+      languagePolicy: {
+        sourceLocale: 'en',
+        defaultLocale: 'en',
+        supportedLocales: ['en'],
+        requiredLocales: ['en']
+      }
+    })?.title,
+    'Localized title'
+  );
+});
+
 test('migrateBoardToSchemaV7 seeds default templates and language policy on migrated boards', () => {
   const migratedBoard = migrateBoardToSchemaV7(
     createLegacyBoard({
@@ -191,6 +269,69 @@ test('migrateBoardToSchemaV7 seeds default templates and language policy on migr
     supportedLocales: ['en'],
     requiredLocales: ['en']
   });
+});
+
+test('migrateBoardToSchemaV7 preserves custom legacy stage ids, transitions, and template arrays', () => {
+  const migratedBoard = migrateBoardToSchemaV7({
+    id: 'board_custom',
+    title: 'Custom board',
+    createdAt: '2026-03-31T09:00:00.000Z',
+    updatedAt: '2026-03-31T09:00:00.000Z',
+    columnOrder: ['draft', 'review', 'published'],
+    columns: {
+      draft: {
+        id: 'draft',
+        title: 'Draft',
+        cardIds: ['card_1'],
+        allowedTransitionStageIds: ['review'],
+        templateIds: ['starter']
+      },
+      review: {
+        id: 'review',
+        title: 'Review',
+        cardIds: [],
+        allowedTransitionStageIds: ['draft', 'published'],
+        templateIds: []
+      },
+      published: {
+        id: 'published',
+        title: 'Published',
+        cardIds: [],
+        allowedTransitionStageIds: ['review'],
+        templateIds: []
+      }
+    },
+    templates: [
+      {
+        id: 'starter',
+        title: 'Starter',
+        initialStageId: 'draft'
+      }
+    ],
+    cards: {
+      card_1: {
+        id: 'card_1',
+        title: 'Legacy draft',
+        detailsMarkdown: '',
+        priority: 'important',
+        createdAt: '2026-03-31T09:00:00.000Z',
+        updatedAt: '2026-03-31T09:00:00.000Z'
+      }
+    }
+  });
+
+  assert.deepEqual(migratedBoard.stageOrder, ['draft', 'review', 'published']);
+  assert.deepEqual(migratedBoard.stages.review.allowedTransitionStageIds, ['draft', 'published']);
+  assert.deepEqual(migratedBoard.templates, {
+    default: [
+      {
+        id: 'starter',
+        title: 'Starter',
+        initialStageId: 'draft'
+      }
+    ]
+  });
+  assert.equal(migratedBoard.cards.card_1.contentByLocale.en.title, 'Legacy draft');
 });
 
 function createLegacyWorkspace(overrides = {}) {

@@ -44,6 +44,36 @@ test('loadOrCreateWorkspaceRecord creates an empty record on first access', asyn
   assert.equal(storedDocument.viewerSub, 'sub_123');
 });
 
+test('loadOrCreateWorkspaceRecord normalizes existing legacy-shaped workspace documents', async () => {
+  const collection = createWorkspaceRecordCollectionDouble([
+    {
+      _id: 'sub_123',
+      viewerSub: 'sub_123',
+      workspace: createLegacyWorkspaceSnapshot({
+        version: 5,
+        title: 'Legacy persisted task',
+        detailsMarkdown: 'Loaded from Mongo',
+        priority: 'important'
+      }),
+      revision: 2,
+      createdAt: '2026-04-01T10:00:00.000Z',
+      updatedAt: '2026-04-01T11:15:00.000Z',
+      lastChangedBy: 'sub_123',
+      activityEvents: [],
+      commandReceipts: []
+    }
+  ]);
+  const repository = new MongoWorkspaceRecordRepository({ collection });
+
+  const record = await repository.loadOrCreateWorkspaceRecord('sub_123');
+
+  assert.equal(validateWorkspaceShape(record.workspace), true);
+  assert.equal(record.workspace.boards.main.columnOrder, undefined);
+  assert.equal(record.workspace.boards.main.columns, undefined);
+  assert.equal(record.workspace.boards.main.cards.card_legacy_1.title, undefined);
+  assert.equal(record.workspace.boards.main.cards.card_legacy_1.contentByLocale.en.title, 'Legacy persisted task');
+});
+
 test('replaceWorkspaceSnapshot stores a validated full-workspace snapshot with metadata', async () => {
   const collection = createWorkspaceRecordCollectionDouble();
   const nowValues = ['2026-04-01T10:00:00.000Z', '2026-04-01T11:15:00.000Z'];
@@ -282,6 +312,72 @@ function createWorkspaceRecordCollectionDouble(initialDocuments = []) {
 
     size() {
       return documents.size;
+    }
+  };
+}
+
+function createLegacyWorkspaceSnapshot({
+  version = 4,
+  title = 'Legacy task',
+  detailsMarkdown = '',
+  priority = 'important'
+} = {}) {
+  const workspace = createEmptyWorkspace();
+  const board = workspace.boards.main;
+
+  return {
+    version,
+    workspaceId: workspace.workspaceId,
+    ui: structuredClone(workspace.ui),
+    boardOrder: [...workspace.boardOrder],
+    boards: {
+      [board.id]: {
+        id: board.id,
+        title: board.title,
+        createdAt: board.createdAt,
+        updatedAt: board.updatedAt,
+        columnOrder: ['backlog', 'doing', 'done', 'archived'],
+        columns: {
+          backlog: {
+            id: 'backlog',
+            title: 'Backlog',
+            cardIds: ['card_legacy_1'],
+            allowedTransitionStageIds: ['doing', 'done'],
+            templateIds: []
+          },
+          doing: {
+            id: 'doing',
+            title: 'Doing',
+            cardIds: [],
+            allowedTransitionStageIds: ['backlog', 'done'],
+            templateIds: []
+          },
+          done: {
+            id: 'done',
+            title: 'Done',
+            cardIds: [],
+            allowedTransitionStageIds: ['backlog', 'doing', 'archived'],
+            templateIds: []
+          },
+          archived: {
+            id: 'archived',
+            title: 'Archived',
+            cardIds: [],
+            allowedTransitionStageIds: ['backlog', 'doing', 'done'],
+            templateIds: []
+          }
+        },
+        cards: {
+          card_legacy_1: {
+            id: 'card_legacy_1',
+            title,
+            detailsMarkdown,
+            priority,
+            createdAt: '2026-04-01T09:00:00.000Z',
+            updatedAt: '2026-04-01T09:30:00.000Z'
+          }
+        }
+      }
     }
   };
 }

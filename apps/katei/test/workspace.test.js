@@ -74,6 +74,19 @@ test('validateWorkspaceShape rejects legacy cards that only use description', ()
   assert.equal(validateWorkspaceShape(workspace), false);
 });
 
+test('validateWorkspaceShape rejects boards with invalid language policy definitions', () => {
+  const workspace = createEmptyWorkspace();
+
+  workspace.boards.main.languagePolicy = {
+    sourceLocale: 'en',
+    defaultLocale: 'fr',
+    supportedLocales: ['en'],
+    requiredLocales: ['en']
+  };
+
+  assert.equal(validateWorkspaceShape(workspace), false);
+});
+
 test('getActiveBoard returns the active board from the read model', () => {
   const workspace = createEmptyWorkspace();
 

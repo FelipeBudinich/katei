@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createWorkspaceBoard } from '../public/js/domain/workspace_read_model.js';
 import {
+  getDefaultBoardStageId,
   getBoardStageTitle,
   getStageMoveOptions,
   resolveBoardStageId
@@ -25,6 +26,12 @@ test('getStageMoveOptions derives editor move targets from allowedTransitionStag
     { id: 'published', title: 'Published' }
   ]);
   assert.equal(getBoardStageTitle(board, 'qa'), 'QA Sweep');
+});
+
+test('getDefaultBoardStageId follows the board-defined stage order for create flows', () => {
+  const board = createBoardWithCustomStages();
+
+  assert.equal(getDefaultBoardStageId(board), 'review');
 });
 
 function createBoardWithCustomStages() {

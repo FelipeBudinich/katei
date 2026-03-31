@@ -62,3 +62,67 @@ test('parseBoardEditorFormInput parses valid schema edits and generates template
     }
   ]);
 });
+
+test('parseBoardEditorFormInput rejects source-locale changes that existing cards cannot satisfy', () => {
+  const workspace = createEmptyWorkspace();
+  const board = workspace.boards.main;
+
+  board.cards.card_1 = {
+    id: 'card_1',
+    priority: 'important',
+    createdAt: '2026-03-31T09:00:00.000Z',
+    updatedAt: '2026-03-31T09:00:00.000Z',
+    contentByLocale: {
+      en: {
+        title: 'English title',
+        detailsMarkdown: '',
+        provenance: null
+      }
+    }
+  };
+  board.stages.backlog.cardIds.push('card_1');
+
+  assert.throws(
+    () =>
+      parseBoardEditorFormInput(
+        {
+          title: 'Editorial board',
+          sourceLocale: 'ja',
+          defaultLocale: 'ja',
+          supportedLocales: 'en, ja',
+          requiredLocales: 'ja',
+          stageDefinitions: ['backlog | Backlog | doing', 'doing | Doing | backlog'].join('\n'),
+          templates: ''
+        },
+        {
+          currentBoard: board
+        }
+      ),
+    /Existing cards do not contain the new source locale/
+  );
+});
+
+test('parseBoardEditorFormInput generates unique template ids when repeated titles omit ids', () => {
+  const parsedInput = parseBoardEditorFormInput({
+    title: 'Editorial board',
+    sourceLocale: 'en',
+    defaultLocale: 'en',
+    supportedLocales: 'en',
+    requiredLocales: 'en',
+    stageDefinitions: ['backlog | Backlog | review', 'review | Review | backlog'].join('\n'),
+    templates: ['Starter template | backlog', 'Starter template | review'].join('\n')
+  });
+
+  assert.deepEqual(parsedInput.templates, [
+    {
+      id: 'starter-template',
+      title: 'Starter template',
+      initialStageId: 'backlog'
+    },
+    {
+      id: 'starter-template-2',
+      title: 'Starter template',
+      initialStageId: 'review'
+    }
+  ]);
+});

@@ -83,6 +83,103 @@ test('getCardContentVariant falls back to legacy card content when no localized 
   );
 });
 
+test('getCardContentVariant falls back from requested locale to default, then source, then first available locale', () => {
+  const board = {
+    languagePolicy: {
+      sourceLocale: 'en',
+      defaultLocale: 'es-CL',
+      supportedLocales: ['en', 'es-CL', 'ja'],
+      requiredLocales: ['en']
+    }
+  };
+
+  assert.deepEqual(
+    getCardContentVariant(
+      {
+        id: 'card_default',
+        contentByLocale: {
+          'es-CL': {
+            title: 'Titulo por defecto',
+            detailsMarkdown: 'Detalles por defecto',
+            provenance: createCardContentProvenance({
+              actor: { type: 'agent', id: 'translator_default' },
+              timestamp: '2026-03-31T10:00:00.000Z',
+              includesHumanInput: false
+            })
+          },
+          en: {
+            title: 'English source',
+            detailsMarkdown: 'English details',
+            provenance: createCardContentProvenance({
+              actor: { type: 'human', id: 'viewer_123' },
+              timestamp: '2026-03-31T09:00:00.000Z',
+              includesHumanInput: true
+            })
+          }
+        }
+      },
+      'fr',
+      board
+    ),
+    {
+      locale: 'es-CL',
+      title: 'Titulo por defecto',
+      detailsMarkdown: 'Detalles por defecto',
+      provenance: {
+        actor: { type: 'agent', id: 'translator_default' },
+        timestamp: '2026-03-31T10:00:00.000Z',
+        includesHumanInput: false
+      },
+      isFallback: true,
+      source: 'localized'
+    }
+  );
+
+  assert.equal(
+    getCardContentVariant(
+      {
+        id: 'card_source',
+        contentByLocale: {
+          en: {
+            title: 'English source',
+            detailsMarkdown: 'English details',
+            provenance: createCardContentProvenance({
+              actor: { type: 'human', id: 'viewer_123' },
+              timestamp: '2026-03-31T09:00:00.000Z',
+              includesHumanInput: true
+            })
+          }
+        }
+      },
+      'fr',
+      board
+    )?.locale,
+    'en'
+  );
+
+  assert.equal(
+    getCardContentVariant(
+      {
+        id: 'card_first',
+        contentByLocale: {
+          ja: {
+            title: '日本語タイトル',
+            detailsMarkdown: '日本語本文',
+            provenance: createCardContentProvenance({
+              actor: { type: 'human', id: 'viewer_123' },
+              timestamp: '2026-03-31T11:00:00.000Z',
+              includesHumanInput: true
+            })
+          }
+        }
+      },
+      'fr',
+      board
+    )?.locale,
+    'ja'
+  );
+});
+
 test('upsertCardContentVariant adds and updates localized variants without mutating the source card', () => {
   const card = {
     id: 'card_1',

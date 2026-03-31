@@ -153,6 +153,36 @@ test('card.create mints a server-side card id and stores the card in backlog', (
   });
 });
 
+test('card.create writes only the board source locale when the command engine uses a non-default language policy', () => {
+  const workspace = createEmptyWorkspace();
+  workspace.boards.main.languagePolicy = {
+    sourceLocale: 'ja',
+    defaultLocale: 'en',
+    supportedLocales: ['en', 'ja'],
+    requiredLocales: ['ja']
+  };
+
+  const { workspace: nextWorkspace } = applyWorkspaceCommand({
+    record: createRecord(workspace, 0),
+    command: {
+      clientMutationId: 'm2b',
+      type: 'card.create',
+      payload: {
+        boardId: 'main',
+        title: '日本語カード',
+        detailsMarkdown: '日本語の本文'
+      }
+    },
+    expectedRevision: 0,
+    context: createContext()
+  });
+  const card = nextWorkspace.boards.main.cards.card_srv001;
+
+  assert.deepEqual(Object.keys(card.contentByLocale), ['ja']);
+  assert.equal(card.contentByLocale.ja.title, '日本語カード');
+  assert.equal(card.contentByLocale.en, undefined);
+});
+
 test('card.update changes updatedAt only and preserves createdAt', () => {
   const createdWorkspace = applyWorkspaceCommand({
     record: createRecord(),
