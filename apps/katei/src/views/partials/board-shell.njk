@@ -1,3 +1,20 @@
+{% set boardMembershipRole = '' %}
+{% for membership in board.collaboration.memberships or [] %}
+  {% if membership.actor and membership.actor.type == 'human' and membership.actor.id == viewer.sub %}
+    {% set boardMembershipRole = membership.role %}
+  {% endif %}
+{% endfor %}
+{% set boardCanRead = boardMembershipRole != '' %}
+{% set boardCanEdit = boardMembershipRole == 'admin' or boardMembershipRole == 'editor' %}
+{% set boardInvitePending = false %}
+{% if not boardCanRead and viewer and viewer.email %}
+  {% for invite in board.collaboration.invites or [] %}
+    {% if invite.status == 'pending' and invite.email and invite.email == viewer.email %}
+      {% set boardInvitePending = true %}
+    {% endif %}
+  {% endfor %}
+{% endif %}
+
 <header class="top-bar">
   <div class="top-bar-heading-group">
     {% if viewer %}
@@ -31,12 +48,28 @@
     <button type="button" class="touch-button-secondary" data-action="workspace#openBoardOptions">
       {{ t('workspace.boardOptions') }}
     </button>
-    <button type="button" class="touch-button-primary" data-action="workspace#openCreateCard">
+    <button
+      type="button"
+      class="touch-button-primary"
+      data-workspace-target="createCardButton"
+      data-action="workspace#openCreateCard"
+      {% if not boardCanEdit %}hidden aria-disabled="true"{% endif %}
+    >
       {{ t('workspace.addCard') }}
     </button>
   </div>
 </header>
 
-<section class="board-columns grid gap-4" data-workspace-target="desktopColumns">
-  {% include "partials/desktop-board.njk" %}
+<p
+  class="paper-panel px-4 py-4 text-sm leading-6 text-muted"
+  data-workspace-target="boardAccessNotice"
+  {% if not boardInvitePending %}hidden{% endif %}
+>
+  {{ t('workspace.boardInvitePendingNotice') }}
+</p>
+
+<section class="board-columns grid gap-4" data-workspace-target="desktopColumns" {% if not boardCanRead %}hidden{% endif %}>
+  {% if boardCanRead %}
+    {% include "partials/desktop-board.njk" %}
+  {% endif %}
 </section>

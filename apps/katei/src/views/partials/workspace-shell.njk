@@ -5,6 +5,7 @@
   class="mx-auto grid min-h-screen w-full max-w-7xl content-start gap-4 px-4 pb-10 pt-4 sm:px-6 lg:px-8"
   data-controller="workspace"
   data-workspace-viewer-sub-value="{{ viewer.sub }}"
+  data-workspace-viewer-email-value="{{ viewer.email or '' }}"
   data-action="
     card-editor:save->workspace#handleCardEditorSave
     board-editor:save->workspace#handleBoardEditorSave
@@ -13,6 +14,13 @@
     board-options:rename-board->workspace#openRenameBoard
     board-options:delete-board->workspace#confirmDeleteBoard
     board-options:reset-board->workspace#confirmResetBoard
+    board-options:open-collaborators->workspace#openBoardCollaborators
+    board-collaborators:invite-member->workspace#handleInviteMember
+    board-collaborators:revoke-invite->workspace#handleRevokeInvite
+    board-collaborators:change-member-role->workspace#handleChangeMemberRole
+    board-collaborators:remove-member->workspace#handleRemoveMember
+    board-collaborators:accept-invite->workspace#handleAcceptInvite
+    board-collaborators:decline-invite->workspace#handleDeclineInvite
   "
 >
   {% include "partials/board-shell.njk" %}
@@ -22,6 +30,7 @@
   {% include "partials/card-editor-sheet.njk" %}
   {% include "partials/card-view-dialog.njk" %}
   {% include "partials/board-options-dialog.njk" %}
+  {% include "partials/board-collaborators-sheet.njk" %}
   {% include "partials/board-editor-sheet.njk" %}
   {% include "partials/confirm-dialog.njk" %}
   {% include "partials/board-templates.njk" %}

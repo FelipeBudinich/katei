@@ -1,0 +1,160 @@
+<dialog
+  class="sheet-dialog"
+  data-controller="board-collaborators"
+  data-board-collaborators-target="dialog"
+  data-action="
+    workspace:open-board-collaborators@window->board-collaborators#openFromEvent
+    workspace:sync-board-collaborators@window->board-collaborators#syncFromEvent
+    click->board-collaborators#backdropClose
+    cancel->board-collaborators#close
+  "
+>
+  <div class="sheet-panel">
+    <div class="dialog-handle mx-auto h-1.5 w-16 rounded-full lg:hidden"></div>
+
+    <div class="dialog-header-row mt-4">
+      <div class="min-w-0 space-y-2">
+        <p class="field-label text-sm font-semibold">{{ t('collaborators.sectionLabel') }}</p>
+        <h2 class="font-serif text-3xl text-strong" data-board-collaborators-target="heading">
+          {{ t('collaborators.heading', { title: board.title }) }}
+        </h2>
+        <p class="text-sm leading-6 text-muted" data-board-collaborators-target="currentRole">
+          {{ t('collaborators.currentRoleValue', { role: t('collaborators.roles.none') }) }}
+        </p>
+      </div>
+
+      <button
+        type="button"
+        class="touch-button-secondary"
+        data-board-collaborators-initial-focus
+        data-action="board-collaborators#close"
+      >
+        {{ t('common.close') }}
+      </button>
+    </div>
+
+    <section class="mt-6 space-y-4" data-board-collaborators-target="inviteSection">
+      <div class="space-y-1">
+        <p class="field-label text-sm font-semibold">{{ t('collaborators.inviteHeading') }}</p>
+        <p class="text-xs leading-5 text-muted">{{ t('collaborators.inviteHelp') }}</p>
+      </div>
+
+      <form class="space-y-4" data-board-collaborators-target="inviteForm" data-action="submit->board-collaborators#submitInvite">
+        <label class="block space-y-2">
+          <span class="field-label text-sm font-semibold">{{ t('collaborators.inviteEmailLabel') }}</span>
+          <input
+            type="email"
+            name="email"
+            class="field-control"
+            placeholder="teammate@example.com"
+            required
+            data-board-collaborators-target="inviteEmailInput"
+          >
+        </label>
+
+        <label class="block space-y-2">
+          <span class="field-label text-sm font-semibold">{{ t('collaborators.inviteRoleLabel') }}</span>
+          <select name="role" class="field-control">
+            <option value="viewer">{{ t('collaborators.roles.viewer') }}</option>
+            <option value="editor">{{ t('collaborators.roles.editor') }}</option>
+            <option value="admin">{{ t('collaborators.roles.admin') }}</option>
+          </select>
+        </label>
+
+        <div class="dialog-actions pt-1">
+          <button type="submit" class="touch-button-primary">{{ t('collaborators.inviteSubmit') }}</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="mt-6 space-y-3" data-board-collaborators-target="membersSection">
+      <p class="field-label text-sm font-semibold">{{ t('collaborators.membersHeading') }}</p>
+      <ul class="space-y-3" data-board-collaborators-target="membersList"></ul>
+    </section>
+
+    <template data-board-collaborators-target="memberTemplate">
+      <li class="paper-panel px-4 py-4">
+        <div class="space-y-3">
+          <div class="space-y-1">
+            <p class="text-base text-strong" data-board-collaborators-field="memberTitle"></p>
+            <p class="text-xs leading-5 text-muted" data-board-collaborators-field="memberMeta"></p>
+          </div>
+
+          <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center">
+            <p class="text-xs uppercase tracking-[0.24em] text-subtle" data-board-collaborators-field="memberRoleText"></p>
+            <select
+              class="field-control text-sm"
+              hidden
+              data-board-collaborators-field="memberRoleSelect"
+              data-action="change->board-collaborators#changeRole"
+            >
+              <option value="viewer">{{ t('collaborators.roles.viewer') }}</option>
+              <option value="editor">{{ t('collaborators.roles.editor') }}</option>
+              <option value="admin">{{ t('collaborators.roles.admin') }}</option>
+            </select>
+            <button
+              type="button"
+              class="touch-button-danger"
+              hidden
+              data-board-collaborators-field="memberRemoveButton"
+              data-action="board-collaborators#removeMember"
+            >
+              {{ t('collaborators.removeMember') }}
+            </button>
+          </div>
+        </div>
+      </li>
+    </template>
+
+    <section class="mt-6 space-y-3" data-board-collaborators-target="pendingInvitesSection">
+      <p class="field-label text-sm font-semibold">{{ t('collaborators.pendingHeading') }}</p>
+      <ul class="space-y-3" data-board-collaborators-target="pendingInvitesList"></ul>
+    </section>
+
+    <template data-board-collaborators-target="inviteTemplate">
+      <li class="paper-panel px-4 py-4">
+        <div class="space-y-3">
+          <div class="space-y-1">
+            <p class="text-base text-strong" data-board-collaborators-field="inviteTitle"></p>
+            <p class="text-xs leading-5 text-muted" data-board-collaborators-field="inviteMeta"></p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.24em] text-subtle">
+            <span data-board-collaborators-field="inviteRole"></span>
+            <span data-board-collaborators-field="inviteStatus"></span>
+          </div>
+
+          <div class="action-wrap-grid">
+            <button
+              type="button"
+              class="touch-button-secondary"
+              hidden
+              data-board-collaborators-field="inviteAcceptButton"
+              data-action="board-collaborators#acceptInvite"
+            >
+              {{ t('collaborators.acceptInvite') }}
+            </button>
+            <button
+              type="button"
+              class="touch-button-secondary"
+              hidden
+              data-board-collaborators-field="inviteDeclineButton"
+              data-action="board-collaborators#declineInvite"
+            >
+              {{ t('collaborators.declineInvite') }}
+            </button>
+            <button
+              type="button"
+              class="touch-button-danger"
+              hidden
+              data-board-collaborators-field="inviteRevokeButton"
+              data-action="board-collaborators#revokeInvite"
+            >
+              {{ t('collaborators.revokeInvite') }}
+            </button>
+          </div>
+        </div>
+      </li>
+    </template>
+  </div>
+</dialog>

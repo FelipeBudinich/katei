@@ -12,6 +12,14 @@ import { HttpWorkspaceRepository } from '../repositories/http_workspace_reposito
 import { renderBoardState } from '../renderers/board_renderer.js';
 import { WorkspaceService } from '../services/workspace_service.js';
 import {
+  createWorkspaceViewerActor,
+  getBoardCollaborationState
+} from './board_collaboration_state.js';
+import {
+  performWorkspaceCollaboratorAction,
+  performWorkspaceInviteDecision
+} from './workspace_collaboration_actions.js';
+import {
   getBoardStageTitle,
   getDefaultBoardStageId,
   resolveBoardStageId,
@@ -20,12 +28,15 @@ import {
 
 export default class extends Controller {
   static values = {
-    viewerSub: String
+    viewerSub: String,
+    viewerEmail: String
   };
 
   static targets = [
     'boardTitle',
+    'boardAccessNotice',
     'desktopColumns',
+    'createCardButton',
     'announcer',
     'viewDialog',
     'viewCardTitle',
@@ -60,6 +71,10 @@ export default class extends Controller {
       columnTemplate: document.getElementById('column-panel-template'),
       cardTemplate: document.getElementById('card-item-template')
     };
+    this.viewerActor = createWorkspaceViewerActor({
+      sub: this.viewerSubValue,
+      email: this.hasViewerEmailValue ? this.viewerEmailValue : null
+    });
     this.pendingConfirmation = null;
     this.viewTriggerElement = null;
     this.confirmTriggerElement = null;
@@ -69,6 +84,18 @@ export default class extends Controller {
 
   get activeBoard() {
     return this.workspace ? getActiveBoard(this.workspace) : null;
+  }
+
+  get activeBoardCollaborationState() {
+    return this.activeBoard ? getBoardCollaborationState(this.activeBoard, this.viewerActor) : null;
+  }
+
+  get canEditActiveBoard() {
+    return Boolean(this.activeBoardCollaborationState?.canEdit);
+  }
+
+  get canAdminActiveBoard() {
+    return Boolean(this.activeBoardCollaborationState?.canAdmin);
   }
 
   async loadWorkspace() {
@@ -82,6 +109,7 @@ export default class extends Controller {
 
     this.dispatchWorkspaceEvent('open-board-options', {
       workspace: this.workspace,
+      viewerActor: this.viewerActor,
       triggerElement: event?.currentTarget ?? null
     });
   }
@@ -89,7 +117,10 @@ export default class extends Controller {
   async toggleColumn(event) {
     const board = this.activeBoard;
 
-    if (!board) {
+    if (!board || !this.activeBoardCollaborationState?.canRead) {
+      if (board) {
+        this.announce(this.t('errors.boardReadPermissionDenied'));
+      }
       return;
     }
 
@@ -121,13 +152,32 @@ export default class extends Controller {
   }
 
   openRenameBoard() {
-    if (!this.activeBoard) {
+    if (!this.activeBoard || !this.canAdminActiveBoard) {
+      if (this.activeBoard) {
+        this.announce(this.t('errors.boardAdminPermissionDenied'));
+      }
       return;
     }
 
     this.dispatchWorkspaceEvent('open-board-editor', {
       mode: 'rename',
       board: this.activeBoard
+    });
+  }
+
+  openBoardCollaborators(event) {
+    const boardId = event.detail?.boardId ?? this.activeBoard?.id;
+    const board = boardId ? this.workspace?.boards?.[boardId] : null;
+
+    if (!board) {
+      return;
+    }
+
+    this.dispatchWorkspaceEvent('open-board-collaborators', {
+      workspace: this.workspace,
+      viewerActor: this.viewerActor,
+      boardId,
+      triggerElement: event?.target ?? null
     });
   }
 
@@ -152,11 +202,41 @@ export default class extends Controller {
     await this.runAction(() => this.service.createBoard(input), this.t('workspace.announcements.boardCreated'));
   }
 
+  async handleInviteMember(event) {
+    await this.runCollaboratorAction('invite-member', event.detail, this.t('workspace.announcements.inviteSent'));
+  }
+
+  async handleRevokeInvite(event) {
+    await this.runCollaboratorAction('revoke-invite', event.detail, this.t('workspace.announcements.inviteRevoked'));
+  }
+
+  async handleChangeMemberRole(event) {
+    await this.runCollaboratorAction('change-member-role', event.detail, this.t('workspace.announcements.memberRoleUpdated'));
+  }
+
+  async handleRemoveMember(event) {
+    await this.runCollaboratorAction('remove-member', event.detail, this.t('workspace.announcements.memberRemoved'));
+  }
+
+  async handleAcceptInvite(event) {
+    await this.runInviteDecision('accept', event.detail, this.t('workspace.announcements.inviteAccepted'));
+  }
+
+  async handleDeclineInvite(event) {
+    await this.runInviteDecision('decline', event.detail, this.t('workspace.announcements.inviteDeclined'));
+  }
+
   confirmDeleteBoard(event) {
     const boardId = event.detail?.boardId ?? this.activeBoard?.id;
     const board = boardId ? this.workspace?.boards?.[boardId] : null;
+    const boardState = board ? getBoardCollaborationState(board, this.viewerActor) : null;
 
     if (!board) {
+      return;
+    }
+
+    if (!boardState?.canAdmin) {
+      this.announce(this.t('errors.boardAdminPermissionDenied'));
       return;
     }
 
@@ -175,8 +255,14 @@ export default class extends Controller {
   confirmResetBoard(event) {
     const boardId = event.detail?.boardId ?? this.activeBoard?.id;
     const board = boardId ? this.workspace?.boards?.[boardId] : null;
+    const boardState = board ? getBoardCollaborationState(board, this.viewerActor) : null;
 
     if (!board) {
+      return;
+    }
+
+    if (!boardState?.canAdmin) {
+      this.announce(this.t('errors.boardAdminPermissionDenied'));
       return;
     }
 
@@ -193,7 +279,10 @@ export default class extends Controller {
   }
 
   openCreateCard() {
-    if (!this.activeBoard) {
+    if (!this.activeBoard || !this.canEditActiveBoard) {
+      if (this.activeBoard) {
+        this.announce(this.t('errors.boardEditPermissionDenied'));
+      }
       return;
     }
 
@@ -208,7 +297,10 @@ export default class extends Controller {
   openEdit(event) {
     const board = this.activeBoard;
 
-    if (!board) {
+    if (!board || !this.canEditActiveBoard) {
+      if (board) {
+        this.announce(this.t('errors.boardEditPermissionDenied'));
+      }
       return;
     }
 
@@ -371,14 +463,69 @@ export default class extends Controller {
     }
   }
 
+  async runCollaboratorAction(actionName, detail, successMessage) {
+    return this.runAction(
+      () =>
+        performWorkspaceCollaboratorAction({
+          service: this.service,
+          action: actionName,
+          detail
+        }),
+      successMessage
+    );
+  }
+
+  async runInviteDecision(decision, detail, successMessage) {
+    try {
+      const result = await performWorkspaceInviteDecision({
+        service: this.service,
+        decision,
+        detail,
+        viewerActor: this.viewerActor,
+        activeWorkspaceId: this.service.getActiveWorkspaceId()
+      });
+
+      this.workspace = result.workspace;
+      this.render();
+      this.announce(
+        result.leftWorkspace
+          ? this.t('workspace.announcements.returnedHomeWorkspace')
+          : successMessage
+      );
+
+      return true;
+    } catch (error) {
+      console.error(error);
+      this.announce(localizeErrorMessage(error, this.t));
+      return false;
+    }
+  }
+
   render() {
-    if (!this.workspace || !this.activeBoard) {
+    const activeBoardState = this.activeBoardCollaborationState;
+
+    if (!this.workspace || !this.activeBoard || !activeBoardState) {
       return;
+    }
+
+    if (this.hasCreateCardButtonTarget) {
+      this.createCardButtonTarget.hidden = !activeBoardState.canEdit;
+      this.createCardButtonTarget.disabled = !activeBoardState.canEdit;
+      this.createCardButtonTarget.setAttribute('aria-disabled', String(!activeBoardState.canEdit));
+    }
+
+    if (this.hasBoardAccessNoticeTarget) {
+      this.boardAccessNoticeTarget.hidden = activeBoardState.canRead || !activeBoardState.pendingInvite;
+      this.boardAccessNoticeTarget.textContent = activeBoardState.pendingInvite
+        ? this.t('workspace.boardInvitePendingNotice')
+        : '';
     }
 
     renderBoardState({
       board: this.activeBoard,
       collapsedColumns: getCollapsedColumnsForBoard(this.workspace, this.activeBoard.id),
+      canReadBoard: activeBoardState.canRead,
+      canEditBoard: activeBoardState.canEdit,
       regions: {
         boardTitle: this.boardTitleTarget,
         desktopColumns: this.desktopColumnsTarget
@@ -389,7 +536,13 @@ export default class extends Controller {
     });
 
     this.dispatchWorkspaceEvent('sync-board-options', {
-      workspace: this.workspace
+      workspace: this.workspace,
+      viewerActor: this.viewerActor
+    });
+    this.dispatchWorkspaceEvent('sync-board-collaborators', {
+      workspace: this.workspace,
+      viewerActor: this.viewerActor,
+      boardId: this.activeBoard.id
     });
   }
 

@@ -60,6 +60,14 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
     return payload.workspace;
   }
 
+  getActiveWorkspaceId() {
+    return this.activeWorkspaceId;
+  }
+
+  setActiveWorkspace(workspaceId) {
+    this.activeWorkspaceId = normalizeOptionalWorkspaceId(workspaceId);
+  }
+
   async saveWorkspace(workspace) {
     const normalizedWorkspace = normalizeWorkspaceSnapshot(workspace);
 

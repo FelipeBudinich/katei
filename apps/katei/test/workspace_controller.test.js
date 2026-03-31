@@ -1,12 +1,20 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createWorkspaceBoard } from '../public/js/domain/workspace_read_model.js';
+import {
+  createEmptyWorkspace,
+  createWorkspaceBoard
+} from '../public/js/domain/workspace_read_model.js';
+import { getBoardCollaborationState } from '../public/js/controllers/board_collaboration_state.js';
 import {
   getDefaultBoardStageId,
   getBoardStageTitle,
   getStageMoveOptions,
   resolveBoardStageId
 } from '../public/js/controllers/stage_ui.js';
+import {
+  performWorkspaceCollaboratorAction,
+  performWorkspaceInviteDecision
+} from '../public/js/controllers/workspace_collaboration_actions.js';
 
 test('resolveBoardStageId accepts stage ids and legacy column ids for the active board flow', () => {
   const board = createBoardWithCustomStages();
@@ -32,6 +40,168 @@ test('getDefaultBoardStageId follows the board-defined stage order for create fl
   const board = createBoardWithCustomStages();
 
   assert.equal(getDefaultBoardStageId(board), 'review');
+});
+
+test('performWorkspaceCollaboratorAction routes collaborator UI actions through WorkspaceService', async () => {
+  const workspace = createEmptyWorkspace();
+  const scenarios = [
+    {
+      action: 'invite-member',
+      detail: { boardId: 'main', email: 'invitee@example.com', role: 'editor' },
+      expectedMethod: 'inviteBoardMember',
+      expectedArgs: ['main', 'invitee@example.com', 'editor']
+    },
+    {
+      action: 'revoke-invite',
+      detail: { boardId: 'main', inviteId: 'invite_1' },
+      expectedMethod: 'revokeBoardInvite',
+      expectedArgs: ['main', 'invite_1']
+    },
+    {
+      action: 'change-member-role',
+      detail: {
+        boardId: 'main',
+        targetActor: { type: 'human', id: 'viewer_1', email: 'viewer@example.com' },
+        role: 'admin'
+      },
+      expectedMethod: 'setBoardMemberRole',
+      expectedArgs: ['main', { type: 'human', id: 'viewer_1', email: 'viewer@example.com' }, 'admin']
+    },
+    {
+      action: 'remove-member',
+      detail: {
+        boardId: 'main',
+        targetActor: { type: 'human', id: 'viewer_1' }
+      },
+      expectedMethod: 'removeBoardMember',
+      expectedArgs: ['main', { type: 'human', id: 'viewer_1' }]
+    }
+  ];
+
+  for (const scenario of scenarios) {
+    const service = createCollaborationServiceDouble({ workspace });
+    const result = await performWorkspaceCollaboratorAction({
+      service,
+      action: scenario.action,
+      detail: scenario.detail
+    });
+
+    assert.deepEqual(result, workspace);
+    assert.deepEqual(service.calls, [
+      {
+        method: scenario.expectedMethod,
+        args: scenario.expectedArgs
+      }
+    ]);
+  }
+});
+
+test('performWorkspaceInviteDecision keeps the active workspace when accepting an invite', async () => {
+  const viewerActor = createActor('invitee_sub', 'invitee@example.com', 'Invitee');
+  const sharedWorkspace = createViewerWorkspace('workspace_shared', viewerActor);
+  const service = createCollaborationServiceDouble({
+    acceptWorkspace: sharedWorkspace,
+    switchWorkspace: createViewerWorkspace('workspace_home', viewerActor)
+  });
+
+  const result = await performWorkspaceInviteDecision({
+    service,
+    decision: 'accept',
+    detail: {
+      boardId: 'main',
+      inviteId: 'invite_1'
+    },
+    viewerActor,
+    activeWorkspaceId: 'workspace_shared'
+  });
+
+  assert.deepEqual(result, {
+    workspace: sharedWorkspace,
+    leftWorkspace: false
+  });
+  assert.deepEqual(service.calls, [
+    {
+      method: 'acceptBoardInvite',
+      args: ['main', 'invite_1']
+    }
+  ]);
+});
+
+test('performWorkspaceInviteDecision returns to the home workspace when declining the last visible invite in a shared workspace', async () => {
+  const viewerActor = createActor('invitee_sub', 'invitee@example.com', 'Invitee');
+  const noAccessWorkspace = createEmptyWorkspace({
+    workspaceId: 'workspace_shared',
+    creator: createActor('owner_1', 'owner@example.com', 'Owner')
+  });
+  const homeWorkspace = createViewerWorkspace('workspace_home', viewerActor);
+  const service = createCollaborationServiceDouble({
+    declineWorkspace: noAccessWorkspace,
+    switchWorkspace: homeWorkspace
+  });
+
+  const result = await performWorkspaceInviteDecision({
+    service,
+    decision: 'decline',
+    detail: {
+      boardId: 'main',
+      inviteId: 'invite_1'
+    },
+    viewerActor,
+    activeWorkspaceId: 'workspace_shared'
+  });
+
+  assert.deepEqual(result, {
+    workspace: homeWorkspace,
+    leftWorkspace: true
+  });
+  assert.deepEqual(service.calls, [
+    {
+      method: 'declineBoardInvite',
+      args: ['main', 'invite_1']
+    },
+    {
+      method: 'switchWorkspace',
+      args: [null]
+    }
+  ]);
+});
+
+test('viewer and invite-only actors stay read-only in collaboration state', () => {
+  const board = createWorkspaceBoard({
+    id: 'board_read_only',
+    title: 'Read only board',
+    createdAt: '2026-03-31T10:00:00.000Z',
+    updatedAt: '2026-03-31T10:00:00.000Z',
+    creator: createActor('owner_1', 'owner@example.com', 'Owner')
+  });
+  const viewerActor = createActor('viewer_1', 'viewer@example.com', 'Viewer');
+  const inviteeActor = createActor('invitee_sub', 'invitee@example.com', 'Invitee');
+
+  board.collaboration.memberships.push({
+    actor: viewerActor,
+    role: 'viewer',
+    joinedAt: '2026-03-31T10:05:00.000Z'
+  });
+  board.collaboration.invites.push({
+    id: 'invite_1',
+    email: inviteeActor.email,
+    role: 'viewer',
+    status: 'pending',
+    invitedBy: board.collaboration.memberships[0].actor,
+    invitedAt: '2026-03-31T10:10:00.000Z'
+  });
+
+  const viewerState = getBoardCollaborationState(board, viewerActor);
+  const inviteeState = getBoardCollaborationState(board, inviteeActor);
+
+  assert.equal(viewerState.canRead, true);
+  assert.equal(viewerState.canEdit, false);
+  assert.equal(viewerState.canAdmin, false);
+  assert.equal(inviteeState.canRead, false);
+  assert.equal(inviteeState.canEdit, false);
+  assert.equal(inviteeState.canAdmin, false);
+  assert.equal(inviteeState.accessible, true);
+  assert.equal(inviteeState.pendingInvites.length, 1);
 });
 
 function createBoardWithCustomStages() {
@@ -71,4 +241,67 @@ function createBoardWithCustomStages() {
   };
 
   return board;
+}
+
+function createViewerWorkspace(workspaceId, actor) {
+  const workspace = createEmptyWorkspace({
+    workspaceId,
+    creator: createActor(`owner_${workspaceId}`, `owner+${workspaceId}@example.com`, 'Owner')
+  });
+
+  workspace.boards.main.collaboration.memberships.push({
+    actor,
+    role: 'viewer',
+    joinedAt: '2026-03-31T10:05:00.000Z'
+  });
+
+  return workspace;
+}
+
+function createCollaborationServiceDouble({
+  workspace = createEmptyWorkspace(),
+  acceptWorkspace = workspace,
+  declineWorkspace = workspace,
+  switchWorkspace = workspace
+} = {}) {
+  return {
+    calls: [],
+    async inviteBoardMember(...args) {
+      this.calls.push({ method: 'inviteBoardMember', args });
+      return structuredClone(workspace);
+    },
+    async revokeBoardInvite(...args) {
+      this.calls.push({ method: 'revokeBoardInvite', args });
+      return structuredClone(workspace);
+    },
+    async setBoardMemberRole(...args) {
+      this.calls.push({ method: 'setBoardMemberRole', args });
+      return structuredClone(workspace);
+    },
+    async removeBoardMember(...args) {
+      this.calls.push({ method: 'removeBoardMember', args });
+      return structuredClone(workspace);
+    },
+    async acceptBoardInvite(...args) {
+      this.calls.push({ method: 'acceptBoardInvite', args });
+      return structuredClone(acceptWorkspace);
+    },
+    async declineBoardInvite(...args) {
+      this.calls.push({ method: 'declineBoardInvite', args });
+      return structuredClone(declineWorkspace);
+    },
+    async switchWorkspace(...args) {
+      this.calls.push({ method: 'switchWorkspace', args });
+      return structuredClone(switchWorkspace);
+    }
+  };
+}
+
+function createActor(id, email, displayName) {
+  return {
+    type: 'human',
+    id,
+    email,
+    displayName
+  };
 }

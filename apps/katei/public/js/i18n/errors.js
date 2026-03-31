@@ -27,6 +27,14 @@ const KNOWN_ERROR_KEY_BY_MESSAGE = Object.freeze({
   'Board not found.': 'errors.boardNotFound',
   'Card not found.': 'errors.cardNotFound',
   'Card is not in the source column.': 'errors.cardNotInSourceColumn',
+  'You do not have permission to access this board.': 'errors.boardReadPermissionDenied',
+  'You can view this board, but interactive board controls are unavailable until you join it.':
+    'errors.boardReadPermissionDenied',
+  'You do not have permission to modify this board.': 'errors.boardEditPermissionDenied',
+  'You do not have permission to edit this board.': 'errors.boardEditPermissionDenied',
+  'You do not have permission to administer this board.': 'errors.boardAdminPermissionDenied',
+  'You do not have permission to manage this board.': 'errors.boardAdminPermissionDenied',
+  'You do not have permission to respond to this invite.': 'errors.inviteResponsePermissionDenied',
   'Unable to complete the request.': 'errors.requestUnavailable'
 });
 

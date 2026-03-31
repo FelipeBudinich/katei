@@ -1,7 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createWorkspaceBoard } from '../public/js/domain/workspace_read_model.js';
-import { getBoardRenderStages, getCardRenderState } from '../public/js/renderers/board_renderer.js';
+import {
+  getBoardRenderStages,
+  getCardRenderState,
+  renderBoardState
+} from '../public/js/renderers/board_renderer.js';
 
 test('getBoardRenderStages follows board.stageOrder instead of fixed column order', () => {
   const board = createWorkspaceBoard({
@@ -88,6 +92,30 @@ test('getCardRenderState resolves localized title and preview text from the boar
   });
 });
 
+test('renderBoardState clears board columns when the actor cannot read the active board', () => {
+  const board = createWorkspaceBoard({
+    id: 'board_hidden',
+    title: 'Hidden board',
+    createdAt: '2026-03-31T10:00:00.000Z',
+    updatedAt: '2026-03-31T10:00:00.000Z'
+  });
+  const regions = {
+    boardTitle: { textContent: '' },
+    desktopColumns: createRegionDouble([Symbol('existing-column')])
+  };
+
+  renderBoardState({
+    board,
+    canReadBoard: false,
+    regions,
+    templates: {}
+  });
+
+  assert.equal(regions.boardTitle.textContent, 'Hidden board');
+  assert.equal(regions.desktopColumns.hidden, true);
+  assert.deepEqual(regions.desktopColumns.children, []);
+});
+
 function withMarkdownEnvironment(action) {
   const previousWindow = globalThis.window;
   const previousDocument = globalThis.document;
@@ -127,4 +155,14 @@ function withMarkdownEnvironment(action) {
     globalThis.window = previousWindow;
     globalThis.document = previousDocument;
   }
+}
+
+function createRegionDouble(initialChildren = []) {
+  return {
+    hidden: false,
+    children: [...initialChildren],
+    replaceChildren(...nodes) {
+      this.children = nodes;
+    }
+  };
 }

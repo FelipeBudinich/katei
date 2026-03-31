@@ -17,6 +17,8 @@
         <p class="field-label text-sm font-semibold">{{ t('boardOptionsDialog.sectionLabel') }}</p>
         <h2 class="font-serif text-3xl text-strong">{{ t('boardOptionsDialog.heading') }}</h2>
         <p class="text-sm leading-6 text-muted" data-board-options-target="summary"></p>
+        <p class="text-xs uppercase tracking-[0.24em] text-subtle" data-board-options-target="roleSummary"></p>
+        <p class="text-xs leading-5 text-muted" hidden data-board-options-target="pendingSummary"></p>
       </div>
 
       <button
@@ -66,10 +68,29 @@
       <button type="button" class="touch-button-primary" data-action="board-options#createBoard">
         {{ t('boardOptionsDialog.newBoard') }}
       </button>
-      <button type="button" class="touch-button-secondary" data-action="board-options#renameBoard">
+      <button
+        type="button"
+        class="touch-button-secondary"
+        data-board-options-target="collaboratorsButton"
+        data-action="board-options#openCollaborators"
+      >
+        {{ t('boardOptionsDialog.collaboratorsButton') }}
+        <span class="count-chip ml-2 px-2 py-0.5 text-xs" hidden data-board-options-target="collaboratorBadge">0</span>
+      </button>
+      <button
+        type="button"
+        class="touch-button-secondary"
+        data-board-options-target="renameButton"
+        data-action="board-options#renameBoard"
+      >
         {{ t('boardOptionsDialog.renameBoard') }}
       </button>
-      <button type="button" class="touch-button-secondary" data-action="board-options#resetBoard">
+      <button
+        type="button"
+        class="touch-button-secondary"
+        data-board-options-target="resetButton"
+        data-action="board-options#resetBoard"
+      >
         {{ t('boardOptionsDialog.resetBoard') }}
       </button>
       <button

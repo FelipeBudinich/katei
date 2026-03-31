@@ -7,6 +7,27 @@ export class WorkspaceService {
     return this.repository.loadWorkspace();
   }
 
+  getActiveWorkspaceId() {
+    if (typeof this.repository.getActiveWorkspaceId === 'function') {
+      return this.repository.getActiveWorkspaceId();
+    }
+
+    return this.repository.activeWorkspaceId ?? null;
+  }
+
+  setActiveWorkspace(workspaceId) {
+    if (typeof this.repository.setActiveWorkspace === 'function') {
+      this.repository.setActiveWorkspace(workspaceId);
+    } else {
+      this.repository.activeWorkspaceId = workspaceId ?? null;
+    }
+  }
+
+  async switchWorkspace(workspaceId) {
+    this.setActiveWorkspace(workspaceId);
+    return this.load();
+  }
+
   async createBoard(input) {
     return this.#applyCommand('board.create', {
       title: input?.title,

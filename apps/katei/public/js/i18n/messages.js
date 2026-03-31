@@ -46,6 +46,7 @@ const EN_MESSAGES = freezeCatalog({
     updatedLabel: 'Updated',
     cardCount: '{count} cards',
     fallbackBoardTitle: 'board',
+    boardInvitePendingNotice: 'This board is shared with you. Open Collaborators to accept or decline the invite.',
     status: {
       loadUnavailable: 'Unable to load this workspace.',
       moveUnavailable: 'Unable to move card.'
@@ -60,6 +61,13 @@ const EN_MESSAGES = freezeCatalog({
       boardRenamed: 'Board renamed.',
       boardUpdated: 'Board saved.',
       boardCreated: 'Board created.',
+      inviteSent: 'Invite sent.',
+      inviteRevoked: 'Invite revoked.',
+      inviteAccepted: 'Invite accepted.',
+      inviteDeclined: 'Invite declined.',
+      memberRoleUpdated: 'Member role updated.',
+      memberRemoved: 'Member removed.',
+      returnedHomeWorkspace: 'Returned to your home workspace.',
       cardUpdated: 'Card updated.',
       cardCreated: 'Card created.',
       movedCard: 'Moved card to {column}.',
@@ -102,12 +110,39 @@ const EN_MESSAGES = freezeCatalog({
     activeStatePlaceholder: 'Active',
     switchButton: 'Switch',
     newBoard: 'New Board',
+    collaboratorsButton: 'Collaborators',
     renameBoard: 'Edit Board',
     resetBoard: 'Reset Board',
     deleteBoard: 'Delete Board',
     summaryActive: 'Active board: {title}',
+    currentRoleSummary: 'Your access: {role}',
+    pendingInvitesSummary: '{count} pending invites',
     stateActive: 'Active board',
     stateAvailable: 'Available'
+  },
+  collaborators: {
+    sectionLabel: 'Collaboration',
+    heading: 'Collaborators · {title}',
+    currentRoleValue: 'Current role: {role}',
+    inviteHeading: 'Invite member',
+    inviteHelp: 'Admins can invite people by email and set their starting role.',
+    inviteEmailLabel: 'Invite email',
+    inviteRoleLabel: 'Invite role',
+    inviteSubmit: 'Send invite',
+    membersHeading: 'Members',
+    pendingHeading: 'Pending invites',
+    pendingStatus: 'Pending',
+    revokeInvite: 'Revoke invite',
+    removeMember: 'Remove member',
+    acceptInvite: 'Accept invite',
+    declineInvite: 'Decline invite',
+    roles: {
+      admin: 'Admin',
+      editor: 'Editor',
+      viewer: 'Viewer',
+      invited: 'Pending invite',
+      none: 'No board role'
+    }
   },
   cardEditor: {
     newHeading: 'New card',
@@ -193,6 +228,10 @@ const EN_MESSAGES = freezeCatalog({
     boardNotFound: 'Board not found.',
     cardNotFound: 'Card not found.',
     cardNotInSourceColumn: 'Card is not in the source column.',
+    boardReadPermissionDenied: 'You can view this board, but interactive board controls are unavailable until you join it.',
+    boardEditPermissionDenied: 'You do not have permission to edit this board.',
+    boardAdminPermissionDenied: 'You do not have permission to manage this board.',
+    inviteResponsePermissionDenied: 'You do not have permission to respond to this invite.',
     requestUnavailable: 'Unable to complete the request.'
   }
 });
@@ -246,6 +285,7 @@ const ES_CL_MESSAGES = freezeCatalog({
     updatedLabel: 'Actualizado',
     cardCount: '{count} tarjetas',
     fallbackBoardTitle: 'tablero',
+    boardInvitePendingNotice: 'Este tablero fue compartido contigo. Abre Colaboradores para aceptar o rechazar la invitación.',
     status: {
       loadUnavailable: 'No se pudo cargar este espacio de trabajo.',
       moveUnavailable: 'No se pudo mover la tarjeta.'
@@ -260,6 +300,13 @@ const ES_CL_MESSAGES = freezeCatalog({
       boardRenamed: 'Tablero renombrado.',
       boardUpdated: 'Tablero guardado.',
       boardCreated: 'Tablero creado.',
+      inviteSent: 'Invitación enviada.',
+      inviteRevoked: 'Invitación revocada.',
+      inviteAccepted: 'Invitación aceptada.',
+      inviteDeclined: 'Invitación rechazada.',
+      memberRoleUpdated: 'Rol actualizado.',
+      memberRemoved: 'Miembro eliminado.',
+      returnedHomeWorkspace: 'Volviste a tu espacio principal.',
       cardUpdated: 'Tarjeta actualizada.',
       cardCreated: 'Tarjeta creada.',
       movedCard: 'Tarjeta movida a {column}.',
@@ -302,12 +349,39 @@ const ES_CL_MESSAGES = freezeCatalog({
     activeStatePlaceholder: 'Activo',
     switchButton: 'Cambiar',
     newBoard: 'Nuevo tablero',
+    collaboratorsButton: 'Colaboradores',
     renameBoard: 'Editar tablero',
     resetBoard: 'Reiniciar tablero',
     deleteBoard: 'Eliminar tablero',
     summaryActive: 'Tablero activo: {title}',
+    currentRoleSummary: 'Tu acceso: {role}',
+    pendingInvitesSummary: '{count} invitaciones pendientes',
     stateActive: 'Tablero activo',
     stateAvailable: 'Disponible'
+  },
+  collaborators: {
+    sectionLabel: 'Colaboración',
+    heading: 'Colaboradores · {title}',
+    currentRoleValue: 'Rol actual: {role}',
+    inviteHeading: 'Invitar miembro',
+    inviteHelp: 'Los administradores pueden invitar por correo y definir el rol inicial.',
+    inviteEmailLabel: 'Correo de invitación',
+    inviteRoleLabel: 'Rol de invitación',
+    inviteSubmit: 'Enviar invitación',
+    membersHeading: 'Miembros',
+    pendingHeading: 'Invitaciones pendientes',
+    pendingStatus: 'Pendiente',
+    revokeInvite: 'Revocar invitación',
+    removeMember: 'Quitar miembro',
+    acceptInvite: 'Aceptar invitación',
+    declineInvite: 'Rechazar invitación',
+    roles: {
+      admin: 'Administrador',
+      editor: 'Editor',
+      viewer: 'Lector',
+      invited: 'Invitación pendiente',
+      none: 'Sin rol en el tablero'
+    }
   },
   cardEditor: {
     newHeading: 'Nueva tarjeta',
@@ -393,6 +467,10 @@ const ES_CL_MESSAGES = freezeCatalog({
     boardNotFound: 'No se encontró el tablero.',
     cardNotFound: 'No se encontró la tarjeta.',
     cardNotInSourceColumn: 'La tarjeta no está en la columna de origen.',
+    boardReadPermissionDenied: 'Puedes ver este tablero, pero los controles interactivos no estarán disponibles hasta que te unas.',
+    boardEditPermissionDenied: 'No tienes permiso para editar este tablero.',
+    boardAdminPermissionDenied: 'No tienes permiso para administrarlo.',
+    inviteResponsePermissionDenied: 'No tienes permiso para responder esta invitación.',
     requestUnavailable: 'No se pudo completar la solicitud.'
   }
 });
@@ -446,6 +524,7 @@ const JA_MESSAGES = freezeCatalog({
     updatedLabel: '更新日時',
     cardCount: '{count} 件のカード',
     fallbackBoardTitle: 'ボード',
+    boardInvitePendingNotice: 'このボードはあなたに共有されています。共同編集を開いて、招待を承認または辞退してください。',
     status: {
       loadUnavailable: 'このワークスペースを読み込めません。',
       moveUnavailable: 'カードを移動できません。'
@@ -460,6 +539,13 @@ const JA_MESSAGES = freezeCatalog({
       boardRenamed: 'ボード名を変更しました。',
       boardUpdated: 'ボードを保存しました。',
       boardCreated: 'ボードを作成しました。',
+      inviteSent: '招待を送りました。',
+      inviteRevoked: '招待を取り消しました。',
+      inviteAccepted: '招待を承認しました。',
+      inviteDeclined: '招待を辞退しました。',
+      memberRoleUpdated: 'メンバー権限を更新しました。',
+      memberRemoved: 'メンバーを削除しました。',
+      returnedHomeWorkspace: 'ホームワークスペースに戻りました。',
       cardUpdated: 'カードを更新しました。',
       cardCreated: 'カードを作成しました。',
       movedCard: 'カードを {column} に移動しました。',
@@ -502,12 +588,39 @@ const JA_MESSAGES = freezeCatalog({
     activeStatePlaceholder: 'アクティブ',
     switchButton: '切り替え',
     newBoard: '新しいボード',
+    collaboratorsButton: '共同編集',
     renameBoard: 'ボードを編集',
     resetBoard: 'ボードをリセット',
     deleteBoard: 'ボードを削除',
     summaryActive: '現在のボード: {title}',
+    currentRoleSummary: '現在の権限: {role}',
+    pendingInvitesSummary: '保留中の招待 {count} 件',
     stateActive: '現在のボード',
     stateAvailable: '利用可能'
+  },
+  collaborators: {
+    sectionLabel: '共同編集',
+    heading: '共同編集 · {title}',
+    currentRoleValue: '現在の権限: {role}',
+    inviteHeading: 'メンバーを招待',
+    inviteHelp: '管理者はメールアドレスで招待し、初期権限を設定できます。',
+    inviteEmailLabel: '招待メール',
+    inviteRoleLabel: '招待する権限',
+    inviteSubmit: '招待を送る',
+    membersHeading: 'メンバー',
+    pendingHeading: '保留中の招待',
+    pendingStatus: '保留中',
+    revokeInvite: '招待を取り消す',
+    removeMember: 'メンバーを外す',
+    acceptInvite: '参加する',
+    declineInvite: '辞退する',
+    roles: {
+      admin: '管理者',
+      editor: '編集者',
+      viewer: '閲覧者',
+      invited: '招待保留中',
+      none: 'このボードの権限なし'
+    }
   },
   cardEditor: {
     newHeading: '新しいカード',
@@ -593,6 +706,10 @@ const JA_MESSAGES = freezeCatalog({
     boardNotFound: 'ボードが見つかりません。',
     cardNotFound: 'カードが見つかりません。',
     cardNotInSourceColumn: 'カードが移動元の列にありません。',
+    boardReadPermissionDenied: 'このボードは表示できますが、参加するまでは操作できません。',
+    boardEditPermissionDenied: 'このボードを編集する権限がありません。',
+    boardAdminPermissionDenied: 'このボードを管理する権限がありません。',
+    inviteResponsePermissionDenied: 'この招待に応答する権限がありません。',
     requestUnavailable: 'リクエストを完了できませんでした。'
   }
 });

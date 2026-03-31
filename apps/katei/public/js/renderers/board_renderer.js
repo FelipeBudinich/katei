@@ -29,6 +29,8 @@ export function getCardRenderState(board, card) {
 export function renderBoardState({
   board,
   collapsedColumns = {},
+  canReadBoard = true,
+  canEditBoard = true,
   regions,
   templates,
   t = getBrowserTranslator(),
@@ -39,15 +41,34 @@ export function renderBoardState({
     regions.boardTitle.textContent = board.title;
   }
 
+  if (regions.desktopColumns) {
+    regions.desktopColumns.hidden = !canReadBoard;
+  }
+
+  if (!canReadBoard) {
+    replaceRegionChildren(regions.desktopColumns, []);
+    return;
+  }
+
   replaceRegionChildren(
     regions.desktopColumns,
     getBoardRenderStages(board).map(({ stageId, stage }) =>
-      createStagePanel({ board, stageId, stage, collapsedColumns, templates, t, dateTimeFormatter })
+      createStagePanel({
+        board,
+        stageId,
+        stage,
+        collapsedColumns,
+        canReadBoard,
+        canEditBoard,
+        templates,
+        t,
+        dateTimeFormatter
+      })
     )
   );
 }
 
-function createStagePanel({ board, stageId, stage, collapsedColumns, templates, t, dateTimeFormatter }) {
+function createStagePanel({ board, stageId, stage, collapsedColumns, canReadBoard, canEditBoard, templates, t, dateTimeFormatter }) {
   const columnNode = cloneTemplate(templates.columnTemplate);
   const isCollapsed = Boolean(collapsedColumns[stageId]);
   columnNode.dataset.stageId = stage.id;
@@ -76,6 +97,8 @@ function createStagePanel({ board, stageId, stage, collapsedColumns, templates, 
     toggleElement.dataset.stageId = stage.id;
     toggleElement.dataset.columnId = stage.id;
     toggleElement.setAttribute('aria-expanded', String(!isCollapsed));
+    toggleElement.disabled = !canReadBoard;
+    toggleElement.setAttribute('aria-disabled', String(!canReadBoard));
   }
 
   if (bodyElement) {
@@ -99,6 +122,7 @@ function createStagePanel({ board, stageId, stage, collapsedColumns, templates, 
             board,
             card: board.cards[cardId],
             stageId,
+            canEditBoard,
             templates,
             dateTimeFormatter
           })
@@ -110,7 +134,7 @@ function createStagePanel({ board, stageId, stage, collapsedColumns, templates, 
   return columnNode;
 }
 
-function createCardElement({ board, card, stageId, templates, dateTimeFormatter }) {
+function createCardElement({ board, card, stageId, canEditBoard, templates, dateTimeFormatter }) {
   const cardNode = cloneTemplate(templates.cardTemplate);
   const renderState = getCardRenderState(board, card);
   cardNode.dataset.cardId = card.id;
@@ -137,6 +161,11 @@ function createCardElement({ board, card, stageId, templates, dateTimeFormatter 
   const metaElement = cardNode.querySelector('[data-card-field="meta"]');
   if (metaElement) {
     metaElement.textContent = dateTimeFormatter.format(new Date(card.updatedAt));
+  }
+
+  const editButton = cardNode.querySelector('[data-card-field="editButton"]');
+  if (editButton) {
+    editButton.hidden = !canEditBoard;
   }
 
   for (const button of cardNode.querySelectorAll('[data-card-id]')) {

@@ -15,6 +15,40 @@ test('WorkspaceService load keeps using repository.loadWorkspace', async () => {
   assert.equal(repository.applyCommandCalls.length, 0);
 });
 
+test('WorkspaceService exposes the repository active workspace id', () => {
+  const workspace = createEmptyWorkspace();
+  const repository = createRepositoryDouble({ workspace, activeWorkspaceId: 'workspace_home' });
+  const service = new WorkspaceService(repository);
+
+  assert.equal(service.getActiveWorkspaceId(), 'workspace_home');
+});
+
+test('WorkspaceService setActiveWorkspace delegates to the repository switch helper', () => {
+  const workspace = createEmptyWorkspace();
+  const repository = createRepositoryDouble({ workspace });
+  const service = new WorkspaceService(repository);
+
+  service.setActiveWorkspace('workspace_shared');
+
+  assert.equal(repository.activeWorkspaceId, 'workspace_shared');
+  assert.deepEqual(repository.setActiveWorkspaceCalls, ['workspace_shared']);
+  assert.deepEqual(repository.events, ['set:workspace_shared']);
+});
+
+test('WorkspaceService switchWorkspace updates the active workspace before reloading', async () => {
+  const workspace = createEmptyWorkspace({ workspaceId: 'workspace_shared' });
+  const repository = createRepositoryDouble({ workspace });
+  const service = new WorkspaceService(repository);
+
+  const loadedWorkspace = await service.switchWorkspace('workspace_shared');
+
+  assert.deepEqual(loadedWorkspace, workspace);
+  assert.equal(repository.activeWorkspaceId, 'workspace_shared');
+  assert.equal(repository.loadCalls, 1);
+  assert.deepEqual(repository.setActiveWorkspaceCalls, ['workspace_shared']);
+  assert.deepEqual(repository.events, ['set:workspace_shared', 'load']);
+});
+
 test('WorkspaceService createBoard calls repository.applyCommand and returns workspace', async () => {
   await assertServiceCommand({
     action: (service) => service.createBoard({ title: 'Roadmap' }),
@@ -305,12 +339,24 @@ async function assertServiceCommand({ action, expectedType, expectedPayload }) {
   assert.deepEqual(repository.applyCommandCalls[0].payload, expectedPayload);
 }
 
-function createRepositoryDouble({ workspace }) {
+function createRepositoryDouble({ workspace, activeWorkspaceId = null }) {
   return {
+    activeWorkspaceId,
     loadCalls: 0,
     saveCalls: [],
     applyCommandCalls: [],
+    setActiveWorkspaceCalls: [],
+    events: [],
+    getActiveWorkspaceId() {
+      return this.activeWorkspaceId;
+    },
+    setActiveWorkspace(workspaceId) {
+      this.activeWorkspaceId = workspaceId ?? null;
+      this.setActiveWorkspaceCalls.push(this.activeWorkspaceId);
+      this.events.push(`set:${this.activeWorkspaceId}`);
+    },
     async loadWorkspace() {
+      this.events.push('load');
       this.loadCalls += 1;
       return structuredClone(workspace);
     },

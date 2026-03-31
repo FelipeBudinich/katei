@@ -528,6 +528,129 @@ test('HttpWorkspaceRepository applyCommand sends expectedRevision and updates lo
   });
 });
 
+test('HttpWorkspaceRepository targets the selected active workspace on subsequent loads', async () => {
+  const sharedWorkspace = createEmptyWorkspace({
+    workspaceId: 'workspace_shared'
+  });
+  const fetchDouble = createFetchDouble([
+    createJsonResponse(createWorkspaceApiPayload(sharedWorkspace, {
+      revision: 1,
+      updatedAt: '2026-04-03T16:00:00.000Z',
+      lastChangedBy: 'sub_123',
+      isPristine: false,
+      workspaceId: 'workspace_shared',
+      isHomeWorkspace: false
+    }))
+  ]);
+  const repository = new HttpWorkspaceRepository({
+    fetchImpl: fetchDouble.fetch,
+    viewerSub: 'sub_123',
+    storage: null
+  });
+
+  repository.setActiveWorkspace('workspace_shared');
+  await repository.loadWorkspace();
+
+  assert.equal(fetchDouble.calls[0].url, '/api/workspace?workspaceId=workspace_shared');
+  assert.equal(repository.activeWorkspaceId, 'workspace_shared');
+  assert.equal(repository.isHomeWorkspace, false);
+});
+
+test('HttpWorkspaceRepository sends commands against the selected active workspace id', async () => {
+  const sharedWorkspace = createEmptyWorkspace({
+    workspaceId: 'workspace_shared'
+  });
+  const fetchDouble = createFetchDouble([
+    createJsonResponse(createWorkspaceApiPayload(sharedWorkspace, {
+      revision: 2,
+      updatedAt: '2026-04-03T16:30:00.000Z',
+      lastChangedBy: 'sub_123',
+      isPristine: false,
+      workspaceId: 'workspace_shared',
+      isHomeWorkspace: false
+    }, {
+      clientMutationId: 'm2',
+      type: 'board.invite.accept',
+      noOp: false
+    }))
+  ]);
+  const repository = new HttpWorkspaceRepository({
+    fetchImpl: fetchDouble.fetch,
+    viewerSub: 'sub_123',
+    storage: null
+  });
+
+  repository.setActiveWorkspace('workspace_shared');
+  await repository.applyCommand({
+    clientMutationId: 'm2',
+    type: 'board.invite.accept',
+    payload: {
+      boardId: 'main',
+      inviteId: 'invite_1'
+    }
+  });
+
+  assert.deepEqual(JSON.parse(fetchDouble.calls[0].options.body), {
+    command: {
+      clientMutationId: 'm2',
+      type: 'board.invite.accept',
+      payload: {
+        boardId: 'main',
+        inviteId: 'invite_1'
+      }
+    },
+    workspaceId: 'workspace_shared',
+    expectedRevision: 0
+  });
+});
+
+test('HttpWorkspaceRepository can land the client in a shared workspace after invite acceptance', async () => {
+  const sharedWorkspace = createEmptyWorkspace({
+    workspaceId: 'workspace_shared'
+  });
+  const fetchDouble = createFetchDouble([
+    createJsonResponse(createWorkspaceApiPayload(sharedWorkspace, {
+      revision: 3,
+      updatedAt: '2026-04-03T17:00:00.000Z',
+      lastChangedBy: 'sub_123',
+      isPristine: false,
+      workspaceId: 'workspace_shared',
+      isHomeWorkspace: false
+    }, {
+      clientMutationId: 'm3',
+      type: 'board.invite.accept',
+      noOp: false
+    })),
+    createJsonResponse(createWorkspaceApiPayload(sharedWorkspace, {
+      revision: 4,
+      updatedAt: '2026-04-03T17:05:00.000Z',
+      lastChangedBy: 'sub_123',
+      isPristine: false,
+      workspaceId: 'workspace_shared',
+      isHomeWorkspace: false
+    }))
+  ]);
+  const repository = new HttpWorkspaceRepository({
+    fetchImpl: fetchDouble.fetch,
+    viewerSub: 'sub_123',
+    storage: null
+  });
+
+  await repository.applyCommand({
+    clientMutationId: 'm3',
+    type: 'board.invite.accept',
+    payload: {
+      boardId: 'main',
+      inviteId: 'invite_1'
+    }
+  });
+  const sharedLoad = await repository.loadWorkspace();
+
+  assert.equal(repository.activeWorkspaceId, 'workspace_shared');
+  assert.equal(fetchDouble.calls[1].url, '/api/workspace?workspaceId=workspace_shared');
+  assert.deepEqual(sharedLoad, migrateWorkspaceSnapshot(sharedWorkspace));
+});
+
 test('HttpWorkspaceRepository surfaces revision conflicts with a friendly error', async () => {
   const workspace = createEmptyWorkspace();
   const fetchDouble = createFetchDouble([
