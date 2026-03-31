@@ -1,5 +1,10 @@
 import { assertValidWorkspaceCommand } from '../../public/js/domain/workspace_commands.js';
 import {
+  assertBoardSchemaCompatibleWithBoard,
+  normalizeBoardSchemaInput,
+  serializeBoardSchemaInput
+} from '../../public/js/domain/board_schema.js';
+import {
   createCardContentProvenance,
   getCardContentVariant,
   projectWorkspaceWithLegacyCardContent,
@@ -87,6 +92,8 @@ function applyCommandToWorkspace({ workspace, command, context }) {
   switch (command.type) {
     case 'board.create':
       return applyBoardCreate(workspace, command, context);
+    case 'board.update':
+      return applyBoardUpdate(workspace, command, context);
     case 'board.rename':
       return applyBoardRename(workspace, command, context);
     case 'board.delete':
@@ -119,12 +126,69 @@ function applyBoardCreate(workspace, command, context) {
     createdAt: context.now,
     updatedAt: context.now
   });
+  const normalizedSchema = hasBoardSchemaPayload(command.payload)
+    ? normalizeBoardSchemaInput({
+        languagePolicy: command.payload.languagePolicy,
+        stageDefinitions: command.payload.stageDefinitions,
+        templates: command.payload.templates
+      })
+    : null;
+
+  if (normalizedSchema) {
+    applyNormalizedSchemaToBoard(board, normalizedSchema);
+  }
 
   nextWorkspace.boards[board.id] = board;
   nextWorkspace.boardOrder = [...nextWorkspace.boardOrder, board.id];
   nextWorkspace.ui.activeBoardId = board.id;
   ensureCollapsedColumnsByBoard(nextWorkspace);
-  nextWorkspace.ui.collapsedColumnsByBoard[board.id] = createCollapsedColumns(board.stageOrder);
+  nextWorkspace.ui.collapsedColumnsByBoard[board.id] = createCollapsedColumns(
+    normalizedSchema?.stageOrder ?? board.stageOrder
+  );
+
+  return {
+    workspace: nextWorkspace,
+    result: createCommandResult(command, {
+      boardId: board.id
+    })
+  };
+}
+
+function applyBoardUpdate(workspace, command, context) {
+  const normalizedTitle = normalizeBoardTitle(command.payload.title);
+  const currentBoard = getBoard(workspace, command.payload.boardId);
+  const normalizedSchema = normalizeBoardSchemaInput({
+    languagePolicy: command.payload.languagePolicy,
+    stageDefinitions: command.payload.stageDefinitions,
+    templates: command.payload.templates
+  });
+
+  assertBoardSchemaCompatibleWithBoard(currentBoard, normalizedSchema);
+
+  if (
+    currentBoard.title === normalizedTitle &&
+    JSON.stringify(serializeBoardSchemaInput(currentBoard)) ===
+      JSON.stringify({
+        languagePolicy: normalizedSchema.languagePolicy,
+        stageDefinitions: normalizedSchema.stageDefinitions,
+        templates: normalizedSchema.templates
+      })
+  ) {
+    return {
+      workspace,
+      result: createCommandResult(command, {
+        noOp: true,
+        boardId: currentBoard.id
+      })
+    };
+  }
+
+  const nextWorkspace = cloneWorkspace(workspace);
+  const board = getBoard(nextWorkspace, command.payload.boardId);
+  board.title = normalizedTitle;
+  applyNormalizedSchemaToBoard(board, normalizedSchema, { preserveCardIdsFrom: currentBoard });
+  board.updatedAt = context.now;
+  syncCollapsedColumnsForBoard(nextWorkspace, board.id, normalizedSchema.stageOrder);
 
   return {
     workspace: nextWorkspace,
@@ -464,6 +528,23 @@ function applySetColumnCollapsed(workspace, command) {
   };
 }
 
+function applyNormalizedSchemaToBoard(board, normalizedSchema, { preserveCardIdsFrom = null } = {}) {
+  board.stageOrder = [...normalizedSchema.stageOrder];
+  board.stages = Object.fromEntries(
+    normalizedSchema.stageOrder.map((stageId) => [
+      stageId,
+      {
+        ...structuredClone(normalizedSchema.stages[stageId]),
+        cardIds: preserveCardIdsFrom?.stages?.[stageId]?.cardIds
+          ? [...preserveCardIdsFrom.stages[stageId].cardIds]
+          : []
+      }
+    ])
+  );
+  board.templates = structuredClone(normalizedSchema.templatesByGroup);
+  board.languagePolicy = structuredClone(normalizedSchema.languagePolicy);
+}
+
 function createCommandResult(command, data = {}) {
   return {
     clientMutationId: command.clientMutationId,
@@ -489,8 +570,33 @@ function ensureCollapsedColumnsByBoard(workspace) {
   }
 }
 
+function syncCollapsedColumnsForBoard(workspace, boardId, stageOrder) {
+  ensureCollapsedColumnsByBoard(workspace);
+  const currentState = workspace.ui.collapsedColumnsByBoard[boardId] ?? {};
+  const nextState = createCollapsedColumns(stageOrder);
+
+  for (const stageId of stageOrder) {
+    if (Object.prototype.hasOwnProperty.call(currentState, stageId)) {
+      nextState[stageId] = Boolean(currentState[stageId]);
+    }
+  }
+
+  workspace.ui.collapsedColumnsByBoard[boardId] = nextState;
+}
+
 function hasOwn(value, key) {
   return Boolean(value && Object.prototype.hasOwnProperty.call(value, key));
+}
+
+function hasBoardSchemaPayload(payload) {
+  return Boolean(
+    payload &&
+      (
+        hasOwn(payload, 'languagePolicy') ||
+        hasOwn(payload, 'stageDefinitions') ||
+        hasOwn(payload, 'templates')
+      )
+  );
 }
 
 function createClearedStages(board) {

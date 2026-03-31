@@ -12,6 +12,7 @@ import {
 
 test('isWorkspaceCommandType accepts known command types and rejects unknown ones', () => {
   assert.equal(isWorkspaceCommandType('board.create'), true);
+  assert.equal(isWorkspaceCommandType('board.update'), true);
   assert.equal(isWorkspaceCommandType('card.move'), true);
   assert.equal(isWorkspaceCommandType('board.archive'), false);
 });
@@ -25,21 +26,54 @@ test('validateWorkspaceCommand accepts valid command envelopes', () => {
     },
     {
       clientMutationId: 'm2',
+      type: 'board.update',
+      payload: {
+        boardId: 'main',
+        title: 'Now',
+        languagePolicy: {
+          sourceLocale: 'en',
+          defaultLocale: 'ja',
+          supportedLocales: ['en', 'ja'],
+          requiredLocales: ['en']
+        },
+        stageDefinitions: [
+          {
+            id: 'backlog',
+            title: 'Backlog',
+            allowedTransitionStageIds: ['review']
+          },
+          {
+            id: 'review',
+            title: 'Review',
+            allowedTransitionStageIds: ['backlog']
+          }
+        ],
+        templates: [
+          {
+            id: 'starter',
+            title: 'Starter',
+            initialStageId: 'backlog'
+          }
+        ]
+      }
+    },
+    {
+      clientMutationId: 'm3',
       type: 'board.rename',
       payload: { boardId: 'main', title: 'Now' }
     },
     {
-      clientMutationId: 'm3',
+      clientMutationId: 'm4',
       type: 'board.delete',
       payload: { boardId: 'main' }
     },
     {
-      clientMutationId: 'm4',
+      clientMutationId: 'm5',
       type: 'board.reset',
       payload: { boardId: 'main' }
     },
     {
-      clientMutationId: 'm5',
+      clientMutationId: 'm6',
       type: 'card.create',
       payload: {
         boardId: 'main',
@@ -49,7 +83,7 @@ test('validateWorkspaceCommand accepts valid command envelopes', () => {
       }
     },
     {
-      clientMutationId: 'm6',
+      clientMutationId: 'm7',
       type: 'card.update',
       payload: {
         boardId: 'main',
@@ -58,12 +92,12 @@ test('validateWorkspaceCommand accepts valid command envelopes', () => {
       }
     },
     {
-      clientMutationId: 'm7',
+      clientMutationId: 'm8',
       type: 'card.delete',
       payload: { boardId: 'main', cardId: 'card_1' }
     },
     {
-      clientMutationId: 'm8',
+      clientMutationId: 'm9',
       type: 'card.move',
       payload: {
         boardId: 'main',
@@ -73,12 +107,12 @@ test('validateWorkspaceCommand accepts valid command envelopes', () => {
       }
     },
     {
-      clientMutationId: 'm9',
+      clientMutationId: 'm10',
       type: 'ui.activeBoard.set',
       payload: { boardId: 'main' }
     },
     {
-      clientMutationId: 'm10',
+      clientMutationId: 'm11',
       type: 'ui.columnCollapsed.set',
       payload: {
         boardId: 'main',
@@ -163,10 +197,16 @@ test('validateWorkspaceCommand rejects invalid payloads', () => {
   assert.equal(
     validateWorkspaceCommand({
       clientMutationId: 'm4',
-      type: 'card.update',
+      type: 'board.update',
       payload: {
         boardId: 'main',
-        cardId: 'card_1'
+        title: 'Bad schema',
+        languagePolicy: {
+          sourceLocale: 'en',
+          defaultLocale: 'fr'
+        },
+        stageDefinitions: [],
+        templates: []
       }
     }),
     false

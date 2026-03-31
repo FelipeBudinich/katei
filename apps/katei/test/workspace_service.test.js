@@ -36,6 +36,70 @@ test('WorkspaceService renameBoard calls repository.applyCommand and returns wor
   });
 });
 
+test('WorkspaceService updateBoard calls repository.applyCommand and returns workspace', async () => {
+  await assertServiceCommand({
+    action: (service) =>
+      service.updateBoard('main', {
+        title: 'Updated title',
+        languagePolicy: {
+          sourceLocale: 'en',
+          defaultLocale: 'ja',
+          supportedLocales: ['en', 'ja'],
+          requiredLocales: ['en']
+        },
+        stageDefinitions: [
+          {
+            id: 'backlog',
+            title: 'Backlog',
+            allowedTransitionStageIds: ['review']
+          },
+          {
+            id: 'review',
+            title: 'Review',
+            allowedTransitionStageIds: ['backlog']
+          }
+        ],
+        templates: [
+          {
+            id: 'starter',
+            title: 'Starter',
+            initialStageId: 'backlog'
+          }
+        ]
+      }),
+    expectedType: 'board.update',
+    expectedPayload: {
+      boardId: 'main',
+      title: 'Updated title',
+      languagePolicy: {
+        sourceLocale: 'en',
+        defaultLocale: 'ja',
+        supportedLocales: ['en', 'ja'],
+        requiredLocales: ['en']
+      },
+      stageDefinitions: [
+        {
+          id: 'backlog',
+          title: 'Backlog',
+          allowedTransitionStageIds: ['review']
+        },
+        {
+          id: 'review',
+          title: 'Review',
+          allowedTransitionStageIds: ['backlog']
+        }
+      ],
+      templates: [
+        {
+          id: 'starter',
+          title: 'Starter',
+          initialStageId: 'backlog'
+        }
+      ]
+    }
+  });
+});
+
 test('WorkspaceService deleteBoard calls repository.applyCommand and returns workspace', async () => {
   await assertServiceCommand({
     action: (service) => service.deleteBoard('main'),

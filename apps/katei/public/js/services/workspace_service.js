@@ -9,7 +9,8 @@ export class WorkspaceService {
 
   async createBoard(input) {
     return this.#applyCommand('board.create', {
-      title: input?.title
+      title: input?.title,
+      ...buildBoardSchemaPayload(input)
     });
   }
 
@@ -17,6 +18,14 @@ export class WorkspaceService {
     return this.#applyCommand('board.rename', {
       boardId,
       title
+    });
+  }
+
+  async updateBoard(boardId, input) {
+    return this.#applyCommand('board.update', {
+      boardId,
+      title: input?.title,
+      ...buildBoardSchemaPayload(input)
     });
   }
 
@@ -97,4 +106,22 @@ function createClientMutationId() {
       : `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
 
   return `cmd_${randomId}`;
+}
+
+function buildBoardSchemaPayload(input) {
+  const payload = {};
+
+  if (input?.languagePolicy !== undefined) {
+    payload.languagePolicy = input.languagePolicy;
+  }
+
+  if (input?.stageDefinitions !== undefined) {
+    payload.stageDefinitions = input.stageDefinitions;
+  }
+
+  if (input?.templates !== undefined) {
+    payload.templates = input.templates;
+  }
+
+  return payload;
 }

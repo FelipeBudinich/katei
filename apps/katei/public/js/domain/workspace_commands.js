@@ -1,8 +1,10 @@
+import { normalizeBoardSchemaInput } from './board_schema.js';
 import { PRIORITY_ORDER } from './workspace_read_model.js';
 import { validateWorkspaceShape } from './workspace_validation.js';
 
 export const WORKSPACE_COMMAND_TYPES = Object.freeze([
   'board.create',
+  'board.update',
   'board.rename',
   'board.delete',
   'board.reset',
@@ -77,7 +79,9 @@ function validateWorkspaceCommandInternal(command) {
 function validatePayload(type, payload) {
   switch (type) {
     case 'board.create':
-      return requireNonEmptyString(payload.title, 'board.create payload.title is required.');
+      return validateBoardCreatePayload(payload);
+    case 'board.update':
+      return validateBoardUpdatePayload(payload);
     case 'board.rename':
       return validateBoardScopedTitlePayload(type, payload);
     case 'board.delete':
@@ -99,6 +103,32 @@ function validatePayload(type, payload) {
   }
 }
 
+function validateBoardCreatePayload(payload) {
+  const titleValidation = requireNonEmptyString(payload.title, 'board.create payload.title is required.');
+
+  if (!titleValidation.isValid) {
+    return titleValidation;
+  }
+
+  return validateOptionalBoardSchemaPayload(payload, 'board.create');
+}
+
+function validateBoardUpdatePayload(payload) {
+  const boardIdValidation = requireBoardId(payload, 'board.update payload.boardId is required.');
+
+  if (!boardIdValidation.isValid) {
+    return boardIdValidation;
+  }
+
+  const titleValidation = requireNonEmptyString(payload.title, 'board.update payload.title is required.');
+
+  if (!titleValidation.isValid) {
+    return titleValidation;
+  }
+
+  return validateRequiredBoardSchemaPayload(payload, 'board.update');
+}
+
 function validateBoardScopedTitlePayload(type, payload) {
   const boardIdValidation = requireBoardId(payload, `${type} payload.boardId is required.`);
 
@@ -107,6 +137,35 @@ function validateBoardScopedTitlePayload(type, payload) {
   }
 
   return requireNonEmptyString(payload.title, `${type} payload.title is required.`);
+}
+
+function validateOptionalBoardSchemaPayload(payload, type) {
+  if (!hasBoardSchemaFields(payload)) {
+    return valid();
+  }
+
+  return validateBoardSchemaPayload(payload, type);
+}
+
+function validateRequiredBoardSchemaPayload(payload, type) {
+  if (!hasBoardSchemaFields(payload)) {
+    return invalid(`${type} payload must include board schema fields.`);
+  }
+
+  return validateBoardSchemaPayload(payload, type);
+}
+
+function validateBoardSchemaPayload(payload, type) {
+  try {
+    normalizeBoardSchemaInput({
+      languagePolicy: payload.languagePolicy,
+      stageDefinitions: payload.stageDefinitions,
+      templates: payload.templates
+    });
+    return valid();
+  } catch (error) {
+    return invalid(error?.message || `${type} payload schema is invalid.`);
+  }
 }
 
 function validateCardCreatePayload(payload) {
@@ -268,6 +327,17 @@ function validateWorkspaceCommandResponseInternal(response) {
 
 function requireBoardId(payload, errorMessage) {
   return requireNonEmptyString(payload?.boardId, errorMessage);
+}
+
+function hasBoardSchemaFields(payload) {
+  return Boolean(
+    payload &&
+      (
+        Object.prototype.hasOwnProperty.call(payload, 'languagePolicy') ||
+        Object.prototype.hasOwnProperty.call(payload, 'stageDefinitions') ||
+        Object.prototype.hasOwnProperty.call(payload, 'templates')
+      )
+  );
 }
 
 function requireColumnId(value, requiredErrorMessage) {

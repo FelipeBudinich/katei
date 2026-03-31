@@ -56,6 +56,68 @@ test('board.create mints a server-side board id and timestamps from context', ()
   assert.equal(activityEvent.revision, 1);
 });
 
+test('board.update saves valid schema edits through the command engine', () => {
+  const workspace = createEmptyWorkspace();
+
+  const { workspace: nextWorkspace, result } = applyWorkspaceCommand({
+    record: createRecord(workspace, 0),
+    command: {
+      clientMutationId: 'm1b',
+      type: 'board.update',
+      payload: {
+        boardId: 'main',
+        title: 'Editorial board',
+        languagePolicy: {
+          sourceLocale: 'en',
+          defaultLocale: 'ja',
+          supportedLocales: ['en', 'ja'],
+          requiredLocales: ['en']
+        },
+        stageDefinitions: [
+          {
+            id: 'backlog',
+            title: 'Inbox',
+            allowedTransitionStageIds: ['review']
+          },
+          {
+            id: 'review',
+            title: 'Review',
+            allowedTransitionStageIds: ['backlog']
+          }
+        ],
+        templates: [
+          {
+            id: 'starter',
+            title: 'Starter',
+            initialStageId: 'backlog'
+          }
+        ]
+      }
+    },
+    expectedRevision: 0,
+    context: createContext()
+  });
+
+  assert.equal(result.type, 'board.update');
+  assert.equal(nextWorkspace.boards.main.title, 'Editorial board');
+  assert.deepEqual(nextWorkspace.boards.main.stageOrder, ['backlog', 'review']);
+  assert.equal(nextWorkspace.boards.main.stages.backlog.title, 'Inbox');
+  assert.deepEqual(nextWorkspace.boards.main.stages.backlog.templateIds, ['starter']);
+  assert.deepEqual(nextWorkspace.boards.main.templates.default, [
+    {
+      id: 'starter',
+      title: 'Starter',
+      initialStageId: 'backlog'
+    }
+  ]);
+  assert.deepEqual(nextWorkspace.boards.main.languagePolicy, {
+    sourceLocale: 'en',
+    defaultLocale: 'ja',
+    supportedLocales: ['en', 'ja'],
+    requiredLocales: ['en']
+  });
+});
+
 test('card.create mints a server-side card id and stores the card in backlog', () => {
   const { workspace, result } = applyWorkspaceCommand({
     record: createRecord(),

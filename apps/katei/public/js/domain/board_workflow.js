@@ -25,6 +25,8 @@ const DEFAULT_BOARD_STAGES = Object.freeze([
   })
 ]);
 
+export const BOARD_STAGE_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
 export function createDefaultBoardStages() {
   return DEFAULT_BOARD_STAGES.map(({ id, title, allowedTransitionStageIds, templateIds }) => ({
     id,
@@ -41,6 +43,10 @@ export function createDefaultBoardTemplates() {
   };
 }
 
+export function isValidBoardStageId(value) {
+  return typeof value === 'string' && BOARD_STAGE_ID_PATTERN.test(value.trim());
+}
+
 export function validateBoardStages(board) {
   if (!isPlainObject(board) || !Array.isArray(board.stageOrder) || !isPlainObject(board.stages)) {
     return false;
@@ -53,7 +59,7 @@ export function validateBoardStages(board) {
   const validStageIds = new Set();
 
   for (const stageId of board.stageOrder) {
-    if (!isNonEmptyString(stageId) || validStageIds.has(stageId)) {
+    if (!isValidBoardStageId(stageId) || validStageIds.has(stageId)) {
       return false;
     }
 

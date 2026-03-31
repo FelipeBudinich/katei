@@ -142,14 +142,14 @@ export default class extends Controller {
   }
 
   async handleBoardEditorSave(event) {
-    const { mode, boardId, title } = event.detail;
+    const { mode, boardId, input } = event.detail;
 
     if (mode === 'rename') {
-      await this.runAction(() => this.service.renameBoard(boardId, title), this.t('workspace.announcements.boardRenamed'));
+      await this.runAction(() => this.service.updateBoard(boardId, input), this.t('workspace.announcements.boardUpdated'));
       return;
     }
 
-    await this.runAction(() => this.service.createBoard({ title }), this.t('workspace.announcements.boardCreated'));
+    await this.runAction(() => this.service.createBoard(input), this.t('workspace.announcements.boardCreated'));
   }
 
   confirmDeleteBoard(event) {
