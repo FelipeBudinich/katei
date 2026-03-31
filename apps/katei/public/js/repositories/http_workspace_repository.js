@@ -9,12 +9,15 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
   constructor({
     fetchImpl = globalThis.fetch?.bind(globalThis),
     viewerSub,
+    workspaceId = null,
     storage = globalThis.localStorage,
     document = globalThis.document
   } = {}) {
     super();
     this.fetchImpl = resolveFetch(fetchImpl);
     this.viewerSub = normalizeViewerSub(viewerSub);
+    this.activeWorkspaceId = normalizeOptionalWorkspaceId(workspaceId);
+    this.isHomeWorkspace = null;
     this.storage = storage ?? null;
     this.document = document ?? null;
     this.meta = null;
@@ -26,28 +29,29 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
     let payload = this.#consumeBootstrapPayload();
 
     if (!payload) {
-      payload = await this.#requestWorkspace('/api/workspace', {
+      payload = await this.#requestWorkspace(this.#buildWorkspaceUrl('/api/workspace'), {
         method: 'GET'
       }, 'Unable to load workspace.');
     }
 
-    if (payload.meta?.isPristine) {
+    if (payload.meta?.isPristine && this.isHomeWorkspace) {
       const localWorkspace = readLocalV4Workspace(this.storage, this.viewerSub);
 
       if (localWorkspace) {
         try {
           const importedPayload = await postWorkspaceImport({
             fetchImpl: this.fetchImpl,
-            workspace: localWorkspace
+            workspace: localWorkspace,
+            workspaceId: this.activeWorkspaceId
           });
-          this.#setMeta(importedPayload.meta ?? null);
+          this.#setState(importedPayload);
         } catch (error) {
           if (error?.status !== 409) {
             throw error;
           }
         }
 
-        payload = await this.#requestWorkspace('/api/workspace', {
+        payload = await this.#requestWorkspace(this.#buildWorkspaceUrl('/api/workspace'), {
           method: 'GET'
         }, 'Unable to load workspace.');
       }
@@ -69,6 +73,7 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
         method: 'PUT',
         body: JSON.stringify({
           workspace: normalizedWorkspace,
+          workspaceId: this.activeWorkspaceId ?? normalizedWorkspace.workspaceId,
           expectedRevision: this.revision ?? 0
         })
       },
@@ -85,6 +90,7 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
         method: 'POST',
         body: JSON.stringify({
           command,
+          workspaceId: this.activeWorkspaceId,
           expectedRevision: this.revision ?? 0
         })
       },
@@ -121,7 +127,7 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
         }
       : { workspace };
 
-    this.#setMeta(payload.meta ?? null);
+    this.#setState(payload);
     return payload;
   }
 
@@ -157,16 +163,33 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
           }
         : { workspace };
 
-      this.#setMeta(nextPayload.meta ?? null);
+      this.#setState(nextPayload);
       return nextPayload;
     } catch (error) {
       return null;
     }
   }
 
+  #setState(payload) {
+    this.#setMeta(payload?.meta ?? null);
+    const activeWorkspace = normalizeActiveWorkspace(payload?.activeWorkspace, payload?.workspace);
+
+    this.activeWorkspaceId = activeWorkspace?.workspaceId ?? this.activeWorkspaceId ?? null;
+    this.isHomeWorkspace =
+      typeof activeWorkspace?.isHomeWorkspace === 'boolean' ? activeWorkspace.isHomeWorkspace : this.isHomeWorkspace;
+  }
+
   #setMeta(meta) {
     this.meta = meta ?? null;
     this.revision = Number.isInteger(meta?.revision) ? meta.revision : null;
+  }
+
+  #buildWorkspaceUrl(pathname) {
+    if (!this.activeWorkspaceId) {
+      return pathname;
+    }
+
+    return `${pathname}?workspaceId=${encodeURIComponent(this.activeWorkspaceId)}`;
   }
 }
 
@@ -176,6 +199,10 @@ function normalizeViewerSub(viewerSub) {
   }
 
   return viewerSub.trim();
+}
+
+function normalizeOptionalWorkspaceId(workspaceId) {
+  return typeof workspaceId === 'string' && workspaceId.trim() ? workspaceId.trim() : null;
 }
 
 function resolveFetch(fetchImpl) {
@@ -208,4 +235,19 @@ function isPlainObject(value) {
 
 function normalizeWorkspaceSnapshot(workspace) {
   return migrateWorkspaceSnapshot(workspace);
+}
+
+function normalizeActiveWorkspace(activeWorkspace, workspace) {
+  const workspaceId =
+    normalizeOptionalWorkspaceId(activeWorkspace?.workspaceId) ??
+    normalizeOptionalWorkspaceId(workspace?.workspaceId);
+
+  if (!workspaceId) {
+    return null;
+  }
+
+  return {
+    workspaceId,
+    isHomeWorkspace: typeof activeWorkspace?.isHomeWorkspace === 'boolean' ? activeWorkspace.isHomeWorkspace : false
+  };
 }

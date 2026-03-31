@@ -5,7 +5,6 @@ import { validateCardContentByLocale } from './card_localization.js';
 import {
   COLUMN_ORDER,
   PRIORITY_ORDER,
-  WORKSPACE_ID,
   WORKSPACE_VERSION
 } from './workspace_read_model.js';
 
@@ -14,7 +13,7 @@ export function validateWorkspaceShape(value) {
     return false;
   }
 
-  if (value.version !== WORKSPACE_VERSION || value.workspaceId !== WORKSPACE_ID) {
+  if (value.version !== WORKSPACE_VERSION || !isValidWorkspaceId(value.workspaceId)) {
     return false;
   }
 
@@ -203,4 +202,8 @@ function isValidCollapsedColumns(value, board) {
   }
 
   return true;
+}
+
+function isValidWorkspaceId(workspaceId) {
+  return typeof workspaceId === 'string' && workspaceId.trim().length > 0;
 }

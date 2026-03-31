@@ -12,11 +12,13 @@ import {
 } from '../src/workspaces/mongo_workspace_record_repository.js';
 import {
   WORKSPACE_RECORD_COLLECTION_NAME,
+  createHomeWorkspaceId,
   createInitialWorkspaceRecord,
   createUpdatedWorkspaceRecord,
   toWorkspaceRecordDocument
 } from '../src/workspaces/workspace_record.js';
 import {
+  WorkspaceAccessDeniedError,
   WorkspaceImportConflictError,
   WorkspaceRevisionConflictError
 } from '../src/workspaces/workspace_record_repository.js';
@@ -28,20 +30,25 @@ test('loadOrCreateWorkspaceRecord creates an empty record on first access', asyn
     now: () => '2026-04-01T10:00:00.000Z'
   });
 
-  const record = await repository.loadOrCreateWorkspaceRecord(' sub_123 ');
+  const record = await repository.loadOrCreateWorkspaceRecord({ viewerSub: ' sub_123 ' });
 
   assert.equal(record.viewerSub, 'sub_123');
+  assert.equal(record.workspaceId, createHomeWorkspaceId('sub_123'));
+  assert.equal(record.isHomeWorkspace, true);
   assert.equal(record.revision, 0);
   assert.equal(record.createdAt, '2026-04-01T10:00:00.000Z');
   assert.equal(record.updatedAt, '2026-04-01T10:00:00.000Z');
   assert.equal(record.lastChangedBy, null);
   assert.deepEqual(record.activityEvents, []);
   assert.equal(validateWorkspaceShape(record.workspace), true);
+  assert.equal(record.workspace.workspaceId, createHomeWorkspaceId('sub_123'));
   assert.equal(collection.size(), 1);
 
-  const storedDocument = collection.getDocument('sub_123');
-  assert.equal(storedDocument._id, 'sub_123');
+  const storedDocument = collection.getDocument(createHomeWorkspaceId('sub_123'));
+  assert.equal(storedDocument._id, createHomeWorkspaceId('sub_123'));
   assert.equal(storedDocument.viewerSub, 'sub_123');
+  assert.equal(storedDocument.workspaceId, createHomeWorkspaceId('sub_123'));
+  assert.equal(storedDocument.isHomeWorkspace, true);
 });
 
 test('loadOrCreateWorkspaceRecord normalizes existing legacy-shaped workspace documents', async () => {
@@ -65,13 +72,69 @@ test('loadOrCreateWorkspaceRecord normalizes existing legacy-shaped workspace do
   ]);
   const repository = new MongoWorkspaceRecordRepository({ collection });
 
-  const record = await repository.loadOrCreateWorkspaceRecord('sub_123');
+  const record = await repository.loadOrCreateWorkspaceRecord({ viewerSub: 'sub_123' });
 
   assert.equal(validateWorkspaceShape(record.workspace), true);
+  assert.equal(record.workspaceId, 'sub_123');
+  assert.equal(record.isHomeWorkspace, true);
   assert.equal(record.workspace.boards.main.columnOrder, undefined);
   assert.equal(record.workspace.boards.main.columns, undefined);
   assert.equal(record.workspace.boards.main.cards.card_legacy_1.title, undefined);
   assert.equal(record.workspace.boards.main.cards.card_legacy_1.contentByLocale.en.title, 'Legacy persisted task');
+});
+
+test('loadOrCreateWorkspaceRecord resolves accessible shared workspaces by workspaceId', async () => {
+  const sharedWorkspace = createEmptyWorkspace({ workspaceId: 'workspace_shared_1' });
+  sharedWorkspace.boards.main.memberships = [
+    {
+      actor: { type: 'human', id: 'sub_collab' },
+      role: 'editor'
+    }
+  ];
+  const sharedRecord = createUpdatedWorkspaceRecord(
+    createInitialWorkspaceRecord('sub_owner', {
+      workspaceId: 'workspace_shared_1',
+      now: '2026-04-01T10:00:00.000Z'
+    }),
+    {
+      workspace: sharedWorkspace,
+      actor: { type: 'human', id: 'sub_owner' },
+      now: '2026-04-01T11:15:00.000Z'
+    }
+  );
+  sharedRecord.isHomeWorkspace = false;
+  const collection = createWorkspaceRecordCollectionDouble([toWorkspaceRecordDocument(sharedRecord)]);
+  const repository = new MongoWorkspaceRecordRepository({ collection });
+
+  const record = await repository.loadOrCreateWorkspaceRecord({
+    viewerSub: 'sub_collab',
+    workspaceId: 'workspace_shared_1'
+  });
+
+  assert.equal(record.workspaceId, 'workspace_shared_1');
+  assert.equal(record.viewerSub, 'sub_owner');
+  assert.equal(record.isHomeWorkspace, false);
+  assert.equal(record.workspace.boards.main.memberships[0].actor.id, 'sub_collab');
+});
+
+test('loadOrCreateWorkspaceRecord rejects inaccessible shared workspaces by workspaceId', async () => {
+  const sharedWorkspace = createEmptyWorkspace({ workspaceId: 'workspace_shared_2' });
+  const sharedRecord = createInitialWorkspaceRecord('sub_owner', {
+    workspaceId: 'workspace_shared_2',
+    now: '2026-04-01T10:00:00.000Z'
+  });
+  sharedRecord.isHomeWorkspace = false;
+  sharedRecord.workspace = sharedWorkspace;
+  const collection = createWorkspaceRecordCollectionDouble([toWorkspaceRecordDocument(sharedRecord)]);
+  const repository = new MongoWorkspaceRecordRepository({ collection });
+
+  await assert.rejects(
+    repository.loadOrCreateWorkspaceRecord({
+      viewerSub: 'sub_blocked',
+      workspaceId: 'workspace_shared_2'
+    }),
+    WorkspaceAccessDeniedError
+  );
 });
 
 test('replaceWorkspaceSnapshot stores a validated full-workspace snapshot with metadata', async () => {
@@ -97,6 +160,8 @@ test('replaceWorkspaceSnapshot stores a validated full-workspace snapshot with m
   });
 
   assert.equal(record.viewerSub, 'sub_123');
+  assert.equal(record.workspaceId, createHomeWorkspaceId('sub_123'));
+  assert.equal(record.isHomeWorkspace, true);
   assert.equal(record.revision, 1);
   assert.equal(record.createdAt, '2026-04-01T10:00:00.000Z');
   assert.equal(record.updatedAt, '2026-04-01T11:15:00.000Z');
@@ -119,8 +184,9 @@ test('replaceWorkspaceSnapshot stores a validated full-workspace snapshot with m
     record.workspace.boards.main.cards[Object.keys(record.workspace.boards.main.cards)[0]].contentByLocale.en.title,
     'Ship launch checklist'
   );
+  assert.equal(record.workspace.workspaceId, createHomeWorkspaceId('sub_123'));
 
-  const storedDocument = collection.getDocument('sub_123');
+  const storedDocument = collection.getDocument(createHomeWorkspaceId('sub_123'));
   assert.equal(storedDocument.revision, 1);
   assert.equal(storedDocument.lastChangedBy, 'sub_123');
   assert.equal(storedDocument.activityEvents[0].type, 'workspace.saved');
@@ -161,10 +227,7 @@ test('replaceWorkspaceSnapshot rejects stale expectedRevision values', async () 
 test('replaceWorkspaceSnapshot rejects invalid workspaces before saving', async () => {
   const collection = createWorkspaceRecordCollectionDouble();
   const repository = new MongoWorkspaceRecordRepository({ collection });
-  const invalidWorkspace = {
-    ...createEmptyWorkspace(),
-    workspaceId: 'broken'
-  };
+  const invalidWorkspace = { version: -1 };
 
   await assert.rejects(
     repository.replaceWorkspaceSnapshot({
@@ -179,7 +242,7 @@ test('replaceWorkspaceSnapshot rejects invalid workspaces before saving', async 
   );
 
   assert.equal(collection.size(), 0);
-  assert.equal(collection.getDocument('sub_123'), null);
+  assert.equal(collection.getDocument(createHomeWorkspaceId('sub_123')), null);
 });
 
 test('importWorkspaceSnapshot stores a validated full-workspace snapshot only when the server record is pristine', async () => {
@@ -203,6 +266,8 @@ test('importWorkspaceSnapshot stores a validated full-workspace snapshot only wh
     actor: { type: 'human', id: 'sub_123' }
   });
 
+  assert.equal(record.workspaceId, createHomeWorkspaceId('sub_123'));
+  assert.equal(record.isHomeWorkspace, true);
   assert.equal(record.revision, 1);
   assert.equal(record.updatedAt, '2026-04-01T11:15:00.000Z');
   assert.equal(record.lastChangedBy, 'sub_123');
@@ -252,7 +317,7 @@ test('importWorkspaceSnapshot rejects imports once the server record is no longe
     WorkspaceImportConflictError
   );
 
-  assert.equal(collection.getDocument('sub_123').revision, 1);
+  assert.equal(collection.getDocument(createHomeWorkspaceId('sub_123')).revision, 1);
 });
 
 test('getWorkspaceRecordCollection can resolve the dedicated collection from an injected db handle', () => {
@@ -284,8 +349,13 @@ function createWorkspaceRecordCollectionDouble(initialDocuments = []) {
     },
 
     async findOne(filter) {
-      const document = documents.get(filter._id);
-      return document ? structuredClone(document) : null;
+      for (const document of documents.values()) {
+        if (matchesDocumentFilter(document, filter)) {
+          return structuredClone(document);
+        }
+      }
+
+      return null;
     },
 
     async replaceOne(filter, replacement, options = {}) {
@@ -314,6 +384,10 @@ function createWorkspaceRecordCollectionDouble(initialDocuments = []) {
       return documents.size;
     }
   };
+}
+
+function matchesDocumentFilter(document, filter = {}) {
+  return Object.entries(filter).every(([key, value]) => document?.[key] === value);
 }
 
 function createLegacyWorkspaceSnapshot({

@@ -17,13 +17,16 @@ import { KATEI_UI_LOCALE_COOKIE_NAME } from '../src/i18n/request_ui_locale.js';
 import { createTranslator } from '../public/js/i18n/translate.js';
 import { buildWorkspacePageModel } from '../src/routes/boards.js';
 import {
+  createHomeWorkspaceId,
   createInitialWorkspaceRecord,
   createUpdatedWorkspaceRecord
 } from '../src/workspaces/workspace_record.js';
 import {
+  WorkspaceAccessDeniedError,
   WorkspaceImportConflictError,
   WorkspaceRevisionConflictError
 } from '../src/workspaces/workspace_record_repository.js';
+import { canViewerAccessWorkspace } from '../src/workspaces/workspace_access.js';
 
 const WORKSPACE_VENDOR_ASSET_PATHS = [
   '/vendor/easymde/easymde.min.css',
@@ -171,7 +174,6 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
     priority: 'urgent'
   });
   workspace.boards.main.title = 'Roadmap alpha';
-  const normalizedWorkspace = migrateWorkspaceSnapshot(workspace);
   const record = createUpdatedWorkspaceRecord(
     createInitialWorkspaceRecord('sub_123', {
       now: '2026-04-02T10:00:00.000Z'
@@ -182,6 +184,7 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
       now: '2026-04-02T11:00:00.000Z'
     }
   );
+  const normalizedWorkspace = structuredClone(record.workspace);
   const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([record]);
   const app = createTestApp({
     googleTokenVerifier: async () => ({ sub: 'sub_123' }),
@@ -207,11 +210,17 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
   assert.doesNotMatch(response.text, /<\/script><img src=x onerror=1>/);
   assert.deepEqual(bootstrapPayload, {
     workspace: normalizedWorkspace,
+    activeWorkspace: {
+      workspaceId: record.workspaceId,
+      isHomeWorkspace: true
+    },
     meta: {
       revision: 1,
       updatedAt: '2026-04-02T11:00:00.000Z',
       lastChangedBy: 'sub_123',
-      isPristine: false
+      isPristine: false,
+      workspaceId: record.workspaceId,
+      isHomeWorkspace: true
     }
   });
   assert.equal(bootstrapPayload.workspace.boards.main.title, 'Roadmap alpha');
@@ -220,7 +229,13 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
       .en.title,
     'Ship launch checklist'
   );
-  assert.deepEqual(workspaceRecordRepository.loadCalls, ['sub_123']);
+  assert.deepEqual(workspaceRecordRepository.loadCalls, [
+    {
+      viewerSub: 'sub_123',
+      viewerEmail: null,
+      workspaceId: null
+    }
+  ]);
 
   for (const assetPath of WORKSPACE_VENDOR_ASSET_PATHS) {
     assert.match(response.text, new RegExp(escapeForRegex(assetPath)));
@@ -265,6 +280,57 @@ test('GET /boards bootstraps normalized workspace snapshots when the loaded reco
     bootstrapPayload.workspace.boards.main.cards.card_legacy_1.contentByLocale.en.title,
     'Legacy bootstrap task'
   );
+});
+
+test('GET /boards loads an accessible shared workspace by workspaceId and rejects inaccessible ones', async () => {
+  const sharedWorkspace = createCard(createEmptyWorkspace({ workspaceId: 'workspace_shared_1' }), 'main', {
+    title: 'Shared roadmap',
+    detailsMarkdown: 'Visible to collaborators',
+    priority: 'important'
+  });
+  sharedWorkspace.boards.main.memberships = [
+    {
+      actor: { type: 'human', id: 'sub_collab' },
+      role: 'editor'
+    }
+  ];
+  const sharedRecord = createUpdatedWorkspaceRecord(
+    createInitialWorkspaceRecord('sub_owner', {
+      workspaceId: 'workspace_shared_1',
+      now: '2026-04-02T10:00:00.000Z'
+    }),
+    {
+      workspace: sharedWorkspace,
+      actor: { id: 'sub_owner' },
+      now: '2026-04-02T11:00:00.000Z'
+    }
+  );
+  sharedRecord.isHomeWorkspace = false;
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord]);
+  const app = createTestApp({
+    googleTokenVerifier: async () => ({ sub: 'sub_collab' }),
+    workspaceRecordRepository
+  });
+
+  const accessibleResponse = await request(app)
+    .get('/boards?workspaceId=workspace_shared_1')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_collab' }));
+  const accessibleBootstrap = readWorkspaceBootstrapPayload(accessibleResponse.text);
+
+  assert.equal(accessibleResponse.status, 200);
+  assert.equal(accessibleBootstrap.activeWorkspace.workspaceId, 'workspace_shared_1');
+  assert.deepEqual(workspaceRecordRepository.loadCalls[0], {
+    viewerSub: 'sub_collab',
+    viewerEmail: null,
+    workspaceId: 'workspace_shared_1'
+  });
+
+  const inaccessibleResponse = await request(app)
+    .get('/boards?workspaceId=workspace_shared_1')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_blocked' }));
+
+  assert.equal(inaccessibleResponse.status, 404);
+  assert.match(inaccessibleResponse.text, /Workspace not found\./);
 });
 
 test('GET /boards localizes server-rendered chrome for ja without changing user-authored viewer content', async () => {
@@ -318,13 +384,23 @@ test('GET /api/workspace returns the authenticated viewer workspace JSON', async
   assert.equal(response.status, 200);
   assert.equal(response.body.ok, true);
   assert.equal(validateWorkspaceShape(response.body.workspace), true);
+  assert.deepEqual(response.body.activeWorkspace, {
+    workspaceId: createHomeWorkspaceId('sub_123'),
+    isHomeWorkspace: true
+  });
   assert.deepEqual(response.body.meta, {
     revision: 0,
     updatedAt: '2026-04-02T10:00:00.000Z',
     lastChangedBy: null,
     isPristine: true
   });
-  assert.deepEqual(workspaceRecordRepository.loadCalls, ['sub_123']);
+  assert.deepEqual(workspaceRecordRepository.loadCalls, [
+    {
+      viewerSub: 'sub_123',
+      viewerEmail: null,
+      workspaceId: null
+    }
+  ]);
 });
 
 test('GET /api/workspace normalizes older persisted snapshots before returning them', async () => {
@@ -419,6 +495,8 @@ test('PUT /api/workspace saves a valid full-workspace snapshot for the authentic
   assert.deepEqual(workspaceRecordRepository.replaceCalls, [
     {
       viewerSub: 'sub_123',
+      viewerEmail: null,
+      workspaceId: null,
       workspace: normalizedWorkspace,
       expectedRevision: 0,
       actor: {
@@ -506,6 +584,48 @@ test('POST /api/workspace/commands applies a valid runtime command for the authe
   assert.equal(workspaceRecordRepository.replaceRecordCalls[0].expectedRevision, 0);
   assert.equal(workspaceRecordRepository.replaceRecordCalls[0].record.commandReceipts.length, 1);
   assert.equal(workspaceRecordRepository.replaceRecordCalls[0].record.commandReceipts[0].clientMutationId, 'm1');
+});
+
+test('POST /api/workspace/commands routes mutations by workspaceId for accessible shared workspaces', async () => {
+  const sharedWorkspace = createEmptyWorkspace({ workspaceId: 'workspace_shared_2' });
+  sharedWorkspace.boards.main.memberships = [
+    {
+      actor: { type: 'human', id: 'sub_collab' },
+      role: 'editor'
+    }
+  ];
+  const sharedRecord = createInitialWorkspaceRecord('sub_owner', {
+    workspaceId: 'workspace_shared_2',
+    now: '2026-04-02T10:00:00.000Z'
+  });
+  sharedRecord.isHomeWorkspace = false;
+  sharedRecord.workspace = sharedWorkspace;
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord]);
+  const app = createTestApp({
+    googleTokenVerifier: async () => ({ sub: 'sub_collab' }),
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .post('/api/workspace/commands')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_collab' }))
+    .send({
+      workspaceId: 'workspace_shared_2',
+      command: {
+        clientMutationId: 'shared_m1',
+        type: 'board.rename',
+        payload: {
+          boardId: 'main',
+          title: 'Shared board renamed'
+        }
+      },
+      expectedRevision: 0
+    });
+
+  assert.equal(response.status, 200);
+  assert.equal(response.body.activeWorkspace.workspaceId, 'workspace_shared_2');
+  assert.equal(response.body.workspace.boards.main.title, 'Shared board renamed');
+  assert.equal(workspaceRecordRepository.replaceRecordCalls[0].record.workspaceId, 'workspace_shared_2');
 });
 
 test('POST /api/workspace/commands replays duplicate clientMutationId safely without duplicating work', async () => {
@@ -644,6 +764,8 @@ test('POST /api/workspace/import saves a valid full-workspace snapshot for a pri
   assert.deepEqual(workspaceRecordRepository.importCalls, [
     {
       viewerSub: 'sub_123',
+      viewerEmail: null,
+      workspaceId: null,
       workspace: normalizedWorkspace,
       actor: {
         type: 'human',
@@ -1036,6 +1158,7 @@ function createLegacyWorkspaceSnapshot({
 
 function createLegacyWorkspaceRecord({
   viewerSub = 'sub_123',
+  workspaceId = viewerSub,
   workspace = createLegacyWorkspaceSnapshot(),
   revision = 1,
   createdAt = '2026-04-02T10:00:00.000Z',
@@ -1045,7 +1168,9 @@ function createLegacyWorkspaceRecord({
   commandReceipts = []
 } = {}) {
   return {
+    workspaceId,
     viewerSub,
+    isHomeWorkspace: true,
     workspace,
     revision,
     createdAt,
@@ -1058,7 +1183,7 @@ function createLegacyWorkspaceRecord({
 
 function createWorkspaceRecordRepositoryDouble(initialRecords = []) {
   const records = new Map(
-    initialRecords.map((record) => [record.viewerSub, structuredClone(record)])
+    initialRecords.map((record) => [record.workspaceId, structuredClone(record)])
   );
 
   return {
@@ -1067,33 +1192,68 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = []) {
     replaceRecordCalls: [],
     importCalls: [],
 
-    async loadOrCreateWorkspaceRecord(viewerSub) {
-      this.loadCalls.push(viewerSub);
+    async loadOrCreateWorkspaceRecord({ viewerSub, viewerEmail = null, workspaceId = null } = {}) {
+      this.loadCalls.push({
+        viewerSub,
+        viewerEmail,
+        workspaceId
+      });
 
-      if (!records.has(viewerSub)) {
+      if (workspaceId) {
+        const requestedRecord = records.get(workspaceId);
+
+        if (
+          !requestedRecord ||
+          !canViewerAccessWorkspace({
+            viewerSub,
+            viewerEmail,
+            ownerSub: requestedRecord.viewerSub,
+            workspace: requestedRecord.workspace
+          })
+        ) {
+          throw new WorkspaceAccessDeniedError();
+        }
+
+        return structuredClone(requestedRecord);
+      }
+
+      const homeWorkspaceId = createHomeWorkspaceId(viewerSub);
+      const existingHomeRecord =
+        records.get(homeWorkspaceId)
+        ?? records.get(viewerSub)
+        ?? [...records.values()].find((record) => record.viewerSub === viewerSub && record.isHomeWorkspace);
+
+      if (existingHomeRecord) {
+        return structuredClone(existingHomeRecord);
+      }
+
+      if (!records.has(homeWorkspaceId)) {
         records.set(
-          viewerSub,
+          homeWorkspaceId,
           createInitialWorkspaceRecord(viewerSub, {
             now: '2026-04-02T10:00:00.000Z'
           })
         );
       }
 
-      return structuredClone(records.get(viewerSub));
+      return structuredClone(records.get(homeWorkspaceId));
     },
 
-    async replaceWorkspaceSnapshot({ viewerSub, workspace, actor, expectedRevision }) {
+    async replaceWorkspaceSnapshot({ viewerSub, viewerEmail = null, workspaceId = null, workspace, actor, expectedRevision }) {
       this.replaceCalls.push({
         viewerSub,
+        viewerEmail,
+        workspaceId,
         workspace,
         expectedRevision,
         actor
       });
 
       const currentRecord =
-        records.get(viewerSub)
-        ?? createInitialWorkspaceRecord(viewerSub, {
-          now: '2026-04-02T10:00:00.000Z'
+        await this.loadOrCreateWorkspaceRecord({
+          viewerSub,
+          viewerEmail,
+          workspaceId
         });
 
       if (currentRecord.revision !== expectedRevision) {
@@ -1107,21 +1267,24 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = []) {
         createActivityEventId: () => 'activity_saved_test'
       });
 
-      records.set(viewerSub, nextRecord);
+      records.set(nextRecord.workspaceId, nextRecord);
       return structuredClone(nextRecord);
     },
 
-    async importWorkspaceSnapshot({ viewerSub, workspace, actor }) {
+    async importWorkspaceSnapshot({ viewerSub, viewerEmail = null, workspaceId = null, workspace, actor }) {
       this.importCalls.push({
         viewerSub,
+        viewerEmail,
+        workspaceId,
         workspace,
         actor
       });
 
       const currentRecord =
-        records.get(viewerSub)
-        ?? createInitialWorkspaceRecord(viewerSub, {
-          now: '2026-04-02T10:00:00.000Z'
+        await this.loadOrCreateWorkspaceRecord({
+          viewerSub,
+          viewerEmail,
+          workspaceId
         });
 
       if (currentRecord.revision !== 0) {
@@ -1136,7 +1299,7 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = []) {
         createActivityEventId: () => 'activity_imported_test'
       });
 
-      records.set(viewerSub, nextRecord);
+      records.set(nextRecord.workspaceId, nextRecord);
       return structuredClone(nextRecord);
     },
 
@@ -1147,8 +1310,9 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = []) {
       });
 
       const currentRecord =
-        records.get(record.viewerSub)
+        records.get(record.workspaceId)
         ?? createInitialWorkspaceRecord(record.viewerSub, {
+          workspaceId: record.workspaceId,
           now: '2026-04-02T10:00:00.000Z'
         });
 
@@ -1156,7 +1320,7 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = []) {
         throw new WorkspaceRevisionConflictError();
       }
 
-      records.set(record.viewerSub, structuredClone(record));
+      records.set(record.workspaceId, structuredClone(record));
       return structuredClone(record);
     }
   };

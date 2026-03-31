@@ -7,6 +7,7 @@ import {
   createActivityEvent,
   createCommandAppliedWorkspaceRecord,
   createCommandReceipt,
+  fromWorkspaceRecordDocument,
   createWorkspaceRecord,
   findCommandReceipt
 } from '../src/workspaces/workspace_record.js';
@@ -215,6 +216,24 @@ test('older activity events without entity or details still load safely', () => 
       details: null
     }
   ]);
+});
+
+test('fromWorkspaceRecordDocument migrates legacy home records to workspaceId = viewerSub', () => {
+  const record = fromWorkspaceRecordDocument({
+    _id: 'sub_123',
+    viewerSub: 'sub_123',
+    workspace: createEmptyWorkspace(),
+    revision: 1,
+    createdAt: '2026-04-01T10:00:00.000Z',
+    updatedAt: '2026-04-01T10:05:00.000Z',
+    lastChangedBy: 'sub_123',
+    activityEvents: [],
+    commandReceipts: []
+  });
+
+  assert.equal(record.workspaceId, 'sub_123');
+  assert.equal(record.isHomeWorkspace, true);
+  assert.equal(record.workspace.workspaceId, 'sub_123');
 });
 
 test('createCommandAppliedWorkspaceRecord appends semantic activity and a command receipt together', () => {

@@ -10,6 +10,7 @@ import {
   findCommandReceipt
 } from '../workspaces/workspace_record.js';
 import {
+  WorkspaceAccessDeniedError,
   WorkspaceImportConflictError,
   WorkspaceRevisionConflictError
 } from '../workspaces/workspace_record_repository.js';
@@ -20,10 +21,22 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
   router.get('/api/workspace', requireSession, async (request, response, next) => {
     try {
       const record = createWorkspaceRecord(
-        await workspaceRecordRepository.loadOrCreateWorkspaceRecord(request.viewer.sub)
+        await workspaceRecordRepository.loadOrCreateWorkspaceRecord({
+          viewerSub: request.viewer.sub,
+          viewerEmail: request.viewer.email ?? null,
+          workspaceId: resolveRequestedWorkspaceId(request)
+        })
       );
       response.json(createWorkspaceApiResponse(record));
     } catch (error) {
+      if (error instanceof WorkspaceAccessDeniedError || error?.code === 'WORKSPACE_ACCESS_DENIED') {
+        response.status(404).json({
+          ok: false,
+          error: 'Workspace not found.'
+        });
+        return;
+      }
+
       next(error);
     }
   });
@@ -48,6 +61,8 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
     try {
       const record = await workspaceRecordRepository.replaceWorkspaceSnapshot({
         viewerSub: request.viewer.sub,
+        viewerEmail: request.viewer.email ?? null,
+        workspaceId: resolveRequestedWorkspaceId(request),
         workspace,
         expectedRevision,
         actor: {
@@ -58,6 +73,14 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
 
       response.json(createWorkspaceApiResponse(record));
     } catch (error) {
+      if (error instanceof WorkspaceAccessDeniedError || error?.code === 'WORKSPACE_ACCESS_DENIED') {
+        response.status(404).json({
+          ok: false,
+          error: 'Workspace not found.'
+        });
+        return;
+      }
+
       if (error instanceof WorkspaceRevisionConflictError || error?.code === 'WORKSPACE_REVISION_CONFLICT') {
         response.status(409).json({
           ok: false,
@@ -84,7 +107,11 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
 
     try {
       const currentRecord = createWorkspaceRecord(
-        await workspaceRecordRepository.loadOrCreateWorkspaceRecord(request.viewer.sub)
+        await workspaceRecordRepository.loadOrCreateWorkspaceRecord({
+          viewerSub: request.viewer.sub,
+          viewerEmail: request.viewer.email ?? null,
+          workspaceId: resolveRequestedWorkspaceId(request)
+        })
       );
       const existingReceipt =
         typeof command?.clientMutationId === 'string' && command.clientMutationId.trim()
@@ -132,6 +159,14 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
 
       response.json(createWorkspaceApiResponse(persistedRecord, application.result));
     } catch (error) {
+      if (error instanceof WorkspaceAccessDeniedError || error?.code === 'WORKSPACE_ACCESS_DENIED') {
+        response.status(404).json({
+          ok: false,
+          error: 'Workspace not found.'
+        });
+        return;
+      }
+
       if (error instanceof WorkspaceRevisionConflictError || error?.code === 'WORKSPACE_REVISION_CONFLICT') {
         response.status(409).json({
           ok: false,
@@ -163,6 +198,8 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
     try {
       const record = await workspaceRecordRepository.importWorkspaceSnapshot({
         viewerSub: request.viewer.sub,
+        viewerEmail: request.viewer.email ?? null,
+        workspaceId: resolveRequestedWorkspaceId(request),
         workspace,
         actor: {
           type: 'human',
@@ -172,6 +209,14 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
 
       response.json(createWorkspaceApiResponse(record));
     } catch (error) {
+      if (error instanceof WorkspaceAccessDeniedError || error?.code === 'WORKSPACE_ACCESS_DENIED') {
+        response.status(404).json({
+          ok: false,
+          error: 'Workspace not found.'
+        });
+        return;
+      }
+
       if (error instanceof WorkspaceImportConflictError || error?.code === 'WORKSPACE_IMPORT_CONFLICT') {
         response.status(409).json({
           ok: false,
@@ -201,6 +246,10 @@ function createWorkspaceApiResponse(record, result = undefined) {
   const payload = {
     ok: true,
     workspace: normalizedRecord.workspace,
+    activeWorkspace: {
+      workspaceId: normalizedRecord.workspaceId,
+      isHomeWorkspace: normalizedRecord.isHomeWorkspace
+    },
     meta: {
       revision: normalizedRecord.revision,
       updatedAt: normalizedRecord.updatedAt,
@@ -240,4 +289,16 @@ function parseExpectedRevision(value) {
     expectedRevision: normalizedRevision,
     isValid: true
   };
+}
+
+function resolveRequestedWorkspaceId(request) {
+  if (typeof request?.body?.workspaceId === 'string' && request.body.workspaceId.trim()) {
+    return request.body.workspaceId.trim();
+  }
+
+  if (typeof request?.query?.workspaceId === 'string' && request.query.workspaceId.trim()) {
+    return request.query.workspaceId.trim();
+  }
+
+  return null;
 }

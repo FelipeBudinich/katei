@@ -31,7 +31,11 @@ export function readLocalV4Workspace(storage = globalThis.localStorage, viewerSu
   }
 }
 
-export async function postWorkspaceImport({ fetchImpl = globalThis.fetch?.bind(globalThis), workspace } = {}) {
+export async function postWorkspaceImport({
+  fetchImpl = globalThis.fetch?.bind(globalThis),
+  workspace,
+  workspaceId = null
+} = {}) {
   const normalizedWorkspace = migrateWorkspaceSnapshot(workspace);
 
   if (!validateWorkspaceShape(normalizedWorkspace)) {
@@ -45,7 +49,10 @@ export async function postWorkspaceImport({ fetchImpl = globalThis.fetch?.bind(g
       'Content-Type': 'application/json'
     },
     credentials: 'same-origin',
-    body: JSON.stringify({ workspace: normalizedWorkspace })
+    body: JSON.stringify({
+      workspace: normalizedWorkspace,
+      ...(typeof workspaceId === 'string' && workspaceId.trim() ? { workspaceId: workspaceId.trim() } : {})
+    })
   });
   const data = await parseJsonResponse(response);
 

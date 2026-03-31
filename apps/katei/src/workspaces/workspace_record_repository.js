@@ -14,16 +14,24 @@ export class WorkspaceRevisionConflictError extends Error {
   }
 }
 
+export class WorkspaceAccessDeniedError extends Error {
+  constructor(message = 'Workspace not found.') {
+    super(message);
+    this.name = 'WorkspaceAccessDeniedError';
+    this.code = 'WORKSPACE_ACCESS_DENIED';
+  }
+}
+
 export class WorkspaceRecordRepository {
-  async loadOrCreateWorkspaceRecord(viewerSub) {
+  async loadOrCreateWorkspaceRecord({ viewerSub, workspaceId, viewerEmail } = {}) {
     throw new Error('Not implemented');
   }
 
-  async replaceWorkspaceSnapshot({ viewerSub, workspace, actor, expectedRevision }) {
+  async replaceWorkspaceSnapshot({ viewerSub, workspaceId, viewerEmail, workspace, actor, expectedRevision }) {
     throw new Error('Not implemented');
   }
 
-  async importWorkspaceSnapshot({ viewerSub, workspace, actor }) {
+  async importWorkspaceSnapshot({ viewerSub, workspaceId, viewerEmail, workspace, actor }) {
     throw new Error('Not implemented');
   }
 

@@ -10,13 +10,18 @@ import {
 } from '../../public/js/domain/workspace_read_model.js';
 import { getActiveBoard } from '../../public/js/domain/workspace_selectors.js';
 import { getColumnDisplayLabel, getPriorityDisplayLabel } from '../../public/js/i18n/workspace_labels.js';
+import { WorkspaceAccessDeniedError } from '../workspaces/workspace_record_repository.js';
 
 export function createBoardsRouter({ requireSession, workspaceRecordRepository }) {
   const router = Router();
 
   router.get('/boards', requireSession, async (request, response, next) => {
     try {
-      const record = await workspaceRecordRepository.loadOrCreateWorkspaceRecord(request.viewer.sub);
+      const record = await workspaceRecordRepository.loadOrCreateWorkspaceRecord({
+        viewerSub: request.viewer.sub,
+        viewerEmail: request.viewer.email ?? null,
+        workspaceId: resolveRequestedWorkspaceId(request)
+      });
 
       response.render(
         'pages/workspace',
@@ -28,6 +33,11 @@ export function createBoardsRouter({ requireSession, workspaceRecordRepository }
         )
       );
     } catch (error) {
+      if (error instanceof WorkspaceAccessDeniedError || error?.code === 'WORKSPACE_ACCESS_DENIED') {
+        response.status(404).send('Workspace not found.');
+        return;
+      }
+
       next(error);
     }
   });
@@ -62,6 +72,7 @@ export function buildWorkspacePageModel(viewer, t, workspace = createEmptyWorksp
     workspaceBootstrapJson: workspaceMeta
       ? serializeWorkspaceBootstrapPayload({
           workspace: normalizedWorkspace,
+          activeWorkspace: createActiveWorkspaceDescriptor(normalizedWorkspace, workspaceMeta),
           meta: workspaceMeta
         })
       : null
@@ -79,7 +90,16 @@ function createWorkspaceBootstrapMeta(record) {
     revision: record.revision,
     updatedAt: record.updatedAt,
     lastChangedBy: record.lastChangedBy,
-    isPristine: record.revision === 0
+    isPristine: record.revision === 0,
+    workspaceId: record.workspaceId,
+    isHomeWorkspace: record.isHomeWorkspace
+  };
+}
+
+function createActiveWorkspaceDescriptor(workspace, workspaceMeta) {
+  return {
+    workspaceId: workspaceMeta?.workspaceId ?? workspace?.workspaceId ?? null,
+    isHomeWorkspace: workspaceMeta?.isHomeWorkspace ?? false
   };
 }
 
@@ -90,4 +110,10 @@ function serializeWorkspaceBootstrapPayload(payload) {
     .replace(/&/g, '\\u0026')
     .replace(/\u2028/g, '\\u2028')
     .replace(/\u2029/g, '\\u2029');
+}
+
+function resolveRequestedWorkspaceId(request) {
+  return typeof request?.query?.workspaceId === 'string' && request.query.workspaceId.trim()
+    ? request.query.workspaceId.trim()
+    : null;
 }

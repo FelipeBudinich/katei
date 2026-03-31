@@ -1,7 +1,7 @@
 import { createDefaultBoardLanguagePolicy, normalizeBoardLanguagePolicy } from './board_language_policy.js';
 import { createDefaultBoardStages, createDefaultBoardTemplates } from './board_workflow.js';
 import { createCardContentProvenance } from './card_localization.js';
-import { WORKSPACE_VERSION } from './workspace_read_model.js';
+import { WORKSPACE_ID, WORKSPACE_VERSION } from './workspace_read_model.js';
 
 export const WORKSPACE_MIGRATIONS = Object.freeze([
   Object.freeze({
@@ -35,6 +35,7 @@ export function normalizeWorkspaceToCurrentSchema(
 
   const migratedWorkspace = structuredClone(workspace);
   migratedWorkspace.version = version;
+  migratedWorkspace.workspaceId = normalizeWorkspaceId(migratedWorkspace.workspaceId);
 
   if (!isPlainObject(migratedWorkspace.boards)) {
     return migratedWorkspace;
@@ -315,4 +316,8 @@ function canonicalizeLocale(value) {
   } catch (error) {
     return null;
   }
+}
+
+function normalizeWorkspaceId(workspaceId) {
+  return typeof workspaceId === 'string' && workspaceId.trim() ? workspaceId.trim() : WORKSPACE_ID;
 }

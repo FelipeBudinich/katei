@@ -26,7 +26,7 @@ export const PRIORITY_DEFINITIONS = Object.freeze(
 export const DEFAULT_PRIORITY = 'important';
 export const DEFAULT_WORKSPACE_STATE = Object.freeze(createEmptyWorkspace());
 
-export function createEmptyWorkspace() {
+export function createEmptyWorkspace({ workspaceId = WORKSPACE_ID } = {}) {
   const timestamp = createTimestamp();
   const board = createWorkspaceBoard({
     id: DEFAULT_BOARD_ID,
@@ -37,7 +37,7 @@ export function createEmptyWorkspace() {
 
   return {
     version: WORKSPACE_VERSION,
-    workspaceId: WORKSPACE_ID,
+    workspaceId: normalizeWorkspaceId(workspaceId),
     ui: {
       activeBoardId: board.id,
       collapsedColumnsByBoard: {
@@ -87,4 +87,14 @@ export function cloneWorkspace(workspace) {
 
 function createTimestamp() {
   return new Date().toISOString();
+}
+
+function normalizeWorkspaceId(workspaceId) {
+  const normalizedWorkspaceId = typeof workspaceId === 'string' ? workspaceId.trim() : '';
+
+  if (!normalizedWorkspaceId) {
+    throw new Error('Workspace id is required.');
+  }
+
+  return normalizedWorkspaceId;
 }

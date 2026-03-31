@@ -1,5 +1,6 @@
 import { getMongoDb } from '../data/mongo_client.js';
 import {
+  WorkspaceAccessDeniedError,
   WorkspaceImportConflictError,
   WorkspaceRecordRepository,
   WorkspaceRevisionConflictError
@@ -10,10 +11,12 @@ import {
   createInitialWorkspaceRecord,
   createUpdatedWorkspaceRecord,
   fromWorkspaceRecordDocument,
+  normalizeWorkspaceId,
   normalizeViewerSub,
   toWorkspaceRecordDocument,
   validateWorkspaceSnapshot
 } from './workspace_record.js';
+import { canViewerAccessWorkspace } from './workspace_access.js';
 
 export function createMongoWorkspaceRecordRepository(options = {}) {
   return new MongoWorkspaceRecordRepository(options);
@@ -51,11 +54,20 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
     this.createActivityEventId = createActivityEventId;
   }
 
-  async loadOrCreateWorkspaceRecord(viewerSub) {
+  async loadOrCreateWorkspaceRecord({ viewerSub, workspaceId = null, viewerEmail = null } = {}) {
     const collection = this.#getCollection();
     const normalizedViewerSub = normalizeViewerSub(viewerSub);
-    const existingDocument = await collection.findOne({ _id: normalizedViewerSub });
-    const existingRecord = fromWorkspaceRecordDocument(existingDocument);
+    const normalizedWorkspaceId = normalizeOptionalWorkspaceId(workspaceId);
+
+    if (normalizedWorkspaceId) {
+      return this.#loadAccessibleWorkspaceRecord({
+        viewerSub: normalizedViewerSub,
+        viewerEmail,
+        workspaceId: normalizedWorkspaceId
+      });
+    }
+
+    const existingRecord = await this.#loadHomeWorkspaceRecord(normalizedViewerSub);
 
     if (existingRecord) {
       return existingRecord;
@@ -64,19 +76,23 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
     const initialRecord = createInitialWorkspaceRecord(normalizedViewerSub, { now: this.now() });
 
     await collection.updateOne(
-      { _id: normalizedViewerSub },
+      { _id: initialRecord.workspaceId },
       { $setOnInsert: toWorkspaceRecordDocument(initialRecord) },
       { upsert: true }
     );
 
-    return this.#loadRequiredWorkspaceRecord(normalizedViewerSub);
+    return this.#loadRequiredWorkspaceRecord(initialRecord.workspaceId);
   }
 
-  async replaceWorkspaceSnapshot({ viewerSub, workspace, actor, expectedRevision } = {}) {
+  async replaceWorkspaceSnapshot({ viewerSub, workspaceId = null, viewerEmail = null, workspace, actor, expectedRevision } = {}) {
     const collection = this.#getCollection();
     validateWorkspaceSnapshot(workspace);
 
-    const currentRecord = await this.loadOrCreateWorkspaceRecord(viewerSub);
+    const currentRecord = await this.loadOrCreateWorkspaceRecord({
+      viewerSub,
+      workspaceId,
+      viewerEmail
+    });
 
     if (currentRecord.revision !== expectedRevision) {
       throw new WorkspaceRevisionConflictError();
@@ -90,7 +106,7 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
       createActivityEventId: this.createActivityEventId
     });
     const result = await collection.replaceOne(
-      { _id: nextRecord.viewerSub, revision: expectedRevision },
+      { _id: nextRecord.workspaceId, revision: expectedRevision },
       toWorkspaceRecordDocument(nextRecord),
       { upsert: false }
     );
@@ -103,11 +119,15 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
     return nextRecord;
   }
 
-  async importWorkspaceSnapshot({ viewerSub, workspace, actor } = {}) {
+  async importWorkspaceSnapshot({ viewerSub, workspaceId = null, viewerEmail = null, workspace, actor } = {}) {
     const collection = this.#getCollection();
     validateWorkspaceSnapshot(workspace);
 
-    const currentRecord = await this.loadOrCreateWorkspaceRecord(viewerSub);
+    const currentRecord = await this.loadOrCreateWorkspaceRecord({
+      viewerSub,
+      workspaceId,
+      viewerEmail
+    });
 
     if (currentRecord.revision !== 0) {
       throw new WorkspaceImportConflictError();
@@ -121,7 +141,7 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
       createActivityEventId: this.createActivityEventId
     });
     const result = await collection.replaceOne(
-      { _id: nextRecord.viewerSub, revision: currentRecord.revision },
+      { _id: nextRecord.workspaceId, revision: currentRecord.revision },
       toWorkspaceRecordDocument(nextRecord),
       { upsert: false }
     );
@@ -151,12 +171,48 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
     return fromWorkspaceRecordDocument(normalizedRecord);
   }
 
-  async #loadRequiredWorkspaceRecord(viewerSub) {
-    const document = await this.#getCollection().findOne({ _id: viewerSub });
+  async #loadRequiredWorkspaceRecord(workspaceId) {
+    const document = await this.#getCollection().findOne({ _id: normalizeWorkspaceId(workspaceId) });
     const record = fromWorkspaceRecordDocument(document);
 
     if (!record) {
-      throw new Error(`Workspace record was not found for viewer ${viewerSub}.`);
+      throw new Error(`Workspace record was not found for workspace ${workspaceId}.`);
+    }
+
+    return record;
+  }
+
+  async #loadHomeWorkspaceRecord(viewerSub) {
+    const collection = this.#getCollection();
+    const homeDocument =
+      (await collection.findOne({ viewerSub, isHomeWorkspace: true })) ??
+      (await collection.findOne({ _id: viewerSub }));
+
+    return fromWorkspaceRecordDocument(homeDocument);
+  }
+
+  async #loadAccessibleWorkspaceRecord({ viewerSub, viewerEmail, workspaceId }) {
+    let record;
+
+    try {
+      record = await this.#loadRequiredWorkspaceRecord(workspaceId);
+    } catch (error) {
+      if (error?.message === `Workspace record was not found for workspace ${workspaceId}.`) {
+        throw new WorkspaceAccessDeniedError();
+      }
+
+      throw error;
+    }
+
+    if (
+      !canViewerAccessWorkspace({
+        viewerSub,
+        viewerEmail,
+        ownerSub: record.viewerSub,
+        workspace: record.workspace
+      })
+    ) {
+      throw new WorkspaceAccessDeniedError();
     }
 
     return record;
@@ -177,4 +233,8 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
 
 function createNowIsoString() {
   return new Date().toISOString();
+}
+
+function normalizeOptionalWorkspaceId(workspaceId) {
+  return typeof workspaceId === 'string' && workspaceId.trim() ? workspaceId.trim() : null;
 }

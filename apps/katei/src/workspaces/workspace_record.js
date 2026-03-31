@@ -12,10 +12,22 @@ export const WORKSPACE_RECORD_COLLECTION_NAME = 'workspace_records';
 export const DEFAULT_MAX_ACTIVITY_EVENTS = 100;
 export const DEFAULT_MAX_COMMAND_RECEIPTS = 100;
 
-export function createInitialWorkspaceRecord(viewerSub, { now = new Date().toISOString() } = {}) {
+export function createInitialWorkspaceRecord(
+  viewerSub,
+  {
+    workspaceId = createHomeWorkspaceId(viewerSub),
+    now = new Date().toISOString()
+  } = {}
+) {
+  const normalizedViewerSub = normalizeViewerSub(viewerSub);
+  const normalizedWorkspaceId = normalizeWorkspaceId(workspaceId);
+
   return createWorkspaceRecord({
-    viewerSub,
-    workspace: createEmptyWorkspace(),
+    workspaceId: normalizedWorkspaceId,
+    viewerSub: normalizedViewerSub,
+    workspace: createEmptyWorkspace({ workspaceId: normalizedWorkspaceId }),
+    isHomeWorkspace:
+      normalizedWorkspaceId === createHomeWorkspaceId(normalizedViewerSub) || normalizedWorkspaceId === normalizedViewerSub,
     revision: 0,
     createdAt: now,
     updatedAt: now,
@@ -26,8 +38,14 @@ export function createInitialWorkspaceRecord(viewerSub, { now = new Date().toISO
 }
 
 export function createWorkspaceRecord({
+  workspaceId,
   viewerSub,
-  workspace = createEmptyWorkspace(),
+  workspace = createEmptyWorkspace({
+    workspaceId:
+      workspaceId ??
+      (typeof viewerSub === 'string' && viewerSub.trim() ? createHomeWorkspaceId(viewerSub) : undefined)
+  }),
+  isHomeWorkspace = false,
   revision = 0,
   createdAt = new Date().toISOString(),
   updatedAt = createdAt,
@@ -35,9 +53,14 @@ export function createWorkspaceRecord({
   activityEvents = [],
   commandReceipts = []
 } = {}) {
+  const normalizedViewerSub = normalizeViewerSub(viewerSub);
+  const normalizedWorkspaceId = normalizeWorkspaceId(workspaceId ?? workspace?.workspaceId);
+
   return {
-    viewerSub: normalizeViewerSub(viewerSub),
-    workspace: cloneWorkspace(validateWorkspaceSnapshot(workspace)),
+    workspaceId: normalizedWorkspaceId,
+    viewerSub: normalizedViewerSub,
+    isHomeWorkspace: Boolean(isHomeWorkspace),
+    workspace: cloneWorkspace(validateWorkspaceSnapshot(workspace, { workspaceId: normalizedWorkspaceId })),
     revision: normalizeRevision(revision),
     createdAt: normalizeIsoTimestamp(createdAt, 'createdAt'),
     updatedAt: normalizeIsoTimestamp(updatedAt, 'updatedAt'),
@@ -63,7 +86,9 @@ export function createUpdatedWorkspaceRecord(
   const nextRevision = currentRecord.revision + 1;
 
   return createWorkspaceRecord({
+    workspaceId: currentRecord.workspaceId,
     viewerSub: currentRecord.viewerSub,
+    isHomeWorkspace: currentRecord.isHomeWorkspace,
     workspace,
     revision: nextRevision,
     createdAt: currentRecord.createdAt,
@@ -99,7 +124,9 @@ export function createCommandAppliedWorkspaceRecord(
   const nextRevision = currentRecord.revision + 1;
 
   return createWorkspaceRecord({
+    workspaceId: currentRecord.workspaceId,
     viewerSub: currentRecord.viewerSub,
+    isHomeWorkspace: currentRecord.isHomeWorkspace,
     workspace,
     revision: nextRevision,
     createdAt: currentRecord.createdAt,
@@ -114,7 +141,7 @@ export function toWorkspaceRecordDocument(record) {
   const normalizedRecord = createWorkspaceRecord(record);
 
   return {
-    _id: normalizedRecord.viewerSub,
+    _id: normalizedRecord.workspaceId,
     ...normalizedRecord
   };
 }
@@ -124,9 +151,14 @@ export function fromWorkspaceRecordDocument(document) {
     return null;
   }
 
+  const legacyViewerSub = document.viewerSub ?? document.ownerSub ?? document._id;
+  const normalizedWorkspaceId = document.workspaceId ?? legacyViewerSub ?? document._id;
+
   return createWorkspaceRecord({
-    viewerSub: document.viewerSub ?? document._id,
+    workspaceId: normalizedWorkspaceId,
+    viewerSub: legacyViewerSub,
     workspace: document.workspace,
+    isHomeWorkspace: document.isHomeWorkspace ?? normalizedWorkspaceId === legacyViewerSub,
     revision: document.revision,
     createdAt: document.createdAt,
     updatedAt: document.updatedAt,
@@ -136,11 +168,14 @@ export function fromWorkspaceRecordDocument(document) {
   });
 }
 
-export function validateWorkspaceSnapshot(workspace) {
+export function validateWorkspaceSnapshot(workspace, { workspaceId = null } = {}) {
   const migratedWorkspace = migrateWorkspaceSnapshot(workspace);
   const normalizedWorkspace = stripLegacyCardContentAliasesFromWorkspace(
     stripLegacyColumnAliasesFromWorkspace(migratedWorkspace)
   );
+  const normalizedWorkspaceId = normalizeWorkspaceId(workspaceId ?? normalizedWorkspace?.workspaceId);
+
+  normalizedWorkspace.workspaceId = normalizedWorkspaceId;
 
   if (!validateWorkspaceShape(normalizedWorkspace)) {
     throw new Error('Cannot save an invalid workspace.');
@@ -235,6 +270,20 @@ export function normalizeViewerSub(viewerSub) {
   }
 
   return normalizedViewerSub;
+}
+
+export function createHomeWorkspaceId(viewerSub) {
+  return `workspace_home_${normalizeViewerSub(viewerSub)}`;
+}
+
+export function normalizeWorkspaceId(workspaceId) {
+  const normalizedWorkspaceId = normalizeOptionalString(workspaceId);
+
+  if (!normalizedWorkspaceId) {
+    throw new Error('A workspaceId is required for workspace persistence.');
+  }
+
+  return normalizedWorkspaceId;
 }
 
 export function normalizeActorSub(actor) {

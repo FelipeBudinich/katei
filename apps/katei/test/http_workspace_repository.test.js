@@ -35,6 +35,8 @@ test('HttpWorkspaceRepository loads workspace snapshots from the server API', as
     lastChangedBy: null,
     isPristine: true
   });
+  assert.equal(repository.activeWorkspaceId, workspace.workspaceId);
+  assert.equal(repository.isHomeWorkspace, true);
   assert.deepEqual(fetchDouble.calls, [
     {
       url: '/api/workspace',
@@ -118,6 +120,7 @@ test('HttpWorkspaceRepository saves workspace snapshots to the server API', asyn
   assert.equal(fetchDouble.calls[0].options.headers['Content-Type'], 'application/json');
   assert.deepEqual(JSON.parse(fetchDouble.calls[0].options.body), {
     workspace: normalizedWorkspace,
+    workspaceId: normalizedWorkspace.workspaceId,
     expectedRevision: 0
   });
 });
@@ -155,6 +158,7 @@ test('HttpWorkspaceRepository normalizes older snapshots before saving them back
   assert.equal(requestBody.workspace.boards.main.columns, undefined);
   assert.equal(requestBody.workspace.boards.main.cards.card_legacy_1.title, undefined);
   assert.equal(requestBody.workspace.boards.main.cards.card_legacy_1.contentByLocale.en.title, 'Legacy save task');
+  assert.equal(requestBody.workspaceId, requestBody.workspace.workspaceId);
   assert.equal(requestBody.expectedRevision, 0);
 });
 
@@ -210,10 +214,11 @@ test('HttpWorkspaceRepository imports valid v4 local data when the server record
   assert.equal(fetchDouble.calls[1].url, '/api/workspace/import');
   assert.equal(fetchDouble.calls[1].options.method, 'POST');
   assert.deepEqual(JSON.parse(fetchDouble.calls[1].options.body), {
-    workspace: importedWorkspace
+    workspace: importedWorkspace,
+    workspaceId: importedWorkspace.workspaceId
   });
-  assert.equal(fetchDouble.calls[2].url, '/api/workspace');
-  assert.equal(fetchDouble.calls[3].url, '/api/workspace');
+  assert.equal(fetchDouble.calls[2].url, `/api/workspace?workspaceId=${encodeURIComponent(importedWorkspace.workspaceId)}`);
+  assert.equal(fetchDouble.calls[3].url, `/api/workspace?workspaceId=${encodeURIComponent(importedWorkspace.workspaceId)}`);
 });
 
 test('HttpWorkspaceRepository safely ignores a repeated import attempt once the server rejects it', async () => {
@@ -261,7 +266,11 @@ test('HttpWorkspaceRepository safely ignores a repeated import attempt once the 
   assert.equal(fetchDouble.calls.length, 3);
   assert.equal(fetchDouble.calls[0].url, '/api/workspace');
   assert.equal(fetchDouble.calls[1].url, '/api/workspace/import');
-  assert.equal(fetchDouble.calls[2].url, '/api/workspace');
+  assert.deepEqual(JSON.parse(fetchDouble.calls[1].options.body), {
+    workspace: localWorkspace,
+    workspaceId: localWorkspace.workspaceId
+  });
+  assert.equal(fetchDouble.calls[2].url, `/api/workspace?workspaceId=${encodeURIComponent(localWorkspace.workspaceId)}`);
 });
 
 test('HttpWorkspaceRepository skips import when local v4 data is invalid', async () => {
@@ -333,13 +342,17 @@ test('HttpWorkspaceRepository prefers bootstrap payload on first load and consum
     isPristine: false
   });
   assert.equal(repository.revision, 3);
+  assert.equal(repository.activeWorkspaceId, normalizedBootstrapWorkspace.workspaceId);
   assert.equal(fetchDouble.calls.length, 0);
 
   const secondLoad = await repository.loadWorkspace();
 
   assert.deepEqual(secondLoad, normalizedNetworkWorkspace);
   assert.equal(fetchDouble.calls.length, 1);
-  assert.equal(fetchDouble.calls[0].url, '/api/workspace');
+  assert.equal(
+    fetchDouble.calls[0].url,
+    `/api/workspace?workspaceId=${encodeURIComponent(normalizedBootstrapWorkspace.workspaceId)}`
+  );
 });
 
 test('HttpWorkspaceRepository normalizes older bootstrap payloads before using them', async () => {
@@ -419,6 +432,7 @@ test('HttpWorkspaceRepository sends the bootstrapped revision on save', async ()
 
   assert.deepEqual(JSON.parse(fetchDouble.calls[0].options.body), {
     workspace: normalizedWorkspace,
+    workspaceId: normalizedWorkspace.workspaceId,
     expectedRevision: 5
   });
   assert.equal(repository.revision, 6);
@@ -509,6 +523,7 @@ test('HttpWorkspaceRepository applyCommand sends expectedRevision and updates lo
         priority: 'urgent'
       }
     },
+    workspaceId: commandWorkspace.workspaceId,
     expectedRevision: 7
   });
 });
@@ -580,6 +595,10 @@ function createWorkspaceApiPayload(workspace, meta = {}, result = undefined) {
   const payload = {
     ok: true,
     workspace,
+    activeWorkspace: {
+      workspaceId: meta.workspaceId ?? workspace?.workspaceId ?? null,
+      isHomeWorkspace: meta.isHomeWorkspace ?? true
+    },
     meta: {
       revision: meta.revision ?? 0,
       updatedAt: meta.updatedAt ?? '2026-04-03T10:00:00.000Z',
