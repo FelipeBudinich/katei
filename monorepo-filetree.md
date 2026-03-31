@@ -101,6 +101,7 @@ hanmoto-board/
 │       │   ├── board_language_policy.test.js
 │       │   ├── board_workflow.test.js
 │       │   ├── card_localization.test.js
+│       │   ├── card_localization_runtime.test.js
 │       │   ├── config.test.js
 │       │   ├── google_identity.test.js
 │       │   ├── http_workspace_repository.test.js

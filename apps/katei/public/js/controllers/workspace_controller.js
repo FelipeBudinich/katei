@@ -1,6 +1,7 @@
 import { Controller } from '/vendor/stimulus/stimulus.js';
 import {
   findColumnIdByCardId,
+  getBoardCardContentVariant,
   getActiveBoard,
   getCollapsedColumnsForBoard
 } from '../domain/workspace.js';
@@ -213,7 +214,7 @@ export default class extends Controller {
     this.dispatchWorkspaceEvent('open-card-editor', {
       mode: 'edit',
       boardId: board.id,
-      card,
+      card: createRuntimeCardViewModel(card, board),
       columnId
     });
   }
@@ -235,7 +236,7 @@ export default class extends Controller {
     }
 
     this.viewTriggerElement = button;
-    this.syncViewDialog({ card, columnId });
+    this.syncViewDialog({ board, card, columnId });
 
     if (!this.viewDialogTarget.open) {
       this.viewDialogTarget.showModal();
@@ -282,7 +283,9 @@ export default class extends Controller {
         boardId,
         cardId,
         title: this.t('workspace.confirmations.deleteCardTitle'),
-        message: this.t('workspace.confirmations.deleteCardMessage', { title: card.title }),
+        message: this.t('workspace.confirmations.deleteCardMessage', {
+          title: getBoardCardContentVariant(card, board)?.title ?? ''
+        }),
         confirmLabel: this.t('workspace.confirmations.deleteCardConfirm')
       }
     });
@@ -411,12 +414,13 @@ export default class extends Controller {
     this.confirmTriggerElement = null;
   }
 
-  syncViewDialog({ card, columnId }) {
+  syncViewDialog({ board, card, columnId }) {
     const shouldShowPriority = columnId !== 'done' && columnId !== 'archived';
+    const content = getBoardCardContentVariant(card, board);
 
-    this.viewCardTitleTarget.textContent = card.title;
-    if (card.detailsMarkdown) {
-      renderMarkdownInto(this.viewCardBodyTarget, card.detailsMarkdown);
+    this.viewCardTitleTarget.textContent = content?.title ?? '';
+    if (content?.detailsMarkdown) {
+      renderMarkdownInto(this.viewCardBodyTarget, content.detailsMarkdown);
     } else {
       this.viewCardBodyTarget.textContent = this.t('workspace.view.noDetails');
     }
@@ -468,4 +472,14 @@ export default class extends Controller {
   dispatchWorkspaceEvent(name, detail) {
     window.dispatchEvent(new CustomEvent(`workspace:${name}`, { detail }));
   }
+}
+
+function createRuntimeCardViewModel(card, board) {
+  const content = getBoardCardContentVariant(card, board);
+
+  return {
+    ...card,
+    title: content?.title ?? '',
+    detailsMarkdown: content?.detailsMarkdown ?? ''
+  };
 }

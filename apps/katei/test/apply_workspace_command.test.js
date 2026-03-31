@@ -77,6 +77,18 @@ test('card.create mints a server-side card id and stores the card in backlog', (
   assert.deepEqual(workspace.boards.main.stages.backlog.cardIds, ['card_srv001']);
   assert.equal(workspace.boards.main.cards.card_srv001.createdAt, '2026-03-31T10:00:00.000Z');
   assert.equal(workspace.boards.main.cards.card_srv001.updatedAt, '2026-03-31T10:00:00.000Z');
+  assert.deepEqual(workspace.boards.main.cards.card_srv001.contentByLocale.en, {
+    title: 'Ship service',
+    detailsMarkdown: 'Server-authoritative',
+    provenance: {
+      actor: {
+        type: 'human',
+        id: 'viewer_123'
+      },
+      timestamp: '2026-03-31T10:00:00.000Z',
+      includesHumanInput: true
+    }
+  });
 });
 
 test('card.update changes updatedAt only and preserves createdAt', () => {
@@ -114,6 +126,14 @@ test('card.update changes updatedAt only and preserves createdAt', () => {
   assert.equal(workspace.boards.main.cards.card_srv001.createdAt, '2026-03-31T10:00:00.000Z');
   assert.equal(workspace.boards.main.cards.card_srv001.updatedAt, '2026-03-31T11:00:00.000Z');
   assert.equal(workspace.boards.main.cards.card_srv001.title, 'Updated title');
+  assert.deepEqual(workspace.boards.main.cards.card_srv001.contentByLocale.en.provenance, {
+    actor: {
+      type: 'human',
+      id: 'viewer_123'
+    },
+    timestamp: '2026-03-31T11:00:00.000Z',
+    includesHumanInput: true
+  });
 });
 
 test('card.move changes the correct source and target columns', () => {

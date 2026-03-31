@@ -20,6 +20,7 @@ export function getCardContentVariant(card, locale, board) {
   const localizedContent = getLocalizedContentMap(card);
   const languagePolicy = normalizeBoardLanguagePolicy(board?.languagePolicy ?? null);
   const preferredLocales = [];
+  const primaryPreferredLocale = requestedLocale ?? languagePolicy?.defaultLocale ?? languagePolicy?.sourceLocale ?? null;
 
   if (requestedLocale) {
     preferredLocales.push(requestedLocale);
@@ -39,16 +40,16 @@ export function getCardContentVariant(card, locale, board) {
     }
 
     return materializeVariant(localizedContent.get(preferredLocale), preferredLocale, {
-      isFallback: requestedLocale != null && requestedLocale !== preferredLocale,
+      isFallback: primaryPreferredLocale != null && primaryPreferredLocale !== preferredLocale,
       source: 'localized'
     });
   }
 
-  if (!requestedLocale && localizedContent.size > 0) {
+  if (localizedContent.size > 0) {
     const [firstLocale] = [...localizedContent.keys()].sort((left, right) => left.localeCompare(right));
 
     return materializeVariant(localizedContent.get(firstLocale), firstLocale, {
-      isFallback: false,
+      isFallback: primaryPreferredLocale != null && primaryPreferredLocale !== firstLocale,
       source: 'localized'
     });
   }
@@ -65,6 +66,10 @@ export function getCardContentVariant(card, locale, board) {
     isFallback: true,
     source: 'legacy'
   };
+}
+
+export function getBoardCardContentVariant(card, board) {
+  return getCardContentVariant(card, resolveBoardCardContentLocale(board), board);
 }
 
 export function listCardLocales(card) {
@@ -156,14 +161,12 @@ export function projectWorkspaceWithLegacyCardContent(workspace) {
       continue;
     }
 
-    const preferredLocale = resolveLegacyProjectionLocale(board);
-
     for (const card of Object.values(board.cards)) {
       if (!isPlainObject(card)) {
         continue;
       }
 
-      const projectedVariant = getCardContentVariant(card, preferredLocale, board);
+      const projectedVariant = getBoardCardContentVariant(card, board);
 
       if (!projectedVariant) {
         delete card.title;
@@ -353,7 +356,7 @@ function normalizeRequiredString(value, errorMessage) {
   return normalizedValue;
 }
 
-function resolveLegacyProjectionLocale(board) {
+function resolveBoardCardContentLocale(board) {
   const languagePolicy = normalizeBoardLanguagePolicy(board?.languagePolicy ?? null);
   return languagePolicy?.defaultLocale ?? languagePolicy?.sourceLocale ?? null;
 }

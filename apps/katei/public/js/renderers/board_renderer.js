@@ -1,4 +1,5 @@
 import { markdownToPreviewText } from '../lib/markdown.js';
+import { getBoardCardContentVariant } from '../domain/card_localization.js';
 import { sortCardIdsForColumn } from '../domain/workspace_selectors.js';
 import { createBrowserDateTimeFormatter, getBrowserTranslator } from '../i18n/browser.js';
 import { formatCardCount, getColumnDisplayLabel } from '../i18n/workspace_labels.js';
@@ -89,6 +90,7 @@ function createColumnPanel({ board, columnId, collapsedColumns, templates, t, da
 
 function createCardElement({ board, card, columnId, templates, dateTimeFormatter }) {
   const cardNode = cloneTemplate(templates.cardTemplate);
+  const content = getBoardCardContentVariant(card, board);
   cardNode.dataset.cardId = card.id;
   cardNode.dataset.columnId = columnId;
 
@@ -100,12 +102,12 @@ function createCardElement({ board, card, columnId, templates, dateTimeFormatter
 
   const titleElement = cardNode.querySelector('[data-card-field="title"]');
   if (titleElement) {
-    titleElement.textContent = card.title;
+    titleElement.textContent = content?.title ?? '';
   }
 
   const previewElement = cardNode.querySelector('[data-card-field="preview"]');
   if (previewElement) {
-    const previewText = markdownToPreviewText(card.detailsMarkdown);
+    const previewText = markdownToPreviewText(content?.detailsMarkdown ?? '');
     previewElement.textContent = previewText;
     previewElement.classList.toggle('hidden', !previewText);
   }
