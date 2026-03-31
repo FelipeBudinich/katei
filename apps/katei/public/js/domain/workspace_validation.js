@@ -1,6 +1,7 @@
+import { validateBoardLanguagePolicy } from './board_language_policy.js';
+import { validateBoardStages, validateBoardTemplates } from './board_workflow.js';
 import {
   COLUMN_ORDER,
-  COLUMN_TITLES,
   PRIORITY_ORDER,
   WORKSPACE_ID,
   WORKSPACE_VERSION
@@ -118,11 +119,15 @@ function isValidBoard(board, boardId) {
     return false;
   }
 
-  if (!Array.isArray(board.columnOrder) || board.columnOrder.join('|') !== COLUMN_ORDER.join('|')) {
+  if (!validateBoardStages(board)) {
     return false;
   }
 
-  if (!board.columns || typeof board.columns !== 'object' || !board.cards || typeof board.cards !== 'object') {
+  if (!validateBoardTemplates(board) || !validateBoardLanguagePolicy(board.languagePolicy)) {
+    return false;
+  }
+
+  if (!board.cards || typeof board.cards !== 'object') {
     return false;
   }
 
@@ -130,14 +135,6 @@ function isValidBoard(board, boardId) {
 
   for (const columnId of COLUMN_ORDER) {
     const column = board.columns[columnId];
-
-    if (!column || column.id !== columnId || column.title !== COLUMN_TITLES[columnId]) {
-      return false;
-    }
-
-    if (!Array.isArray(column.cardIds)) {
-      return false;
-    }
 
     for (const cardId of column.cardIds) {
       if (typeof cardId !== 'string' || seenCardIds.has(cardId)) {

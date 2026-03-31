@@ -6,3 +6,7 @@ export * from './workspace_read_model.js';
 export * from './workspace_selectors.js';
 export * from './workspace_validation.js';
 export * from './workspace_mutations.js';
+export * from './board_workflow.js';
+export * from './board_language_policy.js';
+export * from './card_localization.js';
+export * from './workspace_migrations.js';

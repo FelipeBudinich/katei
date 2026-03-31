@@ -1,18 +1,17 @@
+import { createDefaultBoardStages } from './board_workflow.js';
+
 export const WORKSPACE_VERSION = 4;
 export const WORKSPACE_ID = 'main';
 export const STORAGE_KEY = 'katei.workspace.v4';
 export const APP_TITLE = '過程 (katei)';
 export const DEFAULT_BOARD_ID = 'main';
 export const DEFAULT_BOARD_TITLE = '過程';
-export const COLUMN_ORDER = Object.freeze(['backlog', 'doing', 'done', 'archived']);
-export const COLUMN_TITLES = Object.freeze({
-  backlog: 'Backlog',
-  doing: 'Doing',
-  done: 'Done',
-  archived: 'Archived'
-});
-export const COLUMN_DEFINITIONS = Object.freeze(
-  COLUMN_ORDER.map((id) => ({ id, title: COLUMN_TITLES[id] }))
+const DEFAULT_BOARD_STAGES = Object.freeze(createDefaultBoardStages().map((stage) => Object.freeze(stage)));
+
+export const COLUMN_DEFINITIONS = DEFAULT_BOARD_STAGES;
+export const COLUMN_ORDER = Object.freeze(COLUMN_DEFINITIONS.map(({ id }) => id));
+export const COLUMN_TITLES = Object.freeze(
+  Object.fromEntries(COLUMN_DEFINITIONS.map(({ id, title }) => [id, title]))
 );
 export const PRIORITY_ORDER = Object.freeze(['urgent', 'important', 'normal']);
 export const PRIORITY_LABELS = Object.freeze({

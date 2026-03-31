@@ -3,6 +3,7 @@ import {
   cloneWorkspace,
   createEmptyWorkspace
 } from '../../public/js/domain/workspace_read_model.js';
+import { migrateWorkspaceSnapshot } from '../../public/js/domain/workspace_migrations.js';
 import { validateWorkspaceShape } from '../../public/js/domain/workspace_validation.js';
 
 export const WORKSPACE_RECORD_COLLECTION_NAME = 'workspace_records';
@@ -134,11 +135,13 @@ export function fromWorkspaceRecordDocument(document) {
 }
 
 export function validateWorkspaceSnapshot(workspace) {
-  if (!validateWorkspaceShape(workspace)) {
+  const migratedWorkspace = migrateWorkspaceSnapshot(workspace);
+
+  if (!validateWorkspaceShape(migratedWorkspace)) {
     throw new Error('Cannot save an invalid workspace.');
   }
 
-  return workspace;
+  return migratedWorkspace;
 }
 
 export function createWorkspaceActivityEvent({

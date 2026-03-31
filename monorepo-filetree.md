@@ -97,6 +97,10 @@ hanmoto-board/
 │       ├── test/
 │       │   ├── allowlist.test.js
 │       │   ├── app.test.js
+│       │   ├── apply_workspace_command.test.js
+│       │   ├── board_language_policy.test.js
+│       │   ├── board_workflow.test.js
+│       │   ├── card_localization.test.js
 │       │   ├── config.test.js
 │       │   ├── google_identity.test.js
 │       │   ├── http_workspace_repository.test.js
@@ -106,8 +110,12 @@ hanmoto-board/
 │       │   ├── markdown.test.js
 │       │   ├── mongo_client.test.js
 │       │   ├── mongo_workspace_record_repository.test.js
+│       │   ├── mutation_context.test.js
 │       │   ├── session_cookie.test.js
-│       │   └── workspace.test.js
+│       │   ├── workspace.test.js
+│       │   ├── workspace_commands.test.js
+│       │   ├── workspace_record.test.js
+│       │   └── workspace_service.test.js
 │       ├── .env.example
 │       ├── package.json
 │       └── Procfile

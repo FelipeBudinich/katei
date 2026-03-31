@@ -1,5 +1,6 @@
 import { WorkspaceRepository } from './workspace_repository.js';
 import { createEmptyWorkspace } from '../domain/workspace_read_model.js';
+import { migrateWorkspaceSnapshot } from '../domain/workspace_migrations.js';
 import { validateWorkspaceShape } from '../domain/workspace_validation.js';
 
 export const WORKSPACE_STORAGE_PREFIX = 'katei.workspace.v4:';
@@ -31,7 +32,7 @@ export class LocalWorkspaceRepository extends WorkspaceRepository {
         return createEmptyWorkspace();
       }
 
-      const parsedValue = JSON.parse(rawValue);
+      const parsedValue = migrateWorkspaceSnapshot(JSON.parse(rawValue));
 
       return validateWorkspaceShape(parsedValue) ? parsedValue : createEmptyWorkspace();
     } catch (error) {

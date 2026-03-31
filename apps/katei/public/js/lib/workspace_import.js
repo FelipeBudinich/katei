@@ -1,3 +1,4 @@
+import { migrateWorkspaceSnapshot } from '../domain/workspace_migrations.js';
 import { validateWorkspaceShape } from '../domain/workspace_validation.js';
 import { createWorkspaceStorageKey } from '../repositories/local_workspace_repository.js';
 
@@ -13,7 +14,7 @@ export function readLocalV4Workspace(storage = globalThis.localStorage, viewerSu
       return null;
     }
 
-    const workspace = JSON.parse(rawValue);
+    const workspace = migrateWorkspaceSnapshot(JSON.parse(rawValue));
 
     return validateWorkspaceShape(workspace) ? workspace : null;
   } catch (error) {

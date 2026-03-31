@@ -1,3 +1,4 @@
+import { migrateWorkspaceSnapshot } from '../domain/workspace_migrations.js';
 import { validateWorkspaceShape } from '../domain/workspace_validation.js';
 import { postWorkspaceImport, readLocalV4Workspace } from '../lib/workspace_import.js';
 import { WorkspaceRepository } from './workspace_repository.js';
@@ -105,12 +106,21 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
       throw createWorkspaceApiError(response, data, fallbackMessage);
     }
 
-    if (!validateWorkspaceShape(data?.workspace)) {
+    const workspace = migrateWorkspaceSnapshot(data?.workspace);
+
+    if (!validateWorkspaceShape(workspace)) {
       throw new Error('Workspace API returned an invalid workspace.');
     }
 
-    this.#setMeta(data.meta ?? null);
-    return data;
+    const payload = isPlainObject(data)
+      ? {
+          ...data,
+          workspace
+        }
+      : { workspace };
+
+    this.#setMeta(payload.meta ?? null);
+    return payload;
   }
 
   #consumeBootstrapPayload() {
@@ -132,13 +142,21 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
 
     try {
       const payload = JSON.parse(bootstrapElement.textContent);
+      const workspace = migrateWorkspaceSnapshot(payload?.workspace);
 
-      if (!validateWorkspaceShape(payload?.workspace)) {
+      if (!validateWorkspaceShape(workspace)) {
         return null;
       }
 
-      this.#setMeta(payload.meta ?? null);
-      return payload;
+      const nextPayload = isPlainObject(payload)
+        ? {
+            ...payload,
+            workspace
+          }
+        : { workspace };
+
+      this.#setMeta(nextPayload.meta ?? null);
+      return nextPayload;
     } catch (error) {
       return null;
     }
@@ -180,4 +198,8 @@ function createWorkspaceApiError(response, data, fallbackMessage) {
   error.status = response.status;
   error.data = data;
   return error;
+}
+
+function isPlainObject(value) {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
