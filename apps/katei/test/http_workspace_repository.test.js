@@ -1,6 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createCard, createEmptyWorkspace } from '../public/js/domain/workspace.js';
+import {
+  createCard,
+  createEmptyWorkspace,
+  migrateWorkspaceSnapshot,
+  validateWorkspaceShape
+} from '../public/js/domain/workspace.js';
 import {
   createLegacyV4WorkspaceStorageKey,
   readLocalV4Workspace
@@ -44,12 +49,45 @@ test('HttpWorkspaceRepository loads workspace snapshots from the server API', as
   ]);
 });
 
+test('HttpWorkspaceRepository normalizes older workspace snapshots returned by the server API', async () => {
+  const fetchDouble = createFetchDouble([
+    createJsonResponse(createWorkspaceApiPayload(
+      createLegacyV4Workspace({
+        version: 5,
+        title: 'Legacy API task',
+        detailsMarkdown: 'Returned by an older server snapshot',
+        priority: 'important'
+      }),
+      {
+        revision: 2,
+        updatedAt: '2026-04-03T10:15:00.000Z',
+        lastChangedBy: 'sub_123',
+        isPristine: false
+      }
+    ))
+  ]);
+  const repository = new HttpWorkspaceRepository({
+    fetchImpl: fetchDouble.fetch,
+    viewerSub: 'sub_123',
+    storage: null
+  });
+
+  const loadedWorkspace = await repository.loadWorkspace();
+
+  assert.equal(validateWorkspaceShape(loadedWorkspace), true);
+  assert.equal(loadedWorkspace.boards.main.columnOrder, undefined);
+  assert.equal(loadedWorkspace.boards.main.columns, undefined);
+  assert.equal(loadedWorkspace.boards.main.cards.card_legacy_1.title, undefined);
+  assert.equal(loadedWorkspace.boards.main.cards.card_legacy_1.contentByLocale.en.title, 'Legacy API task');
+});
+
 test('HttpWorkspaceRepository saves workspace snapshots to the server API', async () => {
   const workspace = createCard(createEmptyWorkspace(), 'main', {
     title: 'Ship launch checklist',
     detailsMarkdown: 'Owner: Mina',
     priority: 'urgent'
   });
+  const normalizedWorkspace = migrateWorkspaceSnapshot(workspace);
   const fetchDouble = createFetchDouble([
     createJsonResponse(createWorkspaceApiPayload(workspace, {
       revision: 2,
@@ -66,7 +104,7 @@ test('HttpWorkspaceRepository saves workspace snapshots to the server API', asyn
 
   const savedWorkspace = await repository.saveWorkspace(workspace);
 
-  assert.deepEqual(savedWorkspace, workspace);
+  assert.deepEqual(savedWorkspace, normalizedWorkspace);
   assert.deepEqual(repository.meta, {
     revision: 2,
     updatedAt: '2026-04-03T12:00:00.000Z',
@@ -79,9 +117,45 @@ test('HttpWorkspaceRepository saves workspace snapshots to the server API', asyn
   assert.equal(fetchDouble.calls[0].options.headers.Accept, 'application/json');
   assert.equal(fetchDouble.calls[0].options.headers['Content-Type'], 'application/json');
   assert.deepEqual(JSON.parse(fetchDouble.calls[0].options.body), {
-    workspace,
+    workspace: normalizedWorkspace,
     expectedRevision: 0
   });
+});
+
+test('HttpWorkspaceRepository normalizes older snapshots before saving them back to the server API', async () => {
+  const legacyWorkspace = createLegacyV4Workspace({
+    version: 5,
+    title: 'Legacy save task',
+    detailsMarkdown: 'Normalized before save',
+    priority: 'urgent'
+  });
+  const fetchDouble = createFetchDouble([
+    createJsonResponse(createWorkspaceApiPayload(createCard(createEmptyWorkspace(), 'main', {
+      title: 'Legacy save task',
+      detailsMarkdown: 'Normalized before save',
+      priority: 'urgent'
+    }), {
+      revision: 3,
+      updatedAt: '2026-04-03T12:15:00.000Z',
+      lastChangedBy: 'sub_123',
+      isPristine: false
+    }))
+  ]);
+  const repository = new HttpWorkspaceRepository({
+    fetchImpl: fetchDouble.fetch,
+    viewerSub: 'sub_123',
+    storage: null
+  });
+
+  await repository.saveWorkspace(legacyWorkspace);
+  const requestBody = JSON.parse(fetchDouble.calls[0].options.body);
+
+  assert.equal(validateWorkspaceShape(requestBody.workspace), true);
+  assert.equal(requestBody.workspace.boards.main.columnOrder, undefined);
+  assert.equal(requestBody.workspace.boards.main.columns, undefined);
+  assert.equal(requestBody.workspace.boards.main.cards.card_legacy_1.title, undefined);
+  assert.equal(requestBody.workspace.boards.main.cards.card_legacy_1.contentByLocale.en.title, 'Legacy save task');
+  assert.equal(requestBody.expectedRevision, 0);
 });
 
 test('HttpWorkspaceRepository imports valid v4 local data when the server record is pristine', async () => {
@@ -158,6 +232,7 @@ test('HttpWorkspaceRepository safely ignores a repeated import attempt once the 
     detailsMarkdown: 'Already imported earlier',
     priority: 'urgent'
   });
+  const normalizedServerWorkspace = migrateWorkspaceSnapshot(canonicalServerWorkspace);
 
   assert.notEqual(localWorkspace, null);
 
@@ -182,7 +257,7 @@ test('HttpWorkspaceRepository safely ignores a repeated import attempt once the 
 
   const loadedWorkspace = await repository.loadWorkspace();
 
-  assert.deepEqual(loadedWorkspace, canonicalServerWorkspace);
+  assert.deepEqual(loadedWorkspace, normalizedServerWorkspace);
   assert.equal(fetchDouble.calls.length, 3);
   assert.equal(fetchDouble.calls[0].url, '/api/workspace');
   assert.equal(fetchDouble.calls[1].url, '/api/workspace/import');
@@ -222,6 +297,8 @@ test('HttpWorkspaceRepository prefers bootstrap payload on first load and consum
     detailsMarkdown: 'Loaded after bootstrap is consumed',
     priority: 'urgent'
   });
+  const normalizedBootstrapWorkspace = migrateWorkspaceSnapshot(bootstrapWorkspace);
+  const normalizedNetworkWorkspace = migrateWorkspaceSnapshot(networkWorkspace);
   const fetchDouble = createFetchDouble([
     createJsonResponse(createWorkspaceApiPayload(networkWorkspace, {
       revision: 4,
@@ -248,7 +325,7 @@ test('HttpWorkspaceRepository prefers bootstrap payload on first load and consum
 
   const firstLoad = await repository.loadWorkspace();
 
-  assert.deepEqual(firstLoad, bootstrapWorkspace);
+  assert.deepEqual(firstLoad, normalizedBootstrapWorkspace);
   assert.deepEqual(repository.meta, {
     revision: 3,
     updatedAt: '2026-04-03T11:00:00.000Z',
@@ -260,9 +337,41 @@ test('HttpWorkspaceRepository prefers bootstrap payload on first load and consum
 
   const secondLoad = await repository.loadWorkspace();
 
-  assert.deepEqual(secondLoad, networkWorkspace);
+  assert.deepEqual(secondLoad, normalizedNetworkWorkspace);
   assert.equal(fetchDouble.calls.length, 1);
   assert.equal(fetchDouble.calls[0].url, '/api/workspace');
+});
+
+test('HttpWorkspaceRepository normalizes older bootstrap payloads before using them', async () => {
+  const repository = new HttpWorkspaceRepository({
+    fetchImpl: createFetchDouble([]).fetch,
+    viewerSub: 'sub_123',
+    storage: null,
+    document: createDocumentDouble({
+      'workspace-bootstrap': JSON.stringify(
+        createWorkspaceApiPayload(createLegacyV4Workspace({
+          version: 5,
+          title: 'Legacy bootstrap task',
+          detailsMarkdown: 'Normalized during hydration',
+          priority: 'important'
+        }), {
+          revision: 3,
+          updatedAt: '2026-04-03T11:00:00.000Z',
+          lastChangedBy: 'sub_123',
+          isPristine: false
+        })
+      )
+    })
+  });
+
+  const firstLoad = await repository.loadWorkspace();
+
+  assert.equal(validateWorkspaceShape(firstLoad), true);
+  assert.equal(firstLoad.boards.main.columnOrder, undefined);
+  assert.equal(firstLoad.boards.main.columns, undefined);
+  assert.equal(firstLoad.boards.main.cards.card_legacy_1.title, undefined);
+  assert.equal(firstLoad.boards.main.cards.card_legacy_1.contentByLocale.en.title, 'Legacy bootstrap task');
+  assert.equal(repository.revision, 3);
 });
 
 test('HttpWorkspaceRepository sends the bootstrapped revision on save', async () => {
@@ -271,6 +380,7 @@ test('HttpWorkspaceRepository sends the bootstrapped revision on save', async ()
     detailsMarkdown: 'Revision-aware save',
     priority: 'important'
   });
+  const normalizedWorkspace = migrateWorkspaceSnapshot(workspace);
   const repository = new HttpWorkspaceRepository({
     fetchImpl: createFetchDouble([
       createJsonResponse(createWorkspaceApiPayload(workspace, {
@@ -308,7 +418,7 @@ test('HttpWorkspaceRepository sends the bootstrapped revision on save', async ()
   await repository.saveWorkspace(workspace);
 
   assert.deepEqual(JSON.parse(fetchDouble.calls[0].options.body), {
-    workspace,
+    workspace: normalizedWorkspace,
     expectedRevision: 5
   });
   assert.equal(repository.revision, 6);
@@ -486,6 +596,7 @@ function createWorkspaceApiPayload(workspace, meta = {}, result = undefined) {
 }
 
 function createLegacyV4Workspace({
+  version = 4,
   title = 'Legacy v4 card',
   detailsMarkdown = '',
   priority = 'important'
@@ -494,7 +605,7 @@ function createLegacyV4Workspace({
   const board = workspace.boards.main;
 
   return {
-    version: 4,
+    version,
     workspaceId: workspace.workspaceId,
     ui: structuredClone(workspace.ui),
     boardOrder: [...workspace.boardOrder],

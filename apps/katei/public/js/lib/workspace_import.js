@@ -32,7 +32,9 @@ export function readLocalV4Workspace(storage = globalThis.localStorage, viewerSu
 }
 
 export async function postWorkspaceImport({ fetchImpl = globalThis.fetch?.bind(globalThis), workspace } = {}) {
-  if (!validateWorkspaceShape(workspace)) {
+  const normalizedWorkspace = migrateWorkspaceSnapshot(workspace);
+
+  if (!validateWorkspaceShape(normalizedWorkspace)) {
     throw new Error('Cannot import an invalid workspace.');
   }
 
@@ -43,7 +45,7 @@ export async function postWorkspaceImport({ fetchImpl = globalThis.fetch?.bind(g
       'Content-Type': 'application/json'
     },
     credentials: 'same-origin',
-    body: JSON.stringify({ workspace })
+    body: JSON.stringify({ workspace: normalizedWorkspace })
   });
   const data = await parseJsonResponse(response);
 

@@ -1,10 +1,10 @@
 import { Router } from 'express';
-import { projectWorkspaceWithLegacyColumns } from '../../public/js/domain/board_workflow.js';
-import { projectWorkspaceWithLegacyCardContent } from '../../public/js/domain/card_localization.js';
+import { migrateWorkspaceSnapshot } from '../../public/js/domain/workspace_migrations.js';
 import { validateWorkspaceShape } from '../../public/js/domain/workspace_validation.js';
 import { applyWorkspaceCommand } from '../workspaces/apply_workspace_command.js';
 import { createDefaultMutationContext } from '../workspaces/mutation_context.js';
 import {
+  createWorkspaceRecord,
   createCommandAppliedWorkspaceRecord,
   createCommandReceipt,
   findCommandReceipt
@@ -19,7 +19,9 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
 
   router.get('/api/workspace', requireSession, async (request, response, next) => {
     try {
-      const record = await workspaceRecordRepository.loadOrCreateWorkspaceRecord(request.viewer.sub);
+      const record = createWorkspaceRecord(
+        await workspaceRecordRepository.loadOrCreateWorkspaceRecord(request.viewer.sub)
+      );
       response.json(createWorkspaceApiResponse(record));
     } catch (error) {
       next(error);
@@ -27,7 +29,7 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
   });
 
   router.put('/api/workspace', requireSession, async (request, response, next) => {
-    const workspace = request.body?.workspace;
+    const workspace = migrateWorkspaceSnapshot(request.body?.workspace);
     const { expectedRevision, isValid: hasValidExpectedRevision } = parseExpectedRevision(request.body?.expectedRevision);
 
     if (!validateWorkspaceShape(workspace)) {
@@ -81,7 +83,9 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
     }
 
     try {
-      const currentRecord = await workspaceRecordRepository.loadOrCreateWorkspaceRecord(request.viewer.sub);
+      const currentRecord = createWorkspaceRecord(
+        await workspaceRecordRepository.loadOrCreateWorkspaceRecord(request.viewer.sub)
+      );
       const existingReceipt =
         typeof command?.clientMutationId === 'string' && command.clientMutationId.trim()
           ? findCommandReceipt(currentRecord, command.clientMutationId)
@@ -152,7 +156,7 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
   });
 
   router.post('/api/workspace/import', requireSession, async (request, response, next) => {
-    const workspace = request.body?.workspace;
+    const workspace = migrateWorkspaceSnapshot(request.body?.workspace);
 
     if (!validateWorkspaceShape(workspace)) {
       response.status(400).json(createInvalidWorkspaceResponse());
@@ -187,15 +191,15 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
 }
 
 function createWorkspaceApiResponse(record, result = undefined) {
-  const workspace = projectWorkspaceWithLegacyColumns(projectWorkspaceWithLegacyCardContent(record.workspace));
+  const normalizedRecord = createWorkspaceRecord(record);
   const payload = {
     ok: true,
-    workspace,
+    workspace: normalizedRecord.workspace,
     meta: {
-      revision: record.revision,
-      updatedAt: record.updatedAt,
-      lastChangedBy: record.lastChangedBy,
-      isPristine: record.revision === 0
+      revision: normalizedRecord.revision,
+      updatedAt: normalizedRecord.updatedAt,
+      lastChangedBy: normalizedRecord.lastChangedBy,
+      isPristine: normalizedRecord.revision === 0
     }
   };
 

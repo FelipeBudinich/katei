@@ -1,10 +1,11 @@
 import { createDefaultBoardLanguagePolicy, normalizeBoardLanguagePolicy } from './board_language_policy.js';
 import { createDefaultBoardStages, createDefaultBoardTemplates } from './board_workflow.js';
 import { createCardContentProvenance } from './card_localization.js';
+import { WORKSPACE_VERSION } from './workspace_read_model.js';
 
 export const WORKSPACE_MIGRATIONS = Object.freeze([
   Object.freeze({
-    version: 5,
+    version: WORKSPACE_VERSION,
     up: migrateWorkspaceToV5
   })
 ]);
@@ -14,37 +15,26 @@ export function migrateWorkspaceSnapshot(workspace, options = {}) {
     return workspace;
   }
 
-  const workspaceVersion = Number.isInteger(workspace.version) ? workspace.version : 0;
-
-  if (workspaceVersion >= 5) {
-    return structuredClone(workspace);
-  }
-
-  let nextWorkspace = structuredClone(workspace);
-
-  for (const migration of WORKSPACE_MIGRATIONS) {
-    if (workspaceVersion >= migration.version) {
-      continue;
-    }
-
-    if (typeof migration?.up !== 'function') {
-      continue;
-    }
-
-    const migratedWorkspace = migration.up(nextWorkspace, options);
-    nextWorkspace = migratedWorkspace === undefined ? nextWorkspace : migratedWorkspace;
-  }
-
-  return nextWorkspace;
+  return normalizeWorkspaceToCurrentSchema(workspace, options);
 }
 
 export function migrateWorkspaceToV5(workspace, { now = null } = {}) {
+  return normalizeWorkspaceToCurrentSchema(workspace, {
+    now,
+    version: 5
+  });
+}
+
+export function normalizeWorkspaceToCurrentSchema(
+  workspace,
+  { now = null, version = WORKSPACE_VERSION } = {}
+) {
   if (!isPlainObject(workspace)) {
     return workspace;
   }
 
   const migratedWorkspace = structuredClone(workspace);
-  migratedWorkspace.version = 5;
+  migratedWorkspace.version = version;
 
   if (!isPlainObject(migratedWorkspace.boards)) {
     return migratedWorkspace;

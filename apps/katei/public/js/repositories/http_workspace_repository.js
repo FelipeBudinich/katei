@@ -57,7 +57,9 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
   }
 
   async saveWorkspace(workspace) {
-    if (!validateWorkspaceShape(workspace)) {
+    const normalizedWorkspace = normalizeWorkspaceSnapshot(workspace);
+
+    if (!validateWorkspaceShape(normalizedWorkspace)) {
       throw new Error('Cannot save an invalid workspace.');
     }
 
@@ -66,7 +68,7 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
       {
         method: 'PUT',
         body: JSON.stringify({
-          workspace,
+          workspace: normalizedWorkspace,
           expectedRevision: this.revision ?? 0
         })
       },
@@ -106,7 +108,7 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
       throw createWorkspaceApiError(response, data, fallbackMessage);
     }
 
-    const workspace = migrateWorkspaceSnapshot(data?.workspace);
+    const workspace = normalizeWorkspaceSnapshot(data?.workspace);
 
     if (!validateWorkspaceShape(workspace)) {
       throw new Error('Workspace API returned an invalid workspace.');
@@ -142,7 +144,7 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
 
     try {
       const payload = JSON.parse(bootstrapElement.textContent);
-      const workspace = migrateWorkspaceSnapshot(payload?.workspace);
+      const workspace = normalizeWorkspaceSnapshot(payload?.workspace);
 
       if (!validateWorkspaceShape(workspace)) {
         return null;
@@ -202,4 +204,8 @@ function createWorkspaceApiError(response, data, fallbackMessage) {
 
 function isPlainObject(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function normalizeWorkspaceSnapshot(workspace) {
+  return migrateWorkspaceSnapshot(workspace);
 }

@@ -2,13 +2,17 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import request from 'supertest';
 import { createApp } from '../src/app.js';
-import { projectWorkspaceWithLegacyColumns } from '../public/js/domain/board_workflow.js';
 import {
   KATEI_SESSION_COOKIE_NAME,
   createSessionPayload,
   createSignedSessionCookieValue
 } from '../src/auth/session_cookie.js';
-import { createCard, createEmptyWorkspace, validateWorkspaceShape } from '../public/js/domain/workspace.js';
+import {
+  createCard,
+  createEmptyWorkspace,
+  migrateWorkspaceSnapshot,
+  validateWorkspaceShape
+} from '../public/js/domain/workspace.js';
 import { KATEI_UI_LOCALE_COOKIE_NAME } from '../src/i18n/request_ui_locale.js';
 import { createTranslator } from '../public/js/i18n/translate.js';
 import { buildWorkspacePageModel } from '../src/routes/boards.js';
@@ -167,6 +171,7 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
     priority: 'urgent'
   });
   workspace.boards.main.title = 'Roadmap alpha';
+  const normalizedWorkspace = migrateWorkspaceSnapshot(workspace);
   const record = createUpdatedWorkspaceRecord(
     createInitialWorkspaceRecord('sub_123', {
       now: '2026-04-02T10:00:00.000Z'
@@ -201,7 +206,7 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
   assert.match(response.text, /<script type="application\/json" id="workspace-bootstrap">/);
   assert.doesNotMatch(response.text, /<\/script><img src=x onerror=1>/);
   assert.deepEqual(bootstrapPayload, {
-    workspace: projectWorkspaceWithLegacyColumns(workspace),
+    workspace: normalizedWorkspace,
     meta: {
       revision: 1,
       updatedAt: '2026-04-02T11:00:00.000Z',
@@ -211,7 +216,8 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
   });
   assert.equal(bootstrapPayload.workspace.boards.main.title, 'Roadmap alpha');
   assert.equal(
-    bootstrapPayload.workspace.boards.main.cards[Object.keys(bootstrapPayload.workspace.boards.main.cards)[0]].title,
+    bootstrapPayload.workspace.boards.main.cards[Object.keys(bootstrapPayload.workspace.boards.main.cards)[0]].contentByLocale
+      .en.title,
     'Ship launch checklist'
   );
   assert.deepEqual(workspaceRecordRepository.loadCalls, ['sub_123']);
@@ -226,6 +232,39 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
   assert.match(response.text, /<script defer src="\/vendor\/easymde\/easymde\.min\.js"><\/script>/);
   assert.match(response.text, /id="board-options-ui-locale-picker"/);
   assert.match(response.text, /<form method="get" action="\/boards" class="ui-locale-picker">/);
+});
+
+test('GET /boards bootstraps normalized workspace snapshots when the loaded record is legacy-shaped', async () => {
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([
+    createLegacyWorkspaceRecord({
+      workspace: createLegacyWorkspaceSnapshot({
+        version: 5,
+        title: 'Legacy bootstrap task',
+        detailsMarkdown: 'Rendered from an older snapshot',
+        priority: 'important'
+      })
+    })
+  ]);
+  const app = createTestApp({
+    googleTokenVerifier: async () => ({ sub: 'sub_123' }),
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .get('/boards')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_123', name: 'Tester' }));
+  const bootstrapPayload = readWorkspaceBootstrapPayload(response.text);
+
+  assert.equal(response.status, 200);
+  assert.match(response.text, /Legacy bootstrap task/);
+  assert.equal(validateWorkspaceShape(bootstrapPayload.workspace), true);
+  assert.equal(bootstrapPayload.workspace.boards.main.columnOrder, undefined);
+  assert.equal(bootstrapPayload.workspace.boards.main.columns, undefined);
+  assert.equal(bootstrapPayload.workspace.boards.main.cards.card_legacy_1.title, undefined);
+  assert.equal(
+    bootstrapPayload.workspace.boards.main.cards.card_legacy_1.contentByLocale.en.title,
+    'Legacy bootstrap task'
+  );
 });
 
 test('GET /boards localizes server-rendered chrome for ja without changing user-authored viewer content', async () => {
@@ -288,6 +327,39 @@ test('GET /api/workspace returns the authenticated viewer workspace JSON', async
   assert.deepEqual(workspaceRecordRepository.loadCalls, ['sub_123']);
 });
 
+test('GET /api/workspace normalizes older persisted snapshots before returning them', async () => {
+  const legacyWorkspace = createLegacyWorkspaceSnapshot({
+    version: 5,
+    title: 'Legacy server task',
+    detailsMarkdown: 'Loaded from an older record',
+    priority: 'urgent'
+  });
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([
+    createLegacyWorkspaceRecord({
+      workspace: legacyWorkspace
+    })
+  ]);
+  const app = createTestApp({
+    googleTokenVerifier: async () => ({ sub: 'sub_123' }),
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .get('/api/workspace')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_123', name: 'Tester' }));
+
+  assert.equal(response.status, 200);
+  assert.equal(response.body.ok, true);
+  assert.equal(validateWorkspaceShape(response.body.workspace), true);
+  assert.equal(response.body.workspace.boards.main.columnOrder, undefined);
+  assert.equal(response.body.workspace.boards.main.columns, undefined);
+  assert.equal(response.body.workspace.boards.main.cards.card_legacy_1.title, undefined);
+  assert.equal(
+    response.body.workspace.boards.main.cards.card_legacy_1.contentByLocale.en.title,
+    'Legacy server task'
+  );
+});
+
 test('PUT /api/workspace rejects invalid workspace shapes for authenticated viewers', async () => {
   const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble();
   const app = createTestApp({
@@ -323,6 +395,7 @@ test('PUT /api/workspace saves a valid full-workspace snapshot for the authentic
     detailsMarkdown: 'Owner: Mina',
     priority: 'urgent'
   });
+  const normalizedWorkspace = migrateWorkspaceSnapshot(workspace);
 
   const response = await request(app)
     .put('/api/workspace')
@@ -332,7 +405,11 @@ test('PUT /api/workspace saves a valid full-workspace snapshot for the authentic
   assert.equal(response.status, 200);
   assert.equal(response.body.ok, true);
   assert.equal(validateWorkspaceShape(response.body.workspace), true);
-  assert.equal(response.body.workspace.boards.main.cards[Object.keys(response.body.workspace.boards.main.cards)[0]].title, 'Ship launch checklist');
+  assert.equal(
+    response.body.workspace.boards.main.cards[Object.keys(response.body.workspace.boards.main.cards)[0]].contentByLocale
+      .en.title,
+    'Ship launch checklist'
+  );
   assert.deepEqual(response.body.meta, {
     revision: 1,
     updatedAt: '2026-04-02T11:00:00.000Z',
@@ -342,7 +419,7 @@ test('PUT /api/workspace saves a valid full-workspace snapshot for the authentic
   assert.deepEqual(workspaceRecordRepository.replaceCalls, [
     {
       viewerSub: 'sub_123',
-      workspace,
+      workspace: normalizedWorkspace,
       expectedRevision: 0,
       actor: {
         type: 'human',
@@ -548,6 +625,7 @@ test('POST /api/workspace/import saves a valid full-workspace snapshot for a pri
     detailsMarkdown: 'From local v4 storage',
     priority: 'important'
   });
+  const normalizedWorkspace = migrateWorkspaceSnapshot(workspace);
 
   const response = await request(app)
     .post('/api/workspace/import')
@@ -566,13 +644,51 @@ test('POST /api/workspace/import saves a valid full-workspace snapshot for a pri
   assert.deepEqual(workspaceRecordRepository.importCalls, [
     {
       viewerSub: 'sub_123',
-      workspace,
+      workspace: normalizedWorkspace,
       actor: {
         type: 'human',
         id: 'sub_123'
       }
     }
   ]);
+});
+
+test('POST /api/workspace/import accepts legacy snapshots and persists the migrated shape', async () => {
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble();
+  const app = createTestApp({
+    googleTokenVerifier: async () => ({ sub: 'sub_123' }),
+    workspaceRecordRepository
+  });
+  const legacyWorkspace = createLegacyWorkspaceSnapshot({
+    version: 4,
+    title: 'Imported legacy task',
+    detailsMarkdown: 'Migrated from local v4 storage',
+    priority: 'important'
+  });
+
+  const response = await request(app)
+    .post('/api/workspace/import')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_123', name: 'Tester' }))
+    .send({ workspace: legacyWorkspace });
+
+  assert.equal(response.status, 200);
+  assert.equal(response.body.ok, true);
+  assert.equal(validateWorkspaceShape(response.body.workspace), true);
+  assert.equal(response.body.workspace.boards.main.columnOrder, undefined);
+  assert.equal(response.body.workspace.boards.main.cards.card_legacy_1.title, undefined);
+  assert.equal(
+    response.body.workspace.boards.main.cards.card_legacy_1.contentByLocale.en.title,
+    'Imported legacy task'
+  );
+  assert.equal(workspaceRecordRepository.importCalls.length, 1);
+  assert.equal(validateWorkspaceShape(workspaceRecordRepository.importCalls[0].workspace), true);
+  assert.equal(workspaceRecordRepository.importCalls[0].workspace.boards.main.columnOrder, undefined);
+  assert.equal(workspaceRecordRepository.importCalls[0].workspace.boards.main.columns, undefined);
+  assert.equal(workspaceRecordRepository.importCalls[0].workspace.boards.main.cards.card_legacy_1.title, undefined);
+  assert.equal(
+    workspaceRecordRepository.importCalls[0].workspace.boards.main.cards.card_legacy_1.contentByLocale.en.title,
+    'Imported legacy task'
+  );
 });
 
 test('POST /api/workspace/import returns 409 when the server workspace is no longer pristine', async () => {
@@ -850,6 +966,94 @@ function readWorkspaceBootstrapPayload(html) {
   }
 
   return JSON.parse(match[1]);
+}
+
+function createLegacyWorkspaceSnapshot({
+  version = 4,
+  title = 'Legacy task',
+  detailsMarkdown = '',
+  priority = 'important'
+} = {}) {
+  const workspace = createEmptyWorkspace();
+  const board = workspace.boards.main;
+
+  return {
+    version,
+    workspaceId: workspace.workspaceId,
+    ui: structuredClone(workspace.ui),
+    boardOrder: [...workspace.boardOrder],
+    boards: {
+      [board.id]: {
+        id: board.id,
+        title: board.title,
+        createdAt: board.createdAt,
+        updatedAt: board.updatedAt,
+        columnOrder: ['backlog', 'doing', 'done', 'archived'],
+        columns: {
+          backlog: {
+            id: 'backlog',
+            title: 'Backlog',
+            cardIds: ['card_legacy_1'],
+            allowedTransitionStageIds: ['doing', 'done'],
+            templateIds: []
+          },
+          doing: {
+            id: 'doing',
+            title: 'Doing',
+            cardIds: [],
+            allowedTransitionStageIds: ['backlog', 'done'],
+            templateIds: []
+          },
+          done: {
+            id: 'done',
+            title: 'Done',
+            cardIds: [],
+            allowedTransitionStageIds: ['backlog', 'doing', 'archived'],
+            templateIds: []
+          },
+          archived: {
+            id: 'archived',
+            title: 'Archived',
+            cardIds: [],
+            allowedTransitionStageIds: ['backlog', 'doing', 'done'],
+            templateIds: []
+          }
+        },
+        cards: {
+          card_legacy_1: {
+            id: 'card_legacy_1',
+            title,
+            detailsMarkdown,
+            priority,
+            createdAt: '2026-04-02T09:00:00.000Z',
+            updatedAt: '2026-04-02T09:30:00.000Z'
+          }
+        }
+      }
+    }
+  };
+}
+
+function createLegacyWorkspaceRecord({
+  viewerSub = 'sub_123',
+  workspace = createLegacyWorkspaceSnapshot(),
+  revision = 1,
+  createdAt = '2026-04-02T10:00:00.000Z',
+  updatedAt = '2026-04-02T11:00:00.000Z',
+  lastChangedBy = 'sub_123',
+  activityEvents = [],
+  commandReceipts = []
+} = {}) {
+  return {
+    viewerSub,
+    workspace,
+    revision,
+    createdAt,
+    updatedAt,
+    lastChangedBy,
+    activityEvents,
+    commandReceipts
+  };
 }
 
 function createWorkspaceRecordRepositoryDouble(initialRecords = []) {

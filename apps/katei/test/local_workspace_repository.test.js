@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createEmptyWorkspace } from '../public/js/domain/workspace.js';
+import { createEmptyWorkspace, validateWorkspaceShape } from '../public/js/domain/workspace.js';
 import {
   LocalWorkspaceRepository,
   WORKSPACE_STORAGE_PREFIX,
@@ -30,7 +30,7 @@ test('LocalWorkspaceRepository reads and writes only the viewer-scoped workspace
   assert.deepEqual(await repository.loadWorkspace(), workspace);
 });
 
-test('LocalWorkspaceRepository rejects stored cards that still use the legacy description field', async () => {
+test('LocalWorkspaceRepository normalizes stored cards that still carry an unused legacy description field', async () => {
   const workspace = createEmptyWorkspace();
   const board = workspace.boards.main;
 
@@ -48,12 +48,11 @@ test('LocalWorkspaceRepository rejects stored cards that still use the legacy de
   });
   const repository = new LocalWorkspaceRepository(storage, 'sub_123');
   const loadedWorkspace = await repository.loadWorkspace();
-  const fallbackWorkspace = createEmptyWorkspace();
 
-  fallbackWorkspace.boards.main.createdAt = loadedWorkspace.boards.main.createdAt;
-  fallbackWorkspace.boards.main.updatedAt = loadedWorkspace.boards.main.updatedAt;
-
-  assert.deepEqual(loadedWorkspace, fallbackWorkspace);
+  assert.equal(validateWorkspaceShape(loadedWorkspace), true);
+  assert.equal(loadedWorkspace.boards.main.cards.card_legacy.title, undefined);
+  assert.equal(loadedWorkspace.boards.main.cards.card_legacy.contentByLocale.en.title, 'Legacy card');
+  assert.equal(loadedWorkspace.boards.main.cards.card_legacy.contentByLocale.en.detailsMarkdown, '');
 });
 
 function createStorageDouble(initialEntries = {}) {
