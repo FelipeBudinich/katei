@@ -1,16 +1,3 @@
-import {
-  createBoard,
-  createCard,
-  deleteBoard,
-  deleteCard,
-  moveCard,
-  renameBoard,
-  resetBoard,
-  setColumnCollapsed,
-  setActiveBoard,
-  updateCard
-} from '../domain/workspace_mutations.js';
-
 export class WorkspaceService {
   constructor(repository) {
     this.repository = repository;
@@ -21,50 +8,93 @@ export class WorkspaceService {
   }
 
   async createBoard(input) {
-    return this.#applyMutation((workspace) => createBoard(workspace, input));
+    return this.#applyCommand('board.create', {
+      title: input?.title
+    });
   }
 
   async renameBoard(boardId, title) {
-    return this.#applyMutation((workspace) => renameBoard(workspace, boardId, title));
+    return this.#applyCommand('board.rename', {
+      boardId,
+      title
+    });
   }
 
   async deleteBoard(boardId) {
-    return this.#applyMutation((workspace) => deleteBoard(workspace, boardId));
+    return this.#applyCommand('board.delete', {
+      boardId
+    });
   }
 
   async setActiveBoard(boardId) {
-    return this.#applyMutation((workspace) => setActiveBoard(workspace, boardId));
+    return this.#applyCommand('ui.activeBoard.set', {
+      boardId
+    });
   }
 
   async setColumnCollapsed(boardId, columnId, isCollapsed) {
-    return this.#applyMutation((workspace) => setColumnCollapsed(workspace, boardId, columnId, isCollapsed));
+    return this.#applyCommand('ui.columnCollapsed.set', {
+      boardId,
+      columnId,
+      isCollapsed
+    });
   }
 
   async resetBoard(boardId) {
-    return this.#applyMutation((workspace) => resetBoard(workspace, boardId));
+    return this.#applyCommand('board.reset', {
+      boardId
+    });
   }
 
   async createCard(boardId, input) {
-    return this.#applyMutation((workspace) => createCard(workspace, boardId, input));
+    return this.#applyCommand('card.create', {
+      boardId,
+      title: input?.title,
+      detailsMarkdown: input?.detailsMarkdown,
+      priority: input?.priority
+    });
   }
 
   async updateCard(boardId, cardId, updates) {
-    return this.#applyMutation((workspace) => updateCard(workspace, boardId, cardId, updates));
+    return this.#applyCommand('card.update', {
+      boardId,
+      cardId,
+      ...updates
+    });
   }
 
   async deleteCard(boardId, cardId) {
-    return this.#applyMutation((workspace) => deleteCard(workspace, boardId, cardId));
+    return this.#applyCommand('card.delete', {
+      boardId,
+      cardId
+    });
   }
 
   async moveCard(boardId, cardId, sourceColumnId, targetColumnId) {
-    return this.#applyMutation((workspace) =>
-      moveCard(workspace, boardId, cardId, sourceColumnId, targetColumnId)
-    );
+    return this.#applyCommand('card.move', {
+      boardId,
+      cardId,
+      sourceColumnId,
+      targetColumnId
+    });
   }
 
-  async #applyMutation(mutator) {
-    const workspace = await this.repository.loadWorkspace();
-    const nextWorkspace = mutator(workspace);
-    return this.repository.saveWorkspace(nextWorkspace);
+  async #applyCommand(type, payload) {
+    const response = await this.repository.applyCommand({
+      clientMutationId: createClientMutationId(),
+      type,
+      payload
+    });
+
+    return response?.workspace ?? response;
   }
+}
+
+function createClientMutationId() {
+  const randomId =
+    typeof globalThis.crypto?.randomUUID === 'function'
+      ? globalThis.crypto.randomUUID().replaceAll('-', '')
+      : `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+
+  return `cmd_${randomId}`;
 }
