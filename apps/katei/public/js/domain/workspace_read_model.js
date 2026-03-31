@@ -1,3 +1,4 @@
+import { createBoardCollaboration } from './board_collaboration.js';
 import { createDefaultBoardLanguagePolicy } from './board_language_policy.js';
 import { createDefaultBoardStages, createDefaultBoardTemplates } from './board_workflow.js';
 
@@ -26,13 +27,14 @@ export const PRIORITY_DEFINITIONS = Object.freeze(
 export const DEFAULT_PRIORITY = 'important';
 export const DEFAULT_WORKSPACE_STATE = Object.freeze(createEmptyWorkspace());
 
-export function createEmptyWorkspace({ workspaceId = WORKSPACE_ID } = {}) {
+export function createEmptyWorkspace({ workspaceId = WORKSPACE_ID, creator = undefined } = {}) {
   const timestamp = createTimestamp();
   const board = createWorkspaceBoard({
     id: DEFAULT_BOARD_ID,
     title: DEFAULT_BOARD_TITLE,
     createdAt: timestamp,
-    updatedAt: timestamp
+    updatedAt: timestamp,
+    creator: creator ?? undefined
   });
 
   return {
@@ -51,7 +53,7 @@ export function createEmptyWorkspace({ workspaceId = WORKSPACE_ID } = {}) {
   };
 }
 
-export function createWorkspaceBoard({ id, title, createdAt, updatedAt }) {
+export function createWorkspaceBoard({ id, title, createdAt, updatedAt, creator = createDefaultBoardCreator() }) {
   const stages = {};
 
   for (const stage of createDefaultBoardStages()) {
@@ -66,6 +68,10 @@ export function createWorkspaceBoard({ id, title, createdAt, updatedAt }) {
     stageOrder: Object.keys(stages),
     stages,
     templates: createDefaultBoardTemplates(),
+    collaboration: createBoardCollaboration({
+      creator,
+      joinedAt: createdAt
+    }),
     languagePolicy: createDefaultBoardLanguagePolicy(),
     cards: {}
   };
@@ -87,6 +93,13 @@ export function cloneWorkspace(workspace) {
 
 function createTimestamp() {
   return new Date().toISOString();
+}
+
+function createDefaultBoardCreator() {
+  return {
+    type: 'system',
+    id: 'workspace-bootstrap'
+  };
 }
 
 function normalizeWorkspaceId(workspaceId) {

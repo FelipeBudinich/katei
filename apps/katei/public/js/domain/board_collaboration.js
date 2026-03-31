@@ -1,5 +1,67 @@
 const BOARD_ROLES = Object.freeze(['admin', 'editor', 'viewer']);
-const BOARD_INVITE_STATUSES = Object.freeze(['accepted', 'pending', 'revoked']);
+const BOARD_INVITE_STATUSES = Object.freeze(['accepted', 'pending', 'revoked', 'expired']);
+
+export function createBoardCollaboration({ creator = null, joinedAt = null } = {}) {
+  const collaboration = {
+    memberships: [],
+    invites: []
+  };
+  const actor = normalizeActor(creator);
+
+  if (!actor) {
+    return collaboration;
+  }
+
+  const membership = {
+    actor,
+    role: 'admin'
+  };
+  const normalizedJoinedAt = normalizeOptionalIsoTimestamp(joinedAt);
+
+  if (normalizedJoinedAt) {
+    membership.joinedAt = normalizedJoinedAt;
+  }
+
+  collaboration.memberships.push(membership);
+
+  return collaboration;
+}
+
+export function normalizeBoardCollaboration(board) {
+  const memberships = [];
+  const invites = [];
+  const seenActors = new Set();
+  const seenInviteIds = new Set();
+  const rawMemberships = readBoardMemberships(board);
+  const rawInvites = readBoardInvites(board);
+
+  for (const membership of Array.isArray(rawMemberships) ? rawMemberships : []) {
+    const normalizedMembership = normalizeBoardMembership(membership);
+
+    if (!normalizedMembership || seenActors.has(normalizedMembership.actorKey)) {
+      continue;
+    }
+
+    seenActors.add(normalizedMembership.actorKey);
+    memberships.push(stripActorKey(normalizedMembership));
+  }
+
+  for (const invite of Array.isArray(rawInvites) ? rawInvites : []) {
+    const normalizedInvite = normalizeBoardInvite(invite);
+
+    if (!normalizedInvite || seenInviteIds.has(normalizedInvite.id)) {
+      continue;
+    }
+
+    seenInviteIds.add(normalizedInvite.id);
+    invites.push(normalizedInvite);
+  }
+
+  return {
+    memberships,
+    invites
+  };
+}
 
 export function canonicalizeBoardRole(role) {
   const normalizedRole = normalizeOptionalString(role).toLowerCase();
@@ -78,19 +140,23 @@ function normalizeBoardMembership(membership) {
 
   const actor = normalizeActor(membership.actor);
   const role = canonicalizeBoardRole(membership.role);
+  const invitedBy = membership.invitedBy == null ? null : normalizeActor(membership.invitedBy);
 
-  if (!actor || !role) {
+  if (!actor || !role || (membership.invitedBy != null && !invitedBy)) {
     return null;
   }
 
-  if (membership.joinedAt != null && !isIsoTimestamp(membership.joinedAt)) {
+  const joinedAt = normalizeOptionalIsoTimestamp(membership.joinedAt);
+
+  if (membership.joinedAt != null && !joinedAt) {
     return null;
   }
 
   return {
-    ...structuredClone(membership),
     actor,
     role,
+    ...(joinedAt ? { joinedAt } : {}),
+    ...(invitedBy ? { invitedBy } : {}),
     actorKey: createActorKey(actor)
   };
 }
@@ -119,14 +185,20 @@ function normalizeBoardInvite(invite) {
     return null;
   }
 
+  if (invite.expiresAt != null && !isIsoTimestamp(invite.expiresAt)) {
+    return null;
+  }
+
   return {
-    ...structuredClone(invite),
     id,
     role,
     status,
     ...(targetActor ? { actor: targetActor } : {}),
     ...(targetEmail ? { email: targetEmail } : {}),
-    ...(invitedBy ? { invitedBy } : {})
+    ...(invitedBy ? { invitedBy } : {}),
+    ...(invite.invitedAt != null ? { invitedAt: new Date(invite.invitedAt).toISOString() } : {}),
+    ...(invite.respondedAt != null ? { respondedAt: new Date(invite.respondedAt).toISOString() } : {}),
+    ...(invite.expiresAt != null ? { expiresAt: new Date(invite.expiresAt).toISOString() } : {})
   };
 }
 
@@ -142,12 +214,19 @@ function normalizeActor(actor) {
 
   const type = normalizeOptionalString(actor.type).toLowerCase();
   const id = normalizeOptionalString(actor.id);
+  const email = normalizeEmail(actor.email ?? null);
+  const displayName = normalizeOptionalString(actor.displayName ?? actor.name ?? null);
 
   if (!['human', 'agent', 'system'].includes(type) || !id) {
     return null;
   }
 
-  return { type, id };
+  return {
+    type,
+    id,
+    ...(email ? { email } : {}),
+    ...(displayName ? { displayName } : {})
+  };
 }
 
 function createActorKey(actor) {
@@ -155,40 +234,40 @@ function createActorKey(actor) {
 }
 
 function readBoardMemberships(board) {
-  if (Array.isArray(board?.memberships)) {
-    return board.memberships;
-  }
-
   if (Array.isArray(board?.collaboration?.memberships)) {
     return board.collaboration.memberships;
-  }
-
-  if (board?.memberships != null) {
-    return board.memberships;
   }
 
   if (board?.collaboration?.memberships != null) {
     return board.collaboration.memberships;
   }
 
+  if (Array.isArray(board?.memberships)) {
+    return board.memberships;
+  }
+
+  if (board?.memberships != null) {
+    return board.memberships;
+  }
+
   return null;
 }
 
 function readBoardInvites(board) {
-  if (Array.isArray(board?.invites)) {
-    return board.invites;
-  }
-
   if (Array.isArray(board?.collaboration?.invites)) {
     return board.collaboration.invites;
   }
 
-  if (board?.invites != null) {
+  if (board?.collaboration?.invites != null) {
+    return board.collaboration.invites;
+  }
+
+  if (Array.isArray(board?.invites)) {
     return board.invites;
   }
 
-  if (board?.collaboration?.invites != null) {
-    return board.collaboration.invites;
+  if (board?.invites != null) {
+    return board.invites;
   }
 
   return null;
@@ -203,8 +282,22 @@ function isIsoTimestamp(value) {
   return typeof value === 'string' && !Number.isNaN(new Date(value).getTime());
 }
 
+function normalizeOptionalIsoTimestamp(value) {
+  return isIsoTimestamp(value) ? new Date(value).toISOString() : null;
+}
+
 function normalizeOptionalString(value) {
   return typeof value === 'string' ? value.trim() : '';
+}
+
+function stripActorKey(membership) {
+  const normalizedMembership = {
+    ...membership
+  };
+
+  delete normalizedMembership.actorKey;
+
+  return normalizedMembership;
 }
 
 function isPlainObject(value) {

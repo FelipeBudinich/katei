@@ -288,7 +288,7 @@ test('GET /boards loads an accessible shared workspace by workspaceId and reject
     detailsMarkdown: 'Visible to collaborators',
     priority: 'important'
   });
-  sharedWorkspace.boards.main.memberships = [
+  sharedWorkspace.boards.main.collaboration.memberships = [
     {
       actor: { type: 'human', id: 'sub_collab' },
       role: 'editor'
@@ -588,7 +588,7 @@ test('POST /api/workspace/commands applies a valid runtime command for the authe
 
 test('POST /api/workspace/commands routes mutations by workspaceId for accessible shared workspaces', async () => {
   const sharedWorkspace = createEmptyWorkspace({ workspaceId: 'workspace_shared_2' });
-  sharedWorkspace.boards.main.memberships = [
+  sharedWorkspace.boards.main.collaboration.memberships = [
     {
       actor: { type: 'human', id: 'sub_collab' },
       role: 'editor'

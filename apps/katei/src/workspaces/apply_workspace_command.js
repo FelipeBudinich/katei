@@ -124,7 +124,11 @@ function applyBoardCreate(workspace, command, context) {
     id: boardId,
     title: normalizeBoardTitle(command.payload.title),
     createdAt: context.now,
-    updatedAt: context.now
+    updatedAt: context.now,
+    creator: context.actor ?? {
+      type: 'system',
+      id: 'command-engine'
+    }
   });
   const normalizedSchema = hasBoardSchemaPayload(command.payload)
     ? normalizeBoardSchemaInput({
@@ -277,11 +281,13 @@ function applyBoardReset(workspace, command, context) {
       id: board.id,
       title: board.title,
       createdAt: board.createdAt,
-      updatedAt: context.now
+      updatedAt: context.now,
+      creator: null
     }),
     stageOrder: [...board.stageOrder],
     stages: createClearedStages(board),
     templates: structuredClone(board.templates),
+    collaboration: structuredClone(board.collaboration ?? { memberships: [], invites: [] }),
     languagePolicy: structuredClone(board.languagePolicy)
   };
 
@@ -305,6 +311,7 @@ function applyCardCreate(workspace, command, context) {
     priority: normalizePriority(command.payload.priority ?? DEFAULT_PRIORITY),
     createdAt: context.now,
     updatedAt: context.now,
+    localeRequests: {},
     contentByLocale: {
       [sourceLocale]: {
         title: normalizeCardTitle(command.payload.title),

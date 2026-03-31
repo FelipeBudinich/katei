@@ -36,7 +36,11 @@ export function createBoard(workspace, input) {
     id: createBoardId(),
     title: normalizeBoardTitle(input?.title),
     createdAt: timestamp,
-    updatedAt: timestamp
+    updatedAt: timestamp,
+    creator: {
+      type: 'system',
+      id: 'browser-mutation'
+    }
   });
 
   nextWorkspace.boards[board.id] = board;
@@ -112,11 +116,13 @@ export function resetBoard(workspace, boardId) {
       id: board.id,
       title: board.title,
       createdAt: board.createdAt,
-      updatedAt: timestamp
+      updatedAt: timestamp,
+      creator: null
     }),
     stageOrder: [...board.stageOrder],
     stages: createClearedStages(board),
     templates: structuredClone(board.templates),
+    collaboration: structuredClone(board.collaboration ?? { memberships: [], invites: [] }),
     languagePolicy: structuredClone(board.languagePolicy)
   };
 
@@ -136,6 +142,7 @@ export function createCard(workspace, boardId, input) {
     priority: normalizePriority(input?.priority ?? DEFAULT_PRIORITY),
     createdAt: timestamp,
     updatedAt: timestamp,
+    localeRequests: {},
     contentByLocale: {
       [sourceLocale]: {
         title: normalizeCardTitle(input?.title),

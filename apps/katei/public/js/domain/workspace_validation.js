@@ -3,6 +3,9 @@ import { validateBoardLanguagePolicy } from './board_language_policy.js';
 import { validateBoardStages, validateBoardTemplates } from './board_workflow.js';
 import { validateCardContentByLocale } from './card_localization.js';
 import {
+  validateCardLocaleRequests
+} from './card_localization_requests.js';
+import {
   COLUMN_ORDER,
   PRIORITY_ORDER,
   WORKSPACE_VERSION
@@ -129,6 +132,10 @@ function isValidBoard(board, boardId) {
     return false;
   }
 
+  if (board.collaboration != null && !isPlainObject(board.collaboration)) {
+    return false;
+  }
+
   if (!validateBoardMemberships(board) || !validateBoardInvites(board)) {
     return false;
   }
@@ -172,6 +179,7 @@ function isValidCard(card, cardId, board) {
       typeof card.createdAt === 'string' &&
       typeof card.updatedAt === 'string' &&
       validateCardContentByLocale(card, board) &&
+      validateCardLocaleRequests(card) &&
       isValidPriority(card.priority)
   );
 }
@@ -206,4 +214,8 @@ function isValidCollapsedColumns(value, board) {
 
 function isValidWorkspaceId(workspaceId) {
   return typeof workspaceId === 'string' && workspaceId.trim().length > 0;
+}
+
+function isPlainObject(value) {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }

@@ -17,49 +17,60 @@ test('canonicalizeBoardRole accepts supported board roles and rejects unknown ro
 test('validateBoardMemberships accepts valid memberships and rejects invalid roles or duplicate actors', () => {
   assert.equal(
     validateBoardMemberships({
-      memberships: [
-        {
-          actor: { type: 'human', id: 'viewer_admin' },
-          role: 'admin',
-          joinedAt: '2026-03-31T09:00:00.000Z'
-        },
-        {
-          actor: { type: 'human', id: 'viewer_editor' },
-          role: 'editor'
-        },
-        {
-          actor: { type: 'agent', id: 'agent_viewer' },
-          role: 'viewer'
-        }
-      ]
+      collaboration: {
+        memberships: [
+          {
+            actor: {
+              type: 'human',
+              id: 'viewer_admin',
+              email: 'admin@example.com',
+              displayName: 'Admin'
+            },
+            role: 'admin',
+            joinedAt: '2026-03-31T09:00:00.000Z'
+          },
+          {
+            actor: { type: 'human', id: 'viewer_editor' },
+            role: 'editor'
+          },
+          {
+            actor: { type: 'agent', id: 'agent_viewer' },
+            role: 'viewer'
+          }
+        ]
+      }
     }),
     true
   );
 
   assert.equal(
     validateBoardMemberships({
-      memberships: [
-        {
-          actor: { type: 'human', id: 'viewer_admin' },
-          role: 'owner'
-        }
-      ]
+      collaboration: {
+        memberships: [
+          {
+            actor: { type: 'human', id: 'viewer_admin' },
+            role: 'owner'
+          }
+        ]
+      }
     }),
     false
   );
 
   assert.equal(
     validateBoardMemberships({
-      memberships: [
-        {
-          actor: { type: 'human', id: 'viewer_admin' },
-          role: 'admin'
-        },
-        {
-          actor: { type: 'human', id: 'viewer_admin' },
-          role: 'viewer'
-        }
-      ]
+      collaboration: {
+        memberships: [
+          {
+            actor: { type: 'human', id: 'viewer_admin' },
+            role: 'admin'
+          },
+          {
+            actor: { type: 'human', id: 'viewer_admin' },
+            role: 'viewer'
+          }
+        ]
+      }
     }),
     false
   );
@@ -67,22 +78,26 @@ test('validateBoardMemberships accepts valid memberships and rejects invalid rol
 
 test('validateBoardInvites accepts valid invites and rejects invalid invite status or targets', () => {
   const board = {
-    invites: [
-      {
-        id: 'invite_1',
-        email: 'editor@example.com',
-        role: 'editor',
-        status: 'pending',
-        invitedBy: { type: 'human', id: 'viewer_admin' },
-        invitedAt: '2026-03-31T10:00:00.000Z'
-      },
-      {
-        id: 'invite_2',
-        actor: { type: 'human', id: 'viewer_viewer' },
-        role: 'viewer',
-        status: 'accepted'
-      }
-    ]
+    collaboration: {
+      invites: [
+        {
+          id: 'invite_1',
+          email: 'editor@example.com',
+          role: 'editor',
+          status: 'pending',
+          invitedBy: { type: 'human', id: 'viewer_admin' },
+          invitedAt: '2026-03-31T10:00:00.000Z',
+          expiresAt: '2026-04-07T10:00:00.000Z'
+        },
+        {
+          id: 'invite_2',
+          actor: { type: 'human', id: 'viewer_viewer' },
+          role: 'viewer',
+          status: 'expired',
+          respondedAt: '2026-03-31T11:00:00.000Z'
+        }
+      ]
+    }
   };
 
   assert.equal(validateBoardInvites(board), true);
@@ -93,27 +108,31 @@ test('validateBoardInvites accepts valid invites and rejects invalid invite stat
 
   assert.equal(
     validateBoardInvites({
-      invites: [
-        {
-          id: 'invite_1',
-          email: 'editor@example.com',
-          role: 'editor',
-          status: 'open'
-        }
-      ]
+      collaboration: {
+        invites: [
+          {
+            id: 'invite_1',
+            email: 'editor@example.com',
+            role: 'editor',
+            status: 'open'
+          }
+        ]
+      }
     }),
     false
   );
 
   assert.equal(
     validateBoardInvites({
-      invites: [
-        {
-          id: 'invite_1',
-          role: 'viewer',
-          status: 'pending'
-        }
-      ]
+      collaboration: {
+        invites: [
+          {
+            id: 'invite_1',
+            role: 'viewer',
+            status: 'pending'
+          }
+        ]
+      }
     }),
     false
   );

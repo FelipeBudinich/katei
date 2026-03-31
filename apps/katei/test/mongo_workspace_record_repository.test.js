@@ -85,7 +85,7 @@ test('loadOrCreateWorkspaceRecord normalizes existing legacy-shaped workspace do
 
 test('loadOrCreateWorkspaceRecord resolves accessible shared workspaces by workspaceId', async () => {
   const sharedWorkspace = createEmptyWorkspace({ workspaceId: 'workspace_shared_1' });
-  sharedWorkspace.boards.main.memberships = [
+  sharedWorkspace.boards.main.collaboration.memberships = [
     {
       actor: { type: 'human', id: 'sub_collab' },
       role: 'editor'
@@ -114,7 +114,7 @@ test('loadOrCreateWorkspaceRecord resolves accessible shared workspaces by works
   assert.equal(record.workspaceId, 'workspace_shared_1');
   assert.equal(record.viewerSub, 'sub_owner');
   assert.equal(record.isHomeWorkspace, false);
-  assert.equal(record.workspace.boards.main.memberships[0].actor.id, 'sub_collab');
+  assert.equal(record.workspace.boards.main.collaboration.memberships[0].actor.id, 'sub_collab');
 });
 
 test('loadOrCreateWorkspaceRecord rejects inaccessible shared workspaces by workspaceId', async () => {

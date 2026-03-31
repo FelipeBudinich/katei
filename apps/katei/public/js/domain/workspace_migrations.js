@@ -1,7 +1,9 @@
+import { normalizeBoardCollaboration } from './board_collaboration.js';
 import { createDefaultBoardLanguagePolicy, normalizeBoardLanguagePolicy } from './board_language_policy.js';
 import { getDefaultBoardStageActionIds, isValidBoardStageActionId } from './board_stage_actions.js';
 import { createDefaultBoardStages, createDefaultBoardTemplates } from './board_workflow.js';
 import { createCardContentProvenance } from './card_localization.js';
+import { normalizeCardLocaleRequests } from './card_localization_requests.js';
 import { WORKSPACE_ID, WORKSPACE_VERSION } from './workspace_read_model.js';
 
 export const WORKSPACE_MIGRATIONS = Object.freeze([
@@ -72,6 +74,7 @@ export function migrateBoardToSchemaV7(board, { now = null } = {}) {
     ])
   );
   migratedBoard.templates = migrateBoardTemplates(migratedBoard.templates);
+  migratedBoard.collaboration = normalizeBoardCollaboration(migratedBoard);
   migratedBoard.languagePolicy = migrateBoardLanguagePolicy(migratedBoard.languagePolicy);
 
   if (isPlainObject(migratedBoard.cards)) {
@@ -82,6 +85,8 @@ export function migrateBoardToSchemaV7(board, { now = null } = {}) {
 
   delete migratedBoard.columnOrder;
   delete migratedBoard.columns;
+  delete migratedBoard.memberships;
+  delete migratedBoard.invites;
 
   return migratedBoard;
 }
@@ -126,8 +131,10 @@ export function migrateCardToLocalizedContent(card, board, { now = null } = {}) 
   }
 
   migratedCard.contentByLocale = nextContentByLocale;
+  migratedCard.localeRequests = normalizeCardLocaleRequests(migratedCard);
   delete migratedCard.title;
   delete migratedCard.detailsMarkdown;
+  delete migratedCard.localizationRequests;
 
   return migratedCard;
 }

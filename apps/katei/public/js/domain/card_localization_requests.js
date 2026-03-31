@@ -48,7 +48,7 @@ export function requestCardLocale(card, locale, actor, now) {
   const normalizedLocale = canonicalizeRequiredLocale(locale);
   const normalizedActor = normalizeActor(actor);
   const requestedAt = normalizeIsoTimestamp(now, 'Localization request timestamp is required.');
-  const { key, value } = getLocalizationRequestStore(card);
+  const value = normalizeCardLocaleRequests(card);
   const nextRequests = {
     ...value,
     [normalizedLocale]: {
@@ -59,18 +59,22 @@ export function requestCardLocale(card, locale, actor, now) {
     }
   };
 
-  return {
-    ...(isPlainObject(card) ? structuredClone(card) : {}),
-    [key]: nextRequests
-  };
+  const nextCard = isPlainObject(card) ? structuredClone(card) : {};
+  delete nextCard.localizationRequests;
+  nextCard.localeRequests = nextRequests;
+
+  return nextCard;
 }
 
 export function clearCardLocaleRequest(card, locale) {
   const normalizedLocale = canonicalizeRequiredLocale(locale);
-  const { key, value } = getLocalizationRequestStore(card);
+  const value = normalizeCardLocaleRequests(card);
 
   if (!Object.prototype.hasOwnProperty.call(value, normalizedLocale)) {
-    return isPlainObject(card) ? structuredClone(card) : {};
+    const nextCard = isPlainObject(card) ? structuredClone(card) : {};
+    delete nextCard.localizationRequests;
+    nextCard.localeRequests = value;
+    return nextCard;
   }
 
   const nextCard = isPlainObject(card) ? structuredClone(card) : {};
@@ -80,13 +84,50 @@ export function clearCardLocaleRequest(card, locale) {
 
   delete nextRequests[normalizedLocale];
 
-  if (Object.keys(nextRequests).length > 0) {
-    nextCard[key] = nextRequests;
-  } else {
-    delete nextCard[key];
-  }
+  delete nextCard.localizationRequests;
+  nextCard.localeRequests = nextRequests;
 
   return nextCard;
+}
+
+export function normalizeCardLocaleRequests(card) {
+  const requests = {};
+  const rawRequests = readLocalizationRequests(card);
+
+  if (!isPlainObject(rawRequests)) {
+    return requests;
+  }
+
+  for (const [rawLocale, rawRequest] of Object.entries(rawRequests)) {
+    const locale = canonicalizeContentLocale(rawLocale);
+    const normalizedRequest = locale ? normalizeLocalizationRequest(locale, rawRequest) : null;
+
+    if (normalizedRequest) {
+      requests[locale] = normalizedRequest;
+    }
+  }
+
+  return requests;
+}
+
+export function validateCardLocaleRequests(card) {
+  if (card?.localeRequests != null && !isPlainObject(card.localeRequests)) {
+    return false;
+  }
+
+  if (card?.localizationRequests != null && !isPlainObject(card.localizationRequests)) {
+    return false;
+  }
+
+  const rawRequests = readLocalizationRequests(card);
+
+  if (rawRequests == null) {
+    return true;
+  }
+
+  const normalizedRequests = normalizeCardLocaleRequests(card);
+
+  return Object.keys(rawRequests).length === Object.keys(normalizedRequests).length;
 }
 
 function listRelevantLocales(languagePolicy, card, requestMap) {
@@ -158,7 +199,7 @@ function hasLocalizedContentVariant(card, locale) {
 function getOpenLocalizationRequestMap(card) {
   const requests = new Map();
 
-  for (const [rawLocale, rawRequest] of Object.entries(getLocalizationRequestStore(card).value)) {
+  for (const [rawLocale, rawRequest] of Object.entries(normalizeCardLocaleRequests(card))) {
     const locale = canonicalizeContentLocale(rawLocale);
     const normalizedRequest = locale ? normalizeLocalizationRequest(locale, rawRequest) : null;
 
@@ -196,39 +237,24 @@ function normalizeLocalizationRequest(locale, request) {
   };
 }
 
-function getLocalizationRequestStore(card) {
+function readLocalizationRequests(card) {
   if (isPlainObject(card?.localeRequests)) {
-    return {
-      key: 'localeRequests',
-      value: structuredClone(card.localeRequests)
-    };
+    return structuredClone(card.localeRequests);
   }
 
   if (isPlainObject(card?.localizationRequests)) {
-    return {
-      key: 'localizationRequests',
-      value: structuredClone(card.localizationRequests)
-    };
+    return structuredClone(card.localizationRequests);
   }
 
   if (card?.localeRequests != null) {
-    return {
-      key: 'localeRequests',
-      value: {}
-    };
+    return card.localeRequests;
   }
 
   if (card?.localizationRequests != null) {
-    return {
-      key: 'localizationRequests',
-      value: {}
-    };
+    return card.localizationRequests;
   }
 
-  return {
-    key: 'localeRequests',
-    value: {}
-  };
+  return null;
 }
 
 function getContentByLocaleRecord(card) {

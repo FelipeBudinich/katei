@@ -62,12 +62,12 @@ function hasPendingBoardInvite(board, viewerSub, viewerEmail) {
 }
 
 function readBoardMemberships(board) {
-  if (Array.isArray(board?.memberships)) {
-    return board.memberships;
-  }
-
   if (Array.isArray(board?.collaboration?.memberships)) {
     return board.collaboration.memberships;
+  }
+
+  if (Array.isArray(board?.memberships)) {
+    return board.memberships;
   }
 
   return [];

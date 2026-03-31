@@ -25,7 +25,13 @@ export function createInitialWorkspaceRecord(
   return createWorkspaceRecord({
     workspaceId: normalizedWorkspaceId,
     viewerSub: normalizedViewerSub,
-    workspace: createEmptyWorkspace({ workspaceId: normalizedWorkspaceId }),
+    workspace: createEmptyWorkspace({
+      workspaceId: normalizedWorkspaceId,
+      creator: {
+        type: 'human',
+        id: normalizedViewerSub
+      }
+    }),
     isHomeWorkspace:
       normalizedWorkspaceId === createHomeWorkspaceId(normalizedViewerSub) || normalizedWorkspaceId === normalizedViewerSub,
     revision: 0,
@@ -43,7 +49,14 @@ export function createWorkspaceRecord({
   workspace = createEmptyWorkspace({
     workspaceId:
       workspaceId ??
-      (typeof viewerSub === 'string' && viewerSub.trim() ? createHomeWorkspaceId(viewerSub) : undefined)
+      (typeof viewerSub === 'string' && viewerSub.trim() ? createHomeWorkspaceId(viewerSub) : undefined),
+    creator:
+      typeof viewerSub === 'string' && viewerSub.trim()
+        ? {
+            type: 'human',
+            id: viewerSub.trim()
+          }
+        : undefined
   }),
   isHomeWorkspace = false,
   revision = 0,

@@ -23,6 +23,7 @@ test('createCard stores detailsMarkdown on new cards', () => {
   assert.equal(board.cards[cardId].title, 'Write launch notes');
   assert.deepEqual(board.cards[cardId].contentByLocale.en.title, 'Write launch notes');
   assert.deepEqual(board.cards[cardId].contentByLocale.en.detailsMarkdown, '## Launch\n\n- confirm copy');
+  assert.deepEqual(board.cards[cardId].localeRequests, {});
   assert.equal(board.cards[cardId].priority, 'urgent');
 });
 
@@ -90,20 +91,22 @@ test('validateWorkspaceShape rejects boards with invalid language policy definit
 test('validateWorkspaceShape accepts valid board collaboration metadata', () => {
   const workspace = createEmptyWorkspace();
 
-  workspace.boards.main.memberships = [
-    {
-      actor: { type: 'human', id: 'viewer_admin' },
-      role: 'admin'
-    }
-  ];
-  workspace.boards.main.invites = [
-    {
-      id: 'invite_1',
-      email: 'editor@example.com',
-      role: 'editor',
-      status: 'pending'
-    }
-  ];
+  workspace.boards.main.collaboration = {
+    memberships: [
+      {
+        actor: { type: 'human', id: 'viewer_admin' },
+        role: 'admin'
+      }
+    ],
+    invites: [
+      {
+        id: 'invite_1',
+        email: 'editor@example.com',
+        role: 'editor',
+        status: 'pending'
+      }
+    ]
+  };
 
   assert.equal(validateWorkspaceShape(workspace), true);
 });
@@ -111,7 +114,7 @@ test('validateWorkspaceShape accepts valid board collaboration metadata', () => 
 test('validateWorkspaceShape rejects invalid board collaboration metadata', () => {
   const workspace = createEmptyWorkspace();
 
-  workspace.boards.main.memberships = [
+  workspace.boards.main.collaboration.memberships = [
     {
       actor: { type: 'human', id: 'viewer_admin' },
       role: 'owner'
@@ -119,6 +122,82 @@ test('validateWorkspaceShape rejects invalid board collaboration metadata', () =
   ];
 
   assert.equal(validateWorkspaceShape(workspace), false);
+});
+
+test('createEmptyWorkspace seeds canonical board collaboration defaults', () => {
+  const workspace = createEmptyWorkspace();
+
+  assert.deepEqual(workspace.boards.main.collaboration, {
+    memberships: [
+      {
+        actor: { type: 'system', id: 'workspace-bootstrap' },
+        role: 'admin',
+        joinedAt: workspace.boards.main.createdAt
+      }
+    ],
+    invites: []
+  });
+});
+
+test('validateWorkspaceShape rejects duplicate collaboration members or invites', () => {
+  const workspaceWithDuplicateMembers = createEmptyWorkspace();
+  workspaceWithDuplicateMembers.boards.main.collaboration.memberships = [
+    {
+      actor: { type: 'human', id: 'viewer_admin' },
+      role: 'admin'
+    },
+    {
+      actor: { type: 'human', id: 'viewer_admin' },
+      role: 'editor'
+    }
+  ];
+
+  assert.equal(validateWorkspaceShape(workspaceWithDuplicateMembers), false);
+
+  const workspaceWithDuplicateInvites = createEmptyWorkspace();
+  workspaceWithDuplicateInvites.boards.main.collaboration.invites = [
+    {
+      id: 'invite_1',
+      email: 'editor@example.com',
+      role: 'editor',
+      status: 'pending'
+    },
+    {
+      id: 'invite_1',
+      email: 'viewer@example.com',
+      role: 'viewer',
+      status: 'pending'
+    }
+  ];
+
+  assert.equal(validateWorkspaceShape(workspaceWithDuplicateInvites), false);
+});
+
+test('validateWorkspaceShape accepts cards with empty localeRequests', () => {
+  const workspace = createEmptyWorkspace();
+  const board = workspace.boards.main;
+
+  board.cards.card_1 = {
+    id: 'card_1',
+    priority: 'important',
+    createdAt: '2026-03-31T09:00:00.000Z',
+    updatedAt: '2026-03-31T09:00:00.000Z',
+    localeRequests: {},
+    contentByLocale: {
+      en: {
+        title: 'English title',
+        detailsMarkdown: '',
+        provenance: {
+          actor: { type: 'human', id: 'viewer_123' },
+          timestamp: '2026-03-31T09:00:00.000Z',
+          includesHumanInput: true
+        }
+      }
+    }
+  };
+  board.stages.backlog.cardIds.push('card_1');
+
+  assert.equal(validateWorkspaceShape(workspace), true);
 });
 
 test('getActiveBoard returns the active board from the read model', () => {

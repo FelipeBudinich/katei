@@ -50,6 +50,16 @@ test('board.create mints a server-side board id and timestamps from context', ()
   assert.equal(workspace.ui.activeBoardId, 'board_srv001');
   assert.equal(workspace.boards.board_srv001.createdAt, '2026-03-31T10:00:00.000Z');
   assert.equal(workspace.boards.board_srv001.updatedAt, '2026-03-31T10:00:00.000Z');
+  assert.deepEqual(workspace.boards.board_srv001.collaboration, {
+    memberships: [
+      {
+        actor: { type: 'human', id: 'viewer_123' },
+        role: 'admin',
+        joinedAt: '2026-03-31T10:00:00.000Z'
+      }
+    ],
+    invites: []
+  });
   assert.equal(result.boardId, 'board_srv001');
   assert.equal(result.noOp, false);
   assert.equal(activityEvent.type, 'workspace.command.applied');
@@ -139,6 +149,7 @@ test('card.create mints a server-side card id and stores the card in backlog', (
   assert.deepEqual(workspace.boards.main.stages.backlog.cardIds, ['card_srv001']);
   assert.equal(workspace.boards.main.cards.card_srv001.createdAt, '2026-03-31T10:00:00.000Z');
   assert.equal(workspace.boards.main.cards.card_srv001.updatedAt, '2026-03-31T10:00:00.000Z');
+  assert.deepEqual(workspace.boards.main.cards.card_srv001.localeRequests, {});
   assert.deepEqual(workspace.boards.main.cards.card_srv001.contentByLocale.en, {
     title: 'Ship service',
     detailsMarkdown: 'Server-authoritative',

@@ -106,5 +106,41 @@ test('requestCardLocale and clearCardLocaleRequest manage canonical locale reque
 
   const clearedCard = clearCardLocaleRequest(requestedCard, 'es-CL');
 
-  assert.equal(clearedCard.localeRequests, undefined);
+  assert.deepEqual(clearedCard.localeRequests, {});
+});
+
+test('requestCardLocale rewrites legacy localizationRequests into canonical localeRequests', () => {
+  const card = {
+    id: 'card_3',
+    localizationRequests: {
+      ja: {
+        locale: 'ja',
+        requestedBy: { type: 'human', id: 'viewer_123' },
+        requestedAt: '2026-03-31T12:00:00.000Z'
+      }
+    }
+  };
+
+  const requestedCard = requestCardLocale(
+    card,
+    'es_cl',
+    { type: 'human', id: 'viewer_456' },
+    '2026-03-31T13:00:00.000Z'
+  );
+
+  assert.equal(requestedCard.localizationRequests, undefined);
+  assert.deepEqual(requestedCard.localeRequests, {
+    ja: {
+      locale: 'ja',
+      status: 'open',
+      requestedBy: { type: 'human', id: 'viewer_123' },
+      requestedAt: '2026-03-31T12:00:00.000Z'
+    },
+    'es-CL': {
+      locale: 'es-CL',
+      status: 'open',
+      requestedBy: { type: 'human', id: 'viewer_456' },
+      requestedAt: '2026-03-31T13:00:00.000Z'
+    }
+  });
 });

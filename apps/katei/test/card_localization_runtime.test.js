@@ -27,6 +27,7 @@ test('createCard writes source-locale content for new cards', () => {
   const card = board.cards[cardId];
 
   assert.deepEqual(Object.keys(card.contentByLocale), ['ja']);
+  assert.deepEqual(card.localeRequests, {});
   assert.deepEqual(card.contentByLocale.ja, {
     title: '新しいカード',
     detailsMarkdown: '日本語の本文',
