@@ -7,6 +7,8 @@ import {
   shouldShowDeleteForStage,
   shouldShowPriorityForStage
 } from './stage_ui.js';
+import { createLocalizedCardViewState, resolveCardLocaleSelection } from './card_editor_locale_view.js';
+import { canonicalizeContentLocale } from '../domain/board_language_policy.js';
 
 export default class extends Controller {
   static targets = [
@@ -23,25 +25,37 @@ export default class extends Controller {
     'priorityOption',
     'titleInput',
     'markdownInput',
+    'localeSection',
+    'localeSelect',
+    'localeSummary',
+    'localeFallbackNotice',
+    'localeStatusRegion',
+    'localeStatusTemplate',
     'editActions',
     'deleteActions',
     'deleteActionRegion',
     'deleteButtonTemplate',
     'moveOptionRegion',
-    'moveOptionTemplate'
+    'moveOptionTemplate',
+    'submitActions'
   ];
 
   connect() {
     this.t = getBrowserTranslator();
     this.editor = null;
     this.board = null;
+    this.card = null;
+    this.mode = 'create';
+    this.selectedLocale = null;
+    this.isReadOnlyLocaleView = false;
+    this.triggerElement = null;
   }
 
   disconnect() {
     this.editor?.toTextArea();
     this.editor?.cleanup();
     this.editor = null;
-    this.board = null;
+    this.resetDialogState();
   }
 
   ensureEditor() {
@@ -69,8 +83,9 @@ export default class extends Controller {
   }
 
   openFromEvent(event) {
-    const { mode, boardId, board, card, stageId, columnId } = event.detail;
-    const isEditMode = mode === 'edit';
+    const { mode, boardId, board, card, stageId, columnId, requestedLocale, locale, triggerElement } = event.detail;
+    const nextMode = resolveCardDialogMode(mode);
+    const isEditMode = nextMode === 'edit';
     const nextStageId =
       resolveBoardStageId(board, { stageId, columnId, cardId: card?.id }) ??
       getDefaultBoardStageId(board);
@@ -80,15 +95,24 @@ export default class extends Controller {
 
     this.formTarget.reset();
     this.board = board ?? null;
-    this.modeInputTarget.value = mode;
+    this.card = card ?? null;
+    this.mode = nextMode;
+    this.isReadOnlyLocaleView = nextMode === 'view';
+    this.selectedLocale = resolveCardLocaleSelection({
+      board,
+      preferredLocale: requestedLocale ?? locale
+    });
+    this.triggerElement = triggerElement ?? null;
+    this.modeInputTarget.value = nextMode;
     this.boardIdInputTarget.value = boardId ?? '';
     this.cardIdInputTarget.value = nextCardId;
     this.sourceColumnIdInputTarget.value = sourceStageId;
     this.targetColumnIdInputTarget.value = targetStageId;
     this.priorityInputTarget.value = card?.priority ?? 'important';
-    this.titleInputTarget.value = card?.title ?? '';
-    this.ensureEditor().value(card?.detailsMarkdown ?? '');
-    this.headingTarget.textContent = isEditMode ? this.t('cardEditor.editHeading') : this.t('cardEditor.newHeading');
+    this.ensureEditor().value('');
+    this.syncLocalizedCardView();
+    this.syncReadOnlyMode();
+    this.headingTarget.textContent = this.t(getCardDialogHeadingKey(nextMode));
     this.renderMoveOptions({ board, sourceStageId });
     this.syncPriorityOptions();
     this.syncEditActions({
@@ -104,6 +128,12 @@ export default class extends Controller {
 
     requestAnimationFrame(() => {
       this.editor?.codemirror?.refresh();
+
+      if (this.isReadOnlyLocaleView && !this.localeSectionTarget.hidden) {
+        this.localeSelectTarget.focus();
+        return;
+      }
+
       this.titleInputTarget.focus();
     });
   }
@@ -126,8 +156,21 @@ export default class extends Controller {
     this.closeDialog();
   }
 
+  changeLocale(event) {
+    event.preventDefault();
+    this.selectedLocale =
+      canonicalizeContentLocale(event.currentTarget.value) ??
+      this.selectedLocale;
+    this.syncLocalizedCardView();
+  }
+
   selectPriority(event) {
     event.preventDefault();
+
+    if (this.isReadOnlyLocaleView) {
+      return;
+    }
+
     this.priorityInputTarget.value = event.currentTarget.dataset.priorityId;
     this.syncPriorityOptions();
   }
@@ -148,6 +191,10 @@ export default class extends Controller {
 
   submit(event) {
     event.preventDefault();
+
+    if (this.isReadOnlyLocaleView) {
+      return;
+    }
 
     const formData = new FormData(this.formTarget);
 
@@ -176,7 +223,37 @@ export default class extends Controller {
       this.dialogTarget.close();
     }
 
-    this.board = null;
+    if (this.triggerElement?.isConnected) {
+      this.triggerElement.focus();
+    }
+
+    this.resetDialogState();
+  }
+
+  syncLocalizedCardView() {
+    const localizedView = createLocalizedCardViewState({
+      board: this.board,
+      card: this.card,
+      selectedLocale: this.selectedLocale
+    });
+    const variant = localizedView.variant;
+
+    this.selectedLocale = localizedView.selectedLocale;
+    this.titleInputTarget.value = variant?.title ?? '';
+    this.ensureEditor().value(variant?.detailsMarkdown ?? '');
+    this.renderLocalizedReadSection(localizedView);
+  }
+
+  syncReadOnlyMode() {
+    const editor = this.ensureEditor();
+    this.titleInputTarget.readOnly = this.isReadOnlyLocaleView;
+    this.titleInputTarget.required = !this.isReadOnlyLocaleView;
+    this.markdownInputTarget.readOnly = this.isReadOnlyLocaleView;
+    editor.codemirror?.setOption?.('readOnly', this.isReadOnlyLocaleView);
+
+    if (this.hasSubmitActionsTarget) {
+      this.submitActionsTarget.hidden = this.isReadOnlyLocaleView;
+    }
   }
 
   syncPriorityOptions() {
@@ -184,8 +261,8 @@ export default class extends Controller {
 
     for (const button of this.priorityOptionTargets) {
       const isCurrentPriority = button.dataset.priorityId === selectedPriority;
-      button.disabled = false;
-      button.setAttribute('aria-disabled', 'false');
+      button.disabled = this.isReadOnlyLocaleView;
+      button.setAttribute('aria-disabled', String(this.isReadOnlyLocaleView));
       button.setAttribute('aria-pressed', String(isCurrentPriority));
     }
   }
@@ -233,8 +310,137 @@ export default class extends Controller {
     }
   }
 
+  renderLocalizedReadSection(localizedView) {
+    const shouldShowLocaleSection = Boolean(this.card);
+    this.localeSectionTarget.hidden = !shouldShowLocaleSection;
+
+    if (!shouldShowLocaleSection) {
+      this.localeSelectTarget.replaceChildren();
+      this.localeSummaryTarget.textContent = '';
+      this.localeFallbackNoticeTarget.textContent = '';
+      this.localeFallbackNoticeTarget.hidden = true;
+      this.localeStatusRegionTarget.replaceChildren();
+      return;
+    }
+
+    this.renderLocaleSelector(localizedView);
+    this.renderLocaleSummary(localizedView);
+    this.renderFallbackNotice(localizedView.variant, localizedView);
+    this.renderLocaleStatuses(localizedView);
+  }
+
+  renderLocaleSelector(localizedView) {
+    const optionNodes = localizedView.supportedLocales.map((locale) => createLocaleOption(locale));
+    this.localeSelectTarget.replaceChildren(...optionNodes);
+    this.localeSelectTarget.value = localizedView.selectedLocale ?? '';
+  }
+
+  renderLocaleSummary(localizedView) {
+    const summaryParts = [];
+
+    if (localizedView.selectedLocale) {
+      summaryParts.push(this.t('cardEditor.selectedLocaleValue', { locale: localizedView.selectedLocale }));
+    }
+
+    if (localizedView.renderedLocale) {
+      summaryParts.push(this.t('cardEditor.renderedLocaleValue', { locale: localizedView.renderedLocale }));
+    }
+
+    if (localizedView.isMissingSelectedLocale) {
+      summaryParts.push(this.t('cardEditor.selectedLocaleMissing'));
+    }
+
+    if (localizedView.noLocalizedContent) {
+      summaryParts.push(this.t('cardEditor.noLocalizedContent'));
+    }
+
+    summaryParts.push(
+      this.t('cardEditor.localizedContentSummary', {
+        presentCount: localizedView.presentCount,
+        requestedCount: localizedView.requestedCount,
+        missingCount: localizedView.missingCount
+      })
+    );
+
+    this.localeSummaryTarget.textContent = summaryParts.filter(Boolean).join(' · ');
+  }
+
+  renderFallbackNotice(variant, localizedView) {
+    const shouldShowFallbackNotice =
+      Boolean(variant?.locale) &&
+      localizedView.isMissingSelectedLocale &&
+      localizedView.renderedLocale !== localizedView.selectedLocale;
+
+    this.localeFallbackNoticeTarget.hidden = !shouldShowFallbackNotice;
+
+    if (!shouldShowFallbackNotice) {
+      this.localeFallbackNoticeTarget.textContent = '';
+      return;
+    }
+
+    this.localeFallbackNoticeTarget.textContent = this.t(
+      variant?.source === 'legacy'
+        ? 'cardEditor.localeFallbackLegacyNotice'
+        : 'cardEditor.localeFallbackNotice',
+      {
+        selectedLocale: localizedView.selectedLocale,
+        renderedLocale: localizedView.renderedLocale
+      }
+    );
+  }
+
+  renderLocaleStatuses(localizedView) {
+    const statusItems = localizedView.localeStatuses.map((entry) => {
+      const node = this.localeStatusTemplateTarget.content.firstElementChild.cloneNode(true);
+      const localeNode = node.querySelector('[data-card-locale-field="locale"]');
+      const badgesNode = node.querySelector('[data-card-locale-field="badges"]');
+      const badges = [
+        createLocaleBadge(this.t(`cardEditor.localeStatus.${entry.status}`))
+      ];
+
+      if (entry.isRequested && entry.status !== 'requested') {
+        badges.push(createLocaleBadge(this.t('cardEditor.localeStatus.requested')));
+      }
+
+      if (entry.isSourceLocale) {
+        badges.push(createLocaleBadge(this.t('cardEditor.localeStatus.source')));
+      }
+
+      if (entry.isDefaultLocale) {
+        badges.push(createLocaleBadge(this.t('cardEditor.localeStatus.default')));
+      }
+
+      if (entry.isRequired) {
+        badges.push(createLocaleBadge(this.t('cardEditor.localeStatus.required')));
+      }
+
+      if (entry.locale === localizedView.selectedLocale) {
+        badges.push(createLocaleBadge(this.t('cardEditor.localeStatus.selected')));
+      }
+
+      if (entry.locale === localizedView.renderedLocale) {
+        badges.push(createLocaleBadge(this.t('cardEditor.localeStatus.rendered')));
+      }
+
+      localeNode.textContent = entry.locale;
+      badgesNode.replaceChildren(...badges);
+      return node;
+    });
+
+    this.localeStatusRegionTarget.replaceChildren(...statusItems);
+  }
+
   getMoveOptionButtons() {
     return [...this.moveOptionRegionTarget.querySelectorAll('[data-card-editor-target="moveOption"]')];
+  }
+
+  resetDialogState() {
+    this.board = null;
+    this.card = null;
+    this.mode = 'create';
+    this.selectedLocale = null;
+    this.isReadOnlyLocaleView = false;
+    this.triggerElement = null;
   }
 }
 
@@ -263,4 +469,30 @@ function createToolbarButton(name, text, action, overrides = {}) {
     title: text,
     ...overrides
   };
+}
+
+function resolveCardDialogMode(mode) {
+  return ['create', 'edit', 'view'].includes(mode) ? mode : 'create';
+}
+
+function getCardDialogHeadingKey(mode) {
+  if (mode === 'view') {
+    return 'cardEditor.viewHeading';
+  }
+
+  return mode === 'edit' ? 'cardEditor.editHeading' : 'cardEditor.newHeading';
+}
+
+function createLocaleOption(locale) {
+  const option = document.createElement('option');
+  option.value = locale;
+  option.textContent = locale;
+  return option;
+}
+
+function createLocaleBadge(text) {
+  const badge = document.createElement('span');
+  badge.className = 'count-chip px-2 py-0.5 text-xs';
+  badge.textContent = text;
+  return badge;
 }

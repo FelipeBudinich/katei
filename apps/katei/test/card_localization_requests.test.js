@@ -144,3 +144,71 @@ test('requestCardLocale rewrites legacy localizationRequests into canonical loca
     }
   });
 });
+
+test('listCardLocaleStatuses keeps requested visibility for present locales and marks missing required locales', () => {
+  const board = {
+    languagePolicy: {
+      sourceLocale: 'en',
+      defaultLocale: 'en',
+      supportedLocales: ['en', 'es-CL', 'ja'],
+      requiredLocales: ['en', 'ja']
+    }
+  };
+  const card = {
+    id: 'card_4',
+    title: 'Legacy English title',
+    detailsMarkdown: 'Legacy English details',
+    contentByLocale: {
+      'es-CL': {
+        title: 'Titulo en español',
+        detailsMarkdown: 'Detalle en español',
+        provenance: null
+      }
+    },
+    localeRequests: {
+      en: {
+        locale: 'en',
+        requestedBy: { type: 'human', id: 'viewer_123' },
+        requestedAt: '2026-03-31T14:00:00.000Z'
+      }
+    }
+  };
+
+  assert.deepEqual(listCardLocaleStatuses(board, card), [
+    {
+      locale: 'en',
+      status: 'present',
+      hasContent: true,
+      isRequested: true,
+      isSourceLocale: true,
+      isDefaultLocale: true,
+      isRequired: true,
+      request: {
+        locale: 'en',
+        status: 'open',
+        requestedBy: { type: 'human', id: 'viewer_123' },
+        requestedAt: '2026-03-31T14:00:00.000Z'
+      }
+    },
+    {
+      locale: 'es-CL',
+      status: 'present',
+      hasContent: true,
+      isRequested: false,
+      isSourceLocale: false,
+      isDefaultLocale: false,
+      isRequired: false,
+      request: null
+    },
+    {
+      locale: 'ja',
+      status: 'missing',
+      hasContent: false,
+      isRequested: false,
+      isSourceLocale: false,
+      isDefaultLocale: false,
+      isRequired: true,
+      request: null
+    }
+  ]);
+});

@@ -15,6 +15,7 @@ import {
   performWorkspaceCollaboratorAction,
   performWorkspaceInviteDecision
 } from '../public/js/controllers/workspace_collaboration_actions.js';
+import { createRuntimeCardDialogState } from '../public/js/controllers/workspace_card_dialog.js';
 
 test('resolveBoardStageId accepts stage ids and legacy column ids for the active board flow', () => {
   const board = createBoardWithCustomStages();
@@ -202,6 +203,74 @@ test('viewer and invite-only actors stay read-only in collaboration state', () =
   assert.equal(inviteeState.canAdmin, false);
   assert.equal(inviteeState.accessible, true);
   assert.equal(inviteeState.pendingInvites.length, 1);
+});
+
+test('openEdit and openView card dialog state preserves raw localized card data and resolves the requested locale', () => {
+  const board = createBoardWithCustomStages();
+  const card = {
+    id: 'card_localized',
+    priority: 'important',
+    createdAt: '2026-03-31T09:00:00.000Z',
+    updatedAt: '2026-03-31T11:00:00.000Z',
+    contentByLocale: {
+      en: {
+        title: 'English source',
+        detailsMarkdown: 'English details',
+        provenance: null
+      },
+      'es-CL': {
+        title: 'Titulo por defecto',
+        detailsMarkdown: 'Detalles por defecto',
+        provenance: null
+      }
+    },
+    localeRequests: {
+      ja: {
+        locale: 'ja',
+        status: 'open',
+        requestedBy: { type: 'human', id: 'viewer_123' },
+        requestedAt: '2026-03-31T12:00:00.000Z'
+      }
+    }
+  };
+
+  board.languagePolicy = {
+    sourceLocale: 'en',
+    defaultLocale: 'es-CL',
+    supportedLocales: ['en', 'es-CL', 'ja'],
+    requiredLocales: ['en', 'ja']
+  };
+
+  const editState = createRuntimeCardDialogState(card, board, {
+    requestedLocale: 'ja'
+  });
+  const viewState = createRuntimeCardDialogState(card, board, {
+    requestedLocale: 'en'
+  });
+
+  assert.equal(editState.card, card);
+  assert.deepEqual(editState.card.contentByLocale, card.contentByLocale);
+  assert.deepEqual(editState.card.localeRequests, card.localeRequests);
+  assert.equal(editState.requestedLocale, 'ja');
+  assert.deepEqual(editState.displayVariant, {
+    locale: 'es-CL',
+    title: 'Titulo por defecto',
+    detailsMarkdown: 'Detalles por defecto',
+    provenance: null,
+    isFallback: true,
+    source: 'localized'
+  });
+
+  assert.equal(viewState.card, card);
+  assert.equal(viewState.requestedLocale, 'en');
+  assert.deepEqual(viewState.displayVariant, {
+    locale: 'en',
+    title: 'English source',
+    detailsMarkdown: 'English details',
+    provenance: null,
+    isFallback: false,
+    source: 'localized'
+  });
 });
 
 function createBoardWithCustomStages() {

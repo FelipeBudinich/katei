@@ -22,6 +22,36 @@
       <input type="hidden" name="targetColumnId" value="backlog" data-card-editor-target="targetColumnIdInput">
       <input type="hidden" name="priority" value="important" data-card-editor-target="priorityInput">
 
+      <section class="space-y-3" hidden data-card-editor-target="localeSection">
+        <div class="space-y-2">
+          <p class="field-label text-sm font-semibold">{{ t('cardEditor.localeSectionLabel') }}</p>
+
+          <label class="block space-y-2">
+            <span class="field-label text-sm font-semibold">{{ t('cardEditor.localeLabel') }}</span>
+            <select
+              class="field-control"
+              data-action="change->card-editor#changeLocale"
+              data-card-editor-target="localeSelect"
+            ></select>
+          </label>
+
+          <p class="text-sm leading-6 text-muted" aria-live="polite" data-card-editor-target="localeSummary"></p>
+          <p class="text-sm leading-6 text-muted" aria-live="polite" hidden data-card-editor-target="localeFallbackNotice"></p>
+        </div>
+
+        <div class="space-y-2">
+          <p class="field-label text-sm font-semibold">{{ t('cardEditor.availableLocalizationsLabel') }}</p>
+          <ul class="space-y-3" data-card-editor-target="localeStatusRegion"></ul>
+
+          <template data-card-editor-target="localeStatusTemplate">
+            <li class="space-y-2">
+              <p class="text-sm font-semibold text-strong" data-card-locale-field="locale"></p>
+              <div class="action-wrap-grid" data-card-locale-field="badges"></div>
+            </li>
+          </template>
+        </div>
+      </section>
+
       <label class="block space-y-2">
         <span class="field-label text-sm font-semibold">{{ t('cardEditor.titleLabel') }}</span>
         <input
@@ -103,7 +133,7 @@
         </template>
       </section>
 
-      <div class="dialog-actions pt-2">
+      <div class="dialog-actions pt-2" data-card-editor-target="submitActions">
         <button type="submit" class="touch-button-primary">{{ t('cardEditor.saveButton') }}</button>
       </div>
     </form>

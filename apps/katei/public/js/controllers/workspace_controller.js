@@ -25,6 +25,7 @@ import {
   resolveBoardStageId,
   shouldShowPriorityForStage
 } from './stage_ui.js';
+import { createRuntimeCardDialogState } from './workspace_card_dialog.js';
 
 export default class extends Controller {
   static values = {
@@ -278,7 +279,7 @@ export default class extends Controller {
     });
   }
 
-  openCreateCard() {
+  openCreateCard(event) {
     if (!this.activeBoard || !this.canEditActiveBoard) {
       if (this.activeBoard) {
         this.announce(this.t('errors.boardEditPermissionDenied'));
@@ -290,7 +291,8 @@ export default class extends Controller {
       mode: 'create',
       boardId: this.activeBoard.id,
       board: this.activeBoard,
-      stageId: getDefaultBoardStageId(this.activeBoard)
+      stageId: getDefaultBoardStageId(this.activeBoard),
+      triggerElement: event?.currentTarget ?? null
     });
   }
 
@@ -321,9 +323,12 @@ export default class extends Controller {
       mode: 'edit',
       boardId: board.id,
       board,
-      card: createRuntimeCardViewModel(card, board),
+      ...createRuntimeCardDialogState(card, board, {
+        requestedLocale: button.dataset.requestedLocale ?? button.dataset.locale ?? null
+      }),
       stageId,
-      columnId: stageId
+      columnId: stageId,
+      triggerElement: button
     });
   }
 
@@ -347,15 +352,16 @@ export default class extends Controller {
       return;
     }
 
-    this.viewTriggerElement = button;
-    this.syncViewDialog({ board, card, stageId });
-
-    if (!this.viewDialogTarget.open) {
-      this.viewDialogTarget.showModal();
-    }
-
-    requestAnimationFrame(() => {
-      this.viewDialogTarget.querySelector('[data-view-dialog-initial-focus]')?.focus();
+    this.dispatchWorkspaceEvent('open-card-editor', {
+      mode: 'view',
+      boardId: board.id,
+      board,
+      ...createRuntimeCardDialogState(card, board, {
+        requestedLocale: button.dataset.requestedLocale ?? button.dataset.locale ?? null
+      }),
+      stageId,
+      columnId: stageId,
+      triggerElement: button
     });
   }
 
@@ -670,14 +676,4 @@ export default class extends Controller {
   dispatchWorkspaceEvent(name, detail) {
     window.dispatchEvent(new CustomEvent(`workspace:${name}`, { detail }));
   }
-}
-
-function createRuntimeCardViewModel(card, board) {
-  const content = getBoardCardContentVariant(card, board);
-
-  return {
-    ...card,
-    title: content?.title ?? '',
-    detailsMarkdown: content?.detailsMarkdown ?? ''
-  };
 }
