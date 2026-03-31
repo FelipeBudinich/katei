@@ -11,6 +11,7 @@ import { validateWorkspaceShape } from '../../public/js/domain/workspace_validat
 export const WORKSPACE_RECORD_COLLECTION_NAME = 'workspace_records';
 export const DEFAULT_MAX_ACTIVITY_EVENTS = 100;
 export const DEFAULT_MAX_COMMAND_RECEIPTS = 100;
+export const HOME_WORKSPACE_ID_PREFIX = 'workspace_home_';
 
 export function createInitialWorkspaceRecord(
   viewerSub,
@@ -20,7 +21,15 @@ export function createInitialWorkspaceRecord(
   } = {}
 ) {
   const normalizedViewerSub = normalizeViewerSub(viewerSub);
-  const normalizedWorkspaceId = normalizeWorkspaceId(workspaceId);
+  const normalizedIsHomeWorkspace = normalizeHomeWorkspaceFlag({
+    workspaceId,
+    viewerSub: normalizedViewerSub
+  });
+  const normalizedWorkspaceId = normalizeRecordWorkspaceId({
+    workspaceId,
+    viewerSub: normalizedViewerSub,
+    isHomeWorkspace: normalizedIsHomeWorkspace
+  });
 
   return createWorkspaceRecord({
     workspaceId: normalizedWorkspaceId,
@@ -32,8 +41,7 @@ export function createInitialWorkspaceRecord(
         id: normalizedViewerSub
       }
     }),
-    isHomeWorkspace:
-      normalizedWorkspaceId === createHomeWorkspaceId(normalizedViewerSub) || normalizedWorkspaceId === normalizedViewerSub,
+    isHomeWorkspace: normalizedIsHomeWorkspace,
     revision: 0,
     createdAt: now,
     updatedAt: now,
@@ -59,6 +67,7 @@ export function createWorkspaceRecord({
         : undefined
   }),
   isHomeWorkspace = false,
+  documentId = null,
   revision = 0,
   createdAt = new Date().toISOString(),
   updatedAt = createdAt,
@@ -67,13 +76,31 @@ export function createWorkspaceRecord({
   commandReceipts = []
 } = {}) {
   const normalizedViewerSub = normalizeViewerSub(viewerSub);
-  const normalizedWorkspaceId = normalizeWorkspaceId(workspaceId ?? workspace?.workspaceId);
+  const normalizedIsHomeWorkspace = normalizeHomeWorkspaceFlag({
+    workspaceId: workspaceId ?? workspace?.workspaceId,
+    viewerSub: normalizedViewerSub,
+    isHomeWorkspace,
+    documentId
+  });
+  const normalizedWorkspaceId = normalizeRecordWorkspaceId({
+    workspaceId: workspaceId ?? workspace?.workspaceId,
+    viewerSub: normalizedViewerSub,
+    isHomeWorkspace: normalizedIsHomeWorkspace,
+    documentId
+  });
+  const normalizedDocumentId = normalizeOptionalString(documentId) || normalizedWorkspaceId;
 
   return {
     workspaceId: normalizedWorkspaceId,
     viewerSub: normalizedViewerSub,
-    isHomeWorkspace: Boolean(isHomeWorkspace),
-    workspace: cloneWorkspace(validateWorkspaceSnapshot(workspace, { workspaceId: normalizedWorkspaceId })),
+    isHomeWorkspace: normalizedIsHomeWorkspace,
+    documentId: normalizedDocumentId,
+    workspace: cloneWorkspace(
+      validateWorkspaceSnapshot(workspace, {
+        workspaceId: normalizedWorkspaceId,
+        ownerSub: normalizedViewerSub
+      })
+    ),
     revision: normalizeRevision(revision),
     createdAt: normalizeIsoTimestamp(createdAt, 'createdAt'),
     updatedAt: normalizeIsoTimestamp(updatedAt, 'updatedAt'),
@@ -102,6 +129,7 @@ export function createUpdatedWorkspaceRecord(
     workspaceId: currentRecord.workspaceId,
     viewerSub: currentRecord.viewerSub,
     isHomeWorkspace: currentRecord.isHomeWorkspace,
+    documentId: currentRecord.documentId,
     workspace,
     revision: nextRevision,
     createdAt: currentRecord.createdAt,
@@ -140,6 +168,7 @@ export function createCommandAppliedWorkspaceRecord(
     workspaceId: currentRecord.workspaceId,
     viewerSub: currentRecord.viewerSub,
     isHomeWorkspace: currentRecord.isHomeWorkspace,
+    documentId: currentRecord.documentId,
     workspace,
     revision: nextRevision,
     createdAt: currentRecord.createdAt,
@@ -152,10 +181,11 @@ export function createCommandAppliedWorkspaceRecord(
 
 export function toWorkspaceRecordDocument(record) {
   const normalizedRecord = createWorkspaceRecord(record);
+  const { documentId: _documentId, ...persistedRecord } = normalizedRecord;
 
   return {
-    _id: normalizedRecord.workspaceId,
-    ...normalizedRecord
+    _id: persistedRecord.workspaceId,
+    ...persistedRecord
   };
 }
 
@@ -164,14 +194,30 @@ export function fromWorkspaceRecordDocument(document) {
     return null;
   }
 
-  const legacyViewerSub = document.viewerSub ?? document.ownerSub ?? document._id;
-  const normalizedWorkspaceId = document.workspaceId ?? legacyViewerSub ?? document._id;
+  const legacyViewerSub =
+    document.viewerSub
+    ?? document.ownerSub
+    ?? resolveWorkspaceOwnerSub(document.workspace)
+    ?? document._id;
+  const inferredIsHomeWorkspace = normalizeHomeWorkspaceFlag({
+    workspaceId: document.workspaceId,
+    viewerSub: legacyViewerSub,
+    isHomeWorkspace: document.isHomeWorkspace,
+    documentId: document._id
+  });
+  const normalizedWorkspaceId = normalizeRecordWorkspaceId({
+    workspaceId: document.workspaceId,
+    viewerSub: legacyViewerSub,
+    isHomeWorkspace: inferredIsHomeWorkspace,
+    documentId: document._id
+  });
 
   return createWorkspaceRecord({
     workspaceId: normalizedWorkspaceId,
     viewerSub: legacyViewerSub,
     workspace: document.workspace,
-    isHomeWorkspace: document.isHomeWorkspace ?? normalizedWorkspaceId === legacyViewerSub,
+    isHomeWorkspace: inferredIsHomeWorkspace,
+    documentId: document._id,
     revision: document.revision,
     createdAt: document.createdAt,
     updatedAt: document.updatedAt,
@@ -181,8 +227,13 @@ export function fromWorkspaceRecordDocument(document) {
   });
 }
 
-export function validateWorkspaceSnapshot(workspace, { workspaceId = null } = {}) {
-  const migratedWorkspace = migrateWorkspaceSnapshot(workspace);
+export function validateWorkspaceSnapshot(workspace, { workspaceId = null, ownerSub = null, ownerActor = null } = {}) {
+  const normalizedOwnerSub = normalizeOptionalString(ownerSub) || null;
+  const migratedWorkspace = migrateWorkspaceSnapshot(workspace, {
+    workspaceId,
+    ownerSub: normalizedOwnerSub,
+    ownerActor: ownerActor ?? createHumanActor(normalizedOwnerSub)
+  });
   const normalizedWorkspace = stripLegacyCardContentAliasesFromWorkspace(
     stripLegacyColumnAliasesFromWorkspace(migratedWorkspace)
   );
@@ -286,7 +337,17 @@ export function normalizeViewerSub(viewerSub) {
 }
 
 export function createHomeWorkspaceId(viewerSub) {
-  return `workspace_home_${normalizeViewerSub(viewerSub)}`;
+  return `${HOME_WORKSPACE_ID_PREFIX}${normalizeViewerSub(viewerSub)}`;
+}
+
+export function parseHomeWorkspaceViewerSub(workspaceId) {
+  const normalizedWorkspaceId = normalizeOptionalString(workspaceId);
+
+  if (!normalizedWorkspaceId.startsWith(HOME_WORKSPACE_ID_PREFIX)) {
+    return null;
+  }
+
+  return normalizedWorkspaceId.slice(HOME_WORKSPACE_ID_PREFIX.length) || null;
 }
 
 export function normalizeWorkspaceId(workspaceId) {
@@ -313,6 +374,80 @@ export function normalizeActorSub(actor) {
   }
 
   return null;
+}
+
+function normalizeHomeWorkspaceFlag({ workspaceId, viewerSub, isHomeWorkspace, documentId = null }) {
+  if (typeof isHomeWorkspace === 'boolean') {
+    return isHomeWorkspace;
+  }
+
+  const normalizedViewerSub = normalizeOptionalString(viewerSub);
+
+  if (!normalizedViewerSub) {
+    return false;
+  }
+
+  const normalizedWorkspaceId = normalizeOptionalString(workspaceId);
+  const normalizedDocumentId = normalizeOptionalString(documentId);
+  const canonicalHomeWorkspaceId = createHomeWorkspaceId(normalizedViewerSub);
+
+  return (
+    normalizedWorkspaceId === canonicalHomeWorkspaceId
+    || normalizedWorkspaceId === normalizedViewerSub
+    || normalizedDocumentId === canonicalHomeWorkspaceId
+    || normalizedDocumentId === normalizedViewerSub
+  );
+}
+
+function normalizeRecordWorkspaceId({ workspaceId, viewerSub, isHomeWorkspace, documentId = null }) {
+  const normalizedViewerSub = normalizeOptionalString(viewerSub);
+  const normalizedWorkspaceId = normalizeOptionalString(workspaceId);
+  const normalizedDocumentId = normalizeOptionalString(documentId);
+
+  if (normalizedViewerSub && isHomeWorkspace) {
+    return createHomeWorkspaceId(normalizedViewerSub);
+  }
+
+  return normalizeWorkspaceId(
+    normalizedWorkspaceId
+    || normalizedDocumentId
+    || (normalizedViewerSub ? createHomeWorkspaceId(normalizedViewerSub) : '')
+  );
+}
+
+function resolveWorkspaceOwnerSub(workspace) {
+  if (!workspace || typeof workspace !== 'object' || Array.isArray(workspace)) {
+    return null;
+  }
+
+  const owner =
+    workspace.ownership?.owner
+    ?? workspace.ownership?.actor
+    ?? workspace.owner
+    ?? workspace.ownerActor
+    ?? null;
+
+  if (owner && typeof owner === 'object' && !Array.isArray(owner)) {
+    const ownerType = normalizeOptionalString(owner.type).toLowerCase();
+    const ownerId = normalizeOptionalString(owner.id ?? owner.sub);
+
+    if (ownerType === 'human' && ownerId) {
+      return ownerId;
+    }
+  }
+
+  return normalizeOptionalString(workspace.ownership?.ownerSub ?? workspace.ownerSub) || null;
+}
+
+function createHumanActor(actorId) {
+  const normalizedActorId = normalizeOptionalString(actorId);
+
+  return normalizedActorId
+    ? {
+        type: 'human',
+        id: normalizedActorId
+      }
+    : null;
 }
 
 function normalizeRevision(revision) {

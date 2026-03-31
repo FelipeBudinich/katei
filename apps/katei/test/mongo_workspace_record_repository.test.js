@@ -75,12 +75,62 @@ test('loadOrCreateWorkspaceRecord normalizes existing legacy-shaped workspace do
   const record = await repository.loadOrCreateWorkspaceRecord({ viewerSub: 'sub_123' });
 
   assert.equal(validateWorkspaceShape(record.workspace), true);
-  assert.equal(record.workspaceId, 'sub_123');
+  assert.equal(record.workspaceId, createHomeWorkspaceId('sub_123'));
   assert.equal(record.isHomeWorkspace, true);
+  assert.equal(record.documentId, 'sub_123');
   assert.equal(record.workspace.boards.main.columnOrder, undefined);
   assert.equal(record.workspace.boards.main.columns, undefined);
   assert.equal(record.workspace.boards.main.cards.card_legacy_1.title, undefined);
   assert.equal(record.workspace.boards.main.cards.card_legacy_1.contentByLocale.en.title, 'Legacy persisted task');
+  assert.deepEqual(record.workspace.ownership, {
+    owner: {
+      type: 'human',
+      id: 'sub_123'
+    }
+  });
+  assert.deepEqual(record.workspace.access, {
+    kind: 'private'
+  });
+  assert.deepEqual(record.workspace.boards.main.collaboration.memberships, [
+    {
+      actor: {
+        type: 'human',
+        id: 'sub_123'
+      },
+      role: 'admin',
+      joinedAt: '2026-04-01T09:00:00.000Z'
+    }
+  ]);
+  assert.deepEqual(record.workspace.boards.main.cards.card_legacy_1.localeRequests, {});
+});
+
+test('loadOrCreateWorkspaceRecord resolves canonical home workspace ids back to legacy Mongo documents', async () => {
+  const collection = createWorkspaceRecordCollectionDouble([
+    {
+      _id: 'sub_123',
+      viewerSub: 'sub_123',
+      isHomeWorkspace: true,
+      workspace: createLegacyWorkspaceSnapshot({
+        workspaceId: 'sub_123'
+      }),
+      revision: 0,
+      createdAt: '2026-04-01T10:00:00.000Z',
+      updatedAt: '2026-04-01T10:00:00.000Z',
+      lastChangedBy: null,
+      activityEvents: [],
+      commandReceipts: []
+    }
+  ]);
+  const repository = new MongoWorkspaceRecordRepository({ collection });
+
+  const record = await repository.loadOrCreateWorkspaceRecord({
+    viewerSub: 'sub_123',
+    workspaceId: createHomeWorkspaceId('sub_123')
+  });
+
+  assert.equal(record.workspaceId, createHomeWorkspaceId('sub_123'));
+  assert.equal(record.documentId, 'sub_123');
+  assert.equal(record.workspace.workspaceId, createHomeWorkspaceId('sub_123'));
 });
 
 test('loadOrCreateWorkspaceRecord resolves accessible shared workspaces by workspaceId', async () => {
@@ -191,6 +241,71 @@ test('replaceWorkspaceSnapshot stores a validated full-workspace snapshot with m
   assert.equal(storedDocument.lastChangedBy, 'sub_123');
   assert.equal(storedDocument.activityEvents[0].type, 'workspace.saved');
   assert.equal(validateWorkspaceShape(storedDocument.workspace), true);
+});
+
+test('replaceWorkspaceSnapshot migrates legacy home Mongo documents to the canonical shared-workspace id on save', async () => {
+  const legacyDocument = {
+    _id: 'sub_123',
+    viewerSub: 'sub_123',
+    isHomeWorkspace: true,
+    workspace: createLegacyWorkspaceSnapshot({
+      workspaceId: 'sub_123'
+    }),
+    revision: 0,
+    createdAt: '2026-04-01T10:00:00.000Z',
+    updatedAt: '2026-04-01T10:00:00.000Z',
+    lastChangedBy: null,
+    activityEvents: [],
+    commandReceipts: []
+  };
+  const collection = createWorkspaceRecordCollectionDouble([legacyDocument]);
+  const repository = new MongoWorkspaceRecordRepository({
+    collection,
+    now: () => '2026-04-01T11:15:00.000Z',
+    createActivityEventId: () => 'activity_saved_legacy'
+  });
+  const workspace = createCard(
+    createEmptyWorkspace({
+      workspaceId: createHomeWorkspaceId('sub_123'),
+      creator: {
+        type: 'human',
+        id: 'sub_123'
+      }
+    }),
+    'main',
+    {
+      title: 'Migrated save',
+      detailsMarkdown: 'Canonical save path',
+      priority: 'important'
+    }
+  );
+
+  const record = await repository.replaceWorkspaceSnapshot({
+    viewerSub: 'sub_123',
+    workspaceId: createHomeWorkspaceId('sub_123'),
+    workspace,
+    expectedRevision: 0,
+    actor: { type: 'human', id: 'sub_123' }
+  });
+
+  assert.equal(record.workspaceId, createHomeWorkspaceId('sub_123'));
+  assert.equal(record.documentId, createHomeWorkspaceId('sub_123'));
+  assert.equal(collection.getDocument('sub_123'), null);
+  const storedDocument = collection.getDocument(createHomeWorkspaceId('sub_123'));
+  assert.equal(storedDocument._id, createHomeWorkspaceId('sub_123'));
+  assert.deepEqual(storedDocument.workspace.ownership, {
+    owner: {
+      type: 'human',
+      id: 'sub_123'
+    }
+  });
+  assert.deepEqual(storedDocument.workspace.access, {
+    kind: 'private'
+  });
+  assert.equal(storedDocument.workspace.boards.main.collaboration.memberships.length, 1);
+  assert.equal(storedDocument.workspace.boards.main.collaboration.memberships[0].actor.id, 'sub_123');
+  assert.equal(storedDocument.workspace.boards.main.collaboration.memberships[0].role, 'admin');
+  assert.deepEqual(storedDocument.workspace.boards.main.cards[Object.keys(storedDocument.workspace.boards.main.cards)[0]].localeRequests, {});
 });
 
 test('replaceWorkspaceSnapshot rejects stale expectedRevision values', async () => {
@@ -320,6 +435,55 @@ test('importWorkspaceSnapshot rejects imports once the server record is no longe
   assert.equal(collection.getDocument(createHomeWorkspaceId('sub_123')).revision, 1);
 });
 
+test('repeated load/save cycles do not double-seed owner memberships for migrated legacy home documents', async () => {
+  const collection = createWorkspaceRecordCollectionDouble([
+    {
+      _id: 'sub_123',
+      viewerSub: 'sub_123',
+      isHomeWorkspace: true,
+      workspace: createLegacyWorkspaceSnapshot({
+        workspaceId: 'sub_123'
+      }),
+      revision: 0,
+      createdAt: '2026-04-01T10:00:00.000Z',
+      updatedAt: '2026-04-01T10:00:00.000Z',
+      lastChangedBy: null,
+      activityEvents: [],
+      commandReceipts: []
+    }
+  ]);
+  const repository = createMongoWorkspaceRecordRepository({
+    collection,
+    now: () => '2026-04-01T11:15:00.000Z',
+    createActivityEventId: () => 'activity_saved_repeat'
+  });
+
+  const firstLoad = await repository.loadOrCreateWorkspaceRecord({ viewerSub: 'sub_123' });
+  const firstSave = await repository.replaceWorkspaceSnapshot({
+    viewerSub: 'sub_123',
+    workspaceId: createHomeWorkspaceId('sub_123'),
+    workspace: firstLoad.workspace,
+    expectedRevision: 0,
+    actor: { type: 'human', id: 'sub_123' }
+  });
+  const secondLoad = await repository.loadOrCreateWorkspaceRecord({
+    viewerSub: 'sub_123',
+    workspaceId: createHomeWorkspaceId('sub_123')
+  });
+
+  assert.equal(firstSave.workspace.boards.main.collaboration.memberships.length, 1);
+  assert.deepEqual(secondLoad.workspace.boards.main.collaboration.memberships, [
+    {
+      actor: {
+        type: 'human',
+        id: 'sub_123'
+      },
+      role: 'admin',
+      joinedAt: '2026-04-01T09:00:00.000Z'
+    }
+  ]);
+});
+
 test('getWorkspaceRecordCollection can resolve the dedicated collection from an injected db handle', () => {
   const collection = {};
   const db = {
@@ -371,7 +535,17 @@ function createWorkspaceRecordCollectionDouble(initialDocuments = []) {
       return {
         acknowledged: true,
         matchedCount: currentDocument && revisionMatches ? 1 : 0,
-        modifiedCount: (currentDocument && revisionMatches) || (options.upsert && !currentDocument) ? 1 : 0
+        modifiedCount: currentDocument && revisionMatches ? 1 : 0,
+        upsertedCount: !currentDocument && options.upsert ? 1 : 0
+      };
+    },
+
+    async deleteOne(filter) {
+      const didDelete = documents.delete(filter._id);
+
+      return {
+        acknowledged: true,
+        deletedCount: didDelete ? 1 : 0
       };
     },
 
@@ -392,24 +566,27 @@ function matchesDocumentFilter(document, filter = {}) {
 
 function createLegacyWorkspaceSnapshot({
   version = 4,
+  workspaceId = 'main',
   title = 'Legacy task',
   detailsMarkdown = '',
   priority = 'important'
 } = {}) {
   const workspace = createEmptyWorkspace();
   const board = workspace.boards.main;
+  const boardCreatedAt = '2026-04-01T09:00:00.000Z';
+  const boardUpdatedAt = '2026-04-01T09:00:00.000Z';
 
   return {
     version,
-    workspaceId: workspace.workspaceId,
+    workspaceId,
     ui: structuredClone(workspace.ui),
     boardOrder: [...workspace.boardOrder],
     boards: {
       [board.id]: {
         id: board.id,
         title: board.title,
-        createdAt: board.createdAt,
-        updatedAt: board.updatedAt,
+        createdAt: boardCreatedAt,
+        updatedAt: boardUpdatedAt,
         columnOrder: ['backlog', 'doing', 'done', 'archived'],
         columns: {
           backlog: {

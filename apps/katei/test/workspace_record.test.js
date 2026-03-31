@@ -7,15 +7,24 @@ import {
   createActivityEvent,
   createCommandAppliedWorkspaceRecord,
   createCommandReceipt,
-  fromWorkspaceRecordDocument,
   createWorkspaceRecord,
+  createHomeWorkspaceId,
+  fromWorkspaceRecordDocument,
   findCommandReceipt
 } from '../src/workspaces/workspace_record.js';
 
 function createRecord(overrides = {}) {
+  const workspaceId = createHomeWorkspaceId('sub_123');
   return createWorkspaceRecord({
+    workspaceId,
     viewerSub: 'sub_123',
-    workspace: createEmptyWorkspace(),
+    workspace: createEmptyWorkspace({
+      workspaceId,
+      creator: {
+        type: 'human',
+        id: 'sub_123'
+      }
+    }),
     revision: 0,
     createdAt: '2026-04-01T10:00:00.000Z',
     updatedAt: '2026-04-01T10:00:00.000Z',
@@ -218,7 +227,7 @@ test('older activity events without entity or details still load safely', () => 
   ]);
 });
 
-test('fromWorkspaceRecordDocument migrates legacy home records to workspaceId = viewerSub', () => {
+test('fromWorkspaceRecordDocument migrates legacy home documents to canonical shared-workspace ids', () => {
   const record = fromWorkspaceRecordDocument({
     _id: 'sub_123',
     viewerSub: 'sub_123',
@@ -231,9 +240,144 @@ test('fromWorkspaceRecordDocument migrates legacy home records to workspaceId = 
     commandReceipts: []
   });
 
-  assert.equal(record.workspaceId, 'sub_123');
+  assert.equal(record.workspaceId, createHomeWorkspaceId('sub_123'));
   assert.equal(record.isHomeWorkspace, true);
-  assert.equal(record.workspace.workspaceId, 'sub_123');
+  assert.equal(record.documentId, 'sub_123');
+  assert.equal(record.workspace.workspaceId, createHomeWorkspaceId('sub_123'));
+  assert.deepEqual(record.workspace.ownership, {
+    owner: {
+      type: 'human',
+      id: 'sub_123'
+    }
+  });
+  assert.deepEqual(record.workspace.access, {
+    kind: 'private'
+  });
+});
+
+test('fromWorkspaceRecordDocument accepts ownerSub-only legacy documents and seeds owner admin memberships', () => {
+  const record = fromWorkspaceRecordDocument({
+    _id: 'sub_owner',
+    ownerSub: 'sub_owner',
+    workspace: {
+      version: 5,
+      workspaceId: 'sub_owner',
+      ui: {
+        activeBoardId: 'main',
+        collapsedColumnsByBoard: {
+          main: {
+            backlog: false,
+            doing: false,
+            done: false,
+            archived: false
+          }
+        }
+      },
+      boardOrder: ['main'],
+      boards: {
+        main: {
+          id: 'main',
+          title: 'Legacy board',
+          createdAt: '2026-04-01T09:00:00.000Z',
+          updatedAt: '2026-04-01T09:00:00.000Z',
+          columnOrder: ['backlog', 'doing', 'done', 'archived'],
+          columns: {
+            backlog: {
+              id: 'backlog',
+              title: 'Backlog',
+              cardIds: ['card_1'],
+              allowedTransitionStageIds: ['doing', 'done'],
+              templateIds: []
+            },
+            doing: {
+              id: 'doing',
+              title: 'Doing',
+              cardIds: [],
+              allowedTransitionStageIds: ['backlog', 'done'],
+              templateIds: []
+            },
+            done: {
+              id: 'done',
+              title: 'Done',
+              cardIds: [],
+              allowedTransitionStageIds: ['backlog', 'doing', 'archived'],
+              templateIds: []
+            },
+            archived: {
+              id: 'archived',
+              title: 'Archived',
+              cardIds: [],
+              allowedTransitionStageIds: ['backlog', 'doing', 'done'],
+              templateIds: []
+            }
+          },
+          cards: {
+            card_1: {
+              id: 'card_1',
+              title: 'Legacy task',
+              detailsMarkdown: 'Needs backfill',
+              priority: 'important',
+              createdAt: '2026-04-01T09:00:00.000Z',
+              updatedAt: '2026-04-01T09:30:00.000Z'
+            }
+          }
+        }
+      }
+    },
+    revision: 0,
+    createdAt: '2026-04-01T10:00:00.000Z',
+    updatedAt: '2026-04-01T10:00:00.000Z',
+    lastChangedBy: null,
+    activityEvents: [],
+    commandReceipts: []
+  });
+
+  assert.equal(record.workspaceId, createHomeWorkspaceId('sub_owner'));
+  assert.equal(record.workspace.workspaceId, createHomeWorkspaceId('sub_owner'));
+  assert.deepEqual(record.workspace.ownership, {
+    owner: {
+      type: 'human',
+      id: 'sub_owner'
+    }
+  });
+  assert.deepEqual(record.workspace.boards.main.collaboration.memberships, [
+    {
+      actor: {
+        type: 'human',
+        id: 'sub_owner'
+      },
+      role: 'admin',
+      joinedAt: '2026-04-01T09:00:00.000Z'
+    }
+  ]);
+});
+
+test('createWorkspaceRecord preserves canonical owner/admin seeding assumptions for migrated home records', () => {
+  const record = createWorkspaceRecord({
+    workspaceId: 'sub_123',
+    viewerSub: 'sub_123',
+    isHomeWorkspace: true,
+    documentId: 'sub_123',
+    workspace: createEmptyWorkspace({
+      workspaceId: 'sub_123'
+    }),
+    revision: 0,
+    createdAt: '2026-04-01T10:00:00.000Z',
+    updatedAt: '2026-04-01T10:00:00.000Z',
+    activityEvents: [],
+    commandReceipts: []
+  });
+
+  assert.equal(record.workspaceId, createHomeWorkspaceId('sub_123'));
+  assert.equal(record.documentId, 'sub_123');
+  assert.deepEqual(record.workspace.ownership, {
+    owner: {
+      type: 'human',
+      id: 'sub_123'
+    }
+  });
+  assert.equal(record.workspace.boards.main.collaboration.memberships[0].actor.id, 'sub_123');
+  assert.equal(record.workspace.boards.main.collaboration.memberships[0].role, 'admin');
 });
 
 test('createCommandAppliedWorkspaceRecord appends semantic activity and a command receipt together', () => {

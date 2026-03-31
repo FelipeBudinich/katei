@@ -2,9 +2,9 @@ import { createBoardCollaboration } from './board_collaboration.js';
 import { createDefaultBoardLanguagePolicy } from './board_language_policy.js';
 import { createDefaultBoardStages, createDefaultBoardTemplates } from './board_workflow.js';
 
-export const WORKSPACE_VERSION = 5;
+export const WORKSPACE_VERSION = 6;
 export const WORKSPACE_ID = 'main';
-export const STORAGE_KEY = 'katei.workspace.v5';
+export const STORAGE_KEY = 'katei.workspace.v6';
 export const APP_TITLE = '過程 (katei)';
 export const DEFAULT_BOARD_ID = 'main';
 export const DEFAULT_BOARD_TITLE = '過程';
@@ -28,18 +28,23 @@ export const DEFAULT_PRIORITY = 'important';
 export const DEFAULT_WORKSPACE_STATE = Object.freeze(createEmptyWorkspace());
 
 export function createEmptyWorkspace({ workspaceId = WORKSPACE_ID, creator = undefined } = {}) {
+  const owner = normalizeWorkspaceActor(creator) ?? createDefaultWorkspaceCreator();
   const timestamp = createTimestamp();
   const board = createWorkspaceBoard({
     id: DEFAULT_BOARD_ID,
     title: DEFAULT_BOARD_TITLE,
     createdAt: timestamp,
     updatedAt: timestamp,
-    creator: creator ?? undefined
+    creator: owner
   });
 
   return {
     version: WORKSPACE_VERSION,
     workspaceId: normalizeWorkspaceId(workspaceId),
+    ownership: createWorkspaceOwnership({
+      owner
+    }),
+    access: createWorkspaceAccess(),
     ui: {
       activeBoardId: board.id,
       collapsedColumnsByBoard: {
@@ -50,6 +55,18 @@ export function createEmptyWorkspace({ workspaceId = WORKSPACE_ID, creator = und
     boards: {
       [board.id]: board
     }
+  };
+}
+
+export function createWorkspaceOwnership({ owner = createDefaultWorkspaceCreator() } = {}) {
+  return {
+    owner: normalizeWorkspaceActor(owner) ?? createDefaultWorkspaceCreator()
+  };
+}
+
+export function createWorkspaceAccess({ kind = 'private' } = {}) {
+  return {
+    kind: normalizeWorkspaceAccessKind(kind) ?? 'private'
   };
 }
 
@@ -95,11 +112,15 @@ function createTimestamp() {
   return new Date().toISOString();
 }
 
-function createDefaultBoardCreator() {
+function createDefaultWorkspaceCreator() {
   return {
     type: 'system',
     id: 'workspace-bootstrap'
   };
+}
+
+function createDefaultBoardCreator() {
+  return createDefaultWorkspaceCreator();
 }
 
 function normalizeWorkspaceId(workspaceId) {
@@ -110,4 +131,40 @@ function normalizeWorkspaceId(workspaceId) {
   }
 
   return normalizedWorkspaceId;
+}
+
+function normalizeWorkspaceActor(actor) {
+  if (!actor || typeof actor !== 'object' || Array.isArray(actor)) {
+    return null;
+  }
+
+  const type = typeof actor.type === 'string' ? actor.type.trim().toLowerCase() : '';
+  const id = typeof actor.id === 'string' ? actor.id.trim() : '';
+  const email = normalizeWorkspaceEmail(actor.email ?? null);
+  const displayName = normalizeWorkspaceString(actor.displayName ?? actor.name ?? null);
+
+  if (!['human', 'agent', 'system'].includes(type) || !id) {
+    return null;
+  }
+
+  return {
+    type,
+    id,
+    ...(email ? { email } : {}),
+    ...(displayName ? { displayName } : {})
+  };
+}
+
+function normalizeWorkspaceAccessKind(kind) {
+  const normalizedKind = normalizeWorkspaceString(kind).toLowerCase();
+  return normalizedKind || null;
+}
+
+function normalizeWorkspaceEmail(email) {
+  const normalizedEmail = normalizeWorkspaceString(email).toLowerCase();
+  return normalizedEmail.includes('@') ? normalizedEmail : '';
+}
+
+function normalizeWorkspaceString(value) {
+  return typeof value === 'string' ? value.trim() : '';
 }

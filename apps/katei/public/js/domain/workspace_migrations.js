@@ -4,12 +4,17 @@ import { getDefaultBoardStageActionIds, isValidBoardStageActionId } from './boar
 import { createDefaultBoardStages, createDefaultBoardTemplates } from './board_workflow.js';
 import { createCardContentProvenance } from './card_localization.js';
 import { normalizeCardLocaleRequests } from './card_localization_requests.js';
-import { WORKSPACE_ID, WORKSPACE_VERSION } from './workspace_read_model.js';
+import {
+  WORKSPACE_ID,
+  WORKSPACE_VERSION,
+  createWorkspaceAccess,
+  createWorkspaceOwnership
+} from './workspace_read_model.js';
 
 export const WORKSPACE_MIGRATIONS = Object.freeze([
   Object.freeze({
     version: WORKSPACE_VERSION,
-    up: migrateWorkspaceToV5
+    up: migrateWorkspaceToV6
   })
 ]);
 
@@ -21,16 +26,19 @@ export function migrateWorkspaceSnapshot(workspace, options = {}) {
   return normalizeWorkspaceToCurrentSchema(workspace, options);
 }
 
-export function migrateWorkspaceToV5(workspace, { now = null } = {}) {
+export function migrateWorkspaceToV6(workspace, { now = null, workspaceId = null, ownerSub = null, ownerActor = null } = {}) {
   return normalizeWorkspaceToCurrentSchema(workspace, {
     now,
-    version: 5
+    version: WORKSPACE_VERSION,
+    workspaceId,
+    ownerSub,
+    ownerActor
   });
 }
 
 export function normalizeWorkspaceToCurrentSchema(
   workspace,
-  { now = null, version = WORKSPACE_VERSION } = {}
+  { now = null, version = WORKSPACE_VERSION, workspaceId = null, ownerSub = null, ownerActor = null } = {}
 ) {
   if (!isPlainObject(workspace)) {
     return workspace;
@@ -38,20 +46,35 @@ export function normalizeWorkspaceToCurrentSchema(
 
   const migratedWorkspace = structuredClone(workspace);
   migratedWorkspace.version = version;
-  migratedWorkspace.workspaceId = normalizeWorkspaceId(migratedWorkspace.workspaceId);
+  migratedWorkspace.workspaceId = normalizeWorkspaceId(workspaceId ?? migratedWorkspace.workspaceId);
+  migratedWorkspace.ownership = migrateWorkspaceOwnership(migratedWorkspace, {
+    ownerSub,
+    ownerActor
+  });
+  migratedWorkspace.access = migrateWorkspaceAccess(migratedWorkspace);
+  delete migratedWorkspace.owner;
+  delete migratedWorkspace.ownerActor;
+  delete migratedWorkspace.ownerSub;
+  delete migratedWorkspace.accessLevel;
+  delete migratedWorkspace.visibility;
 
   if (!isPlainObject(migratedWorkspace.boards)) {
     return migratedWorkspace;
   }
 
+  const workspaceOwner = migratedWorkspace.ownership.owner;
+
   for (const [boardId, board] of Object.entries(migratedWorkspace.boards)) {
-    migratedWorkspace.boards[boardId] = migrateBoardToSchemaV7(board, { now });
+    migratedWorkspace.boards[boardId] = migrateBoardToSchemaV8(board, {
+      now,
+      workspaceOwner
+    });
   }
 
   return migratedWorkspace;
 }
 
-export function migrateBoardToSchemaV7(board, { now = null } = {}) {
+export function migrateBoardToSchemaV8(board, { now = null, workspaceOwner = null } = {}) {
   if (!isPlainObject(board)) {
     return board;
   }
@@ -74,7 +97,9 @@ export function migrateBoardToSchemaV7(board, { now = null } = {}) {
     ])
   );
   migratedBoard.templates = migrateBoardTemplates(migratedBoard.templates);
-  migratedBoard.collaboration = normalizeBoardCollaboration(migratedBoard);
+  migratedBoard.collaboration = migrateBoardCollaboration(migratedBoard, {
+    workspaceOwner
+  });
   migratedBoard.languagePolicy = migrateBoardLanguagePolicy(migratedBoard.languagePolicy);
 
   if (isPlainObject(migratedBoard.cards)) {
@@ -89,6 +114,14 @@ export function migrateBoardToSchemaV7(board, { now = null } = {}) {
   delete migratedBoard.invites;
 
   return migratedBoard;
+}
+
+export function migrateWorkspaceToV5(workspace, options = {}) {
+  return migrateWorkspaceToV6(workspace, options);
+}
+
+export function migrateBoardToSchemaV7(board, options = {}) {
+  return migrateBoardToSchemaV8(board, options);
 }
 
 export function migrateCardToLocalizedContent(card, board, { now = null } = {}) {
@@ -137,6 +170,63 @@ export function migrateCardToLocalizedContent(card, board, { now = null } = {}) 
   delete migratedCard.localizationRequests;
 
   return migratedCard;
+}
+
+export function migrateWorkspaceOwnership(workspace, { ownerSub = null, ownerActor = null } = {}) {
+  const nextOwner =
+    resolveWorkspaceOwner(workspace, {
+      ownerSub,
+      ownerActor
+    })
+    ?? normalizeWorkspaceActor(ownerActor)
+    ?? createHumanWorkspaceActor(ownerSub);
+
+  return createWorkspaceOwnership({
+    owner: nextOwner
+  });
+}
+
+export function migrateBoardCollaboration(board, { workspaceOwner = null } = {}) {
+  return seedBoardOwnerMembership(normalizeBoardCollaboration(board), {
+    ownerActor: workspaceOwner,
+    joinedAt: resolveBoardOwnerJoinedAt(board)
+  });
+}
+
+export function seedBoardOwnerMembership(collaboration, { ownerActor = null, joinedAt = null } = {}) {
+  const migratedCollaboration = isPlainObject(collaboration)
+    ? {
+        memberships: Array.isArray(collaboration.memberships)
+          ? collaboration.memberships.map((membership) => structuredClone(membership))
+          : [],
+        invites: Array.isArray(collaboration.invites) ? collaboration.invites.map((invite) => structuredClone(invite)) : []
+      }
+    : {
+        memberships: [],
+        invites: []
+      };
+
+  const normalizedOwnerActor = normalizeWorkspaceActor(ownerActor);
+
+  if (shouldReplacePlaceholderMemberships(migratedCollaboration.memberships, normalizedOwnerActor)) {
+    migratedCollaboration.memberships = [];
+  }
+
+  if (migratedCollaboration.memberships.length > 0) {
+    return migratedCollaboration;
+  }
+
+  if (!normalizedOwnerActor) {
+    return migratedCollaboration;
+  }
+
+  migratedCollaboration.memberships.push({
+    actor: normalizedOwnerActor,
+    role: 'admin',
+    ...(joinedAt ? { joinedAt } : {})
+  });
+
+  return migratedCollaboration;
 }
 
 function isPlainObject(value) {
@@ -294,6 +384,40 @@ function normalizeTimestamp(value) {
   return timestamp.toISOString();
 }
 
+function resolveWorkspaceOwner(workspace, { ownerSub = null, ownerActor = null } = {}) {
+  const existingOwner =
+    normalizeWorkspaceActor(workspace?.ownership?.owner)
+    ?? normalizeWorkspaceActor(workspace?.ownership?.actor)
+    ?? normalizeWorkspaceActor(workspace?.owner)
+    ?? normalizeWorkspaceActor(workspace?.ownerActor);
+  const providedOwner =
+    normalizeWorkspaceActor(ownerActor)
+    ?? createHumanWorkspaceActor(workspace?.ownership?.ownerSub ?? workspace?.ownerSub ?? ownerSub);
+
+  if (providedOwner && isPlaceholderWorkspaceOwner(existingOwner)) {
+    return providedOwner;
+  }
+
+  return existingOwner ?? providedOwner ?? null;
+}
+
+function migrateWorkspaceAccess(workspace) {
+  return createWorkspaceAccess({
+    kind: normalizeWorkspaceAccessKind(
+      workspace?.access?.kind
+      ?? workspace?.access?.policy
+      ?? workspace?.access?.level
+      ?? workspace?.access
+      ?? workspace?.accessLevel
+      ?? workspace?.visibility
+    )
+  });
+}
+
+function resolveBoardOwnerJoinedAt(board) {
+  return normalizeTimestamp(board?.createdAt) ?? normalizeTimestamp(board?.updatedAt) ?? null;
+}
+
 function normalizeStringArray(value, fallback = []) {
   const rawValues = Array.isArray(value) ? value : fallback;
   const values = [];
@@ -327,6 +451,65 @@ function canonicalizeLocale(value) {
   } catch (error) {
     return null;
   }
+}
+
+function normalizeWorkspaceActor(actor) {
+  if (!isPlainObject(actor)) {
+    return null;
+  }
+
+  const type = normalizeOptionalString(actor.type).toLowerCase();
+  const id = normalizeOptionalString(actor.id ?? actor.sub);
+  const email = normalizeOptionalEmail(actor.email ?? null);
+  const displayName = normalizeOptionalString(actor.displayName ?? actor.name ?? null);
+
+  if (!['human', 'agent', 'system'].includes(type) || !id) {
+    return null;
+  }
+
+  return {
+    type,
+    id,
+    ...(email ? { email } : {}),
+    ...(displayName ? { displayName } : {})
+  };
+}
+
+function createHumanWorkspaceActor(ownerSub) {
+  const normalizedOwnerSub = normalizeOptionalString(ownerSub);
+
+  return normalizedOwnerSub
+    ? {
+        type: 'human',
+        id: normalizedOwnerSub
+      }
+    : null;
+}
+
+function isPlaceholderWorkspaceOwner(owner) {
+  return owner?.type === 'system';
+}
+
+function shouldReplacePlaceholderMemberships(memberships, ownerActor) {
+  if (!Array.isArray(memberships) || memberships.length === 0 || ownerActor?.type !== 'human') {
+    return false;
+  }
+
+  return memberships.every((membership) => membership?.actor?.type === 'system');
+}
+
+function normalizeWorkspaceAccessKind(kind) {
+  const normalizedKind = normalizeOptionalString(kind).toLowerCase();
+  return normalizedKind || null;
+}
+
+function normalizeOptionalEmail(value) {
+  const normalizedValue = normalizeOptionalString(value).toLowerCase();
+  return normalizedValue.includes('@') ? normalizedValue : '';
+}
+
+function normalizeOptionalString(value) {
+  return typeof value === 'string' ? value.trim() : '';
 }
 
 function normalizeWorkspaceId(workspaceId) {

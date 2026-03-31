@@ -427,6 +427,10 @@ test('GET /api/workspace normalizes older persisted snapshots before returning t
   assert.equal(response.status, 200);
   assert.equal(response.body.ok, true);
   assert.equal(validateWorkspaceShape(response.body.workspace), true);
+  assert.deepEqual(response.body.activeWorkspace, {
+    workspaceId: createHomeWorkspaceId('sub_123'),
+    isHomeWorkspace: true
+  });
   assert.equal(response.body.workspace.boards.main.columnOrder, undefined);
   assert.equal(response.body.workspace.boards.main.columns, undefined);
   assert.equal(response.body.workspace.boards.main.cards.card_legacy_1.title, undefined);
@@ -434,6 +438,19 @@ test('GET /api/workspace normalizes older persisted snapshots before returning t
     response.body.workspace.boards.main.cards.card_legacy_1.contentByLocale.en.title,
     'Legacy server task'
   );
+  assert.deepEqual(response.body.workspace.ownership, {
+    owner: {
+      type: 'human',
+      id: 'sub_123'
+    }
+  });
+  assert.deepEqual(response.body.workspace.access, {
+    kind: 'private'
+  });
+  assert.equal(response.body.workspace.boards.main.collaboration.memberships.length, 1);
+  assert.equal(response.body.workspace.boards.main.collaboration.memberships[0].actor.id, 'sub_123');
+  assert.equal(response.body.workspace.boards.main.collaboration.memberships[0].role, 'admin');
+  assert.deepEqual(response.body.workspace.boards.main.cards.card_legacy_1.localeRequests, {});
 });
 
 test('PUT /api/workspace rejects invalid workspace shapes for authenticated viewers', async () => {
@@ -802,6 +819,18 @@ test('POST /api/workspace/import accepts legacy snapshots and persists the migra
     response.body.workspace.boards.main.cards.card_legacy_1.contentByLocale.en.title,
     'Imported legacy task'
   );
+  assert.deepEqual(response.body.workspace.ownership, {
+    owner: {
+      type: 'human',
+      id: 'sub_123'
+    }
+  });
+  assert.deepEqual(response.body.workspace.access, {
+    kind: 'private'
+  });
+  assert.equal(response.body.workspace.boards.main.collaboration.memberships[0].actor.id, 'sub_123');
+  assert.equal(response.body.workspace.boards.main.collaboration.memberships[0].role, 'admin');
+  assert.deepEqual(response.body.workspace.boards.main.cards.card_legacy_1.localeRequests, {});
   assert.equal(workspaceRecordRepository.importCalls.length, 1);
   assert.equal(validateWorkspaceShape(workspaceRecordRepository.importCalls[0].workspace), true);
   assert.equal(workspaceRecordRepository.importCalls[0].workspace.boards.main.columnOrder, undefined);
@@ -811,6 +840,16 @@ test('POST /api/workspace/import accepts legacy snapshots and persists the migra
     workspaceRecordRepository.importCalls[0].workspace.boards.main.cards.card_legacy_1.contentByLocale.en.title,
     'Imported legacy task'
   );
+  assert.deepEqual(workspaceRecordRepository.importCalls[0].workspace.ownership, {
+    owner: {
+      type: 'system',
+      id: 'workspace-bootstrap'
+    }
+  });
+  assert.deepEqual(workspaceRecordRepository.importCalls[0].workspace.access, {
+    kind: 'private'
+  });
+  assert.deepEqual(workspaceRecordRepository.importCalls[0].workspace.boards.main.cards.card_legacy_1.localeRequests, {});
 });
 
 test('POST /api/workspace/import returns 409 when the server workspace is no longer pristine', async () => {
