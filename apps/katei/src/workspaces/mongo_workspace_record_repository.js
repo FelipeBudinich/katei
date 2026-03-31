@@ -134,6 +134,23 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
     return nextRecord;
   }
 
+  async replaceWorkspaceRecord({ record, expectedRevision } = {}) {
+    const collection = this.#getCollection();
+    const normalizedRecord = toWorkspaceRecordDocument(record);
+    const result = await collection.replaceOne(
+      { _id: normalizedRecord._id, revision: expectedRevision },
+      normalizedRecord,
+      { upsert: false }
+    );
+    const matchedCount = typeof result?.matchedCount === 'number' ? result.matchedCount : 1;
+
+    if (matchedCount === 0) {
+      throw new WorkspaceRevisionConflictError();
+    }
+
+    return fromWorkspaceRecordDocument(normalizedRecord);
+  }
+
   async #loadRequiredWorkspaceRecord(viewerSub) {
     const document = await this.#getCollection().findOne({ _id: viewerSub });
     const record = fromWorkspaceRecordDocument(document);

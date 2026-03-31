@@ -26,4 +26,8 @@ export class WorkspaceRecordRepository {
   async importWorkspaceSnapshot({ viewerSub, workspace, actor }) {
     throw new Error('Not implemented');
   }
+
+  async replaceWorkspaceRecord({ record, expectedRevision }) {
+    throw new Error('Not implemented');
+  }
 }

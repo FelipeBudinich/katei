@@ -82,6 +82,31 @@ export function createUpdatedWorkspaceRecord(
   });
 }
 
+export function createCommandAppliedWorkspaceRecord(
+  record,
+  {
+    workspace,
+    actor,
+    now = new Date().toISOString(),
+    activityEvent = null,
+    commandReceipt = null
+  } = {}
+) {
+  const currentRecord = createWorkspaceRecord(record);
+  const nextRevision = currentRecord.revision + 1;
+
+  return createWorkspaceRecord({
+    viewerSub: currentRecord.viewerSub,
+    workspace,
+    revision: nextRevision,
+    createdAt: currentRecord.createdAt,
+    updatedAt: now,
+    lastChangedBy: normalizeActorSub(actor),
+    activityEvents: activityEvent ? appendActivityEvent(currentRecord, activityEvent) : currentRecord.activityEvents,
+    commandReceipts: commandReceipt ? appendCommandReceipt(currentRecord, commandReceipt) : currentRecord.commandReceipts
+  });
+}
+
 export function toWorkspaceRecordDocument(record) {
   const normalizedRecord = createWorkspaceRecord(record);
 

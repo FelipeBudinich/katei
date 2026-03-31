@@ -1,5 +1,12 @@
 import { Router } from 'express';
 import { validateWorkspaceShape } from '../../public/js/domain/workspace_validation.js';
+import { applyWorkspaceCommand } from '../workspaces/apply_workspace_command.js';
+import { createDefaultMutationContext } from '../workspaces/mutation_context.js';
+import {
+  createCommandAppliedWorkspaceRecord,
+  createCommandReceipt,
+  findCommandReceipt
+} from '../workspaces/workspace_record.js';
 import {
   WorkspaceImportConflictError,
   WorkspaceRevisionConflictError
@@ -59,6 +66,89 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
     }
   });
 
+  router.post('/api/workspace/commands', requireSession, async (request, response, next) => {
+    const { expectedRevision, isValid: hasValidExpectedRevision } = parseExpectedRevision(request.body?.expectedRevision);
+    const command = request.body?.command;
+
+    if (!hasValidExpectedRevision) {
+      response.status(400).json({
+        ok: false,
+        error: 'expectedRevision must be a non-negative integer.'
+      });
+      return;
+    }
+
+    try {
+      const currentRecord = await workspaceRecordRepository.loadOrCreateWorkspaceRecord(request.viewer.sub);
+      const existingReceipt =
+        typeof command?.clientMutationId === 'string' && command.clientMutationId.trim()
+          ? findCommandReceipt(currentRecord, command.clientMutationId)
+          : null;
+
+      if (existingReceipt) {
+        response.json(createWorkspaceApiResponse(currentRecord, existingReceipt.result));
+        return;
+      }
+
+      const context = createDefaultMutationContext({
+        actor: {
+          type: 'human',
+          id: request.viewer.sub
+        }
+      });
+      const application = applyWorkspaceCommand({
+        record: currentRecord,
+        command,
+        expectedRevision,
+        context
+      });
+
+      if (application.result.noOp) {
+        response.json(createWorkspaceApiResponse(currentRecord, application.result));
+        return;
+      }
+
+      const nextRecord = createCommandAppliedWorkspaceRecord(currentRecord, {
+        workspace: application.workspace,
+        actor: context.actor,
+        now: context.now,
+        activityEvent: application.activityEvent,
+        commandReceipt: createCommandReceipt({
+          clientMutationId: command.clientMutationId,
+          commandType: command.type,
+          actorId: request.viewer.sub,
+          revision: currentRecord.revision + 1,
+          appliedAt: context.now,
+          result: application.result
+        })
+      });
+      const persistedRecord = await workspaceRecordRepository.replaceWorkspaceRecord({
+        record: nextRecord,
+        expectedRevision
+      });
+
+      response.json(createWorkspaceApiResponse(persistedRecord, application.result));
+    } catch (error) {
+      if (error instanceof WorkspaceRevisionConflictError || error?.code === 'WORKSPACE_REVISION_CONFLICT') {
+        response.status(409).json({
+          ok: false,
+          error: error.message
+        });
+        return;
+      }
+
+      if (error?.message && /Workspace command|expectedRevision/.test(error.message)) {
+        response.status(400).json({
+          ok: false,
+          error: error.message
+        });
+        return;
+      }
+
+      next(error);
+    }
+  });
+
   router.post('/api/workspace/import', requireSession, async (request, response, next) => {
     const workspace = request.body?.workspace;
 
@@ -94,8 +184,8 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
   return router;
 }
 
-function createWorkspaceApiResponse(record) {
-  return {
+function createWorkspaceApiResponse(record, result = undefined) {
+  const payload = {
     ok: true,
     workspace: record.workspace,
     meta: {
@@ -105,6 +195,12 @@ function createWorkspaceApiResponse(record) {
       isPristine: record.revision === 0
     }
   };
+
+  if (result !== undefined) {
+    payload.result = result;
+  }
+
+  return payload;
 }
 
 function createInvalidWorkspaceResponse() {

@@ -390,6 +390,89 @@ test('PUT /api/workspace returns 409 when expectedRevision is stale', async () =
   });
 });
 
+test('POST /api/workspace/commands applies a valid runtime command for the authenticated viewer', async () => {
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble();
+  const app = createTestApp({
+    googleTokenVerifier: async () => ({ sub: 'sub_123' }),
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .post('/api/workspace/commands')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_123', name: 'Tester' }))
+    .send({
+      command: {
+        clientMutationId: 'm1',
+        type: 'board.create',
+        payload: {
+          title: 'Roadmap'
+        }
+      },
+      expectedRevision: 0
+    });
+
+  assert.equal(response.status, 200);
+  assert.equal(response.body.ok, true);
+  assert.equal(validateWorkspaceShape(response.body.workspace), true);
+  assert.match(response.body.result.boardId, /^board_[a-f0-9]{12}$/);
+  assert.equal(response.body.workspace.boardOrder.includes(response.body.result.boardId), true);
+  assert.equal(response.body.result.clientMutationId, 'm1');
+  assert.equal(response.body.result.type, 'board.create');
+  assert.equal(response.body.result.noOp, false);
+  assert.equal(response.body.meta.revision, 1);
+  assert.match(response.body.meta.updatedAt, /^\d{4}-\d{2}-\d{2}T/);
+  assert.equal(response.body.meta.lastChangedBy, 'sub_123');
+  assert.equal(response.body.meta.isPristine, false);
+  assert.equal(workspaceRecordRepository.replaceRecordCalls.length, 1);
+  assert.equal(workspaceRecordRepository.replaceRecordCalls[0].expectedRevision, 0);
+  assert.equal(workspaceRecordRepository.replaceRecordCalls[0].record.commandReceipts.length, 1);
+  assert.equal(workspaceRecordRepository.replaceRecordCalls[0].record.commandReceipts[0].clientMutationId, 'm1');
+});
+
+test('POST /api/workspace/commands returns 409 when expectedRevision is stale', async () => {
+  const existingWorkspace = createCard(createEmptyWorkspace(), 'main', {
+    title: 'Server task',
+    detailsMarkdown: 'Already persisted',
+    priority: 'urgent'
+  });
+  const existingRecord = createUpdatedWorkspaceRecord(
+    createInitialWorkspaceRecord('sub_123', {
+      now: '2026-04-02T10:00:00.000Z'
+    }),
+    {
+      workspace: existingWorkspace,
+      actor: { type: 'human', id: 'sub_123' },
+      now: '2026-04-02T11:00:00.000Z',
+      createActivityEventId: () => 'activity_saved_existing'
+    }
+  );
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([existingRecord]);
+  const app = createTestApp({
+    googleTokenVerifier: async () => ({ sub: 'sub_123' }),
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .post('/api/workspace/commands')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_123', name: 'Tester' }))
+    .send({
+      command: {
+        clientMutationId: 'm2',
+        type: 'board.create',
+        payload: {
+          title: 'New board'
+        }
+      },
+      expectedRevision: 0
+    });
+
+  assert.equal(response.status, 409);
+  assert.deepEqual(response.body, {
+    ok: false,
+    error: 'This workspace changed elsewhere. Refresh to continue.'
+  });
+});
+
 test('POST /api/workspace/import saves a valid full-workspace snapshot for a pristine server record', async () => {
   const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble();
   const app = createTestApp({
@@ -713,6 +796,7 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = []) {
   return {
     loadCalls: [],
     replaceCalls: [],
+    replaceRecordCalls: [],
     importCalls: [],
 
     async loadOrCreateWorkspaceRecord(viewerSub) {
@@ -786,6 +870,26 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = []) {
 
       records.set(viewerSub, nextRecord);
       return structuredClone(nextRecord);
+    },
+
+    async replaceWorkspaceRecord({ record, expectedRevision }) {
+      this.replaceRecordCalls.push({
+        record,
+        expectedRevision
+      });
+
+      const currentRecord =
+        records.get(record.viewerSub)
+        ?? createInitialWorkspaceRecord(record.viewerSub, {
+          now: '2026-04-02T10:00:00.000Z'
+        });
+
+      if (currentRecord.revision !== expectedRevision) {
+        throw new WorkspaceRevisionConflictError();
+      }
+
+      records.set(record.viewerSub, structuredClone(record));
+      return structuredClone(record);
     }
   };
 }
