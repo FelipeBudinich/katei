@@ -1,3 +1,4 @@
+import { validateBoardInvites, validateBoardMemberships } from './board_collaboration.js';
 import { validateBoardLanguagePolicy } from './board_language_policy.js';
 import { validateBoardStages, validateBoardTemplates } from './board_workflow.js';
 import { validateCardContentByLocale } from './card_localization.js';
@@ -126,6 +127,10 @@ function isValidBoard(board, boardId) {
   }
 
   if (!validateBoardTemplates(board) || !validateBoardLanguagePolicy(board.languagePolicy)) {
+    return false;
+  }
+
+  if (!validateBoardMemberships(board) || !validateBoardInvites(board)) {
     return false;
   }
 

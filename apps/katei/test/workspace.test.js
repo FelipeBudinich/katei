@@ -87,6 +87,40 @@ test('validateWorkspaceShape rejects boards with invalid language policy definit
   assert.equal(validateWorkspaceShape(workspace), false);
 });
 
+test('validateWorkspaceShape accepts valid board collaboration metadata', () => {
+  const workspace = createEmptyWorkspace();
+
+  workspace.boards.main.memberships = [
+    {
+      actor: { type: 'human', id: 'viewer_admin' },
+      role: 'admin'
+    }
+  ];
+  workspace.boards.main.invites = [
+    {
+      id: 'invite_1',
+      email: 'editor@example.com',
+      role: 'editor',
+      status: 'pending'
+    }
+  ];
+
+  assert.equal(validateWorkspaceShape(workspace), true);
+});
+
+test('validateWorkspaceShape rejects invalid board collaboration metadata', () => {
+  const workspace = createEmptyWorkspace();
+
+  workspace.boards.main.memberships = [
+    {
+      actor: { type: 'human', id: 'viewer_admin' },
+      role: 'owner'
+    }
+  ];
+
+  assert.equal(validateWorkspaceShape(workspace), false);
+});
+
 test('getActiveBoard returns the active board from the read model', () => {
   const workspace = createEmptyWorkspace();
 

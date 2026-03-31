@@ -2,6 +2,7 @@ import {
   canonicalizeContentLocale,
   normalizeBoardLanguagePolicy
 } from './board_language_policy.js';
+import { listCardLocaleStatuses } from './card_localization_requests.js';
 
 export function createCardContentProvenance({
   actor,
@@ -83,14 +84,11 @@ export function getMissingRequiredLocales(board, card) {
     return [];
   }
 
-  const presentLocales = new Set(listCardLocales(card));
+  const localeStatuses = new Map(
+    listCardLocaleStatuses(board, card).map((entry) => [entry.locale, entry])
+  );
 
-  // Legacy cards still store their base content outside localized variants.
-  if (languagePolicy.sourceLocale && hasLegacyCardContent(card)) {
-    presentLocales.add(languagePolicy.sourceLocale);
-  }
-
-  return languagePolicy.requiredLocales.filter((locale) => !presentLocales.has(locale));
+  return languagePolicy.requiredLocales.filter((locale) => !localeStatuses.get(locale)?.hasContent);
 }
 
 export function upsertCardContentVariant(card, locale, patch, provenance) {
