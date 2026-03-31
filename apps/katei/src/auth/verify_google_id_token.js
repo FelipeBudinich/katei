@@ -2,8 +2,8 @@ import { OAuth2Client } from 'google-auth-library';
 
 const ALLOWED_ISSUERS = new Set(['accounts.google.com', 'https://accounts.google.com']);
 
-export function createGoogleIdTokenVerifier({ clientId }) {
-  const client = new OAuth2Client(clientId);
+export function createGoogleIdTokenVerifier({ clientId, oauthClient = new OAuth2Client(clientId) }) {
+  const client = oauthClient;
 
   return async function verifyGoogleIdToken(credential) {
     if (typeof credential !== 'string' || !credential.trim()) {
@@ -34,6 +34,7 @@ export function createGoogleIdTokenVerifier({ clientId }) {
 
     return {
       sub: payload.sub,
+      ...(normalizeVerifiedEmail(payload) ? { email: normalizeVerifiedEmail(payload) } : {}),
       ...(typeof payload.name === 'string' && payload.name.trim() ? { name: payload.name.trim() } : {}),
       ...(typeof payload.picture === 'string' && payload.picture.trim()
         ? { picture: payload.picture.trim() }
@@ -42,3 +43,11 @@ export function createGoogleIdTokenVerifier({ clientId }) {
   };
 }
 
+function normalizeVerifiedEmail(payload) {
+  if (payload?.email_verified !== true) {
+    return null;
+  }
+
+  const normalizedEmail = typeof payload.email === 'string' ? payload.email.trim() : '';
+  return normalizedEmail.includes('@') ? normalizedEmail : null;
+}

@@ -10,14 +10,18 @@ export function createSessionPayload(viewer, ttlSeconds, now = new Date()) {
 
   const issuedAtSeconds = Math.floor(now.getTime() / 1000);
   const expiresAtSeconds = issuedAtSeconds + ttlSeconds;
+  const email = normalizeOptionalEmail(viewer.email);
+  const name = normalizeOptionalField(viewer.name);
+  const picture = normalizeOptionalField(viewer.picture);
 
   return {
     v: KATEI_SESSION_VERSION,
     sub: viewer.sub,
     iat: issuedAtSeconds,
     exp: expiresAtSeconds,
-    ...(normalizeOptionalField(viewer.name) ? { name: viewer.name.trim() } : {}),
-    ...(normalizeOptionalField(viewer.picture) ? { picture: viewer.picture.trim() } : {})
+    ...(email ? { email } : {}),
+    ...(name ? { name } : {}),
+    ...(picture ? { picture } : {})
   };
 }
 
@@ -64,10 +68,15 @@ export function getViewerFromSessionPayload(payload) {
     return null;
   }
 
+  const email = normalizeOptionalEmail(payload.email);
+  const name = normalizeOptionalField(payload.name);
+  const picture = normalizeOptionalField(payload.picture);
+
   return {
     sub: payload.sub,
-    ...(normalizeOptionalField(payload.name) ? { name: payload.name.trim() } : {}),
-    ...(normalizeOptionalField(payload.picture) ? { picture: payload.picture.trim() } : {})
+    ...(email ? { email } : {}),
+    ...(name ? { name } : {}),
+    ...(picture ? { picture } : {})
   };
 }
 
@@ -130,6 +139,10 @@ function isValidSessionPayload(payload, now) {
     return false;
   }
 
+  if (payload.email != null && !normalizeOptionalEmail(payload.email)) {
+    return false;
+  }
+
   if (payload.picture != null && typeof payload.picture !== 'string') {
     return false;
   }
@@ -153,5 +166,10 @@ function safeEqual(left, right) {
 }
 
 function normalizeOptionalField(value) {
-  return typeof value === 'string' && value.trim();
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function normalizeOptionalEmail(value) {
+  const normalizedValue = normalizeOptionalField(value);
+  return normalizedValue.includes('@') ? normalizedValue : '';
 }

@@ -13,6 +13,7 @@ test('verifySignedSessionCookieValue returns the viewer payload for a valid sign
   const payload = createSessionPayload(
     {
       sub: 'sub_123',
+      email: 'tester@example.com',
       name: 'Tester',
       picture: 'https://example.com/avatar.png'
     },
@@ -24,6 +25,7 @@ test('verifySignedSessionCookieValue returns the viewer payload for a valid sign
 
   assert.deepEqual(getViewerFromSessionPayload(verifiedPayload), {
     sub: 'sub_123',
+    email: 'tester@example.com',
     name: 'Tester',
     picture: 'https://example.com/avatar.png'
   });

@@ -97,10 +97,7 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
       }
 
       const context = createDefaultMutationContext({
-        actor: {
-          type: 'human',
-          id: request.viewer.sub
-        }
+        actor: createViewerMutationActor(request.viewer)
       });
       const application = applyWorkspaceCommand({
         record: currentRecord,
@@ -188,6 +185,15 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
   });
 
   return router;
+}
+
+function createViewerMutationActor(viewer) {
+  return {
+    type: 'human',
+    id: viewer.sub,
+    ...(typeof viewer?.email === 'string' && viewer.email.trim() ? { email: viewer.email.trim() } : {}),
+    ...(typeof viewer?.name === 'string' && viewer.name.trim() ? { name: viewer.name.trim() } : {})
+  };
 }
 
 function createWorkspaceApiResponse(record, result = undefined) {

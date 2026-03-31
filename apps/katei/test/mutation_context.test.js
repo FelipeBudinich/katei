@@ -11,13 +11,17 @@ test('createDefaultMutationContext returns the default server mutation context s
   const context = createDefaultMutationContext({
     actor: {
       type: 'human',
-      id: 'viewer_123'
+      id: 'viewer_123',
+      email: 'viewer@example.com',
+      name: 'Viewer Name'
     }
   });
 
   assert.deepEqual(context.actor, {
     type: 'human',
-    id: 'viewer_123'
+    id: 'viewer_123',
+    email: 'viewer@example.com',
+    name: 'Viewer Name'
   });
   assert.equal(typeof context.now, 'string');
   assert.match(context.now, /^\d{4}-\d{2}-\d{2}T/);
@@ -50,14 +54,16 @@ test('createMutationContext accepts null or populated actor values', () => {
   const systemActorContext = createMutationContext({
     actor: {
       type: 'system',
-      id: 'seed-job'
+      id: 'seed-job',
+      name: 'Seed Job'
     }
   });
 
   assert.equal(nullActorContext.actor, null);
   assert.deepEqual(systemActorContext.actor, {
     type: 'system',
-    id: 'seed-job'
+    id: 'seed-job',
+    name: 'Seed Job'
   });
 });
 
@@ -76,5 +82,19 @@ test('createMutationContext rejects unsupported actor types', () => {
         }
       }),
     /Unsupported mutation context actor\.type/
+  );
+});
+
+test('createMutationContext rejects invalid optional actor email metadata', () => {
+  assert.throws(
+    () =>
+      createMutationContext({
+        actor: {
+          type: 'human',
+          id: 'viewer_123',
+          email: 'not-an-email'
+        }
+      }),
+    /Mutation context actor\.email must be a valid email when provided\./
   );
 });

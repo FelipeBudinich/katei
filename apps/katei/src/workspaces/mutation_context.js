@@ -37,6 +37,8 @@ export function normalizeMutationActor(actor) {
 
   const normalizedType = normalizeRequiredString(actor.type, 'Mutation context actor.type is required.');
   const normalizedId = normalizeRequiredString(actor.id, 'Mutation context actor.id is required.');
+  const normalizedEmail = normalizeOptionalEmail(actor.email);
+  const normalizedName = normalizeOptionalMetadataField(actor.name, 'Mutation context actor.name');
 
   if (!['human', 'agent', 'system'].includes(normalizedType)) {
     throw new Error(`Unsupported mutation context actor.type: ${normalizedType}`);
@@ -44,7 +46,9 @@ export function normalizeMutationActor(actor) {
 
   return {
     type: normalizedType,
-    id: normalizedId
+    id: normalizedId,
+    ...(normalizedEmail ? { email: normalizedEmail } : {}),
+    ...(normalizedName ? { name: normalizedName } : {})
   };
 }
 
@@ -75,4 +79,30 @@ function normalizeRequiredString(value, errorMessage) {
   }
 
   return normalizedValue;
+}
+
+function normalizeOptionalMetadataField(value, fieldName) {
+  if (value == null) {
+    return '';
+  }
+
+  if (typeof value !== 'string') {
+    throw new Error(`${fieldName} must be a string when provided.`);
+  }
+
+  return value.trim();
+}
+
+function normalizeOptionalEmail(value) {
+  const normalizedEmail = normalizeOptionalMetadataField(value, 'Mutation context actor.email');
+
+  if (!normalizedEmail) {
+    return '';
+  }
+
+  if (!normalizedEmail.includes('@')) {
+    throw new Error('Mutation context actor.email must be a valid email when provided.');
+  }
+
+  return normalizedEmail;
 }
