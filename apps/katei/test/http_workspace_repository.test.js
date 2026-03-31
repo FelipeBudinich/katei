@@ -105,6 +105,61 @@ test('HttpWorkspaceRepository imports valid v4 local data when the server record
       updatedAt: '2026-04-03T10:30:00.000Z',
       lastChangedBy: 'sub_123',
       isPristine: false
+    })),
+    createJsonResponse(createWorkspaceApiPayload(importedWorkspace, {
+      revision: 1,
+      updatedAt: '2026-04-03T10:30:00.000Z',
+      lastChangedBy: 'sub_123',
+      isPristine: false
+    }))
+  ]);
+  const repository = new HttpWorkspaceRepository({
+    fetchImpl: fetchDouble.fetch,
+    viewerSub: 'sub_123',
+    storage
+  });
+
+  const loadedWorkspace = await repository.loadWorkspace();
+  const canonicalWorkspace = await repository.loadWorkspace();
+
+  assert.deepEqual(loadedWorkspace, importedWorkspace);
+  assert.deepEqual(canonicalWorkspace, importedWorkspace);
+  assert.equal(fetchDouble.calls.length, 4);
+  assert.equal(fetchDouble.calls[0].url, '/api/workspace');
+  assert.equal(fetchDouble.calls[1].url, '/api/workspace/import');
+  assert.equal(fetchDouble.calls[1].options.method, 'POST');
+  assert.deepEqual(JSON.parse(fetchDouble.calls[1].options.body), {
+    workspace: importedWorkspace
+  });
+  assert.equal(fetchDouble.calls[2].url, '/api/workspace');
+  assert.equal(fetchDouble.calls[3].url, '/api/workspace');
+});
+
+test('HttpWorkspaceRepository safely ignores a repeated import attempt once the server rejects it', async () => {
+  const localWorkspace = createCard(createEmptyWorkspace(), 'main', {
+    title: 'Local v4 task',
+    detailsMarkdown: 'Attempted import source',
+    priority: 'important'
+  });
+  const canonicalServerWorkspace = createCard(createEmptyWorkspace(), 'main', {
+    title: 'Canonical server task',
+    detailsMarkdown: 'Already imported earlier',
+    priority: 'urgent'
+  });
+  const storage = createStorageDouble({
+    [createWorkspaceStorageKey('sub_123')]: JSON.stringify(localWorkspace)
+  });
+  const fetchDouble = createFetchDouble([
+    createJsonResponse(createWorkspaceApiPayload(createEmptyWorkspace())),
+    createJsonResponse({
+      ok: false,
+      error: 'Workspace import is only allowed while the server workspace is still pristine.'
+    }, 409),
+    createJsonResponse(createWorkspaceApiPayload(canonicalServerWorkspace, {
+      revision: 1,
+      updatedAt: '2026-04-03T10:45:00.000Z',
+      lastChangedBy: 'sub_123',
+      isPristine: false
     }))
   ]);
   const repository = new HttpWorkspaceRepository({
@@ -115,14 +170,10 @@ test('HttpWorkspaceRepository imports valid v4 local data when the server record
 
   const loadedWorkspace = await repository.loadWorkspace();
 
-  assert.deepEqual(loadedWorkspace, importedWorkspace);
+  assert.deepEqual(loadedWorkspace, canonicalServerWorkspace);
   assert.equal(fetchDouble.calls.length, 3);
   assert.equal(fetchDouble.calls[0].url, '/api/workspace');
   assert.equal(fetchDouble.calls[1].url, '/api/workspace/import');
-  assert.equal(fetchDouble.calls[1].options.method, 'POST');
-  assert.deepEqual(JSON.parse(fetchDouble.calls[1].options.body), {
-    workspace: importedWorkspace
-  });
   assert.equal(fetchDouble.calls[2].url, '/api/workspace');
 });
 
