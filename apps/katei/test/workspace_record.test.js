@@ -5,6 +5,7 @@ import {
   appendActivityEvent,
   appendCommandReceipt,
   createActivityEvent,
+  createCommandAppliedWorkspaceRecord,
   createCommandReceipt,
   createWorkspaceRecord,
   findCommandReceipt
@@ -212,6 +213,76 @@ test('older activity events without entity or details still load safely', () => 
       revision: 1,
       entity: null,
       details: null
+    }
+  ]);
+});
+
+test('createCommandAppliedWorkspaceRecord appends semantic activity and a command receipt together', () => {
+  const workspace = createEmptyWorkspace();
+  workspace.boards.main.title = 'Roadmap';
+
+  const nextRecord = createCommandAppliedWorkspaceRecord(createRecord(), {
+    workspace,
+    actor: { type: 'human', id: 'sub_123' },
+    now: '2026-04-01T10:15:00.000Z',
+    activityEvent: createActivityEvent({
+      id: 'activity_cmd_1',
+      type: 'board.renamed',
+      actor: { type: 'human', id: 'sub_123' },
+      createdAt: '2026-04-01T10:15:00.000Z',
+      revision: 1,
+      entity: {
+        kind: 'board',
+        boardId: 'main'
+      },
+      details: {
+        title: 'Roadmap'
+      }
+    }),
+    commandReceipt: createCommandReceipt({
+      clientMutationId: 'm1',
+      commandType: 'board.rename',
+      actorId: 'sub_123',
+      revision: 1,
+      appliedAt: '2026-04-01T10:15:00.000Z',
+      result: {
+        boardId: 'main',
+        noOp: false
+      }
+    })
+  });
+
+  assert.equal(nextRecord.revision, 1);
+  assert.equal(nextRecord.updatedAt, '2026-04-01T10:15:00.000Z');
+  assert.equal(nextRecord.lastChangedBy, 'sub_123');
+  assert.deepEqual(nextRecord.activityEvents, [
+    {
+      id: 'activity_cmd_1',
+      type: 'board.renamed',
+      actor: { type: 'human', id: 'sub_123' },
+      createdAt: '2026-04-01T10:15:00.000Z',
+      revision: 1,
+      entity: {
+        kind: 'board',
+        boardId: 'main',
+        cardId: null
+      },
+      details: {
+        title: 'Roadmap'
+      }
+    }
+  ]);
+  assert.deepEqual(nextRecord.commandReceipts, [
+    {
+      clientMutationId: 'm1',
+      commandType: 'board.rename',
+      actorId: 'sub_123',
+      revision: 1,
+      appliedAt: '2026-04-01T10:15:00.000Z',
+      result: {
+        boardId: 'main',
+        noOp: false
+      }
     }
   ]);
 });

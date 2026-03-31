@@ -423,10 +423,74 @@ test('POST /api/workspace/commands applies a valid runtime command for the authe
   assert.match(response.body.meta.updatedAt, /^\d{4}-\d{2}-\d{2}T/);
   assert.equal(response.body.meta.lastChangedBy, 'sub_123');
   assert.equal(response.body.meta.isPristine, false);
+  assert.equal(response.body.workspace.boards[response.body.result.boardId].createdAt, response.body.meta.updatedAt);
+  assert.equal(response.body.workspace.boards[response.body.result.boardId].updatedAt, response.body.meta.updatedAt);
   assert.equal(workspaceRecordRepository.replaceRecordCalls.length, 1);
   assert.equal(workspaceRecordRepository.replaceRecordCalls[0].expectedRevision, 0);
   assert.equal(workspaceRecordRepository.replaceRecordCalls[0].record.commandReceipts.length, 1);
   assert.equal(workspaceRecordRepository.replaceRecordCalls[0].record.commandReceipts[0].clientMutationId, 'm1');
+});
+
+test('POST /api/workspace/commands replays duplicate clientMutationId safely without duplicating work', async () => {
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble();
+  const app = createTestApp({
+    googleTokenVerifier: async () => ({ sub: 'sub_123' }),
+    workspaceRecordRepository
+  });
+  const commandBody = {
+    command: {
+      clientMutationId: 'dup_1',
+      type: 'board.create',
+      payload: {
+        title: 'Retry-safe board'
+      }
+    },
+    expectedRevision: 0
+  };
+
+  const firstResponse = await request(app)
+    .post('/api/workspace/commands')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_123', name: 'Tester' }))
+    .send(commandBody);
+  const secondResponse = await request(app)
+    .post('/api/workspace/commands')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_123', name: 'Tester' }))
+    .send(commandBody);
+
+  assert.equal(firstResponse.status, 200);
+  assert.equal(secondResponse.status, 200);
+  assert.deepEqual(secondResponse.body.result, firstResponse.body.result);
+  assert.equal(secondResponse.body.meta.revision, 1);
+  assert.equal(workspaceRecordRepository.replaceRecordCalls.length, 1);
+  assert.equal(secondResponse.body.workspace.boardOrder.filter((boardId) => boardId === firstResponse.body.result.boardId).length, 1);
+});
+
+test('POST /api/workspace/commands returns no-op results without incrementing revision', async () => {
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble();
+  const app = createTestApp({
+    googleTokenVerifier: async () => ({ sub: 'sub_123' }),
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .post('/api/workspace/commands')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_123', name: 'Tester' }))
+    .send({
+      command: {
+        clientMutationId: 'noop_1',
+        type: 'ui.activeBoard.set',
+        payload: {
+          boardId: 'main'
+        }
+      },
+      expectedRevision: 0
+    });
+
+  assert.equal(response.status, 200);
+  assert.equal(response.body.result.noOp, true);
+  assert.equal(response.body.meta.revision, 0);
+  assert.equal(response.body.meta.isPristine, true);
+  assert.equal(workspaceRecordRepository.replaceRecordCalls.length, 0);
 });
 
 test('POST /api/workspace/commands returns 409 when expectedRevision is stale', async () => {
