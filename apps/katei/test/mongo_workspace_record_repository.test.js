@@ -80,7 +80,9 @@ test('replaceWorkspaceSnapshot stores a validated full-workspace snapshot with m
         id: 'sub_123'
       },
       createdAt: '2026-04-01T11:15:00.000Z',
-      revision: 1
+      revision: 1,
+      entity: null,
+      details: null
     }
   ]);
   assert.equal(record.workspace.boards.main.cards[Object.keys(record.workspace.boards.main.cards)[0]].title, 'Ship launch checklist');
@@ -180,7 +182,9 @@ test('importWorkspaceSnapshot stores a validated full-workspace snapshot only wh
         id: 'sub_123'
       },
       createdAt: '2026-04-01T11:15:00.000Z',
-      revision: 1
+      revision: 1,
+      entity: null,
+      details: null
     }
   ]);
   assert.equal(validateWorkspaceShape(record.workspace), true);

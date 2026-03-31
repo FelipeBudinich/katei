@@ -6,6 +6,8 @@ import {
 import { validateWorkspaceShape } from '../../public/js/domain/workspace_validation.js';
 
 export const WORKSPACE_RECORD_COLLECTION_NAME = 'workspace_records';
+export const DEFAULT_MAX_ACTIVITY_EVENTS = 100;
+export const DEFAULT_MAX_COMMAND_RECEIPTS = 100;
 
 export function createInitialWorkspaceRecord(viewerSub, { now = new Date().toISOString() } = {}) {
   return createWorkspaceRecord({
@@ -15,7 +17,8 @@ export function createInitialWorkspaceRecord(viewerSub, { now = new Date().toISO
     createdAt: now,
     updatedAt: now,
     lastChangedBy: null,
-    activityEvents: []
+    activityEvents: [],
+    commandReceipts: []
   });
 }
 
@@ -26,7 +29,8 @@ export function createWorkspaceRecord({
   createdAt = new Date().toISOString(),
   updatedAt = createdAt,
   lastChangedBy = null,
-  activityEvents = []
+  activityEvents = [],
+  commandReceipts = []
 } = {}) {
   return {
     viewerSub: normalizeViewerSub(viewerSub),
@@ -35,7 +39,8 @@ export function createWorkspaceRecord({
     createdAt: normalizeIsoTimestamp(createdAt, 'createdAt'),
     updatedAt: normalizeIsoTimestamp(updatedAt, 'updatedAt'),
     lastChangedBy: normalizeActorSub(lastChangedBy),
-    activityEvents: normalizeActivityEvents(activityEvents)
+    activityEvents: normalizeActivityEvents(activityEvents),
+    commandReceipts: normalizeCommandReceipts(commandReceipts)
   };
 }
 
@@ -46,6 +51,8 @@ export function createUpdatedWorkspaceRecord(
     actor,
     now = new Date().toISOString(),
     activityType = 'workspace.saved',
+    activityEntity = null,
+    activityDetails = null,
     createActivityEventId = createWorkspaceActivityEventId
   } = {}
 ) {
@@ -59,16 +66,19 @@ export function createUpdatedWorkspaceRecord(
     createdAt: currentRecord.createdAt,
     updatedAt: now,
     lastChangedBy: normalizeActorSub(actor),
-    activityEvents: [
-      ...currentRecord.activityEvents,
-      createWorkspaceActivityEvent({
+    activityEvents: appendActivityEvent(
+      currentRecord,
+      createActivityEvent({
         id: createActivityEventId(),
         type: activityType,
         actor,
         createdAt: now,
-        revision: nextRevision
+        revision: nextRevision,
+        entity: activityEntity,
+        details: activityDetails
       })
-    ]
+    ),
+    commandReceipts: currentRecord.commandReceipts
   });
 }
 
@@ -93,7 +103,8 @@ export function fromWorkspaceRecordDocument(document) {
     createdAt: document.createdAt,
     updatedAt: document.updatedAt,
     lastChangedBy: document.lastChangedBy,
-    activityEvents: document.activityEvents
+    activityEvents: document.activityEvents,
+    commandReceipts: document.commandReceipts
   });
 }
 
@@ -110,19 +121,77 @@ export function createWorkspaceActivityEvent({
   type,
   actor = null,
   createdAt = new Date().toISOString(),
-  revision
+  revision,
+  entity = null,
+  details = null
 } = {}) {
   return {
     id: normalizeRequiredString(id, 'Workspace activity event id is required.'),
     type: normalizeRequiredString(type, 'Workspace activity event type is required.'),
     actor: normalizeActivityActor(actor),
     createdAt: normalizeIsoTimestamp(createdAt, 'activityEvent.createdAt'),
-    revision: normalizeRevision(revision)
+    revision: normalizeRevision(revision),
+    entity: normalizeActivityEntity(entity),
+    details: normalizeActivityDetails(details)
   };
 }
 
+export const createActivityEvent = createWorkspaceActivityEvent;
+
 export function createWorkspaceActivityEventId() {
   return `activity_${randomUUID().replaceAll('-', '').slice(0, 12)}`;
+}
+
+export function appendActivityEvent(record, event, maxEvents = DEFAULT_MAX_ACTIVITY_EVENTS) {
+  const currentRecord = createWorkspaceRecord(record);
+  const normalizedEvent = createActivityEvent(event);
+  const normalizedMaxEvents = normalizeBoundedRecentSetSize(maxEvents, 'maxEvents');
+
+  return [...currentRecord.activityEvents, normalizedEvent].slice(-normalizedMaxEvents);
+}
+
+export function createCommandReceipt({
+  clientMutationId,
+  commandType,
+  actorId = null,
+  revision,
+  appliedAt,
+  result
+} = {}) {
+  return {
+    clientMutationId: normalizeRequiredString(
+      clientMutationId,
+      'Workspace command receipt clientMutationId is required.'
+    ),
+    commandType: normalizeRequiredString(commandType, 'Workspace command receipt commandType is required.'),
+    actorId: normalizeOptionalString(actorId) || null,
+    revision: normalizeRevision(revision),
+    appliedAt: normalizeIsoTimestamp(appliedAt, 'commandReceipt.appliedAt'),
+    result: normalizeCommandReceiptResult(result)
+  };
+}
+
+export function findCommandReceipt(record, clientMutationId) {
+  const currentRecord = createWorkspaceRecord(record);
+  const normalizedClientMutationId = normalizeRequiredString(
+    clientMutationId,
+    'Workspace command receipt clientMutationId is required.'
+  );
+
+  return (
+    currentRecord.commandReceipts.find((receipt) => receipt.clientMutationId === normalizedClientMutationId) ?? null
+  );
+}
+
+export function appendCommandReceipt(record, receipt, maxReceipts = DEFAULT_MAX_COMMAND_RECEIPTS) {
+  const currentRecord = createWorkspaceRecord(record);
+  const normalizedReceipt = createCommandReceipt(receipt);
+  const normalizedMaxReceipts = normalizeBoundedRecentSetSize(maxReceipts, 'maxReceipts');
+  const receiptsWithoutDuplicate = currentRecord.commandReceipts.filter(
+    (currentReceipt) => currentReceipt.clientMutationId !== normalizedReceipt.clientMutationId
+  );
+
+  return [...receiptsWithoutDuplicate, normalizedReceipt].slice(-normalizedMaxReceipts);
 }
 
 export function normalizeViewerSub(viewerSub) {
@@ -185,7 +254,7 @@ function normalizeActivityEvents(activityEvents) {
     throw new Error('Workspace record activityEvents must be an array.');
   }
 
-  return activityEvents.map((activityEvent) => createWorkspaceActivityEvent(activityEvent));
+  return activityEvents.map((activityEvent) => createActivityEvent(activityEvent));
 }
 
 function normalizeActivityActor(actor) {
@@ -219,6 +288,67 @@ function normalizeActivityActor(actor) {
   }
 
   return null;
+}
+
+function normalizeActivityEntity(entity) {
+  if (entity == null) {
+    return null;
+  }
+
+  if (typeof entity !== 'object' || Array.isArray(entity)) {
+    throw new Error('Workspace activity event entity must be an object or null.');
+  }
+
+  const kind = normalizeRequiredString(entity.kind, 'Workspace activity event entity.kind is required.');
+
+  if (!['workspace', 'board', 'card'].includes(kind)) {
+    throw new Error(`Unsupported workspace activity event entity.kind: ${kind}`);
+  }
+
+  return {
+    kind,
+    boardId: normalizeOptionalString(entity.boardId) || null,
+    cardId: normalizeOptionalString(entity.cardId) || null
+  };
+}
+
+function normalizeActivityDetails(details) {
+  if (details == null) {
+    return null;
+  }
+
+  if (typeof details !== 'object' || Array.isArray(details)) {
+    throw new Error('Workspace activity event details must be an object or null.');
+  }
+
+  return structuredClone(details);
+}
+
+function normalizeCommandReceipts(commandReceipts) {
+  if (!Array.isArray(commandReceipts)) {
+    throw new Error('Workspace record commandReceipts must be an array.');
+  }
+
+  return commandReceipts.map((receipt) => createCommandReceipt(receipt));
+}
+
+function normalizeCommandReceiptResult(result) {
+  if (!result || typeof result !== 'object' || Array.isArray(result)) {
+    throw new Error('Workspace command receipt result must be an object.');
+  }
+
+  return structuredClone(result);
+}
+
+function normalizeBoundedRecentSetSize(value, fieldName) {
+  const normalizedValue =
+    typeof value === 'number' && Number.isInteger(value) ? value : Number.parseInt(String(value ?? ''), 10);
+
+  if (!Number.isInteger(normalizedValue) || normalizedValue < 1) {
+    throw new Error(`${fieldName} must be a positive integer.`);
+  }
+
+  return normalizedValue;
 }
 
 function normalizeRequiredString(value, errorMessage) {
