@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { projectWorkspaceWithLegacyColumns } from '../../public/js/domain/board_workflow.js';
 import {
   APP_TITLE,
   COLUMN_ORDER,
@@ -33,6 +34,7 @@ export function createBoardsRouter({ requireSession, workspaceRecordRepository }
 }
 
 export function buildWorkspacePageModel(viewer, t, workspace = createEmptyWorkspace(), workspaceMeta = null) {
+  const projectedWorkspace = projectWorkspaceWithLegacyColumns(workspace);
   const columnDisplayTitles = buildColumnDisplayTitles(t);
   const columnDefinitions = COLUMN_ORDER.map((id) => ({
     id,
@@ -44,8 +46,8 @@ export function buildWorkspacePageModel(viewer, t, workspace = createEmptyWorksp
   }));
 
   return {
-    workspace,
-    board: getActiveBoard(workspace),
+    workspace: projectedWorkspace,
+    board: getActiveBoard(projectedWorkspace),
     columnDefinitions,
     columnDisplayTitles,
     priorityDefinitions,
@@ -54,7 +56,7 @@ export function buildWorkspacePageModel(viewer, t, workspace = createEmptyWorksp
     viewer,
     workspaceBootstrapJson: workspaceMeta
       ? serializeWorkspaceBootstrapPayload({
-          workspace,
+          workspace: projectedWorkspace,
           meta: workspaceMeta
         })
       : null

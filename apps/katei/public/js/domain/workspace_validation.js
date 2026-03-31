@@ -86,12 +86,13 @@ export function isValidPriority(value) {
   return PRIORITY_ORDER.includes(value);
 }
 
-export function isValidColumnId(columnId) {
-  return COLUMN_ORDER.includes(columnId);
+export function isValidColumnId(columnId, board = null) {
+  const stageIds = Array.isArray(board?.stageOrder) ? board.stageOrder : COLUMN_ORDER;
+  return Boolean(typeof columnId === 'string' && stageIds.includes(columnId));
 }
 
-export function assertValidColumnId(columnId) {
-  if (!isValidColumnId(columnId)) {
+export function assertValidColumnId(columnId, board = null) {
+  if (!isValidColumnId(columnId, board)) {
     throw new Error(`Invalid column id: ${columnId}`);
   }
 }
@@ -133,10 +134,10 @@ function isValidBoard(board, boardId) {
 
   const seenCardIds = new Set();
 
-  for (const columnId of COLUMN_ORDER) {
-    const column = board.columns[columnId];
+  for (const stageId of board.stageOrder) {
+    const stage = board.stages[stageId];
 
-    for (const cardId of column.cardIds) {
+    for (const cardId of stage.cardIds) {
       if (typeof cardId !== 'string' || seenCardIds.has(cardId)) {
         return false;
       }
@@ -178,7 +179,7 @@ function isValidCollapsedColumnsByBoard(value, boards) {
   }
 
   for (const boardId of Object.keys(value)) {
-    if (!boards[boardId] || !isValidCollapsedColumns(value[boardId])) {
+    if (!boards[boardId] || !isValidCollapsedColumns(value[boardId], boards[boardId])) {
       return false;
     }
   }
@@ -186,13 +187,13 @@ function isValidCollapsedColumnsByBoard(value, boards) {
   return true;
 }
 
-function isValidCollapsedColumns(value) {
+function isValidCollapsedColumns(value, board) {
   if (!value || typeof value !== 'object') {
     return false;
   }
 
-  for (const columnId of COLUMN_ORDER) {
-    if (value[columnId] != null && typeof value[columnId] !== 'boolean') {
+  for (const stageId of board.stageOrder) {
+    if (value[stageId] != null && typeof value[stageId] !== 'boolean') {
       return false;
     }
   }

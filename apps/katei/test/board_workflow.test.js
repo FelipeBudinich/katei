@@ -12,10 +12,34 @@ test('createDefaultBoardStages returns the default workflow stages as fresh obje
   const secondStages = createDefaultBoardStages();
 
   assert.deepEqual(firstStages, [
-    { id: 'backlog', title: 'Backlog' },
-    { id: 'doing', title: 'Doing' },
-    { id: 'done', title: 'Done' },
-    { id: 'archived', title: 'Archived' }
+    {
+      id: 'backlog',
+      title: 'Backlog',
+      cardIds: [],
+      allowedTransitionStageIds: ['doing', 'done'],
+      templateIds: []
+    },
+    {
+      id: 'doing',
+      title: 'Doing',
+      cardIds: [],
+      allowedTransitionStageIds: ['backlog', 'done'],
+      templateIds: []
+    },
+    {
+      id: 'done',
+      title: 'Done',
+      cardIds: [],
+      allowedTransitionStageIds: ['backlog', 'doing', 'archived'],
+      templateIds: []
+    },
+    {
+      id: 'archived',
+      title: 'Archived',
+      cardIds: [],
+      allowedTransitionStageIds: ['backlog', 'doing', 'done'],
+      templateIds: []
+    }
   ]);
 
   firstStages[0].title = 'Changed';
@@ -33,7 +57,7 @@ test('validateBoardStages accepts boards that match the current workflow schema'
   assert.equal(validateBoardStages(board), true);
 });
 
-test('validateBoardStages rejects invalid stage order or column definitions', () => {
+test('validateBoardStages rejects duplicate stage ids or invalid stage definitions', () => {
   const board = createWorkspaceBoard({
     id: 'main',
     title: 'Main board',
@@ -41,7 +65,7 @@ test('validateBoardStages rejects invalid stage order or column definitions', ()
     updatedAt: '2026-03-31T10:00:00.000Z'
   });
 
-  board.columnOrder = ['backlog', 'done', 'doing', 'archived'];
+  board.stageOrder = ['backlog', 'doing', 'done', 'done'];
   assert.equal(validateBoardStages(board), false);
 
   const boardWithBadTitle = createWorkspaceBoard({
@@ -50,12 +74,12 @@ test('validateBoardStages rejects invalid stage order or column definitions', ()
     createdAt: '2026-03-31T10:00:00.000Z',
     updatedAt: '2026-03-31T10:00:00.000Z'
   });
-  boardWithBadTitle.columns.doing.title = 'In progress';
+  boardWithBadTitle.stages.doing.title = '';
 
   assert.equal(validateBoardStages(boardWithBadTitle), false);
 });
 
-test('validateBoardTemplates accepts absent templates and rejects malformed ones', () => {
+test('validateBoardTemplates accepts synced templates and rejects malformed ones', () => {
   const board = createWorkspaceBoard({
     id: 'main',
     title: 'Main board',
@@ -63,25 +87,18 @@ test('validateBoardTemplates accepts absent templates and rejects malformed ones
     updatedAt: '2026-03-31T10:00:00.000Z'
   });
 
-  assert.equal(validateBoardTemplates(board), true);
-
   board.templates = [
     {
       id: 'template_1',
       title: 'Reusable draft',
-      stageId: 'backlog'
+      initialStageId: 'backlog'
     }
   ];
+  board.stages.backlog.templateIds = ['template_1'];
 
   assert.equal(validateBoardTemplates(board), true);
 
-  board.templates = [
-    {
-      id: 'template_1',
-      title: 'Broken draft',
-      stageId: 'review'
-    }
-  ];
+  board.templates[0].initialStageId = 'review';
 
   assert.equal(validateBoardTemplates(board), false);
 });

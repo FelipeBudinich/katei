@@ -1,4 +1,5 @@
-import { createDefaultBoardStages } from './board_workflow.js';
+import { createDefaultBoardLanguagePolicy } from './board_language_policy.js';
+import { createDefaultBoardStages, createDefaultBoardTemplates } from './board_workflow.js';
 
 export const WORKSPACE_VERSION = 4;
 export const WORKSPACE_ID = 'main';
@@ -6,9 +7,9 @@ export const STORAGE_KEY = 'katei.workspace.v4';
 export const APP_TITLE = '過程 (katei)';
 export const DEFAULT_BOARD_ID = 'main';
 export const DEFAULT_BOARD_TITLE = '過程';
-const DEFAULT_BOARD_STAGES = Object.freeze(createDefaultBoardStages().map((stage) => Object.freeze(stage)));
-
-export const COLUMN_DEFINITIONS = DEFAULT_BOARD_STAGES;
+export const COLUMN_DEFINITIONS = Object.freeze(
+  createDefaultBoardStages().map(({ id, title }) => Object.freeze({ id, title }))
+);
 export const COLUMN_ORDER = Object.freeze(COLUMN_DEFINITIONS.map(({ id }) => id));
 export const COLUMN_TITLES = Object.freeze(
   Object.fromEntries(COLUMN_DEFINITIONS.map(({ id, title }) => [id, title]))
@@ -51,14 +52,10 @@ export function createEmptyWorkspace() {
 }
 
 export function createWorkspaceBoard({ id, title, createdAt, updatedAt }) {
-  const columns = {};
+  const stages = {};
 
-  for (const column of COLUMN_DEFINITIONS) {
-    columns[column.id] = {
-      id: column.id,
-      title: column.title,
-      cardIds: []
-    };
+  for (const stage of createDefaultBoardStages()) {
+    stages[stage.id] = stage;
   }
 
   return {
@@ -66,17 +63,19 @@ export function createWorkspaceBoard({ id, title, createdAt, updatedAt }) {
     title: String(title),
     createdAt,
     updatedAt,
-    columnOrder: [...COLUMN_ORDER],
-    columns,
+    stageOrder: Object.keys(stages),
+    stages,
+    templates: createDefaultBoardTemplates(),
+    languagePolicy: createDefaultBoardLanguagePolicy(),
     cards: {}
   };
 }
 
-export function createCollapsedColumns() {
+export function createCollapsedColumns(stageIds = COLUMN_ORDER) {
   const collapsedColumns = {};
 
-  for (const columnId of COLUMN_ORDER) {
-    collapsedColumns[columnId] = false;
+  for (const stageId of stageIds) {
+    collapsedColumns[stageId] = false;
   }
 
   return collapsedColumns;

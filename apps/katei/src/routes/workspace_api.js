@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { projectWorkspaceWithLegacyColumns } from '../../public/js/domain/board_workflow.js';
 import { validateWorkspaceShape } from '../../public/js/domain/workspace_validation.js';
 import { applyWorkspaceCommand } from '../workspaces/apply_workspace_command.js';
 import { createDefaultMutationContext } from '../workspaces/mutation_context.js';
@@ -185,9 +186,10 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
 }
 
 function createWorkspaceApiResponse(record, result = undefined) {
+  const workspace = projectWorkspaceWithLegacyColumns(record.workspace);
   const payload = {
     ok: true,
-    workspace: record.workspace,
+    workspace,
     meta: {
       revision: record.revision,
       updatedAt: record.updatedAt,

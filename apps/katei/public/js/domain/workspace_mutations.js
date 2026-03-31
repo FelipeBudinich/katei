@@ -37,7 +37,7 @@ export function createBoard(workspace, input) {
   nextWorkspace.boardOrder = [...nextWorkspace.boardOrder, board.id];
   nextWorkspace.ui.activeBoardId = board.id;
   ensureCollapsedColumnsByBoard(nextWorkspace);
-  nextWorkspace.ui.collapsedColumnsByBoard[board.id] = createCollapsedColumns();
+  nextWorkspace.ui.collapsedColumnsByBoard[board.id] = createCollapsedColumns(board.stageOrder);
 
   return nextWorkspace;
 }
@@ -86,10 +86,9 @@ export function setActiveBoard(workspace, boardId) {
 }
 
 export function setColumnCollapsed(workspace, boardId, columnId, isCollapsed) {
-  assertValidColumnId(columnId);
-
   const nextWorkspace = cloneWorkspace(workspace);
-  getBoard(nextWorkspace, boardId);
+  const board = getBoard(nextWorkspace, boardId);
+  assertValidColumnId(columnId, board);
   ensureCollapsedColumnsByBoard(nextWorkspace);
   nextWorkspace.ui.collapsedColumnsByBoard[boardId] = getCollapsedColumnsForBoard(nextWorkspace, boardId);
   nextWorkspace.ui.collapsedColumnsByBoard[boardId][columnId] = Boolean(isCollapsed);
@@ -102,12 +101,18 @@ export function resetBoard(workspace, boardId) {
   const board = getBoard(nextWorkspace, boardId);
   const timestamp = createTimestamp();
 
-  nextWorkspace.boards[boardId] = createWorkspaceBoard({
-    id: board.id,
-    title: board.title,
-    createdAt: board.createdAt,
-    updatedAt: timestamp
-  });
+  nextWorkspace.boards[boardId] = {
+    ...createWorkspaceBoard({
+      id: board.id,
+      title: board.title,
+      createdAt: board.createdAt,
+      updatedAt: timestamp
+    }),
+    stageOrder: [...board.stageOrder],
+    stages: createClearedStages(board),
+    templates: structuredClone(board.templates),
+    languagePolicy: structuredClone(board.languagePolicy)
+  };
 
   return nextWorkspace;
 }
@@ -117,6 +122,7 @@ export function createCard(workspace, boardId, input) {
   const board = getBoard(nextWorkspace, boardId);
   const timestamp = createTimestamp();
   const cardId = createCardId();
+  const initialStageId = board.stageOrder[0];
 
   board.cards[cardId] = {
     id: cardId,
@@ -126,7 +132,7 @@ export function createCard(workspace, boardId, input) {
     createdAt: timestamp,
     updatedAt: timestamp
   };
-  board.columns.backlog.cardIds = [...board.columns.backlog.cardIds, cardId];
+  board.stages[initialStageId].cardIds = [...board.stages[initialStageId].cardIds, cardId];
   board.updatedAt = timestamp;
 
   return nextWorkspace;
@@ -162,7 +168,7 @@ export function deleteCard(workspace, boardId, cardId) {
   const sourceColumnId = findColumnIdByCardId(board, cardId);
 
   if (sourceColumnId) {
-    board.columns[sourceColumnId].cardIds = board.columns[sourceColumnId].cardIds.filter(
+    board.stages[sourceColumnId].cardIds = board.stages[sourceColumnId].cardIds.filter(
       (currentCardId) => currentCardId !== cardId
     );
   }
@@ -173,13 +179,12 @@ export function deleteCard(workspace, boardId, cardId) {
 }
 
 export function moveCard(workspace, boardId, cardId, sourceColumnId, targetColumnId) {
-  assertValidColumnId(sourceColumnId);
-  assertValidColumnId(targetColumnId);
-
   const nextWorkspace = cloneWorkspace(workspace);
   const board = getBoard(nextWorkspace, boardId);
+  assertValidColumnId(sourceColumnId, board);
+  assertValidColumnId(targetColumnId, board);
   const card = getCard(board, cardId);
-  const sourceColumn = board.columns[sourceColumnId];
+  const sourceColumn = board.stages[sourceColumnId];
   const sourceIndex = sourceColumn.cardIds.indexOf(cardId);
 
   if (sourceIndex === -1) {
@@ -191,7 +196,7 @@ export function moveCard(workspace, boardId, cardId, sourceColumnId, targetColum
   }
 
   sourceColumn.cardIds = sourceColumn.cardIds.filter((currentCardId) => currentCardId !== cardId);
-  board.columns[targetColumnId].cardIds = [...board.columns[targetColumnId].cardIds, cardId];
+  board.stages[targetColumnId].cardIds = [...board.stages[targetColumnId].cardIds, cardId];
 
   const timestamp = createTimestamp();
   board.cards[cardId] = {
@@ -215,4 +220,16 @@ function ensureCollapsedColumnsByBoard(workspace) {
   if (!workspace.ui.collapsedColumnsByBoard || typeof workspace.ui.collapsedColumnsByBoard !== 'object') {
     workspace.ui.collapsedColumnsByBoard = {};
   }
+}
+
+function createClearedStages(board) {
+  return Object.fromEntries(
+    board.stageOrder.map((stageId) => [
+      stageId,
+      {
+        ...structuredClone(board.stages[stageId]),
+        cardIds: []
+      }
+    ])
+  );
 }

@@ -42,7 +42,7 @@ test('LocalWorkspaceRepository rejects stored cards that still use the legacy de
     createdAt: '2026-03-30T00:00:00.000Z',
     updatedAt: '2026-03-30T00:00:00.000Z'
   };
-  board.columns.backlog.cardIds.push('card_legacy');
+  board.stages.backlog.cardIds.push('card_legacy');
   const storage = createStorageDouble({
     'katei.workspace.v4:sub_123': JSON.stringify(workspace)
   });

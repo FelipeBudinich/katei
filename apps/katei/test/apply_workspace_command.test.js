@@ -74,7 +74,7 @@ test('card.create mints a server-side card id and stores the card in backlog', (
   });
 
   assert.equal(result.cardId, 'card_srv001');
-  assert.deepEqual(workspace.boards.main.columns.backlog.cardIds, ['card_srv001']);
+  assert.deepEqual(workspace.boards.main.stages.backlog.cardIds, ['card_srv001']);
   assert.equal(workspace.boards.main.cards.card_srv001.createdAt, '2026-03-31T10:00:00.000Z');
   assert.equal(workspace.boards.main.cards.card_srv001.updatedAt, '2026-03-31T10:00:00.000Z');
 });
@@ -149,8 +149,8 @@ test('card.move changes the correct source and target columns', () => {
     })
   });
 
-  assert.deepEqual(workspace.boards.main.columns.backlog.cardIds, []);
-  assert.deepEqual(workspace.boards.main.columns.doing.cardIds, ['card_srv001']);
+  assert.deepEqual(workspace.boards.main.stages.backlog.cardIds, []);
+  assert.deepEqual(workspace.boards.main.stages.doing.cardIds, ['card_srv001']);
   assert.equal(workspace.boards.main.cards.card_srv001.updatedAt, '2026-03-31T11:00:00.000Z');
   assert.equal(result.sourceColumnId, 'backlog');
   assert.equal(result.targetColumnId, 'doing');
@@ -186,7 +186,7 @@ test('card.delete removes card references from columns and cards map', () => {
   });
 
   assert.equal(workspace.boards.main.cards.card_srv001, undefined);
-  assert.deepEqual(workspace.boards.main.columns.backlog.cardIds, []);
+  assert.deepEqual(workspace.boards.main.stages.backlog.cardIds, []);
 });
 
 test('no-op command behavior is surfaced without creating an activity event', () => {

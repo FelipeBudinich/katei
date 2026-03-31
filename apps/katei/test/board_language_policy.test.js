@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   canonicalizeContentLocale,
+  createDefaultBoardLanguagePolicy,
   normalizeBoardLanguagePolicy,
   validateBoardLanguagePolicy
 } from '../public/js/domain/board_language_policy.js';
@@ -25,6 +26,19 @@ test('validateBoardLanguagePolicy accepts canonicalizable language policies', ()
     defaultLocale: 'es-CL',
     requiredLocales: ['es-CL', 'ja'],
     allowedLocales: ['ja', 'es-CL', 'en']
+  });
+});
+
+test('createDefaultBoardLanguagePolicy returns a fresh default object', () => {
+  const firstPolicy = createDefaultBoardLanguagePolicy();
+  const secondPolicy = createDefaultBoardLanguagePolicy();
+
+  firstPolicy.requiredLocales.push('ja');
+
+  assert.deepEqual(secondPolicy, {
+    defaultLocale: null,
+    requiredLocales: [],
+    allowedLocales: null
   });
 });
 

@@ -1,5 +1,13 @@
 const EMPTY_LOCALE_LIST = Object.freeze([]);
 
+export function createDefaultBoardLanguagePolicy() {
+  return {
+    defaultLocale: null,
+    requiredLocales: [],
+    allowedLocales: null
+  };
+}
+
 export const DEFAULT_BOARD_LANGUAGE_POLICY = Object.freeze({
   defaultLocale: null,
   requiredLocales: EMPTY_LOCALE_LIST,
@@ -21,8 +29,12 @@ export function canonicalizeContentLocale(input) {
 }
 
 export function normalizeBoardLanguagePolicy(policy) {
-  if (policy == null) {
-    return DEFAULT_BOARD_LANGUAGE_POLICY;
+  if (policy === null) {
+    return createDefaultBoardLanguagePolicy();
+  }
+
+  if (policy === undefined) {
+    return null;
   }
 
   if (!isPlainObject(policy)) {

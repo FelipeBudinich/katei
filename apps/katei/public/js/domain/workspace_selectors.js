@@ -7,9 +7,9 @@ import {
 import { assertValidBoardId, assertValidColumnId } from './workspace_validation.js';
 
 export function sortCardIdsForColumn(board, columnId) {
-  assertValidColumnId(columnId);
+  assertValidColumnId(columnId, board);
 
-  return [...board.columns[columnId].cardIds].sort((leftCardId, rightCardId) => {
+  return [...board.stages[columnId].cardIds].sort((leftCardId, rightCardId) => {
     const leftCard = board.cards[leftCardId];
     const rightCard = board.cards[rightCardId];
     const priorityDifference =
@@ -28,18 +28,18 @@ export function sortCardIdsForColumn(board, columnId) {
 }
 
 export function findColumnIdByCardId(board, cardId) {
-  for (const columnId of COLUMN_ORDER) {
-    if (board.columns[columnId].cardIds.includes(cardId)) {
-      return columnId;
+  for (const stageId of board.stageOrder) {
+    if (board.stages[stageId].cardIds.includes(cardId)) {
+      return stageId;
     }
   }
 
   return null;
 }
 
-export function getColumnTitle(columnId) {
-  assertValidColumnId(columnId);
-  return COLUMN_TITLES[columnId];
+export function getColumnTitle(columnId, board = null) {
+  assertValidColumnId(columnId, board);
+  return board?.stages?.[columnId]?.title ?? COLUMN_TITLES[columnId];
 }
 
 export function getBoard(workspace, boardId) {
@@ -52,11 +52,12 @@ export function getActiveBoard(workspace) {
 }
 
 export function getCollapsedColumnsForBoard(workspace, boardId) {
+  const board = getBoard(workspace, boardId);
   const storedState = workspace?.ui?.collapsedColumnsByBoard?.[boardId] ?? {};
-  const collapsedColumns = createCollapsedColumns();
+  const collapsedColumns = createCollapsedColumns(board.stageOrder);
 
-  for (const columnId of COLUMN_ORDER) {
-    collapsedColumns[columnId] = Boolean(storedState[columnId]);
+  for (const stageId of board.stageOrder) {
+    collapsedColumns[stageId] = Boolean(storedState[stageId]);
   }
 
   return collapsedColumns;

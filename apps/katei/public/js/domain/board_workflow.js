@@ -1,38 +1,78 @@
 const DEFAULT_BOARD_STAGES = Object.freeze([
-  Object.freeze({ id: 'backlog', title: 'Backlog' }),
-  Object.freeze({ id: 'doing', title: 'Doing' }),
-  Object.freeze({ id: 'done', title: 'Done' }),
-  Object.freeze({ id: 'archived', title: 'Archived' })
+  Object.freeze({
+    id: 'backlog',
+    title: 'Backlog',
+    allowedTransitionStageIds: Object.freeze(['doing', 'done']),
+    templateIds: Object.freeze([])
+  }),
+  Object.freeze({
+    id: 'doing',
+    title: 'Doing',
+    allowedTransitionStageIds: Object.freeze(['backlog', 'done']),
+    templateIds: Object.freeze([])
+  }),
+  Object.freeze({
+    id: 'done',
+    title: 'Done',
+    allowedTransitionStageIds: Object.freeze(['backlog', 'doing', 'archived']),
+    templateIds: Object.freeze([])
+  }),
+  Object.freeze({
+    id: 'archived',
+    title: 'Archived',
+    allowedTransitionStageIds: Object.freeze(['backlog', 'doing', 'done']),
+    templateIds: Object.freeze([])
+  })
 ]);
 
 export function createDefaultBoardStages() {
-  return DEFAULT_BOARD_STAGES.map(({ id, title }) => ({ id, title }));
+  return DEFAULT_BOARD_STAGES.map(({ id, title, allowedTransitionStageIds, templateIds }) => ({
+    id,
+    title,
+    cardIds: [],
+    allowedTransitionStageIds: [...allowedTransitionStageIds],
+    templateIds: [...templateIds]
+  }));
+}
+
+export function createDefaultBoardTemplates() {
+  return [];
 }
 
 export function validateBoardStages(board) {
-  if (!isPlainObject(board) || !Array.isArray(board.columnOrder) || !isPlainObject(board.columns)) {
+  if (!isPlainObject(board) || !Array.isArray(board.stageOrder) || !isPlainObject(board.stages)) {
     return false;
   }
 
-  if (board.columnOrder.length !== DEFAULT_BOARD_STAGES.length) {
+  if (board.stageOrder.length < 1 || Object.keys(board.stages).length !== board.stageOrder.length) {
     return false;
   }
 
-  for (let index = 0; index < DEFAULT_BOARD_STAGES.length; index += 1) {
-    if (board.columnOrder[index] !== DEFAULT_BOARD_STAGES[index].id) {
+  const validStageIds = new Set();
+
+  for (const stageId of board.stageOrder) {
+    if (!isNonEmptyString(stageId) || validStageIds.has(stageId)) {
       return false;
     }
+
+    validStageIds.add(stageId);
   }
 
-  for (const stage of DEFAULT_BOARD_STAGES) {
-    const column = board.columns[stage.id];
+  for (const stageId of board.stageOrder) {
+    const stage = board.stages[stageId];
 
     if (
-      !isPlainObject(column) ||
-      column.id !== stage.id ||
-      column.title !== stage.title ||
-      !Array.isArray(column.cardIds)
+      !isPlainObject(stage) ||
+      stage.id !== stageId ||
+      !isNonEmptyString(stage.title) ||
+      !isStringArray(stage.cardIds) ||
+      !isUniqueStringArray(stage.allowedTransitionStageIds) ||
+      !isUniqueStringArray(stage.templateIds)
     ) {
+      return false;
+    }
+
+    if (stage.allowedTransitionStageIds.some((targetStageId) => !validStageIds.has(targetStageId))) {
       return false;
     }
   }
@@ -41,23 +81,25 @@ export function validateBoardStages(board) {
 }
 
 export function validateBoardTemplates(board) {
-  if (!isPlainObject(board)) {
+  if (!isPlainObject(board) || !Array.isArray(board.stageOrder) || !isPlainObject(board.stages)) {
     return false;
-  }
-
-  if (board.templates == null) {
-    return true;
   }
 
   if (!Array.isArray(board.templates)) {
     return false;
   }
 
-  const validStageIds = new Set(DEFAULT_BOARD_STAGES.map(({ id }) => id));
+  const validStageIds = new Set(board.stageOrder);
   const seenTemplateIds = new Set();
+  const templateById = new Map();
 
   for (const template of board.templates) {
-    if (!isPlainObject(template) || !isNonEmptyString(template.id) || !isNonEmptyString(template.title)) {
+    if (
+      !isPlainObject(template) ||
+      !isNonEmptyString(template.id) ||
+      !isNonEmptyString(template.title) ||
+      !isNonEmptyString(template.initialStageId)
+    ) {
       return false;
     }
 
@@ -66,21 +108,73 @@ export function validateBoardTemplates(board) {
     }
 
     seenTemplateIds.add(template.id);
+    templateById.set(template.id, template);
 
-    if (template.detailsMarkdown != null && typeof template.detailsMarkdown !== 'string') {
-      return false;
-    }
-
-    if (template.priority != null && typeof template.priority !== 'string') {
-      return false;
-    }
-
-    if (template.stageId != null && !validStageIds.has(template.stageId)) {
+    if (!validStageIds.has(template.initialStageId)) {
       return false;
     }
   }
 
+  for (const stageId of board.stageOrder) {
+    const stage = board.stages[stageId];
+    const seenStageTemplateIds = new Set();
+
+    if (!isPlainObject(stage) || !Array.isArray(stage.templateIds)) {
+      return false;
+    }
+
+    for (const templateId of stage.templateIds) {
+      if (!isNonEmptyString(templateId) || seenStageTemplateIds.has(templateId)) {
+        return false;
+      }
+
+      if (!templateById.has(templateId) || templateById.get(templateId).initialStageId !== stageId) {
+        return false;
+      }
+
+      seenStageTemplateIds.add(templateId);
+    }
+  }
+
   return true;
+}
+
+export function projectWorkspaceWithLegacyColumns(workspace) {
+  if (!isPlainObject(workspace) || !isPlainObject(workspace.boards)) {
+    return workspace;
+  }
+
+  const projectedWorkspace = structuredClone(workspace);
+
+  for (const board of Object.values(projectedWorkspace.boards)) {
+    if (!isPlainObject(board) || !Array.isArray(board.stageOrder) || !isPlainObject(board.stages)) {
+      continue;
+    }
+
+    board.columnOrder = [...board.stageOrder];
+    board.columns = structuredClone(board.stages);
+  }
+
+  return projectedWorkspace;
+}
+
+export function stripLegacyColumnAliasesFromWorkspace(workspace) {
+  if (!isPlainObject(workspace) || !isPlainObject(workspace.boards)) {
+    return workspace;
+  }
+
+  const normalizedWorkspace = structuredClone(workspace);
+
+  for (const board of Object.values(normalizedWorkspace.boards)) {
+    if (!isPlainObject(board)) {
+      continue;
+    }
+
+    delete board.columnOrder;
+    delete board.columns;
+  }
+
+  return normalizedWorkspace;
 }
 
 function isPlainObject(value) {
@@ -89,4 +183,12 @@ function isPlainObject(value) {
 
 function isNonEmptyString(value) {
   return typeof value === 'string' && value.trim().length > 0;
+}
+
+function isStringArray(value) {
+  return Array.isArray(value) && value.every((entry) => typeof entry === 'string');
+}
+
+function isUniqueStringArray(value) {
+  return isStringArray(value) && new Set(value).size === value.length && value.every(isNonEmptyString);
 }

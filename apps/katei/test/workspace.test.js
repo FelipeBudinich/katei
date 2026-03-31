@@ -17,7 +17,7 @@ test('createCard stores detailsMarkdown on new cards', () => {
     priority: 'urgent'
   });
   const board = nextWorkspace.boards.main;
-  const [cardId] = board.columns.backlog.cardIds;
+  const [cardId] = board.stages.backlog.cardIds;
 
   assert.equal(board.cards[cardId].detailsMarkdown, '## Launch\n\n- confirm copy');
   assert.equal(board.cards[cardId].title, 'Write launch notes');
@@ -31,7 +31,7 @@ test('updateCard updates detailsMarkdown on existing cards', () => {
     priority: 'important'
   });
   const board = workspace.boards.main;
-  const [cardId] = board.columns.backlog.cardIds;
+  const [cardId] = board.stages.backlog.cardIds;
   const nextWorkspace = updateCard(workspace, 'main', cardId, {
     detailsMarkdown: 'Updated **markdown**'
   });
@@ -63,7 +63,7 @@ test('validateWorkspaceShape rejects legacy cards that only use description', ()
     createdAt: '2026-03-30T00:00:00.000Z',
     updatedAt: '2026-03-30T00:00:00.000Z'
   };
-  board.columns.backlog.cardIds.push('card_legacy');
+  board.stages.backlog.cardIds.push('card_legacy');
 
   assert.equal(validateWorkspaceShape(workspace), false);
 });
@@ -80,7 +80,7 @@ test('findColumnIdByCardId returns the containing column id', () => {
     priority: 'normal'
   });
   const board = workspace.boards.main;
-  const [cardId] = board.columns.backlog.cardIds;
+  const [cardId] = board.stages.backlog.cardIds;
 
   assert.equal(findColumnIdByCardId(board, cardId), 'backlog');
   assert.equal(findColumnIdByCardId(board, 'missing_card'), null);

@@ -118,7 +118,7 @@ function applyBoardCreate(workspace, command, context) {
   nextWorkspace.boardOrder = [...nextWorkspace.boardOrder, board.id];
   nextWorkspace.ui.activeBoardId = board.id;
   ensureCollapsedColumnsByBoard(nextWorkspace);
-  nextWorkspace.ui.collapsedColumnsByBoard[board.id] = createCollapsedColumns();
+  nextWorkspace.ui.collapsedColumnsByBoard[board.id] = createCollapsedColumns(board.stageOrder);
 
   return {
     workspace: nextWorkspace,
@@ -202,12 +202,18 @@ function applyBoardReset(workspace, command, context) {
 
   const nextWorkspace = cloneWorkspace(workspace);
   const board = getBoard(nextWorkspace, command.payload.boardId);
-  nextWorkspace.boards[board.id] = createWorkspaceBoard({
-    id: board.id,
-    title: board.title,
-    createdAt: board.createdAt,
-    updatedAt: context.now
-  });
+  nextWorkspace.boards[board.id] = {
+    ...createWorkspaceBoard({
+      id: board.id,
+      title: board.title,
+      createdAt: board.createdAt,
+      updatedAt: context.now
+    }),
+    stageOrder: [...board.stageOrder],
+    stages: createClearedStages(board),
+    templates: structuredClone(board.templates),
+    languagePolicy: structuredClone(board.languagePolicy)
+  };
 
   return {
     workspace: nextWorkspace,
@@ -221,6 +227,7 @@ function applyCardCreate(workspace, command, context) {
   const nextWorkspace = cloneWorkspace(workspace);
   const board = getBoard(nextWorkspace, command.payload.boardId);
   const cardId = context.createCardId();
+  const initialStageId = board.stageOrder[0];
 
   board.cards[cardId] = {
     id: cardId,
@@ -230,7 +237,7 @@ function applyCardCreate(workspace, command, context) {
     createdAt: context.now,
     updatedAt: context.now
   };
-  board.columns.backlog.cardIds = [...board.columns.backlog.cardIds, cardId];
+  board.stages[initialStageId].cardIds = [...board.stages[initialStageId].cardIds, cardId];
   board.updatedAt = context.now;
 
   return {
@@ -299,7 +306,7 @@ function applyCardDelete(workspace, command, context) {
   delete board.cards[card.id];
 
   if (sourceColumnId) {
-    board.columns[sourceColumnId].cardIds = board.columns[sourceColumnId].cardIds.filter(
+    board.stages[sourceColumnId].cardIds = board.stages[sourceColumnId].cardIds.filter(
       (currentCardId) => currentCardId !== card.id
     );
   }
@@ -316,12 +323,11 @@ function applyCardDelete(workspace, command, context) {
 
 function applyCardMove(workspace, command, context) {
   const { boardId, cardId, sourceColumnId, targetColumnId } = command.payload;
-  assertValidColumnId(sourceColumnId);
-  assertValidColumnId(targetColumnId);
-
   const currentBoard = getBoard(workspace, boardId);
+  assertValidColumnId(sourceColumnId, currentBoard);
+  assertValidColumnId(targetColumnId, currentBoard);
   getCard(currentBoard, cardId);
-  const sourceIndex = currentBoard.columns[sourceColumnId].cardIds.indexOf(cardId);
+  const sourceIndex = currentBoard.stages[sourceColumnId].cardIds.indexOf(cardId);
 
   if (sourceIndex === -1) {
     throw new Error('Card is not in the source column.');
@@ -343,10 +349,10 @@ function applyCardMove(workspace, command, context) {
   const nextWorkspace = cloneWorkspace(workspace);
   const board = getBoard(nextWorkspace, boardId);
   const card = getCard(board, cardId);
-  board.columns[sourceColumnId].cardIds = board.columns[sourceColumnId].cardIds.filter(
+  board.stages[sourceColumnId].cardIds = board.stages[sourceColumnId].cardIds.filter(
     (currentCardId) => currentCardId !== cardId
   );
-  board.columns[targetColumnId].cardIds = [...board.columns[targetColumnId].cardIds, cardId];
+  board.stages[targetColumnId].cardIds = [...board.stages[targetColumnId].cardIds, cardId];
   board.cards[card.id] = {
     ...card,
     updatedAt: context.now
@@ -390,8 +396,8 @@ function applySetActiveBoard(workspace, command) {
 
 function applySetColumnCollapsed(workspace, command) {
   const { boardId, columnId, isCollapsed } = command.payload;
-  assertValidColumnId(columnId);
-  getBoard(workspace, boardId);
+  const board = getBoard(workspace, boardId);
+  assertValidColumnId(columnId, board);
 
   const currentCollapsedColumns = getCollapsedColumnsForBoard(workspace, boardId);
 
@@ -438,7 +444,7 @@ function assertExpectedRevision(expectedRevision) {
 }
 
 function isBoardResetNoOp(board) {
-  return board.columnOrder.every((columnId) => board.columns[columnId]?.cardIds?.length === 0);
+  return board.stageOrder.every((stageId) => board.stages[stageId]?.cardIds?.length === 0);
 }
 
 function ensureCollapsedColumnsByBoard(workspace) {
@@ -449,4 +455,16 @@ function ensureCollapsedColumnsByBoard(workspace) {
 
 function hasOwn(value, key) {
   return Boolean(value && Object.prototype.hasOwnProperty.call(value, key));
+}
+
+function createClearedStages(board) {
+  return Object.fromEntries(
+    board.stageOrder.map((stageId) => [
+      stageId,
+      {
+        ...structuredClone(board.stages[stageId]),
+        cardIds: []
+      }
+    ])
+  );
 }

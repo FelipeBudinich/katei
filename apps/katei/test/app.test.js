@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import request from 'supertest';
 import { createApp } from '../src/app.js';
+import { projectWorkspaceWithLegacyColumns } from '../public/js/domain/board_workflow.js';
 import {
   KATEI_SESSION_COOKIE_NAME,
   createSessionPayload,
@@ -200,7 +201,7 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
   assert.match(response.text, /<script type="application\/json" id="workspace-bootstrap">/);
   assert.doesNotMatch(response.text, /<\/script><img src=x onerror=1>/);
   assert.deepEqual(bootstrapPayload, {
-    workspace,
+    workspace: projectWorkspaceWithLegacyColumns(workspace),
     meta: {
       revision: 1,
       updatedAt: '2026-04-02T11:00:00.000Z',
@@ -623,7 +624,7 @@ test('buildWorkspacePageModel localizes fixed labels without rewriting user-auth
     createdAt: '2026-03-30T10:00:00.000Z',
     updatedAt: '2026-03-30T11:00:00.000Z'
   };
-  board.columns.backlog.cardIds = [cardId];
+  board.stages.backlog.cardIds = [cardId];
 
   const viewModel = buildWorkspacePageModel(
     { sub: 'sub_123', name: 'Tester' },
@@ -632,7 +633,7 @@ test('buildWorkspacePageModel localizes fixed labels without rewriting user-auth
   );
 
   assert.equal(viewModel.board.title, 'Roadmap alpha');
-  assert.equal(viewModel.workspace.boards[board.id].columns.backlog.title, 'Backlog');
+  assert.equal(viewModel.workspace.boards[board.id].stages.backlog.title, 'Backlog');
   assert.equal(viewModel.workspace.boards[board.id].cards[cardId].title, 'Ship launch checklist');
   assert.equal(viewModel.workspace.boards[board.id].cards[cardId].detailsMarkdown, 'Owner: Mina');
   assert.equal(viewModel.columnDefinitions.find((column) => column.id === 'backlog')?.title, 'バックログ');

@@ -14,7 +14,7 @@ export function getCardContentVariant(card, locale, board) {
     });
   }
 
-  const languagePolicy = normalizeBoardLanguagePolicy(board?.languagePolicy);
+  const languagePolicy = normalizeBoardLanguagePolicy(board?.languagePolicy ?? null);
   const defaultLocale = languagePolicy?.defaultLocale ?? null;
 
   if (defaultLocale && localizedContent.has(defaultLocale)) {
@@ -52,7 +52,7 @@ export function listCardLocales(card) {
 }
 
 export function getMissingRequiredLocales(board, card) {
-  const languagePolicy = normalizeBoardLanguagePolicy(board?.languagePolicy);
+  const languagePolicy = normalizeBoardLanguagePolicy(board?.languagePolicy ?? null);
 
   if (!languagePolicy) {
     return [];

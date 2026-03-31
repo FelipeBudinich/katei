@@ -113,6 +113,7 @@ hanmoto-board/
 │       │   ├── mutation_context.test.js
 │       │   ├── session_cookie.test.js
 │       │   ├── workspace.test.js
+│       │   ├── workspace_board_schema.test.js
 │       │   ├── workspace_commands.test.js
 │       │   ├── workspace_record.test.js
 │       │   └── workspace_service.test.js

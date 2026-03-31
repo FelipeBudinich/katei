@@ -1,7 +1,4 @@
-import {
-  COLUMN_ORDER,
-  PRIORITY_ORDER
-} from './workspace_read_model.js';
+import { PRIORITY_ORDER } from './workspace_read_model.js';
 import { validateWorkspaceShape } from './workspace_validation.js';
 
 export const WORKSPACE_COMMAND_TYPES = Object.freeze([
@@ -274,17 +271,7 @@ function requireBoardId(payload, errorMessage) {
 }
 
 function requireColumnId(value, requiredErrorMessage) {
-  const requiredValidation = requireNonEmptyString(value, requiredErrorMessage);
-
-  if (!requiredValidation.isValid) {
-    return requiredValidation;
-  }
-
-  if (!COLUMN_ORDER.includes(value)) {
-    return invalid(`Invalid column id: ${value}`);
-  }
-
-  return valid();
+  return requireNonEmptyString(value, requiredErrorMessage);
 }
 
 function requireNonEmptyString(value, errorMessage) {
