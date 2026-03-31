@@ -4,7 +4,10 @@ import {
   createEmptyWorkspace,
   createWorkspaceBoard
 } from '../public/js/domain/workspace_read_model.js';
-import { getBoardCollaborationState } from '../public/js/controllers/board_collaboration_state.js';
+import {
+  getBoardCollaborationState,
+  hasVisibleWorkspaceAccess
+} from '../public/js/controllers/board_collaboration_state.js';
 import {
   getDefaultBoardStageId,
   getBoardStageTitle,
@@ -207,6 +210,20 @@ test('viewer and invite-only actors stay read-only in collaboration state', () =
   assert.equal(inviteeState.canAdmin, false);
   assert.equal(inviteeState.accessible, true);
   assert.equal(inviteeState.pendingInvites.length, 1);
+});
+
+test('empty filtered workspaces report no visible access and keep invite-exit flows safe', () => {
+  const viewerActor = createActor('viewer_1', 'viewer@example.com', 'Viewer');
+  const workspace = createEmptyWorkspace({
+    workspaceId: 'workspace_filtered_empty',
+    creator: createActor('owner_1', 'owner@example.com', 'Owner')
+  });
+
+  workspace.boardOrder = [];
+  workspace.boards = {};
+  workspace.ui.activeBoardId = null;
+
+  assert.equal(hasVisibleWorkspaceAccess(workspace, viewerActor), false);
 });
 
 test('openEdit and openView card dialog state preserves raw localized card data and resolves the requested locale', () => {

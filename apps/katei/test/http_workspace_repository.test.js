@@ -556,6 +556,35 @@ test('HttpWorkspaceRepository targets the selected active workspace on subsequen
   assert.equal(repository.isHomeWorkspace, false);
 });
 
+test('HttpWorkspaceRepository loads filtered shared workspace payloads without breaking active workspace state', async () => {
+  const filteredWorkspace = createFilteredSharedWorkspace();
+  const fetchDouble = createFetchDouble([
+    createJsonResponse(createWorkspaceApiPayload(filteredWorkspace, {
+      revision: 2,
+      updatedAt: '2026-04-03T16:15:00.000Z',
+      lastChangedBy: 'sub_owner',
+      isPristine: false,
+      workspaceId: 'workspace_shared_filtered',
+      isHomeWorkspace: false
+    }))
+  ]);
+  const repository = new HttpWorkspaceRepository({
+    fetchImpl: fetchDouble.fetch,
+    viewerSub: 'sub_member',
+    storage: null
+  });
+
+  repository.setActiveWorkspace('workspace_shared_filtered');
+  const workspace = await repository.loadWorkspace();
+
+  assert.equal(validateWorkspaceShape(workspace), true);
+  assert.deepEqual(workspace.boardOrder, ['member', 'invite']);
+  assert.equal(workspace.ui.activeBoardId, 'member');
+  assert.deepEqual(workspace.boards.invite.cards, {});
+  assert.equal(repository.activeWorkspaceId, 'workspace_shared_filtered');
+  assert.equal(repository.isHomeWorkspace, false);
+});
+
 test('HttpWorkspaceRepository sends commands against the selected active workspace id', async () => {
   const sharedWorkspace = createEmptyWorkspace({
     workspaceId: 'workspace_shared'
@@ -649,6 +678,46 @@ test('HttpWorkspaceRepository can land the client in a shared workspace after in
   assert.equal(repository.activeWorkspaceId, 'workspace_shared');
   assert.equal(fetchDouble.calls[1].url, '/api/workspace?workspaceId=workspace_shared');
   assert.deepEqual(sharedLoad, migrateWorkspaceSnapshot(sharedWorkspace));
+});
+
+test('HttpWorkspaceRepository accepts empty actor-facing command projections after the last invite disappears', async () => {
+  const emptyProjection = createEmptyActorFacingWorkspace('workspace_shared_filtered');
+  const repository = new HttpWorkspaceRepository({
+    fetchImpl: createFetchDouble([
+      createJsonResponse(createWorkspaceApiPayload(emptyProjection, {
+        revision: 5,
+        updatedAt: '2026-04-03T17:10:00.000Z',
+        lastChangedBy: 'sub_member',
+        isPristine: false,
+        workspaceId: 'workspace_shared_filtered',
+        isHomeWorkspace: false
+      }, {
+        clientMutationId: 'm4',
+        type: 'board.invite.decline',
+        noOp: false
+      }))
+    ]).fetch,
+    viewerSub: 'sub_member',
+    storage: null
+  });
+
+  const payload = await repository.applyCommand({
+    clientMutationId: 'm4',
+    type: 'board.invite.decline',
+    payload: {
+      boardId: 'invite',
+      inviteId: 'invite_1'
+    }
+  });
+
+  assert.deepEqual(payload.workspace ?? payload, emptyProjection);
+  assert.equal(repository.activeWorkspaceId, 'workspace_shared_filtered');
+  assert.deepEqual(repository.meta, {
+    revision: 5,
+    updatedAt: '2026-04-03T17:10:00.000Z',
+    lastChangedBy: 'sub_member',
+    isPristine: false
+  });
 });
 
 test('HttpWorkspaceRepository surfaces revision conflicts with a friendly error', async () => {
@@ -860,4 +929,72 @@ function createDocumentDouble(initialTextById = {}) {
       return elements.get(id) ?? null;
     }
   };
+}
+
+function createFilteredSharedWorkspace() {
+  let workspace = createEmptyWorkspace({
+    workspaceId: 'workspace_shared_filtered'
+  });
+
+  workspace.boards.main.id = 'member';
+  workspace.boards.main.title = 'Member board';
+  workspace.boards.main.collaboration.memberships = [
+    {
+      actor: { type: 'human', id: 'sub_member', email: 'member@example.com' },
+      role: 'viewer',
+      joinedAt: workspace.boards.main.createdAt
+    }
+  ];
+  workspace.boards.member = workspace.boards.main;
+  delete workspace.boards.main;
+  workspace = createCard(workspace, 'member', {
+    title: 'Visible card',
+    detailsMarkdown: 'Visible after filtering.',
+    priority: 'important'
+  });
+
+  const inviteBoard = createEmptyWorkspace({
+    workspaceId: 'workspace_shared_filtered_invite'
+  }).boards.main;
+  inviteBoard.id = 'invite';
+  inviteBoard.title = 'Invite board';
+  inviteBoard.collaboration.memberships = [
+    {
+      actor: { type: 'human', id: 'sub_owner', email: 'owner@example.com' },
+      role: 'admin',
+      joinedAt: inviteBoard.createdAt
+    }
+  ];
+  inviteBoard.collaboration.invites = [
+    {
+      id: 'invite_1',
+      email: 'member@example.com',
+      role: 'viewer',
+      status: 'pending',
+      invitedBy: { type: 'human', id: 'sub_owner', email: 'owner@example.com' },
+      invitedAt: '2026-04-03T10:00:00.000Z'
+    }
+  ];
+  inviteBoard.cards = {};
+  workspace.boards.invite = inviteBoard;
+  workspace.boardOrder = ['member', 'invite'];
+  workspace.ui.activeBoardId = 'member';
+  workspace.ui.collapsedColumnsByBoard = {
+    member: structuredClone(workspace.ui.collapsedColumnsByBoard.main ?? workspace.ui.collapsedColumnsByBoard.member ?? {}),
+    invite: {}
+  };
+
+  return workspace;
+}
+
+function createEmptyActorFacingWorkspace(workspaceId) {
+  const workspace = createEmptyWorkspace({
+    workspaceId
+  });
+
+  workspace.boardOrder = [];
+  workspace.boards = {};
+  workspace.ui.activeBoardId = null;
+  workspace.ui.collapsedColumnsByBoard = {};
+  return workspace;
 }

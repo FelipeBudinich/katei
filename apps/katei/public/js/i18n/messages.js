@@ -46,6 +46,8 @@ const EN_MESSAGES = freezeCatalog({
     updatedLabel: 'Updated',
     cardCount: '{count} cards',
     fallbackBoardTitle: 'board',
+    noVisibleBoardsTitle: 'No visible boards',
+    noVisibleBoardsDescription: 'This workspace no longer has any boards you can open.',
     boardInvitePendingNotice: 'This board is shared with you. Open Collaborators to accept or decline the invite.',
     status: {
       loadUnavailable: 'Unable to load this workspace.',
@@ -120,6 +122,7 @@ const EN_MESSAGES = freezeCatalog({
     summaryActive: 'Active board: {title}',
     currentRoleSummary: 'Your access: {role}',
     pendingInvitesSummary: '{count} pending invites',
+    noVisibleBoards: 'No visible boards in this workspace.',
     stateActive: 'Active board',
     stateAvailable: 'Available'
   },
@@ -317,6 +320,8 @@ const ES_CL_MESSAGES = freezeCatalog({
     updatedLabel: 'Actualizado',
     cardCount: '{count} tarjetas',
     fallbackBoardTitle: 'tablero',
+    noVisibleBoardsTitle: 'No hay tableros visibles',
+    noVisibleBoardsDescription: 'Este espacio de trabajo ya no tiene tableros que puedas abrir.',
     boardInvitePendingNotice: 'Este tablero fue compartido contigo. Abre Colaboradores para aceptar o rechazar la invitación.',
     status: {
       loadUnavailable: 'No se pudo cargar este espacio de trabajo.',
@@ -391,6 +396,7 @@ const ES_CL_MESSAGES = freezeCatalog({
     summaryActive: 'Tablero activo: {title}',
     currentRoleSummary: 'Tu acceso: {role}',
     pendingInvitesSummary: '{count} invitaciones pendientes',
+    noVisibleBoards: 'No hay tableros visibles en este espacio de trabajo.',
     stateActive: 'Tablero activo',
     stateAvailable: 'Disponible'
   },
@@ -588,6 +594,8 @@ const JA_MESSAGES = freezeCatalog({
     updatedLabel: '更新日時',
     cardCount: '{count} 件のカード',
     fallbackBoardTitle: 'ボード',
+    noVisibleBoardsTitle: '表示できるボードはありません',
+    noVisibleBoardsDescription: 'このワークスペースには、現在開けるボードがありません。',
     boardInvitePendingNotice: 'このボードはあなたに共有されています。共同編集を開いて、招待を承認または辞退してください。',
     status: {
       loadUnavailable: 'このワークスペースを読み込めません。',
@@ -662,6 +670,7 @@ const JA_MESSAGES = freezeCatalog({
     summaryActive: '現在のボード: {title}',
     currentRoleSummary: '現在の権限: {role}',
     pendingInvitesSummary: '保留中の招待 {count} 件',
+    noVisibleBoards: 'このワークスペースで表示できるボードはありません。',
     stateActive: '現在のボード',
     stateAvailable: '利用可能'
   },

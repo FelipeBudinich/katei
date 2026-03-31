@@ -8,7 +8,6 @@ import {
   PRIORITY_ORDER,
   createEmptyWorkspace
 } from '../../public/js/domain/workspace_read_model.js';
-import { getActiveBoard } from '../../public/js/domain/workspace_selectors.js';
 import { getColumnDisplayLabel, getPriorityDisplayLabel } from '../../public/js/i18n/workspace_labels.js';
 import { WorkspaceAccessDeniedError } from '../workspaces/workspace_record_repository.js';
 
@@ -62,7 +61,7 @@ export function buildWorkspacePageModel(viewer, t, workspace = createEmptyWorksp
 
   return {
     workspace: projectedWorkspace,
-    board: getActiveBoard(projectedWorkspace),
+    board: getProjectedActiveBoard(projectedWorkspace),
     columnDefinitions,
     columnDisplayTitles,
     priorityDefinitions,
@@ -77,6 +76,11 @@ export function buildWorkspacePageModel(viewer, t, workspace = createEmptyWorksp
         })
       : null
   };
+}
+
+function getProjectedActiveBoard(workspace) {
+  const activeBoardId = typeof workspace?.ui?.activeBoardId === 'string' ? workspace.ui.activeBoardId.trim() : '';
+  return activeBoardId ? workspace?.boards?.[activeBoardId] ?? null : null;
 }
 
 function buildColumnDisplayTitles(t) {

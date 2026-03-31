@@ -84,6 +84,23 @@ test('board role translation keys stay stable for member and invite states', () 
   assert.equal(getBoardRoleTranslationKey('missing'), 'collaborators.roles.none');
 });
 
+test('board options state stays stable when filtering removes every visible board', () => {
+  const workspace = createEmptyWorkspace({
+    workspaceId: 'workspace_empty_projection',
+    creator: createActor('owner_1', 'owner@example.com', 'Owner')
+  });
+
+  workspace.boardOrder = [];
+  workspace.boards = {};
+  workspace.ui.activeBoardId = null;
+
+  const optionsState = createBoardOptionsState(workspace, createActor('viewer_1', 'viewer@example.com', 'Viewer'));
+
+  assert.equal(optionsState.activeBoard, null);
+  assert.equal(optionsState.activeBoardState, null);
+  assert.deepEqual(optionsState.boardStates, []);
+});
+
 function createBoard({ id, title, creator }) {
   return createWorkspaceBoard({
     id,

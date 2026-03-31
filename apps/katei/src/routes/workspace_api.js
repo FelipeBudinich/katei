@@ -4,9 +4,9 @@ import { validateWorkspaceShape } from '../../public/js/domain/workspace_validat
 import { applyWorkspaceCommand, WorkspaceCommandPermissionError } from '../workspaces/apply_workspace_command.js';
 import { createDefaultMutationContext } from '../workspaces/mutation_context.js';
 import {
-  createWorkspaceRecord,
   createCommandAppliedWorkspaceRecord,
   createCommandReceipt,
+  createWorkspaceRecord,
   findCommandReceipt
 } from '../workspaces/workspace_record.js';
 import {
@@ -14,19 +14,19 @@ import {
   WorkspaceImportConflictError,
   WorkspaceRevisionConflictError
 } from '../workspaces/workspace_record_repository.js';
+import { projectRecordForViewer } from '../workspaces/mongo_workspace_record_repository.js';
+import { canViewerReplaceWorkspaceSnapshot } from '../workspaces/workspace_access.js';
 
 export function createWorkspaceApiRouter({ requireSession, workspaceRecordRepository }) {
   const router = Router();
 
   router.get('/api/workspace', requireSession, async (request, response, next) => {
     try {
-      const record = createWorkspaceRecord(
-        await workspaceRecordRepository.loadOrCreateWorkspaceRecord({
-          viewerSub: request.viewer.sub,
-          viewerEmail: request.viewer.email ?? null,
-          workspaceId: resolveRequestedWorkspaceId(request)
-        })
-      );
+      const record = await workspaceRecordRepository.loadOrCreateWorkspaceRecord({
+        viewerSub: request.viewer.sub,
+        viewerEmail: request.viewer.email ?? null,
+        workspaceId: resolveRequestedWorkspaceId(request)
+      });
       response.json(createWorkspaceApiResponse(record));
     } catch (error) {
       if (error instanceof WorkspaceAccessDeniedError || error?.code === 'WORKSPACE_ACCESS_DENIED') {
@@ -59,7 +59,30 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
     }
 
     try {
-      const record = await workspaceRecordRepository.replaceWorkspaceSnapshot({
+      const authoritativeRecord = createWorkspaceRecord(
+        await workspaceRecordRepository.loadOrCreateAuthoritativeWorkspaceRecord({
+          viewerSub: request.viewer.sub,
+          viewerEmail: request.viewer.email ?? null,
+          workspaceId: resolveRequestedWorkspaceId(request)
+        })
+      );
+
+      if (
+        !canViewerReplaceWorkspaceSnapshot({
+          viewerSub: request.viewer.sub,
+          viewerEmail: request.viewer.email ?? null,
+          ownerSub: authoritativeRecord.viewerSub,
+          workspace: authoritativeRecord.workspace
+        })
+      ) {
+        response.status(403).json({
+          ok: false,
+          error: 'Use board commands to update shared workspaces when some boards are hidden from you.'
+        });
+        return;
+      }
+
+      const fullRecord = await workspaceRecordRepository.replaceWorkspaceSnapshot({
         viewerSub: request.viewer.sub,
         viewerEmail: request.viewer.email ?? null,
         workspaceId: resolveRequestedWorkspaceId(request),
@@ -71,7 +94,7 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
         }
       });
 
-      response.json(createWorkspaceApiResponse(record));
+      response.json(createWorkspaceApiResponse(projectRecordForViewer(fullRecord, createViewerProjectionContext(request.viewer))));
     } catch (error) {
       if (error instanceof WorkspaceAccessDeniedError || error?.code === 'WORKSPACE_ACCESS_DENIED') {
         response.status(404).json({
@@ -107,19 +130,20 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
 
     try {
       const currentRecord = createWorkspaceRecord(
-        await workspaceRecordRepository.loadOrCreateWorkspaceRecord({
+        await workspaceRecordRepository.loadOrCreateAuthoritativeWorkspaceRecord({
           viewerSub: request.viewer.sub,
           viewerEmail: request.viewer.email ?? null,
           workspaceId: resolveRequestedWorkspaceId(request)
         })
       );
+      const projectedCurrentRecord = projectRecordForViewer(currentRecord, createViewerProjectionContext(request.viewer));
       const existingReceipt =
         typeof command?.clientMutationId === 'string' && command.clientMutationId.trim()
           ? findCommandReceipt(currentRecord, command.clientMutationId)
           : null;
 
       if (existingReceipt) {
-        response.json(createWorkspaceApiResponse(currentRecord, existingReceipt.result));
+        response.json(createWorkspaceApiResponse(projectedCurrentRecord, existingReceipt.result));
         return;
       }
 
@@ -134,7 +158,7 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
       });
 
       if (application.result.noOp) {
-        response.json(createWorkspaceApiResponse(currentRecord, application.result));
+        response.json(createWorkspaceApiResponse(projectedCurrentRecord, application.result));
         return;
       }
 
@@ -157,7 +181,12 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
         expectedRevision
       });
 
-      response.json(createWorkspaceApiResponse(persistedRecord, application.result));
+      response.json(
+        createWorkspaceApiResponse(
+          projectRecordForViewer(persistedRecord, createViewerProjectionContext(request.viewer)),
+          application.result
+        )
+      );
     } catch (error) {
       if (error instanceof WorkspaceAccessDeniedError || error?.code === 'WORKSPACE_ACCESS_DENIED') {
         response.status(404).json({
@@ -204,7 +233,7 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
     }
 
     try {
-      const record = await workspaceRecordRepository.importWorkspaceSnapshot({
+      const fullRecord = await workspaceRecordRepository.importWorkspaceSnapshot({
         viewerSub: request.viewer.sub,
         viewerEmail: request.viewer.email ?? null,
         workspaceId: resolveRequestedWorkspaceId(request),
@@ -215,7 +244,7 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
         }
       });
 
-      response.json(createWorkspaceApiResponse(record));
+      response.json(createWorkspaceApiResponse(projectRecordForViewer(fullRecord, createViewerProjectionContext(request.viewer))));
     } catch (error) {
       if (error instanceof WorkspaceAccessDeniedError || error?.code === 'WORKSPACE_ACCESS_DENIED') {
         response.status(404).json({
@@ -249,20 +278,27 @@ function createViewerMutationActor(viewer) {
   };
 }
 
+function createViewerProjectionContext(viewer) {
+  return {
+    viewerSub: viewer?.sub,
+    viewerEmail: viewer?.email ?? null
+  };
+}
+
 function createWorkspaceApiResponse(record, result = undefined) {
-  const normalizedRecord = createWorkspaceRecord(record);
+  const workspace = record?.workspace;
   const payload = {
     ok: true,
-    workspace: normalizedRecord.workspace,
+    workspace,
     activeWorkspace: {
-      workspaceId: normalizedRecord.workspaceId,
-      isHomeWorkspace: normalizedRecord.isHomeWorkspace
+      workspaceId: normalizeOptionalString(record?.workspaceId) || normalizeOptionalString(workspace?.workspaceId) || null,
+      isHomeWorkspace: record?.isHomeWorkspace === true
     },
     meta: {
-      revision: normalizedRecord.revision,
-      updatedAt: normalizedRecord.updatedAt,
-      lastChangedBy: normalizedRecord.lastChangedBy,
-      isPristine: normalizedRecord.revision === 0
+      revision: normalizeRevision(record?.revision),
+      updatedAt: typeof record?.updatedAt === 'string' ? record.updatedAt : null,
+      lastChangedBy: normalizeOptionalString(record?.lastChangedBy) || null,
+      isPristine: normalizeRevision(record?.revision) === 0
     }
   };
 
@@ -309,4 +345,12 @@ function resolveRequestedWorkspaceId(request) {
   }
 
   return null;
+}
+
+function normalizeOptionalString(value) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function normalizeRevision(value) {
+  return Number.isInteger(value) && value >= 0 ? value : 0;
 }

@@ -1,7 +1,6 @@
 import { Controller } from '/vendor/stimulus/stimulus.js';
 import {
   getBoardCardContentVariant,
-  getActiveBoard,
   getCollapsedColumnsForBoard
 } from '../domain/workspace.js';
 import { createBrowserDateTimeFormatter, getBrowserTranslator } from '../i18n/browser.js';
@@ -90,7 +89,8 @@ export default class extends Controller {
   }
 
   get activeBoard() {
-    return this.workspace ? getActiveBoard(this.workspace) : null;
+    const activeBoardId = typeof this.workspace?.ui?.activeBoardId === 'string' ? this.workspace.ui.activeBoardId.trim() : '';
+    return activeBoardId ? this.workspace?.boards?.[activeBoardId] ?? null : null;
   }
 
   get activeBoardCollaborationState() {
@@ -577,7 +577,40 @@ export default class extends Controller {
   render() {
     const activeBoardState = this.activeBoardCollaborationState;
 
-    if (!this.workspace || !this.activeBoard || !activeBoardState) {
+    if (!this.workspace) {
+      return;
+    }
+
+    if (!this.activeBoard || !activeBoardState) {
+      if (this.hasCreateCardButtonTarget) {
+        this.createCardButtonTarget.hidden = true;
+        this.createCardButtonTarget.disabled = true;
+        this.createCardButtonTarget.setAttribute('aria-disabled', 'true');
+      }
+
+      if (this.hasBoardAccessNoticeTarget) {
+        this.boardAccessNoticeTarget.hidden = false;
+        this.boardAccessNoticeTarget.textContent = this.t('workspace.noVisibleBoardsDescription');
+      }
+
+      if (this.hasBoardTitleTarget) {
+        this.boardTitleTarget.textContent = this.t('workspace.noVisibleBoardsTitle');
+      }
+
+      if (this.hasDesktopColumnsTarget) {
+        this.desktopColumnsTarget.hidden = true;
+        this.desktopColumnsTarget.replaceChildren();
+      }
+
+      this.dispatchWorkspaceEvent('sync-board-options', {
+        workspace: this.workspace,
+        viewerActor: this.viewerActor
+      });
+      this.dispatchWorkspaceEvent('sync-board-collaborators', {
+        workspace: this.workspace,
+        viewerActor: this.viewerActor,
+        boardId: null
+      });
       return;
     }
 

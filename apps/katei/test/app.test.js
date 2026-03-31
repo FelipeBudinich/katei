@@ -19,14 +19,15 @@ import { buildWorkspacePageModel } from '../src/routes/boards.js';
 import {
   createHomeWorkspaceId,
   createInitialWorkspaceRecord,
-  createUpdatedWorkspaceRecord
+  createUpdatedWorkspaceRecord,
+  createWorkspaceRecord
 } from '../src/workspaces/workspace_record.js';
 import {
   WorkspaceAccessDeniedError,
   WorkspaceImportConflictError,
   WorkspaceRevisionConflictError
 } from '../src/workspaces/workspace_record_repository.js';
-import { canViewerAccessWorkspace } from '../src/workspaces/workspace_access.js';
+import { canViewerAccessWorkspace, filterWorkspaceForViewer } from '../src/workspaces/workspace_access.js';
 
 const WORKSPACE_VENDOR_ASSET_PATHS = [
   '/vendor/easymde/easymde.min.css',
@@ -1337,6 +1338,61 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = []) {
     initialRecords.map((record) => [record.workspaceId, structuredClone(record)])
   );
 
+  function projectRecord(record, { viewerSub, viewerEmail = null } = {}) {
+    const normalizedRecord = createWorkspaceRecord(record);
+
+    return {
+      ...structuredClone(normalizedRecord),
+      workspace: filterWorkspaceForViewer({
+        viewerSub,
+        viewerEmail,
+        ownerSub: normalizedRecord.viewerSub,
+        workspace: normalizedRecord.workspace
+      })
+    };
+  }
+
+  async function loadFullRecord({ viewerSub, viewerEmail = null, workspaceId = null } = {}) {
+    if (workspaceId) {
+      const requestedRecord = records.get(workspaceId);
+
+      if (
+        !requestedRecord ||
+        !canViewerAccessWorkspace({
+          viewerSub,
+          viewerEmail,
+          ownerSub: createWorkspaceRecord(requestedRecord).viewerSub,
+          workspace: createWorkspaceRecord(requestedRecord).workspace
+        })
+      ) {
+        throw new WorkspaceAccessDeniedError();
+      }
+
+      return createWorkspaceRecord(requestedRecord);
+    }
+
+    const homeWorkspaceId = createHomeWorkspaceId(viewerSub);
+    const existingHomeRecord =
+      records.get(homeWorkspaceId)
+      ?? records.get(viewerSub)
+      ?? [...records.values()].find((record) => record.viewerSub === viewerSub && record.isHomeWorkspace);
+
+    if (existingHomeRecord) {
+      return createWorkspaceRecord(existingHomeRecord);
+    }
+
+    if (!records.has(homeWorkspaceId)) {
+      records.set(
+        homeWorkspaceId,
+        createInitialWorkspaceRecord(viewerSub, {
+          now: '2026-04-02T10:00:00.000Z'
+        })
+      );
+    }
+
+    return createWorkspaceRecord(records.get(homeWorkspaceId));
+  }
+
   return {
     loadCalls: [],
     replaceCalls: [],
@@ -1350,44 +1406,14 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = []) {
         workspaceId
       });
 
-      if (workspaceId) {
-        const requestedRecord = records.get(workspaceId);
+      return projectRecord(
+        await loadFullRecord({ viewerSub, viewerEmail, workspaceId }),
+        { viewerSub, viewerEmail }
+      );
+    },
 
-        if (
-          !requestedRecord ||
-          !canViewerAccessWorkspace({
-            viewerSub,
-            viewerEmail,
-            ownerSub: requestedRecord.viewerSub,
-            workspace: requestedRecord.workspace
-          })
-        ) {
-          throw new WorkspaceAccessDeniedError();
-        }
-
-        return structuredClone(requestedRecord);
-      }
-
-      const homeWorkspaceId = createHomeWorkspaceId(viewerSub);
-      const existingHomeRecord =
-        records.get(homeWorkspaceId)
-        ?? records.get(viewerSub)
-        ?? [...records.values()].find((record) => record.viewerSub === viewerSub && record.isHomeWorkspace);
-
-      if (existingHomeRecord) {
-        return structuredClone(existingHomeRecord);
-      }
-
-      if (!records.has(homeWorkspaceId)) {
-        records.set(
-          homeWorkspaceId,
-          createInitialWorkspaceRecord(viewerSub, {
-            now: '2026-04-02T10:00:00.000Z'
-          })
-        );
-      }
-
-      return structuredClone(records.get(homeWorkspaceId));
+    async loadOrCreateAuthoritativeWorkspaceRecord({ viewerSub, viewerEmail = null, workspaceId = null } = {}) {
+      return loadFullRecord({ viewerSub, viewerEmail, workspaceId });
     },
 
     async replaceWorkspaceSnapshot({ viewerSub, viewerEmail = null, workspaceId = null, workspace, actor, expectedRevision }) {
@@ -1401,7 +1427,7 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = []) {
       });
 
       const currentRecord =
-        await this.loadOrCreateWorkspaceRecord({
+        await this.loadOrCreateAuthoritativeWorkspaceRecord({
           viewerSub,
           viewerEmail,
           workspaceId
@@ -1432,7 +1458,7 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = []) {
       });
 
       const currentRecord =
-        await this.loadOrCreateWorkspaceRecord({
+        await this.loadOrCreateAuthoritativeWorkspaceRecord({
           viewerSub,
           viewerEmail,
           workspaceId

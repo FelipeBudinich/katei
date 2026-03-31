@@ -149,7 +149,22 @@ export default class extends Controller {
   render() {
     const activeBoardState = this.optionsState?.activeBoardState ?? null;
 
-    if (!this.workspace || !this.activeBoard || !activeBoardState) {
+    if (!this.workspace) {
+      return;
+    }
+
+    if (!this.activeBoard || !activeBoardState) {
+      this.summaryTarget.textContent = this.t('boardOptionsDialog.noVisibleBoards');
+      this.roleSummaryTarget.textContent = '';
+      this.pendingSummaryTarget.hidden = true;
+      this.pendingSummaryTarget.textContent = '';
+      this.renameButtonTarget.hidden = true;
+      this.resetButtonTarget.hidden = true;
+      this.deleteButtonTarget.hidden = true;
+      this.collaboratorsButtonTarget.hidden = true;
+      this.collaboratorBadgeTarget.hidden = true;
+      this.collaboratorBadgeTarget.textContent = '';
+      this.boardListTarget.replaceChildren(...(this.optionsState?.boardStates ?? []).map((boardState) => this.createBoardListItem(boardState)));
       return;
     }
 

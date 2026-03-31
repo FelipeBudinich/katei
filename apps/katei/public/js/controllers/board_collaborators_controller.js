@@ -135,6 +135,11 @@ export default class extends Controller {
 
   render() {
     if (!this.board || !this.collaborationState) {
+      this.membersListTarget.replaceChildren();
+      this.pendingInvitesListTarget.replaceChildren();
+      this.membersSectionTarget.hidden = true;
+      this.pendingInvitesSectionTarget.hidden = true;
+      this.inviteSectionTarget.hidden = true;
       return;
     }
 

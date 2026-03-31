@@ -27,6 +27,10 @@ export class WorkspaceRecordRepository {
     throw new Error('Not implemented');
   }
 
+  async loadOrCreateAuthoritativeWorkspaceRecord({ viewerSub, workspaceId, viewerEmail } = {}) {
+    throw new Error('Not implemented');
+  }
+
   async replaceWorkspaceSnapshot({ viewerSub, workspaceId, viewerEmail, workspace, actor, expectedRevision }) {
     throw new Error('Not implemented');
   }

@@ -1,4 +1,10 @@
-import { canonicalizeBoardRole, listPendingBoardInvites } from '../../public/js/domain/board_collaboration.js';
+import {
+  canonicalizeBoardRole,
+  listPendingBoardInvites,
+  normalizeBoardCollaboration
+} from '../../public/js/domain/board_collaboration.js';
+import { createDefaultBoardLanguagePolicy } from '../../public/js/domain/board_language_policy.js';
+import { createDefaultBoardStages, createDefaultBoardTemplates } from '../../public/js/domain/board_workflow.js';
 
 export function canViewerAccessWorkspace({ viewerSub, viewerEmail = null, ownerSub, workspace }) {
   const normalizedViewerSub = normalizeOptionalString(viewerSub);
@@ -18,12 +24,113 @@ export function canViewerAccessWorkspace({ viewerSub, viewerEmail = null, ownerS
   }
 
   for (const board of Object.values(workspace.boards)) {
-    if (hasHumanBoardMembership(board, normalizedViewerSub) || hasPendingBoardInvite(board, normalizedViewerSub, normalizedViewerEmail)) {
+    if (canViewerAccessBoardShell({ viewerSub: normalizedViewerSub, viewerEmail: normalizedViewerEmail, board })) {
       return true;
     }
   }
 
   return false;
+}
+
+export function canViewerReadBoard({ viewerSub, viewerEmail = null, board }) {
+  const normalizedViewerSub = normalizeOptionalString(viewerSub);
+
+  if (!normalizedViewerSub) {
+    return false;
+  }
+
+  return hasHumanBoardMembership(board, normalizedViewerSub);
+}
+
+export function filterWorkspaceForViewer({ viewerSub, viewerEmail = null, ownerSub, workspace }) {
+  if (!isPlainObject(workspace)) {
+    return workspace;
+  }
+
+  const normalizedWorkspace = structuredClone(workspace);
+  const normalizedViewerSub = normalizeOptionalString(viewerSub);
+  const normalizedViewerEmail = normalizeOptionalEmail(viewerEmail);
+  const normalizedOwnerSub = normalizeOptionalString(ownerSub);
+
+  if (!normalizedViewerSub) {
+    return createFilteredWorkspace(normalizedWorkspace, []);
+  }
+
+  if (normalizedOwnerSub && normalizedOwnerSub === normalizedViewerSub) {
+    return createOwnerWorkspaceProjection(normalizedWorkspace, {
+      ownerSub: normalizedOwnerSub,
+      ownerEmail: normalizedViewerEmail
+    });
+  }
+
+  const visibleBoards = [];
+
+  for (const boardEntry of listWorkspaceBoardEntries(normalizedWorkspace)) {
+    if (canViewerReadBoard({ viewerSub: normalizedViewerSub, viewerEmail: normalizedViewerEmail, board: boardEntry.board })) {
+      visibleBoards.push({
+        boardId: boardEntry.boardId,
+        board: structuredClone(boardEntry.board)
+      });
+      continue;
+    }
+
+    if (hasPendingBoardInvite(boardEntry.board, normalizedViewerSub, normalizedViewerEmail)) {
+      visibleBoards.push({
+        boardId: boardEntry.boardId,
+        board: createPendingInviteBoardProjection(boardEntry.board)
+      });
+    }
+  }
+
+  return createFilteredWorkspace(normalizedWorkspace, visibleBoards);
+}
+
+export function listViewerPendingBoardInvites({ viewerSub, viewerEmail = null, workspace }) {
+  const normalizedViewerSub = normalizeOptionalString(viewerSub);
+  const normalizedViewerEmail = normalizeOptionalEmail(viewerEmail);
+
+  if (!normalizedViewerSub || !isPlainObject(workspace?.boards)) {
+    return [];
+  }
+
+  const pendingInvites = [];
+
+  for (const { boardId, board } of listWorkspaceBoardEntries(workspace)) {
+    for (const invite of listPendingBoardInvites(board)) {
+      if (!inviteMatchesViewer(invite, normalizedViewerSub, normalizedViewerEmail)) {
+        continue;
+      }
+
+      pendingInvites.push({
+        boardId,
+        boardTitle: normalizeOptionalString(board?.title),
+        invite
+      });
+    }
+  }
+
+  return pendingInvites;
+}
+
+export function canViewerReplaceWorkspaceSnapshot({ viewerSub, viewerEmail = null, ownerSub, workspace }) {
+  const normalizedViewerSub = normalizeOptionalString(viewerSub);
+  const normalizedOwnerSub = normalizeOptionalString(ownerSub);
+
+  if (!normalizedViewerSub || !isPlainObject(workspace?.boards)) {
+    return false;
+  }
+
+  if (normalizedOwnerSub && normalizedOwnerSub === normalizedViewerSub) {
+    return true;
+  }
+
+  for (const board of Object.values(workspace.boards)) {
+    if (!canViewerReadBoard({ viewerSub: normalizedViewerSub, viewerEmail, board })) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 function hasHumanBoardMembership(board, viewerSub) {
@@ -45,20 +152,170 @@ function hasHumanBoardMembership(board, viewerSub) {
 
 function hasPendingBoardInvite(board, viewerSub, viewerEmail) {
   for (const invite of listPendingBoardInvites(board)) {
-    const inviteActorType = normalizeOptionalString(invite?.actor?.type).toLowerCase();
-    const inviteActorId = normalizeOptionalString(invite?.actor?.id);
-    const inviteEmail = normalizeOptionalEmail(invite?.email);
-
-    if (inviteActorType === 'human' && inviteActorId === viewerSub) {
-      return true;
-    }
-
-    if (viewerEmail && inviteEmail && inviteEmail === viewerEmail) {
+    if (inviteMatchesViewer(invite, viewerSub, viewerEmail)) {
       return true;
     }
   }
 
   return false;
+}
+
+function canViewerAccessBoardShell({ viewerSub, viewerEmail, board }) {
+  return canViewerReadBoard({ viewerSub, viewerEmail, board }) || hasPendingBoardInvite(board, viewerSub, viewerEmail);
+}
+
+function inviteMatchesViewer(invite, viewerSub, viewerEmail) {
+  const inviteActorType = normalizeOptionalString(invite?.actor?.type).toLowerCase();
+  const inviteActorId = normalizeOptionalString(invite?.actor?.id);
+  const inviteEmail = normalizeOptionalEmail(invite?.email);
+
+  if (inviteActorType === 'human' && inviteActorId === viewerSub) {
+    return true;
+  }
+
+  return Boolean(viewerEmail && inviteEmail && inviteEmail === viewerEmail);
+}
+
+function createPendingInviteBoardProjection(board) {
+  const defaultStages = createDefaultBoardStages();
+
+  return {
+    id: normalizeOptionalString(board?.id),
+    title: normalizeOptionalString(board?.title),
+    createdAt: typeof board?.createdAt === 'string' ? board.createdAt : '',
+    updatedAt: typeof board?.updatedAt === 'string' ? board.updatedAt : '',
+    stageOrder: defaultStages.map((stage) => stage.id),
+    stages: Object.fromEntries(defaultStages.map((stage) => [stage.id, structuredClone(stage)])),
+    templates: createDefaultBoardTemplates(),
+    collaboration: normalizeBoardCollaboration(board),
+    languagePolicy: createDefaultBoardLanguagePolicy(),
+    cards: {}
+  };
+}
+
+function createOwnerWorkspaceProjection(workspace, { ownerSub, ownerEmail = '' } = {}) {
+  const ownerActor = resolveOwnerActor(workspace, ownerSub, ownerEmail);
+  const nextWorkspace = structuredClone(workspace);
+
+  if (!ownerActor || !isPlainObject(nextWorkspace?.boards)) {
+    return nextWorkspace;
+  }
+
+  for (const [boardId, board] of Object.entries(nextWorkspace.boards)) {
+    nextWorkspace.boards[boardId] = ensureOwnerBoardMembership(board, ownerActor);
+  }
+
+  return nextWorkspace;
+}
+
+function createFilteredWorkspace(workspace, visibleBoards) {
+  const nextBoardOrder = visibleBoards.map(({ boardId }) => boardId);
+  const currentActiveBoardId = normalizeOptionalString(workspace?.ui?.activeBoardId);
+  const nextActiveBoardId = nextBoardOrder.includes(currentActiveBoardId) ? currentActiveBoardId : (nextBoardOrder[0] ?? null);
+  const nextCollapsedColumnsByBoard = {};
+
+  if (isPlainObject(workspace?.ui?.collapsedColumnsByBoard)) {
+    for (const boardId of nextBoardOrder) {
+      if (!Object.prototype.hasOwnProperty.call(workspace.ui.collapsedColumnsByBoard, boardId)) {
+        continue;
+      }
+
+      nextCollapsedColumnsByBoard[boardId] = structuredClone(workspace.ui.collapsedColumnsByBoard[boardId]);
+    }
+  }
+
+  return {
+    ...workspace,
+    boardOrder: nextBoardOrder,
+    boards: Object.fromEntries(visibleBoards.map(({ boardId, board }) => [boardId, board])),
+    ui: {
+      ...(isPlainObject(workspace?.ui) ? workspace.ui : {}),
+      activeBoardId: nextActiveBoardId,
+      collapsedColumnsByBoard: nextCollapsedColumnsByBoard
+    }
+  };
+}
+
+function listWorkspaceBoardEntries(workspace) {
+  const boardIdsInOrder = [];
+  const seenBoardIds = new Set();
+
+  for (const boardId of Array.isArray(workspace?.boardOrder) ? workspace.boardOrder : []) {
+    if (typeof boardId !== 'string' || seenBoardIds.has(boardId) || !isPlainObject(workspace?.boards?.[boardId])) {
+      continue;
+    }
+
+    seenBoardIds.add(boardId);
+    boardIdsInOrder.push(boardId);
+  }
+
+  for (const boardId of Object.keys(workspace?.boards ?? {})) {
+    if (seenBoardIds.has(boardId) || !isPlainObject(workspace.boards[boardId])) {
+      continue;
+    }
+
+    seenBoardIds.add(boardId);
+    boardIdsInOrder.push(boardId);
+  }
+
+  return boardIdsInOrder.map((boardId) => ({
+    boardId,
+    board: workspace.boards[boardId]
+  }));
+}
+
+function ensureOwnerBoardMembership(board, ownerActor) {
+  const collaboration = normalizeBoardCollaboration(board);
+
+  if (collaboration.memberships.some((membership) => ownerActorMatchesMembership(ownerActor, membership))) {
+    return {
+      ...board,
+      collaboration
+    };
+  }
+
+  return {
+    ...board,
+    collaboration: {
+      ...collaboration,
+      memberships: [
+        ...collaboration.memberships,
+        {
+          actor: ownerActor,
+          role: 'admin',
+          ...(typeof board?.createdAt === 'string' ? { joinedAt: board.createdAt } : {})
+        }
+      ]
+    }
+  };
+}
+
+function ownerActorMatchesMembership(ownerActor, membership) {
+  return normalizeOptionalString(membership?.actor?.type).toLowerCase() === ownerActor.type
+    && normalizeOptionalString(membership?.actor?.id) === ownerActor.id
+    && canonicalizeBoardRole(membership?.role) != null;
+}
+
+function resolveOwnerActor(workspace, ownerSub, ownerEmail) {
+  const normalizedOwner = workspace?.ownership?.owner;
+
+  if (
+    normalizeOptionalString(normalizedOwner?.type).toLowerCase() === 'human'
+    && normalizeOptionalString(normalizedOwner?.id) === ownerSub
+  ) {
+    return {
+      type: 'human',
+      id: ownerSub,
+      ...(normalizeOptionalEmail(normalizedOwner?.email) ? { email: normalizeOptionalEmail(normalizedOwner.email) } : {}),
+      ...(normalizeOptionalString(normalizedOwner?.displayName) ? { displayName: normalizeOptionalString(normalizedOwner.displayName) } : {})
+    };
+  }
+
+  return {
+    type: 'human',
+    id: ownerSub,
+    ...(ownerEmail ? { email: ownerEmail } : {})
+  };
 }
 
 function readBoardMemberships(board) {

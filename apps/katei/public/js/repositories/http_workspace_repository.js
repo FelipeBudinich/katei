@@ -124,7 +124,7 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
 
     const workspace = normalizeWorkspaceSnapshot(data?.workspace);
 
-    if (!validateWorkspaceShape(workspace)) {
+    if (!validateActorFacingWorkspaceShape(workspace)) {
       throw new Error('Workspace API returned an invalid workspace.');
     }
 
@@ -160,7 +160,7 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
       const payload = JSON.parse(bootstrapElement.textContent);
       const workspace = normalizeWorkspaceSnapshot(payload?.workspace);
 
-      if (!validateWorkspaceShape(workspace)) {
+      if (!validateActorFacingWorkspaceShape(workspace)) {
         return null;
       }
 
@@ -258,4 +258,23 @@ function normalizeActiveWorkspace(activeWorkspace, workspace) {
     workspaceId,
     isHomeWorkspace: typeof activeWorkspace?.isHomeWorkspace === 'boolean' ? activeWorkspace.isHomeWorkspace : false
   };
+}
+
+function validateActorFacingWorkspaceShape(workspace) {
+  return validateWorkspaceShape(workspace) || isValidEmptyActorFacingWorkspace(workspace);
+}
+
+function isValidEmptyActorFacingWorkspace(workspace) {
+  return Boolean(
+    isPlainObject(workspace)
+      && typeof workspace.workspaceId === 'string'
+      && workspace.workspaceId.trim()
+      && Number.isInteger(workspace.version)
+      && Array.isArray(workspace.boardOrder)
+      && workspace.boardOrder.length === 0
+      && isPlainObject(workspace.boards)
+      && Object.keys(workspace.boards).length === 0
+      && isPlainObject(workspace.ui)
+      && (workspace.ui.activeBoardId == null || normalizeOptionalWorkspaceId(workspace.ui.activeBoardId) == null)
+  );
 }

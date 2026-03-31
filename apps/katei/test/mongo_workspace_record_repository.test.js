@@ -187,6 +187,65 @@ test('loadOrCreateWorkspaceRecord rejects inaccessible shared workspaces by work
   );
 });
 
+test('loadOrCreateWorkspaceRecord filters shared workspace reads down to the actor-visible boards', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_filtered');
+  const collection = createWorkspaceRecordCollectionDouble([toWorkspaceRecordDocument(sharedRecord)]);
+  const repository = new MongoWorkspaceRecordRepository({ collection });
+
+  const record = await repository.loadOrCreateWorkspaceRecord({
+    viewerSub: 'sub_member',
+    viewerEmail: 'member@example.com',
+    workspaceId: 'workspace_shared_filtered'
+  });
+
+  assert.equal(record.workspaceId, 'workspace_shared_filtered');
+  assert.deepEqual(record.workspace.boardOrder, ['member']);
+  assert.deepEqual(Object.keys(record.workspace.boards), ['member']);
+  assert.equal(record.workspace.ui.activeBoardId, 'member');
+  assert.equal(firstCardTitle(record.workspace.boards.member), 'Member board card');
+  const storedDocument = collection.getDocument('workspace_shared_filtered');
+  assert.deepEqual(storedDocument.workspace.boardOrder, ['main', 'member', 'invite']);
+});
+
+test('loadOrCreateWorkspaceRecord keeps pending-invite boards visible as redacted shells', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_invite_projection');
+  const collection = createWorkspaceRecordCollectionDouble([toWorkspaceRecordDocument(sharedRecord)]);
+  const repository = new MongoWorkspaceRecordRepository({ collection });
+
+  const record = await repository.loadOrCreateWorkspaceRecord({
+    viewerSub: 'sub_invited',
+    viewerEmail: 'invitee@example.com',
+    workspaceId: 'workspace_shared_invite_projection'
+  });
+
+  assert.deepEqual(record.workspace.boardOrder, ['invite']);
+  assert.equal(record.workspace.ui.activeBoardId, 'invite');
+  assert.deepEqual(record.workspace.boards.invite.cards, {});
+  assert.equal(record.workspace.boards.invite.collaboration.invites[0].email, 'invitee@example.com');
+  assert.equal(record.workspace.boards.invite.stages.backlog.cardIds.length, 0);
+  assert.equal(
+    firstCardTitle(collection.getDocument('workspace_shared_invite_projection').workspace.boards.invite),
+    'Invite board card'
+  );
+});
+
+test('loadOrCreateAuthoritativeWorkspaceRecord preserves the full stored shared workspace for mutation paths', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_authoritative');
+  const collection = createWorkspaceRecordCollectionDouble([toWorkspaceRecordDocument(sharedRecord)]);
+  const repository = new MongoWorkspaceRecordRepository({ collection });
+
+  const record = await repository.loadOrCreateAuthoritativeWorkspaceRecord({
+    viewerSub: 'sub_member',
+    viewerEmail: 'member@example.com',
+    workspaceId: 'workspace_shared_authoritative'
+  });
+
+  assert.deepEqual(record.workspace.boardOrder, ['main', 'member', 'invite']);
+  assert.equal(record.workspace.ui.activeBoardId, 'main');
+  assert.equal(firstCardTitle(record.workspace.boards.main), 'Owner board card');
+  assert.equal(firstCardTitle(record.workspace.boards.invite), 'Invite board card');
+});
+
 test('replaceWorkspaceSnapshot stores a validated full-workspace snapshot with metadata', async () => {
   const collection = createWorkspaceRecordCollectionDouble();
   const nowValues = ['2026-04-01T10:00:00.000Z', '2026-04-01T11:15:00.000Z'];
@@ -631,4 +690,110 @@ function createLegacyWorkspaceSnapshot({
       }
     }
   };
+}
+
+function firstCardTitle(board) {
+  const firstCard = Object.values(board.cards)[0];
+  return firstCard?.contentByLocale?.en?.title ?? null;
+}
+
+function createSharedWorkspaceRecordFixture(workspaceId) {
+  let workspace = createCard(
+    createEmptyWorkspace({
+      workspaceId,
+      creator: {
+        type: 'human',
+        id: 'sub_owner',
+        email: 'owner@example.com'
+      }
+    }),
+    'main',
+    {
+      title: 'Owner board card',
+      detailsMarkdown: 'Hidden from the collaborator.',
+      priority: 'important'
+    }
+  );
+
+  workspace.boards.main.title = 'Owner board';
+  workspace.boards.main.collaboration.memberships = [
+    {
+      actor: { type: 'human', id: 'sub_owner', email: 'owner@example.com' },
+      role: 'admin',
+      joinedAt: workspace.boards.main.createdAt
+    }
+  ];
+
+  workspace = addSharedBoard(workspace, 'member', 'Member board', {
+    memberships: [
+      {
+        actor: { type: 'human', id: 'sub_member', email: 'member@example.com' },
+        role: 'editor',
+        joinedAt: '2026-04-01T10:05:00.000Z'
+      }
+    ],
+    card: {
+      title: 'Member board card',
+      detailsMarkdown: 'Visible to the collaborator.',
+      priority: 'urgent'
+    }
+  });
+  workspace = addSharedBoard(workspace, 'invite', 'Invite board', {
+    invites: [
+      {
+        id: 'invite_1',
+        email: 'invitee@example.com',
+        role: 'viewer',
+        status: 'pending',
+        invitedBy: { type: 'human', id: 'sub_owner', email: 'owner@example.com' },
+        invitedAt: '2026-04-01T10:15:00.000Z'
+      }
+    ],
+    card: {
+      title: 'Invite board card',
+      detailsMarkdown: 'Should be redacted until the invite is accepted.',
+      priority: 'normal'
+    }
+  });
+
+  workspace.boardOrder = ['main', 'member', 'invite'];
+  workspace.ui.activeBoardId = 'main';
+
+  const record = createUpdatedWorkspaceRecord(
+    createInitialWorkspaceRecord('sub_owner', {
+      workspaceId,
+      now: '2026-04-01T10:00:00.000Z'
+    }),
+    {
+      workspace,
+      actor: { type: 'human', id: 'sub_owner' },
+      now: '2026-04-01T11:15:00.000Z'
+    }
+  );
+  record.isHomeWorkspace = false;
+  return record;
+}
+
+function addSharedBoard(workspace, boardId, title, { memberships = [], invites = [], card = null } = {}) {
+  const sourceBoard = createEmptyWorkspace({
+    workspaceId: `${workspace.workspaceId}_${boardId}`,
+    creator: {
+      type: 'human',
+      id: 'sub_owner',
+      email: 'owner@example.com'
+    }
+  }).boards.main;
+  const board = structuredClone(sourceBoard);
+
+  board.id = boardId;
+  board.title = title;
+  board.collaboration.memberships = memberships.map((membership) => structuredClone(membership));
+  board.collaboration.invites = invites.map((invite) => structuredClone(invite));
+  workspace.boards[boardId] = board;
+
+  if (card) {
+    return createCard(workspace, boardId, card);
+  }
+
+  return workspace;
 }

@@ -9,6 +9,7 @@ import {
   WORKSPACE_RECORD_COLLECTION_NAME,
   createHomeWorkspaceId,
   createWorkspaceActivityEventId,
+  createWorkspaceRecord,
   createInitialWorkspaceRecord,
   createUpdatedWorkspaceRecord,
   fromWorkspaceRecordDocument,
@@ -18,7 +19,7 @@ import {
   toWorkspaceRecordDocument,
   validateWorkspaceSnapshot
 } from './workspace_record.js';
-import { canViewerAccessWorkspace } from './workspace_access.js';
+import { canViewerAccessWorkspace, filterWorkspaceForViewer } from './workspace_access.js';
 
 export function createMongoWorkspaceRecordRepository(options = {}) {
   return new MongoWorkspaceRecordRepository(options);
@@ -36,6 +37,20 @@ export function getWorkspaceRecordCollection({ collection, db, config, getDb = g
   }
 
   return resolvedDb.collection(WORKSPACE_RECORD_COLLECTION_NAME);
+}
+
+export function projectRecordForViewer(record, { viewerSub, viewerEmail = null } = {}) {
+  const normalizedRecord = createWorkspaceRecord(record);
+
+  return {
+    ...normalizedRecord,
+    workspace: filterWorkspaceForViewer({
+      viewerSub,
+      viewerEmail,
+      ownerSub: normalizedRecord.viewerSub,
+      workspace: normalizedRecord.workspace
+    })
+  };
 }
 
 export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
@@ -57,39 +72,27 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
   }
 
   async loadOrCreateWorkspaceRecord({ viewerSub, workspaceId = null, viewerEmail = null } = {}) {
-    const collection = this.#getCollection();
-    const normalizedViewerSub = normalizeViewerSub(viewerSub);
-    const normalizedWorkspaceId = normalizeOptionalWorkspaceId(workspaceId);
+    return this.#loadOrCreateWorkspaceRecord({
+      viewerSub,
+      workspaceId,
+      viewerEmail,
+      projectForViewer: true
+    });
+  }
 
-    if (normalizedWorkspaceId) {
-      return this.#loadAccessibleWorkspaceRecord({
-        viewerSub: normalizedViewerSub,
-        viewerEmail,
-        workspaceId: normalizedWorkspaceId
-      });
-    }
-
-    const existingRecord = await this.#loadHomeWorkspaceRecord(normalizedViewerSub);
-
-    if (existingRecord) {
-      return existingRecord;
-    }
-
-    const initialRecord = createInitialWorkspaceRecord(normalizedViewerSub, { now: this.now() });
-
-    await collection.updateOne(
-      { _id: initialRecord.workspaceId },
-      { $setOnInsert: toWorkspaceRecordDocument(initialRecord) },
-      { upsert: true }
-    );
-
-    return this.#loadRequiredWorkspaceRecord(initialRecord.workspaceId);
+  async loadOrCreateAuthoritativeWorkspaceRecord({ viewerSub, workspaceId = null, viewerEmail = null } = {}) {
+    return this.#loadOrCreateWorkspaceRecord({
+      viewerSub,
+      workspaceId,
+      viewerEmail,
+      projectForViewer: false
+    });
   }
 
   async replaceWorkspaceSnapshot({ viewerSub, workspaceId = null, viewerEmail = null, workspace, actor, expectedRevision } = {}) {
     validateWorkspaceSnapshot(workspace);
 
-    const currentRecord = await this.loadOrCreateWorkspaceRecord({
+    const currentRecord = await this.loadOrCreateAuthoritativeWorkspaceRecord({
       viewerSub,
       workspaceId,
       viewerEmail
@@ -118,7 +121,7 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
   async importWorkspaceSnapshot({ viewerSub, workspaceId = null, viewerEmail = null, workspace, actor } = {}) {
     validateWorkspaceSnapshot(workspace);
 
-    const currentRecord = await this.loadOrCreateWorkspaceRecord({
+    const currentRecord = await this.loadOrCreateAuthoritativeWorkspaceRecord({
       viewerSub,
       workspaceId,
       viewerEmail
@@ -155,6 +158,38 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
     });
   }
 
+  async #loadOrCreateWorkspaceRecord({ viewerSub, workspaceId = null, viewerEmail = null, projectForViewer = true } = {}) {
+    const collection = this.#getCollection();
+    const normalizedViewerSub = normalizeViewerSub(viewerSub);
+    const normalizedWorkspaceId = normalizeOptionalWorkspaceId(workspaceId);
+
+    if (normalizedWorkspaceId) {
+      return this.#loadAccessibleWorkspaceRecord({
+        viewerSub: normalizedViewerSub,
+        viewerEmail,
+        workspaceId: normalizedWorkspaceId,
+        projectForViewer
+      });
+    }
+
+    const existingRecord = await this.#loadHomeWorkspaceRecord(normalizedViewerSub);
+
+    if (existingRecord) {
+      return projectRecordForViewer(existingRecord, { viewerSub: normalizedViewerSub, viewerEmail });
+    }
+
+    const initialRecord = createInitialWorkspaceRecord(normalizedViewerSub, { now: this.now() });
+
+    await collection.updateOne(
+      { _id: initialRecord.workspaceId },
+      { $setOnInsert: toWorkspaceRecordDocument(initialRecord) },
+      { upsert: true }
+    );
+
+    const record = await this.#loadRequiredWorkspaceRecord(initialRecord.workspaceId);
+    return projectRecordForViewer(record, { viewerSub: normalizedViewerSub, viewerEmail });
+  }
+
   async #loadRequiredWorkspaceRecord(workspaceId) {
     const collection = this.#getCollection();
     const normalizedWorkspaceId = normalizeWorkspaceId(workspaceId);
@@ -187,7 +222,7 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
     return fromWorkspaceRecordDocument(homeDocument);
   }
 
-  async #loadAccessibleWorkspaceRecord({ viewerSub, viewerEmail, workspaceId }) {
+  async #loadAccessibleWorkspaceRecord({ viewerSub, viewerEmail, workspaceId, projectForViewer = true }) {
     let record;
 
     try {
@@ -209,6 +244,10 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
       })
     ) {
       throw new WorkspaceAccessDeniedError();
+    }
+
+    if (projectForViewer || record.viewerSub === viewerSub) {
+      return projectRecordForViewer(record, { viewerSub, viewerEmail });
     }
 
     return record;
