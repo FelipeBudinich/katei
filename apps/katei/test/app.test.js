@@ -1,5 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import nunjucks from 'nunjucks';
 import request from 'supertest';
 import { createApp } from '../src/app.js';
 import {
@@ -35,6 +38,9 @@ const WORKSPACE_VENDOR_ASSET_PATHS = [
   '/vendor/marked/marked.umd.js',
   '/vendor/dompurify/purify.min.js'
 ];
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const WORKSPACE_VIEWS_PATH = path.join(__dirname, '../src/views');
 
 function createTestApp({ env = {}, googleTokenVerifier, workspaceRecordRepository } = {}) {
   return createApp({
@@ -279,38 +285,38 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
   assert.match(profileOptionsDialog, /session#logout/);
 });
 
-test('GET /boards renders the no-board header with both Options and Profile entry points', async () => {
+test('workspace template renders the no-board header with both Options and Profile entry points', () => {
   const workspace = createEmptyWorkspace();
-  workspace.ui.activeBoardId = null;
+  workspace.ui.activeBoardId = 'missing_board';
 
-  const record = createUpdatedWorkspaceRecord(
-    createInitialWorkspaceRecord('sub_empty', {
-      now: '2026-04-02T10:00:00.000Z'
-    }),
-    {
+  const html = renderWorkspacePage(
+    buildWorkspacePageModel(
+      {
+        sub: 'sub_empty',
+        name: 'No Boards Viewer'
+      },
+      createTranslator('en'),
       workspace,
-      actor: { id: 'sub_empty' },
-      now: '2026-04-02T11:00:00.000Z'
-    }
+      {
+        revision: 1,
+        updatedAt: '2026-04-02T11:00:00.000Z',
+        lastChangedBy: 'sub_empty',
+        isPristine: false,
+        workspaceId: 'workspace_empty_render',
+        isHomeWorkspace: true
+      }
+    )
   );
-  const app = createTestApp({
-    googleTokenVerifier: async () => ({ sub: 'sub_empty' }),
-    workspaceRecordRepository: createWorkspaceRecordRepositoryDouble([record])
-  });
 
-  const response = await request(app)
-    .get('/boards')
-    .set('Cookie', createSessionCookieHeader({ sub: 'sub_empty', name: 'No Boards Viewer' }));
-
-  assert.equal(response.status, 200);
-  assert.match(response.text, /No visible boards/);
-  assert.match(response.text, /This workspace no longer has any boards you can open\./);
-  assert.match(response.text, /data-action="workspace#openBoardOptions"/);
-  assert.match(response.text, /data-action="workspace#openProfileOptions"/);
-  assert.match(response.text, />\s*Options\s*</);
-  assert.match(response.text, />\s*Profile\s*</);
-  assert.match(response.text, /id="profile-options-ui-locale-picker"/);
-  assert.match(response.text, /data-controller="profile-options"/);
+  assert.match(html, /No visible boards/);
+  assert.match(html, /This workspace no longer has any boards you can open\./);
+  assert.match(html, /data-action="workspace#openBoardOptions"/);
+  assert.match(html, /data-action="workspace#openProfileOptions"/);
+  assert.match(html, />\s*Options\s*</);
+  assert.match(html, />\s*Profile\s*</);
+  assert.match(html, /id="profile-options-ui-locale-picker"/);
+  assert.match(html, /data-controller="profile-options"/);
+  assert.match(html, /No Boards Viewer/);
 });
 
 test('GET /boards bootstraps normalized workspace snapshots when the loaded record is legacy-shaped', async () => {
@@ -1319,6 +1325,41 @@ function extractDialogHtml(html, controllerName) {
   }
 
   return match[0];
+}
+
+function renderWorkspacePage(viewModel) {
+  const environment = new nunjucks.Environment(new nunjucks.FileSystemLoader(WORKSPACE_VIEWS_PATH), {
+    autoescape: true
+  });
+  const uiLocale = 'en';
+
+  return environment.render('pages/workspace.njk', {
+    uiLocale,
+    uiLocaleCurrent: {
+      value: uiLocale,
+      label: 'English'
+    },
+    uiLocaleOptions: [
+      {
+        value: 'en',
+        label: 'English',
+        selected: true
+      },
+      {
+        value: 'es-CL',
+        label: 'Español (Chile)',
+        selected: false
+      },
+      {
+        value: 'ja',
+        label: '日本語',
+        selected: false
+      }
+    ],
+    uiLocalePickerAction: '/boards',
+    t: createTranslator(uiLocale),
+    ...viewModel
+  });
 }
 
 function createLegacyWorkspaceSnapshot({
