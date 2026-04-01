@@ -3,8 +3,8 @@ const DEFAULT_SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
 export function createRuntimeConfig(env = process.env) {
   const nodeEnv = normalizeOptionalString(env.NODE_ENV) || 'development';
   const appBaseUrl = normalizeOptionalString(env.APP_BASE_URL) || (nodeEnv === 'development' ? `http://localhost:${Number(env.PORT) || 3000}` : '');
-  const mongoUri = normalizeOptionalString(env.MONGODB_URI);
-  const mongoDbName = normalizeOptionalString(env.MONGODB_DB_NAME);
+  const mongoUri = requireNonEmptyEnv('MONGODB_URI', env.MONGODB_URI);
+  const mongoDbName = requireNonEmptyEnv('MONGODB_DB_NAME', env.MONGODB_DB_NAME);
   const sessionTtlSeconds = parseSessionTtlSeconds(normalizeOptionalString(env.SESSION_TTL_SECONDS) || String(DEFAULT_SESSION_TTL_SECONDS));
 
   return {
@@ -12,7 +12,7 @@ export function createRuntimeConfig(env = process.env) {
     isProduction: nodeEnv === 'production',
     googleClientId: requireNonEmptyEnv('GOOGLE_CLIENT_ID', env.GOOGLE_CLIENT_ID),
     sessionSecret: requireNonEmptyEnv('KATEI_SESSION_SECRET', env.KATEI_SESSION_SECRET),
-    googleAllowlistSubs: parseAllowlistSubs(env.GOOGLE_ALLOWLIST_SUBS),
+    googleAllowlistSubs: parseAllowlistSubs(normalizeOptionalString(env.GOOGLE_ALLOWLIST_SUBS) || ''),
     sessionTtlSeconds,
     appBaseUrl,
     appOrigin: appBaseUrl ? new URL(appBaseUrl).origin : null,

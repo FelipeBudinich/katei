@@ -88,11 +88,11 @@
       ],
       "usages": [
         {
-          "kind": "read",
+          "kind": "default",
           "file": "apps/katei/src/config.js",
           "line": 15,
           "scope": "app",
-          "snippet": "googleAllowlistSubs: parseAllowlistSubs(env.GOOGLE_ALLOWLIST_SUBS),"
+          "snippet": "googleAllowlistSubs: parseAllowlistSubs(normalizeOptionalString(env.GOOGLE_ALLOWLIST_SUBS) || ''),"
         }
       ]
     },
@@ -271,11 +271,11 @@
       ],
       "usages": [
         {
-          "kind": "read",
+          "kind": "requiredHelper",
           "file": "apps/katei/src/config.js",
           "line": 7,
           "scope": "app",
-          "snippet": "const mongoDbName = normalizeOptionalString(env.MONGODB_DB_NAME);"
+          "snippet": "const mongoDbName = requireNonEmptyEnv('MONGODB_DB_NAME', env.MONGODB_DB_NAME);"
         }
       ]
     },
@@ -295,11 +295,11 @@
       ],
       "usages": [
         {
-          "kind": "read",
+          "kind": "requiredHelper",
           "file": "apps/katei/src/config.js",
           "line": 6,
           "scope": "app",
-          "snippet": "const mongoUri = normalizeOptionalString(env.MONGODB_URI);"
+          "snippet": "const mongoUri = requireNonEmptyEnv('MONGODB_URI', env.MONGODB_URI);"
         }
       ]
     },

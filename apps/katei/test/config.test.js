@@ -4,7 +4,9 @@ import { createRuntimeConfig, parseSessionTtlSeconds } from '../src/config.js';
 
 const REQUIRED_ENV = Object.freeze({
   GOOGLE_CLIENT_ID: 'test-google-client-id',
-  KATEI_SESSION_SECRET: 'test-session-secret'
+  KATEI_SESSION_SECRET: 'test-session-secret',
+  MONGODB_URI: 'mongodb://127.0.0.1:27017',
+  MONGODB_DB_NAME: 'katei_test'
 });
 
 test('createRuntimeConfig normalizes MongoDB env values when provided', () => {
@@ -91,15 +93,14 @@ test('createRuntimeConfig leaves APP_BASE_URL unset in production when not provi
   assert.equal(config.appOrigin, null);
 });
 
-test('createRuntimeConfig leaves MongoDB config optional in this step', () => {
+test('createRuntimeConfig normalizes required MongoDB URI from the shared env fixture', () => {
   const config = createRuntimeConfig({
     ...REQUIRED_ENV,
-    NODE_ENV: 'test',
-    MONGODB_URI: '   '
+    NODE_ENV: 'test'
   });
 
-  assert.equal(config.mongoUri, '');
-  assert.equal(config.mongoDbName, '');
+  assert.equal(config.mongoUri, 'mongodb://127.0.0.1:27017');
+  assert.equal(config.mongoDbName, 'katei_test');
 });
 
 test('createRuntimeConfig defaults session TTL to 7 days when SESSION_TTL_SECONDS is unset', () => {
