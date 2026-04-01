@@ -1,5 +1,6 @@
 import {
   boardActorsMatch,
+  canonicalizeBoardRole,
   createBoardActorKey,
   normalizeBoardActor,
   normalizeBoardCollaboration
@@ -22,9 +23,18 @@ export function createWorkspaceViewerActor({ sub, email = null, name = null } = 
   });
 }
 
-export function createBoardOptionsState(workspace, actor) {
+export function createBoardOptionsState(
+  workspace,
+  actor,
+  {
+    pendingWorkspaceInvites = [],
+    activeWorkspaceId = null
+  } = {}
+) {
   const normalizedActor = normalizeBoardActor(actor);
   const activeBoardId = normalizeOptionalString(workspace?.ui?.activeBoardId);
+  const normalizedActiveWorkspaceId = normalizeOptionalString(activeWorkspaceId)
+    || normalizeOptionalString(workspace?.workspaceId);
   const activeBoard = activeBoardId ? workspace?.boards?.[activeBoardId] ?? null : null;
   const boardStates = Array.isArray(workspace?.boardOrder)
     ? workspace.boardOrder
@@ -51,7 +61,10 @@ export function createBoardOptionsState(workspace, actor) {
   return {
     activeBoard,
     activeBoardState: activeBoard ? getBoardCollaborationState(activeBoard, normalizedActor) : null,
-    boardStates
+    boardStates,
+    incomingInvites: createIncomingInviteViewModels(pendingWorkspaceInvites, {
+      activeWorkspaceId: normalizedActiveWorkspaceId
+    })
   };
 }
 
@@ -214,6 +227,63 @@ function createInviteViewModel(invite, actor, { canAdmin }) {
   };
 }
 
+function createIncomingInviteViewModels(pendingWorkspaceInvites, { activeWorkspaceId = '' } = {}) {
+  if (!Array.isArray(pendingWorkspaceInvites)) {
+    return [];
+  }
+
+  return pendingWorkspaceInvites
+    .map((invite) => createIncomingInviteViewModel(invite))
+    .filter((invite) => invite && invite.workspaceId !== activeWorkspaceId);
+}
+
+function createIncomingInviteViewModel(invite) {
+  if (!invite || typeof invite !== 'object' || Array.isArray(invite)) {
+    return null;
+  }
+
+  const workspaceId = normalizeOptionalString(invite.workspaceId);
+  const boardId = normalizeOptionalString(invite.boardId);
+  const boardTitle = normalizeOptionalString(invite.boardTitle);
+  const inviteId = normalizeOptionalString(invite.inviteId);
+  const role = canonicalizeBoardRole(invite.role);
+  const invitedAt = normalizeOptionalIsoString(invite.invitedAt);
+  const invitedBy = normalizeIncomingInviteActorSummary(invite.invitedBy);
+
+  if (!workspaceId || !boardId || !boardTitle || !inviteId || !role || !invitedAt || !invitedBy) {
+    return null;
+  }
+
+  return {
+    workspaceId,
+    workspaceLabel: workspaceId,
+    boardId,
+    boardTitle,
+    inviteId,
+    role,
+    invitedAt,
+    invitedBy
+  };
+}
+
+function normalizeIncomingInviteActorSummary(actorSummary) {
+  if (!actorSummary || typeof actorSummary !== 'object' || Array.isArray(actorSummary)) {
+    return null;
+  }
+
+  const id = normalizeOptionalString(actorSummary.id);
+
+  if (!id) {
+    return null;
+  }
+
+  return {
+    id,
+    email: normalizeOptionalEmail(actorSummary.email),
+    displayName: normalizeOptionalString(actorSummary.displayName ?? actorSummary.name) || null
+  };
+}
+
 function inviteMatchesActor(invite, actor) {
   const normalizedActor = normalizeBoardActor(actor);
 
@@ -229,4 +299,18 @@ function inviteMatchesActor(invite, actor) {
 
 function normalizeOptionalString(value) {
   return typeof value === 'string' ? value.trim() : '';
+}
+
+function normalizeOptionalEmail(value) {
+  const normalizedValue = normalizeOptionalString(value).toLowerCase();
+  return normalizedValue || null;
+}
+
+function normalizeOptionalIsoString(value) {
+  if (!normalizeOptionalString(value)) {
+    return null;
+  }
+
+  const parsedValue = new Date(value);
+  return Number.isNaN(parsedValue.getTime()) ? null : parsedValue.toISOString();
 }

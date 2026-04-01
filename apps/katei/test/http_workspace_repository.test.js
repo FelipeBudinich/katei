@@ -885,15 +885,7 @@ function createPendingWorkspaceInviteSummary() {
 }
 
 function createPendingWorkspaceInvitePayload() {
-  return {
-    ...createPendingWorkspaceInviteSummary(),
-    invitedBy: {
-      type: 'human',
-      id: 'sub_owner',
-      email: 'owner@example.com',
-      displayName: 'Owner'
-    }
-  };
+  return createPendingWorkspaceInviteSummary();
 }
 
 function createLegacyV4Workspace({

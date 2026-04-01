@@ -172,7 +172,10 @@ export default class extends Controller {
     this.viewerActor = viewerActor ?? this.viewerActor;
     this.pendingWorkspaceInvites = Array.isArray(pendingWorkspaceInvites) ? pendingWorkspaceInvites : [];
     this.activeWorkspaceId = normalizeOptionalWorkspaceId(activeWorkspaceId);
-    this.optionsState = createBoardOptionsState(this.workspace, this.viewerActor);
+    this.optionsState = createBoardOptionsState(this.workspace, this.viewerActor, {
+      pendingWorkspaceInvites: this.pendingWorkspaceInvites,
+      activeWorkspaceId: this.activeWorkspaceId
+    });
     this.render();
   }
 
@@ -253,7 +256,8 @@ export default class extends Controller {
     const declineButton = item.querySelector('[data-board-options-field="inviteDeclineButton"]');
 
     titleElement.textContent = invite.boardTitle;
-    metaElement.textContent = this.t('boardOptionsDialog.inviteFrom', {
+    metaElement.textContent = this.t('boardOptionsDialog.inviteContext', {
+      workspace: invite.workspaceLabel,
       inviter: getInviterLabel(invite.invitedBy)
     });
     roleElement.textContent = this.t('boardOptionsDialog.inviteRole', {
@@ -270,18 +274,18 @@ export default class extends Controller {
   }
 
   renderPendingWorkspaceInvites() {
-    const inviteInspection = this.inspectPendingWorkspaceInvites();
-    const inviteItems = inviteInspection.visibleInvites.map((invite) => this.createInviteListItem(invite));
+    const incomingInvites = Array.isArray(this.optionsState?.incomingInvites) ? this.optionsState.incomingInvites : [];
+    const inviteItems = incomingInvites.map((invite) => this.createInviteListItem(invite));
     const boardRowActions = this.getBoardRowInviteActionState();
 
     logInviteDebug('client.invite.render', {
       source: 'board-options',
-      activeWorkspaceId: inviteInspection.activeWorkspaceId,
+      activeWorkspaceId: this.activeWorkspaceId ?? normalizeOptionalWorkspaceId(this.workspace?.workspaceId),
       activeBoardId: normalizeOptionalWorkspaceId(this.workspace?.ui?.activeBoardId),
-      rawInviteIds: inviteInspection.rawInviteIds,
-      visibleInviteIds: inviteInspection.visibleInvites.map((invite) => invite.inviteId),
-      sameWorkspaceRejectedIds: inviteInspection.sameWorkspaceRejectedIds,
-      malformedRejectedIds: inviteInspection.malformedRejectedIds,
+      rawInviteIds: this.pendingWorkspaceInvites
+        .map((invite) => normalizeOptionalString(invite?.inviteId))
+        .filter(Boolean),
+      visibleInviteIds: incomingInvites.map((invite) => invite.inviteId),
       boardRowsWithAccept: boardRowActions
         .filter((row) => row.acceptVisible)
         .map(({ boardId, inviteId }) => ({ boardId, inviteId })),
@@ -292,68 +296,6 @@ export default class extends Controller {
 
     this.inviteSectionTarget.hidden = inviteItems.length === 0;
     this.inviteListTarget.replaceChildren(...inviteItems);
-  }
-
-  getVisiblePendingWorkspaceInvites() {
-    return this.inspectPendingWorkspaceInvites().visibleInvites;
-  }
-
-  inspectPendingWorkspaceInvites() {
-    const activeWorkspaceId =
-      normalizeOptionalWorkspaceId(this.activeWorkspaceId) ??
-      normalizeOptionalWorkspaceId(this.workspace?.workspaceId);
-    const rawInviteIds = [];
-    const visibleInvites = [];
-    const sameWorkspaceRejectedIds = [];
-    const malformedRejectedIds = [];
-
-    for (const invite of Array.isArray(this.pendingWorkspaceInvites) ? this.pendingWorkspaceInvites : []) {
-      const inviteWorkspaceId = normalizeOptionalWorkspaceId(invite?.workspaceId);
-      const boardId = normalizeOptionalString(invite?.boardId);
-      const inviteId = normalizeOptionalString(invite?.inviteId);
-      const boardTitle = normalizeOptionalString(invite?.boardTitle);
-      const inviteKey = inviteId || [inviteWorkspaceId ?? 'unknown-workspace', boardId || 'unknown-board', 'unknown-invite'].join(':');
-      const visible = Boolean(
-        inviteWorkspaceId &&
-          boardId &&
-          inviteId &&
-          boardTitle &&
-          inviteWorkspaceId !== activeWorkspaceId
-      );
-
-      logInviteDebug('client.invite.state', {
-        source: 'board-options',
-        activeWorkspaceId,
-        inviteWorkspaceId,
-        boardId,
-        inviteId,
-        boardTitle,
-        visible,
-        rejectReason: visible
-          ? null
-          : (!inviteWorkspaceId || !boardId || !inviteId || !boardTitle ? 'malformed' : 'same-workspace')
-      });
-
-      if (inviteId) {
-        rawInviteIds.push(inviteId);
-      }
-
-      if (visible) {
-        visibleInvites.push(invite);
-      } else if (!inviteWorkspaceId || !boardId || !inviteId || !boardTitle) {
-        malformedRejectedIds.push(inviteKey);
-      } else {
-        sameWorkspaceRejectedIds.push(inviteKey);
-      }
-    }
-
-    return {
-      activeWorkspaceId,
-      rawInviteIds,
-      visibleInvites,
-      sameWorkspaceRejectedIds,
-      malformedRejectedIds
-    };
   }
 
   getBoardRowInviteActionState() {

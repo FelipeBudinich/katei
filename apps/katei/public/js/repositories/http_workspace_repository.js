@@ -1,6 +1,6 @@
 import { migrateWorkspaceSnapshot } from '../domain/workspace_migrations.js';
 import { validateWorkspaceShape } from '../domain/workspace_validation.js';
-import { canonicalizeBoardRole, normalizeBoardActor } from '../domain/board_collaboration.js';
+import { canonicalizeBoardRole } from '../domain/board_collaboration.js';
 import { isInviteDebugEnabled, logInviteDebug } from '../lib/invite_debug.js';
 import { postWorkspaceImport, readLocalV4Workspace } from '../lib/workspace_import.js';
 import { WorkspaceRepository } from './workspace_repository.js';
@@ -334,11 +334,11 @@ function normalizePendingWorkspaceInvite(invite) {
 
   const workspaceId = normalizeOptionalWorkspaceId(invite.workspaceId);
   const boardId = normalizeOptionalWorkspaceId(invite.boardId);
-  const boardTitle = typeof invite.boardTitle === 'string' ? invite.boardTitle.trim() : '';
+  const boardTitle = normalizeOptionalString(invite.boardTitle);
   const inviteId = normalizeOptionalWorkspaceId(invite.inviteId);
   const role = canonicalizeBoardRole(invite.role);
   const invitedAt = normalizeOptionalIsoString(invite.invitedAt);
-  const invitedBy = normalizeBoardActor(invite.invitedBy);
+  const invitedBy = normalizePendingWorkspaceInvitedBy(invite.invitedBy);
 
   if (!workspaceId || !boardId || !boardTitle || !inviteId || !role || !invitedAt || !invitedBy) {
     return null;
@@ -356,6 +356,24 @@ function normalizePendingWorkspaceInvite(invite) {
       email: invitedBy.email ?? null,
       displayName: invitedBy.displayName ?? null
     }
+  };
+}
+
+function normalizePendingWorkspaceInvitedBy(invitedBy) {
+  if (!isPlainObject(invitedBy)) {
+    return null;
+  }
+
+  const id = normalizeOptionalString(invitedBy.id);
+
+  if (!id) {
+    return null;
+  }
+
+  return {
+    id,
+    email: normalizeOptionalEmail(invitedBy.email),
+    displayName: normalizeOptionalString(invitedBy.displayName ?? invitedBy.name) || null
   };
 }
 
@@ -426,4 +444,13 @@ function collectBoardInviteIdsByBoard(workspace) {
       ];
     })
   );
+}
+
+function normalizeOptionalString(value) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function normalizeOptionalEmail(value) {
+  const normalizedValue = normalizeOptionalString(value).toLowerCase();
+  return normalizedValue || null;
 }

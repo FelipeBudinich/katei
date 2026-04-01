@@ -44,6 +44,53 @@ test('board options state includes readable boards and invite-only boards withou
   assert.equal(optionsState.boardStates[2].canSwitch, false);
 });
 
+test('board options state keeps same-workspace invite rows separate from cross-workspace incoming invites', () => {
+  const { workspace, viewerActor } = createSharedBoardOptionsFixture();
+  const optionsState = createBoardOptionsState(workspace, viewerActor, {
+    activeWorkspaceId: workspace.workspaceId,
+    pendingWorkspaceInvites: [
+      createPendingWorkspaceInvite({
+        workspaceId: 'workspace_invited_casa',
+        boardId: 'casa',
+        boardTitle: 'Casa',
+        inviteId: 'invite_casa_1',
+        role: 'editor',
+        invitedBy: {
+          id: 'sub_owner_casa',
+          email: 'owner-casa@example.com',
+          displayName: 'Casa owner'
+        }
+      }),
+      createPendingWorkspaceInvite({
+        workspaceId: workspace.workspaceId,
+        boardId: 'invite',
+        boardTitle: 'Invited board',
+        inviteId: 'invite_2'
+      })
+    ]
+  });
+
+  assert.deepEqual(
+    optionsState.incomingInvites.map((invite) => ({
+      workspaceId: invite.workspaceId,
+      workspaceLabel: invite.workspaceLabel,
+      boardId: invite.boardId,
+      inviteId: invite.inviteId
+    })),
+    [
+      {
+        workspaceId: 'workspace_invited_casa',
+        workspaceLabel: 'workspace_invited_casa',
+        boardId: 'casa',
+        inviteId: 'invite_casa_1'
+      }
+    ]
+  );
+  assert.equal(optionsState.boardStates[2].boardId, 'invite');
+  assert.equal(optionsState.boardStates[2].currentRoleStatus, 'invited');
+  assert.equal(optionsState.boardStates[2].pendingInvite?.id, 'invite_2');
+});
+
 test('board list action state keeps switch and invite responses mutually exclusive', () => {
   const { optionsState } = createSharedBoardOptionsFixture();
   const activeBoardActions = createBoardListActionState(optionsState.boardStates[0]);
@@ -113,7 +160,7 @@ test('board options controller hides the invite section when there are no off-wo
   assert.deepEqual(controller.inviteListTarget.children, []);
 });
 
-test('board options controller renders off-workspace invite rows and keeps existing board switch rows unchanged', () => {
+test('board options controller renders incoming invite rows from multiple workspaces and keeps board rows unchanged', () => {
   const { workspace, viewerActor, optionsState } = createSharedBoardOptionsFixture();
   const controller = createBoardOptionsControllerDouble();
 
@@ -133,6 +180,18 @@ test('board options controller renders off-workspace invite rows and keeps exist
         }
       }),
       createPendingWorkspaceInvite({
+        workspaceId: 'workspace_invited_prueba',
+        boardId: 'prueba',
+        boardTitle: 'Prueba',
+        inviteId: 'invite_prueba_1',
+        role: 'viewer',
+        invitedBy: {
+          id: 'sub_owner_prueba',
+          email: 'owner-prueba@example.com',
+          displayName: 'Prueba owner'
+        }
+      }),
+      createPendingWorkspaceInvite({
         workspaceId: workspace.workspaceId,
         boardId: 'main',
         boardTitle: 'Should be hidden',
@@ -142,10 +201,19 @@ test('board options controller renders off-workspace invite rows and keeps exist
   });
 
   assert.equal(controller.inviteSectionTarget.hidden, false);
-  assert.equal(controller.inviteListTarget.children.length, 1);
+  assert.equal(controller.inviteListTarget.children.length, 2);
   assert.equal(controller.inviteListTarget.children[0].fields.inviteTitle.textContent, 'Casa');
-  assert.equal(controller.inviteListTarget.children[0].fields.inviteMeta.textContent, 'From Casa owner');
+  assert.equal(
+    controller.inviteListTarget.children[0].fields.inviteMeta.textContent,
+    'Workspace: workspace_invited_casa. From Casa owner'
+  );
   assert.equal(controller.inviteListTarget.children[0].fields.inviteRole.textContent, 'Role: Editor');
+  assert.equal(controller.inviteListTarget.children[1].fields.inviteTitle.textContent, 'Prueba');
+  assert.equal(
+    controller.inviteListTarget.children[1].fields.inviteMeta.textContent,
+    'Workspace: workspace_invited_prueba. From Prueba owner'
+  );
+  assert.equal(controller.inviteListTarget.children[1].fields.inviteRole.textContent, 'Role: Viewer');
   assert.deepEqual(
     controller.boardListTarget.children.map((item) => item.fields.title.textContent),
     optionsState.boardStates.map((boardState) => boardState.title)
