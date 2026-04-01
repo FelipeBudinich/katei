@@ -248,12 +248,69 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
   assert.match(response.text, /<script defer src="\/vendor\/marked\/marked\.umd\.js"><\/script>/);
   assert.match(response.text, /<script defer src="\/vendor\/dompurify\/purify\.min\.js"><\/script>/);
   assert.match(response.text, /<script defer src="\/vendor\/easymde\/easymde\.min\.js"><\/script>/);
-  assert.match(response.text, /id="board-options-ui-locale-picker"/);
+  assert.match(response.text, /data-action="workspace#openBoardOptions"/);
+  assert.match(response.text, /data-action="workspace#openProfileOptions"/);
+  assert.match(response.text, />\s*Options\s*</);
+  assert.match(response.text, />\s*Profile\s*</);
+  assert.match(response.text, /id="profile-options-ui-locale-picker"/);
   assert.match(response.text, /<form method="get" action="\/boards" class="ui-locale-picker">/);
+  assert.match(response.text, /onchange="this\.form\.submit\(\)"/);
   assert.match(response.text, /data-board-options-field="inviteAcceptButton"/);
   assert.match(response.text, /data-board-options-field="inviteDeclineButton"/);
   assert.match(response.text, /board-options:accept-invite->workspace#handleAcceptInvite/);
   assert.match(response.text, /board-options:decline-invite->workspace#handleDeclineInvite/);
+
+  const boardOptionsDialog = extractDialogHtml(response.text, 'board-options');
+  const profileOptionsDialog = extractDialogHtml(response.text, 'profile-options');
+
+  assert.doesNotMatch(boardOptionsDialog, /ui-locale-control-row/);
+  assert.doesNotMatch(boardOptionsDialog, /session#logout/);
+  assert.match(boardOptionsDialog, /board-options#createBoard/);
+  assert.match(boardOptionsDialog, /board-options#openCollaborators/);
+  assert.match(boardOptionsDialog, /board-options#renameBoard/);
+  assert.match(boardOptionsDialog, /board-options#resetBoard/);
+  assert.match(boardOptionsDialog, /board-options#deleteBoard/);
+
+  assert.match(profileOptionsDialog, /viewer-chip/);
+  assert.match(profileOptionsDialog, /ui-locale-control-row/);
+  assert.match(profileOptionsDialog, /data-controller="session"/);
+  assert.match(profileOptionsDialog, /data-session-auth-url-value="\/auth\/logout"/);
+  assert.match(profileOptionsDialog, /data-session-redirect-url-value="\/"/);
+  assert.match(profileOptionsDialog, /session#logout/);
+});
+
+test('GET /boards renders the no-board header with both Options and Profile entry points', async () => {
+  const workspace = createEmptyWorkspace();
+  workspace.ui.activeBoardId = null;
+
+  const record = createUpdatedWorkspaceRecord(
+    createInitialWorkspaceRecord('sub_empty', {
+      now: '2026-04-02T10:00:00.000Z'
+    }),
+    {
+      workspace,
+      actor: { id: 'sub_empty' },
+      now: '2026-04-02T11:00:00.000Z'
+    }
+  );
+  const app = createTestApp({
+    googleTokenVerifier: async () => ({ sub: 'sub_empty' }),
+    workspaceRecordRepository: createWorkspaceRecordRepositoryDouble([record])
+  });
+
+  const response = await request(app)
+    .get('/boards')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_empty', name: 'No Boards Viewer' }));
+
+  assert.equal(response.status, 200);
+  assert.match(response.text, /No visible boards/);
+  assert.match(response.text, /This workspace no longer has any boards you can open\./);
+  assert.match(response.text, /data-action="workspace#openBoardOptions"/);
+  assert.match(response.text, /data-action="workspace#openProfileOptions"/);
+  assert.match(response.text, />\s*Options\s*</);
+  assert.match(response.text, />\s*Profile\s*</);
+  assert.match(response.text, /id="profile-options-ui-locale-picker"/);
+  assert.match(response.text, /data-controller="profile-options"/);
 });
 
 test('GET /boards bootstraps normalized workspace snapshots when the loaded record is legacy-shaped', async () => {
@@ -1248,6 +1305,20 @@ function readWorkspaceBootstrapPayload(html) {
   }
 
   return JSON.parse(match[1]);
+}
+
+function extractDialogHtml(html, controllerName) {
+  const match = html.match(
+    new RegExp(
+      `<dialog[\\s\\S]*?data-controller="${escapeForRegex(controllerName)}"[\\s\\S]*?<\\/dialog>`
+    )
+  );
+
+  if (!match) {
+    throw new Error(`Dialog for controller "${controllerName}" was not rendered.`);
+  }
+
+  return match[0];
 }
 
 function createLegacyWorkspaceSnapshot({
