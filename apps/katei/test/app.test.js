@@ -81,6 +81,7 @@ test('GET / renders the landing page for anonymous users', async () => {
 
   assert.match(response.text, /id="landing-ui-locale-picker"/);
   assert.match(response.text, /<form method="get" action="\/" class="ui-locale-picker">/);
+  assert.match(response.text, /<span class="ui-locale-badge-value">\s*English\s*<\/span>/);
   assert.match(response.text, /<option value="en" selected>\s*English\s*<\/option>/);
   assert.match(response.text, /UI language/);
 });
@@ -279,6 +280,12 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
 
   assert.match(profileOptionsDialog, /viewer-chip/);
   assert.match(profileOptionsDialog, /ui-locale-control-row/);
+  assert.match(profileOptionsDialog, /<span class="ui-locale-badge-label">\s*UI language\s*<\/span>/);
+  assert.doesNotMatch(profileOptionsDialog, /ui-locale-badge-value/);
+  assert.match(profileOptionsDialog, /<form method="get" action="\/boards" class="ui-locale-picker">/);
+  assert.match(profileOptionsDialog, /id="profile-options-ui-locale-picker"/);
+  assert.match(profileOptionsDialog, /<option value="en" selected>\s*English\s*<\/option>/);
+  assert.match(profileOptionsDialog, /onchange="this\.form\.submit\(\)"/);
   assert.match(profileOptionsDialog, /data-controller="session"/);
   assert.match(profileOptionsDialog, /data-session-auth-url-value="\/auth\/logout"/);
   assert.match(profileOptionsDialog, /data-session-redirect-url-value="\/"/);
@@ -316,6 +323,11 @@ test('workspace template renders the no-board header with both Options and Profi
   assert.match(html, />\s*Profile\s*</);
   assert.match(html, /id="profile-options-ui-locale-picker"/);
   assert.match(html, /data-controller="profile-options"/);
+  assert.match(html, /<span class="ui-locale-badge-label">\s*UI language\s*<\/span>/);
+  assert.doesNotMatch(html, /ui-locale-badge-value/);
+  assert.match(html, /<form method="get" action="\/boards" class="ui-locale-picker">/);
+  assert.match(html, /<option value="en" selected>\s*English\s*<\/option>/);
+  assert.match(html, /onchange="this\.form\.submit\(\)"/);
   assert.match(html, /No Boards Viewer/);
 });
 

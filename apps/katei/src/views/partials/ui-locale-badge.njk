@@ -1,4 +1,6 @@
 <div class="ui-locale-badge">
   <span class="ui-locale-badge-label">{{ t('uiLocale.label') }}</span>
-  <span class="ui-locale-badge-value">{{ uiLocaleCurrent.label }}</span>
+  {% if uiLocaleBadgeShowValue != false %}
+    <span class="ui-locale-badge-value">{{ uiLocaleCurrent.label }}</span>
+  {% endif %}
 </div>
