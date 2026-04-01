@@ -8,25 +8,26 @@ Complete complex work faster and more reliably in one governed system that unifi
 
 ## Product Positioning
 
-Katei currently ships in this monorepo as the app at `apps/katei`. The implemented product is a private tester preview of an authenticated board workspace: each verified Google account gets its own persisted workspace, and each workspace can hold multiple boards.
+Katei currently ships in this monorepo as the web app at `apps/katei`. The implemented product in this repository is a private tester preview of an authenticated board workspace: a verified Google account can sign in, receive a signed Katei session, and work inside a persisted home workspace that can also load accessible shared workspaces by `workspaceId`.
 
-The current shipped web app is centered on per-user board operations rather than shared multi-user execution. The runtime in this repository does not expose shared board membership, realtime sync, background jobs, or in-app agent execution routes.
+Today’s runtime is centered on board execution and board-scoped collaboration. It does not currently ship realtime sync, background jobs, scheduled automation, agent sign-in, or public agent execution routes.
 
 ## Current Implemented Scope
 
-- Monorepo layout: the deployable app lives in `apps/katei`, and shared styling source lives in `packages/brand`.
-- Runtime stack: Node.js, Express 5, Nunjucks, Stimulus, Tailwind CSS v4, Google Identity Services, `google-auth-library`, and MongoDB-backed workspace persistence.
+- Monorepo layout: the deployable app lives in `apps/katei`, and shared brand CSS source lives in `packages/brand`.
+- Runtime stack: Node.js, Express 5, Nunjucks, Stimulus, Tailwind CSS 4, Google Identity Services on the landing page, `google-auth-library` for server-side token verification, and MongoDB-backed workspace persistence.
 - Public routes implemented today: `GET /`, `GET /docs/env-inventory.html`, `GET /docs/filetree.html`, and `GET /health`.
-- Auth routes implemented today: `POST /auth/google` verifies a Google ID token server-side and creates a signed Katei session cookie; `POST /auth/logout` clears that cookie.
-- Route behavior: `GET /` renders the landing page for signed-out visitors and redirects to `/boards` when a valid Katei session is already present. `GET /boards` requires a session and redirects back to `/` when one is missing.
-- Session behavior: the `katei_session` cookie is HTTP-only, `SameSite=Lax`, scoped to `/`, `Secure` in production, and defaults to a 7-day TTL unless `SESSION_TTL_SECONDS` overrides it.
+- Auth routes implemented today: `POST /auth/google` verifies a Google ID token server-side and sets a signed Katei session cookie; `POST /auth/logout` clears that cookie.
+- Route behavior: `GET /` renders the landing page for signed-out visitors and redirects authenticated sessions to `/boards`. `GET /boards` requires a session and redirects anonymous requests back to `/`.
+- Session behavior: the `katei_session` cookie is HTTP-only, `SameSite=Lax`, scoped to `/`, marked `Secure` in production, and defaults to a 7-day TTL unless `SESSION_TTL_SECONDS` overrides it.
 - Access control: if `GOOGLE_ALLOWLIST_SUBS` is blank, any verified Google account may sign in; if it contains comma-separated Google `sub` values, only those accounts are admitted.
-- Origin checks: when `APP_BASE_URL` is set, sign-in requests are accepted only when the request `Origin` matches that configured app origin.
-- Authenticated routes implemented today: `GET /boards`, `GET /api/workspace`, `PUT /api/workspace`, `POST /api/workspace/commands`, and `POST /api/workspace/import`.
-- Workspace model: each signed-in Google `sub` gets one server-owned workspace record. The workspace starts with a default board and supports switching, creating, editing, resetting, and deleting boards from the web UI.
-- Board model: boards are not fixed to four hard-coded columns anymore. Each board stores its own ordered stages, allowed stage transitions, templates, and language policy (`sourceLocale`, `defaultLocale`, `supportedLocales`, `requiredLocales`).
-- Card model: cards store priority, timestamps, and localized `contentByLocale` variants with provenance metadata. The current UI supports creating, editing, viewing, moving, and deleting cards.
-- Markdown support: card details are edited with EasyMDE and rendered with Marked plus DOMPurify.
+- Origin checks: when `APP_BASE_URL` resolves to an origin, `/auth/google` rejects requests whose `Origin` header does not match that origin.
+- Authenticated workspace routes implemented today: `GET /boards`, `GET /api/workspace`, `PUT /api/workspace`, `POST /api/workspace/commands`, and `POST /api/workspace/import`.
+- Workspace model: each signed-in Google `sub` gets a persisted home workspace record, and the same runtime can load other accessible workspaces by `workspaceId`. Persisted records track the workspace snapshot, revision, timestamps, `lastChangedBy`, recent activity events, and recent command receipts.
+- Board capabilities implemented today: create, rename, edit, reset, delete, and switch boards; editable board schemas with ordered stages, allowed transitions, templates, and board language policy.
+- Collaboration capabilities implemented today: board-scoped memberships with `admin`, `editor`, and `viewer` roles; invite, revoke, accept, decline, role-change, and member-removal flows backed by the commands API and the boards UI.
+- Card capabilities implemented today: create, edit, move, view, and delete cards; priority handling; localized `contentByLocale` variants; locale request and clear flows; and rendered Markdown details.
+- Markdown/runtime assets: `/boards` loads vendored EasyMDE, Marked, and DOMPurify assets from `apps/katei/public/vendor`.
 - UI locales implemented today: `en`, `es-CL`, and `ja`.
 - UI locale resolution: `?lang=` query parameter first, then the `katei_ui_locale` cookie, then `Accept-Language`, then the default locale `en`.
 
@@ -37,6 +38,8 @@ Use Node 20 or newer. Install dependencies from the repo root so npm workspaces 
 ```bash
 npm install
 ```
+
+The app reads configuration directly from `process.env`. `apps/katei/.env.example` documents the current variables, but the committed runtime does not load `.env` files automatically.
 
 Root-level scripts:
 
@@ -57,24 +60,35 @@ npm run build:css
 npm test
 ```
 
-Runtime environment is documented in `apps/katei/.env.example` and `apps/katei/docs/env-inventory.html`.
+There is no separate JavaScript bundle build in the current app. The active build step is CSS compilation to `apps/katei/public/assets/app.css`; the app-level `npm run build` script is only an informational stub.
 
-Required for the authenticated workspace experience:
+Required runtime variables:
 
 - `GOOGLE_CLIENT_ID`
 - `KATEI_SESSION_SECRET`
+
+Required for persisted boards and workspace APIs:
+
 - `MONGODB_URI`
 - `MONGODB_DB_NAME`
 
 Optional runtime variables:
 
-- `GOOGLE_ALLOWLIST_SUBS`
-- `SESSION_TTL_SECONDS` (defaults to `604800`)
-- `APP_BASE_URL` (defaults to `http://localhost:<PORT>` in development and is the origin check anchor outside development)
-- `PORT` (defaults to `3000`)
-- `NODE_ENV` (defaults to `development`)
+- `NODE_ENV` defaults to `development`.
+- `PORT` defaults to `3000`.
+- `SESSION_TTL_SECONDS` defaults to `604800`.
+- `APP_BASE_URL` defaults to `http://localhost:<PORT>` in development and is otherwise unset unless provided.
+- `GOOGLE_ALLOWLIST_SUBS` may contain a comma-separated allowlist of Google `sub` identifiers.
 
-Deployment-related values also appear in `apps/katei/.env.example`, but the running app code does not read `HEROKU_APP_NAME` or `HEROKU_API_KEY`.
+Deployment workflow variables:
+
+- `HEROKU_APP_NAME` and `HEROKU_API_KEY` appear in `apps/katei/.env.example` and `apps/katei/docs/env-inventory.html`, but the running app code does not read them.
+- The deploy workflow uses GitHub repository secrets `HEROKU_KATEI_APP_PROD` and `HEROKU_API_KEY`.
+
+Human-readable generated docs already present in the repo:
+
+- `apps/katei/docs/env-inventory.html`
+- `apps/katei/docs/filetree.html`
 
 ## Deployment / Runtime
 
@@ -85,6 +99,7 @@ That workflow currently:
 - runs on pushes to `main` that touch `apps/katei`, `packages/brand`, the root package manifests, or the deploy workflow itself
 - installs monorepo dependencies with `npm ci`
 - prebuilds `apps/katei/public/assets/app.css` with `npm run prepare:subtree:katei`
+- verifies that generated CSS exists before deploy
 - splits the `apps/katei` subtree
 - archives that subtree into a temporary deploy directory
 - force-pushes the deploy tree to the target Heroku app git remote
@@ -95,18 +110,21 @@ The Heroku runtime unit is the `apps/katei` subtree. Its `Procfile` is:
 web: npm start
 ```
 
-The deploy workflow expects GitHub repository secrets for the target Heroku app name and API key. The workflow reads `HEROKU_KATEI_APP_PROD` and `HEROKU_API_KEY` from GitHub Actions secrets; those are separate from the app's runtime environment variables.
+Inside that subtree, `npm start` runs `node src/server.js`.
+
+No Dockerfile or second automated deployment target is committed in this repository today.
 
 ## Architecture Notes
 
-- Katei is a server-rendered web app. `src/app.js` wires Express middleware, Nunjucks views, static assets, locale/session middleware, and the route tree.
-- The browser layer is served as ES modules from `apps/katei/public/js`; there is no separate JavaScript bundling step in the current app runtime.
-- `GET /boards` renders the initial workspace HTML and embeds a `workspace-bootstrap` JSON payload when a workspace record is available.
-- The shipped UI uses `HttpWorkspaceRepository` from `public/js/repositories/http_workspace_repository.js`, so the source of truth today is server-owned persistence, not browser storage.
-- Server persistence lives in MongoDB collection `workspace_records`. Each record is keyed by the verified Google `sub` and stores the workspace snapshot, revision, timestamps, `lastChangedBy`, activity events, and command receipts.
-- `POST /api/workspace/commands` is the main write path used by the current UI. `PUT /api/workspace` also exists for whole-workspace replacement with revision checking.
-- Browser storage still exists in the codebase, but not as the primary runtime store. `LocalWorkspaceRepository` writes `katei.workspace.v5:<sub>`, while the shipped HTTP repository only uses browser storage to look for legacy `katei.workspace.v4:<sub>` data and import it through `POST /api/workspace/import` when the server workspace is still pristine.
-- Shared brand styles live in `packages/brand/src/theme.css` and `packages/brand/src/components.css`; deploy preparation prebuilds the resulting CSS into `apps/katei/public/assets/app.css`.
+- `apps/katei/src/app.js` builds the Express app, Nunjucks views, locale/session middleware, static asset serving, and the route tree.
+- The UI is server-rendered first and then enhanced with browser ES modules served directly from `apps/katei/public/js`; there is no client bundling step in the current runtime.
+- The landing page loads Google Identity Services in the browser and posts credentials to `/auth/google`, while the server verifies the ID token with `google-auth-library`.
+- The boards runtime instantiates `HttpWorkspaceRepository` in `apps/katei/public/js/controllers/workspace_controller.js`, so the live source of truth is the server API, not browser storage.
+- Server persistence lives in MongoDB collection `workspace_records` through `MongoWorkspaceRecordRepository`.
+- `POST /api/workspace/commands` is the main write path for the interactive UI. `PUT /api/workspace` supports whole-workspace replacement with revision checks, and `POST /api/workspace/import` imports a full snapshot only while the server record is still pristine.
+- Browser storage still exists, but only as compatibility code. The shipped HTTP repository looks for legacy `katei.workspace.v4:<sub>` data and imports it into a pristine server workspace; `LocalWorkspaceRepository` with `katei.workspace.v5:<sub>` remains in the codebase but is not the active runtime repository.
+- Shared workspace projections are filtered by board membership or pending invite state. Full snapshot replacement is blocked when the viewer cannot see the entire workspace.
+- The domain model already recognizes `human`, `agent`, and `system` actors in collaboration and localized-content provenance records, but the shipped runtime authenticates humans only and exposes no separate agent runtime.
 
 ## Optional Repo-Local Agent Tooling
 
@@ -115,7 +133,7 @@ This repository includes repo-local Codex guidance in `AGENTS.md` and two repo-l
 - `env-inventory` at `.agents/skills/env-inventory/SKILL.md`
 - `monorepo-filetree` at `.agents/skills/monorepo-filetree/SKILL.md`
 
-Generated navigation and environment docs currently present in the repo include:
+Generated navigation and inventory docs currently present in the repo include:
 
 - `monorepo-filetree.md`
 - `apps/katei/docs/env-inventory.html`

@@ -98,9 +98,19 @@ hanmoto-board/
 │       │   ├── allowlist.test.js
 │       │   ├── app.test.js
 │       │   ├── apply_workspace_command.test.js
+│       │   ├── attach_session.test.js
+│       │   ├── board_collaboration.test.js
+│       │   ├── board_collaborators_controller.test.js
+│       │   ├── board_editor_controller.test.js
 │       │   ├── board_language_policy.test.js
+│       │   ├── board_options_controller.test.js
+│       │   ├── board_permissions.test.js
+│       │   ├── board_renderer.test.js
+│       │   ├── board_schema.test.js
 │       │   ├── board_workflow.test.js
+│       │   ├── card_editor_controller.test.js
 │       │   ├── card_localization.test.js
+│       │   ├── card_localization_requests.test.js
 │       │   ├── card_localization_runtime.test.js
 │       │   ├── config.test.js
 │       │   ├── google_identity.test.js
@@ -108,28 +118,27 @@ hanmoto-board/
 │       │   ├── i18n.test.js
 │       │   ├── landing_controller_connection.test.js
 │       │   ├── local_workspace_repository.test.js
+│       │   ├── localized_content_guard.test.js
 │       │   ├── markdown.test.js
 │       │   ├── mongo_client.test.js
 │       │   ├── mongo_workspace_record_repository.test.js
 │       │   ├── mutation_context.test.js
 │       │   ├── session_cookie.test.js
+│       │   ├── stage_ui.test.js
+│       │   ├── verify_google_id_token.test.js
 │       │   ├── workspace.test.js
+│       │   ├── workspace_access.test.js
+│       │   ├── workspace_api.test.js
 │       │   ├── workspace_board_schema.test.js
 │       │   ├── workspace_commands.test.js
+│       │   ├── workspace_controller.test.js
 │       │   ├── workspace_migrations.test.js
+│       │   ├── workspace_permissions.test.js
 │       │   ├── workspace_record.test.js
 │       │   └── workspace_service.test.js
 │       ├── .env.example
 │       ├── package.json
 │       └── Procfile
-├── cool-stuff/
-├── integrate/
-│   ├── cards.svg
-│   ├── clock.svg
-│   ├── edit.svg
-│   ├── eye.svg
-│   ├── locked.svg
-│   └── look.svg
 ├── packages/
 │   └── brand/
 │       ├── src/
