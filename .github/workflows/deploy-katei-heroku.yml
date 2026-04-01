@@ -57,7 +57,7 @@ jobs:
       - name: Validate deploy secrets
         run: |
           test -n "$HEROKU_APP_NAME" || { echo "Missing HEROKU_APP_NAME"; exit 1; }
-          test "$HEROKU_APP_NAME" != "YOUR_HEROKU_APP_NAME" || { echo "Replace YOUR_HEROKU_APP_NAME with the real Heroku app slug or set HEROKY_KATEI_APP_PROD as a Github Repository secret"; exit 1; }
+          test "$HEROKU_APP_NAME" != "YOUR_HEROKU_APP_NAME" || { echo "Replace YOUR_HEROKU_APP_NAME with the real Heroku app slug or set HEROKU_KATEI_APP_PROD as a GitHub repository secret"; exit 1; }
           test -n "$HEROKU_API_KEY" || { echo "Missing HEROKU_API_KEY"; exit 1; }
           test "$HEROKU_API_KEY" != "YOUR_HEROKU_API_KEY" || { echo "Replace YOUR_HEROKU_API_KEY with a real Heroku API key as a Github Repository secret"; exit 1; }
           echo "Deploying branch '${GITHUB_REF_NAME}' to app '${HEROKU_APP_NAME}'"

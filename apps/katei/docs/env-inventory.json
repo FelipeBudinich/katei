@@ -182,8 +182,8 @@
           "file": "apps/katei/.env.example",
           "line": 29,
           "scope": "app",
-          "snippet": "HEROKU_APP_NAME=HEROKY_KATEI_APP_PROD",
-          "comment": "# set HEROKY_KATEI_APP_PROD as a Github Repository secret, it should be the name of the app you created in heroku"
+          "snippet": "HEROKU_APP_NAME=HEROKU_KATEI_APP_PROD",
+          "comment": "# set HEROKU_KATEI_APP_PROD as a GitHub repository secret, it should be the name of the app you created in Heroku"
         }
       ],
       "usages": [
@@ -206,7 +206,7 @@
           "file": ".github/workflows/deploy-katei-heroku.yml",
           "line": 60,
           "scope": "root",
-          "snippet": "test \"$HEROKU_APP_NAME\" != \"YOUR_HEROKU_APP_NAME\" || { echo \"Replace YOUR_HEROKU_APP_NAME with the real Heroku app slug or set HEROKY_KATEI_APP_PROD as a Github Repository secret\"; exit 1; }"
+          "snippet": "test \"$HEROKU_APP_NAME\" != \"YOUR_HEROKU_APP_NAME\" || { echo \"Replace YOUR_HEROKU_APP_NAME with the real Heroku app slug or set HEROKU_KATEI_APP_PROD as a GitHub repository secret\"; exit 1; }"
         },
         {
           "kind": "ci",
