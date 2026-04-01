@@ -36,8 +36,6 @@ export default class extends Controller {
     'localeReadOnlyNotice',
     'requestLocaleButton',
     'clearLocaleRequestButton',
-    'localeStatusRegion',
-    'localeStatusTemplate',
     'editActions',
     'deleteActions',
     'deleteActionRegion',
@@ -383,7 +381,6 @@ export default class extends Controller {
       this.localeSummaryTarget.textContent = '';
       this.localeFallbackNoticeTarget.textContent = '';
       this.localeFallbackNoticeTarget.hidden = true;
-      this.localeStatusRegionTarget.replaceChildren();
       return;
     }
 
@@ -391,7 +388,6 @@ export default class extends Controller {
     this.renderLocaleSummary(localizedView);
     this.renderFallbackNotice(localizedView.variant, localizedView);
     this.renderLocaleEditingState(localizedView);
-    this.renderLocaleStatuses(localizedView);
   }
 
   renderLocaleSelector(localizedView) {
@@ -476,47 +472,6 @@ export default class extends Controller {
     this.clearLocaleRequestButtonTarget.hidden = !localizedView.showClearLocaleRequestButton;
   }
 
-  renderLocaleStatuses(localizedView) {
-    const statusItems = localizedView.localeStatuses.map((entry) => {
-      const node = this.localeStatusTemplateTarget.content.firstElementChild.cloneNode(true);
-      const localeNode = node.querySelector('[data-card-locale-field="locale"]');
-      const badgesNode = node.querySelector('[data-card-locale-field="badges"]');
-      const badges = [
-        createLocaleBadge(this.t(`cardEditor.localeStatus.${entry.status}`))
-      ];
-
-      if (entry.isRequested && entry.status !== 'requested') {
-        badges.push(createLocaleBadge(this.t('cardEditor.localeStatus.requested')));
-      }
-
-      if (entry.isSourceLocale) {
-        badges.push(createLocaleBadge(this.t('cardEditor.localeStatus.source')));
-      }
-
-      if (entry.isDefaultLocale) {
-        badges.push(createLocaleBadge(this.t('cardEditor.localeStatus.default')));
-      }
-
-      if (entry.isRequired) {
-        badges.push(createLocaleBadge(this.t('cardEditor.localeStatus.required')));
-      }
-
-      if (entry.locale === localizedView.selectedLocale) {
-        badges.push(createLocaleBadge(this.t('cardEditor.localeStatus.selected')));
-      }
-
-      if (entry.locale === localizedView.renderedLocale) {
-        badges.push(createLocaleBadge(this.t('cardEditor.localeStatus.rendered')));
-      }
-
-      localeNode.textContent = entry.locale;
-      badgesNode.replaceChildren(...badges);
-      return node;
-    });
-
-    this.localeStatusRegionTarget.replaceChildren(...statusItems);
-  }
-
   getMoveOptionButtons() {
     return [...this.moveOptionRegionTarget.querySelectorAll('[data-card-editor-target="moveOption"]')];
   }
@@ -575,11 +530,4 @@ function createLocaleOption(locale) {
   option.value = locale;
   option.textContent = locale;
   return option;
-}
-
-function createLocaleBadge(text) {
-  const badge = document.createElement('span');
-  badge.className = 'count-chip px-2 py-0.5 text-xs';
-  badge.textContent = text;
-  return badge;
 }

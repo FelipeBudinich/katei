@@ -329,7 +329,7 @@ test('workspace template renders the no-board header with both Options and Profi
   assert.match(html, /No Boards Viewer/);
 });
 
-test('workspace template renders the card editor locale accordion with accessible wiring and preserved locale hooks', () => {
+test('workspace template renders the localized content controls without accordion or locale status markup', () => {
   const workspace = createEmptyWorkspace();
   const html = renderWorkspacePage(
     buildWorkspacePageModel(
@@ -353,32 +353,13 @@ test('workspace template renders the card editor locale accordion with accessibl
 
   assert.match(
     cardEditorDialog,
-    /data-card-editor-target="localeSection"[\s\S]*data-controller="accordion"[\s\S]*data-accordion-open-index-value="0"[\s\S]*workspace:open-card-editor@window->accordion#reset/
+    /data-card-editor-target="localeSection"[\s\S]*Localized content[\s\S]*data-card-editor-target="localeSelect"[\s\S]*data-card-editor-target="localeSummary"[\s\S]*data-card-editor-target="localeFallbackNotice"[\s\S]*data-card-editor-target="localeEditSummary"[\s\S]*data-card-editor-target="localeReadOnlyNotice"[\s\S]*data-card-editor-target="requestLocaleButton"[\s\S]*data-card-editor-target="clearLocaleRequestButton"/
   );
-  assert.match(
-    cardEditorDialog,
-    /id="card-editor-locale-content-trigger"[^>]*aria-expanded="true"[^>]*aria-controls="card-editor-locale-content-panel"/
-  );
-  assert.match(
-    cardEditorDialog,
-    /id="card-editor-available-localizations-trigger"[^>]*aria-expanded="false"[^>]*aria-controls="card-editor-available-localizations-panel"/
-  );
-  assert.match(
-    cardEditorDialog,
-    /id="card-editor-locale-content-panel"[^>]*role="region"[^>]*aria-labelledby="card-editor-locale-content-trigger"/
-  );
-  assert.match(
-    cardEditorDialog,
-    /id="card-editor-available-localizations-panel"[^>]*role="region"[^>]*aria-labelledby="card-editor-available-localizations-trigger"[^>]*hidden/
-  );
-  assert.match(
-    cardEditorDialog,
-    /id="card-editor-locale-content-panel"[\s\S]*data-card-editor-target="localeSelect"[\s\S]*data-card-editor-target="localeSummary"[\s\S]*data-card-editor-target="localeFallbackNotice"[\s\S]*data-card-editor-target="localeEditSummary"[\s\S]*data-card-editor-target="localeReadOnlyNotice"[\s\S]*data-card-editor-target="requestLocaleButton"[\s\S]*data-card-editor-target="clearLocaleRequestButton"/
-  );
-  assert.match(
-    cardEditorDialog,
-    /id="card-editor-available-localizations-panel"[\s\S]*data-card-editor-target="localeStatusRegion"[\s\S]*data-card-editor-target="localeStatusTemplate"/
-  );
+  assert.doesNotMatch(cardEditorDialog, /data-controller="accordion"/);
+  assert.doesNotMatch(cardEditorDialog, /data-accordion-/);
+  assert.doesNotMatch(cardEditorDialog, /Available localizations/);
+  assert.doesNotMatch(cardEditorDialog, /data-card-editor-target="localeStatusRegion"/);
+  assert.doesNotMatch(cardEditorDialog, /data-card-editor-target="localeStatusTemplate"/);
 });
 
 test('GET /boards bootstraps normalized workspace snapshots when the loaded record is legacy-shaped', async () => {
