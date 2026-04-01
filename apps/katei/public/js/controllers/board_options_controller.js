@@ -270,23 +270,49 @@ export default class extends Controller {
   }
 
   renderPendingWorkspaceInvites() {
-    const inviteItems = this.getVisiblePendingWorkspaceInvites().map((invite) => this.createInviteListItem(invite));
+    const inviteInspection = this.inspectPendingWorkspaceInvites();
+    const inviteItems = inviteInspection.visibleInvites.map((invite) => this.createInviteListItem(invite));
+    const boardRowActions = this.getBoardRowInviteActionState();
+
+    logInviteDebug('client.invite.render', {
+      source: 'board-options',
+      activeWorkspaceId: inviteInspection.activeWorkspaceId,
+      activeBoardId: normalizeOptionalWorkspaceId(this.workspace?.ui?.activeBoardId),
+      rawInviteIds: inviteInspection.rawInviteIds,
+      visibleInviteIds: inviteInspection.visibleInvites.map((invite) => invite.inviteId),
+      sameWorkspaceRejectedIds: inviteInspection.sameWorkspaceRejectedIds,
+      malformedRejectedIds: inviteInspection.malformedRejectedIds,
+      boardRowsWithAccept: boardRowActions
+        .filter((row) => row.acceptVisible)
+        .map(({ boardId, inviteId }) => ({ boardId, inviteId })),
+      boardRowsWithDecline: boardRowActions
+        .filter((row) => row.declineVisible)
+        .map(({ boardId, inviteId }) => ({ boardId, inviteId }))
+    });
 
     this.inviteSectionTarget.hidden = inviteItems.length === 0;
     this.inviteListTarget.replaceChildren(...inviteItems);
   }
 
   getVisiblePendingWorkspaceInvites() {
+    return this.inspectPendingWorkspaceInvites().visibleInvites;
+  }
+
+  inspectPendingWorkspaceInvites() {
     const activeWorkspaceId =
       normalizeOptionalWorkspaceId(this.activeWorkspaceId) ??
       normalizeOptionalWorkspaceId(this.workspace?.workspaceId);
+    const rawInviteIds = [];
     const visibleInvites = [];
+    const sameWorkspaceRejectedIds = [];
+    const malformedRejectedIds = [];
 
     for (const invite of Array.isArray(this.pendingWorkspaceInvites) ? this.pendingWorkspaceInvites : []) {
       const inviteWorkspaceId = normalizeOptionalWorkspaceId(invite?.workspaceId);
       const boardId = normalizeOptionalString(invite?.boardId);
       const inviteId = normalizeOptionalString(invite?.inviteId);
       const boardTitle = normalizeOptionalString(invite?.boardTitle);
+      const inviteKey = inviteId || [inviteWorkspaceId ?? 'unknown-workspace', boardId || 'unknown-board', 'unknown-invite'].join(':');
       const visible = Boolean(
         inviteWorkspaceId &&
           boardId &&
@@ -308,12 +334,39 @@ export default class extends Controller {
           : (!inviteWorkspaceId || !boardId || !inviteId || !boardTitle ? 'malformed' : 'same-workspace')
       });
 
+      if (inviteId) {
+        rawInviteIds.push(inviteId);
+      }
+
       if (visible) {
         visibleInvites.push(invite);
+      } else if (!inviteWorkspaceId || !boardId || !inviteId || !boardTitle) {
+        malformedRejectedIds.push(inviteKey);
+      } else {
+        sameWorkspaceRejectedIds.push(inviteKey);
       }
     }
 
-    return visibleInvites;
+    return {
+      activeWorkspaceId,
+      rawInviteIds,
+      visibleInvites,
+      sameWorkspaceRejectedIds,
+      malformedRejectedIds
+    };
+  }
+
+  getBoardRowInviteActionState() {
+    return (this.optionsState?.boardStates ?? []).map((boardState) => {
+      const actionState = createBoardListActionState(boardState);
+
+      return {
+        boardId: boardState.boardId,
+        inviteId: actionState.inviteId,
+        acceptVisible: !actionState.inviteAcceptHidden,
+        declineVisible: !actionState.inviteDeclineHidden
+      };
+    });
   }
 
   dispatchInviteResponse(actionName, dataset = {}) {

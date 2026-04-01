@@ -3,7 +3,7 @@ import { normalizeBoardCollaboration } from '../../public/js/domain/board_collab
 import { migrateWorkspaceSnapshot } from '../../public/js/domain/workspace_migrations.js';
 import { validateWorkspaceShape } from '../../public/js/domain/workspace_validation.js';
 import { applyWorkspaceCommand, WorkspaceCommandPermissionError } from '../workspaces/apply_workspace_command.js';
-import { createInviteDebugLogger } from '../lib/invite_debug.js';
+import { buildInviteResponseDebugFields, createInviteDebugLogger } from '../lib/invite_debug.js';
 import { createDefaultMutationContext } from '../workspaces/mutation_context.js';
 import {
   createCommandAppliedWorkspaceRecord,
@@ -36,7 +36,13 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
         }),
         listPendingWorkspaceInvitesForRequest(workspaceRecordRepository, request, debugLog)
       ]);
-      response.json(createWorkspaceApiResponse(record, undefined, pendingWorkspaceInvites));
+      sendWorkspaceApiResponse(response, {
+        debugLog,
+        request,
+        route: 'GET /api/workspace',
+        record,
+        pendingWorkspaceInvites
+      });
     } catch (error) {
       if (error instanceof WorkspaceAccessDeniedError || error?.code === 'WORKSPACE_ACCESS_DENIED') {
         response.status(404).json({
@@ -109,13 +115,13 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
       });
       const pendingWorkspaceInvites = await listPendingWorkspaceInvitesForRequest(workspaceRecordRepository, request, debugLog);
 
-      response.json(
-        createWorkspaceApiResponse(
-          projectRecordForViewer(fullRecord, createViewerProjectionContext(request.viewer, debugLog)),
-          undefined,
-          pendingWorkspaceInvites
-        )
-      );
+      sendWorkspaceApiResponse(response, {
+        debugLog,
+        request,
+        route: 'PUT /api/workspace',
+        record: projectRecordForViewer(fullRecord, createViewerProjectionContext(request.viewer, debugLog)),
+        pendingWorkspaceInvites
+      });
     } catch (error) {
       if (error instanceof WorkspaceAccessDeniedError || error?.code === 'WORKSPACE_ACCESS_DENIED') {
         response.status(404).json({
@@ -172,7 +178,14 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
 
       if (existingReceipt) {
         const pendingWorkspaceInvites = await listPendingWorkspaceInvitesForRequest(workspaceRecordRepository, request, debugLog);
-        response.json(createWorkspaceApiResponse(projectedCurrentRecord, existingReceipt.result, pendingWorkspaceInvites));
+        sendWorkspaceApiResponse(response, {
+          debugLog,
+          request,
+          route: 'POST /api/workspace/commands',
+          record: projectedCurrentRecord,
+          result: existingReceipt.result,
+          pendingWorkspaceInvites
+        });
         return;
       }
 
@@ -189,7 +202,14 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
 
       if (application.result.noOp) {
         const pendingWorkspaceInvites = await listPendingWorkspaceInvitesForRequest(workspaceRecordRepository, request, debugLog);
-        response.json(createWorkspaceApiResponse(projectedCurrentRecord, application.result, pendingWorkspaceInvites));
+        sendWorkspaceApiResponse(response, {
+          debugLog,
+          request,
+          route: 'POST /api/workspace/commands',
+          record: projectedCurrentRecord,
+          result: application.result,
+          pendingWorkspaceInvites
+        });
         return;
       }
 
@@ -214,13 +234,14 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
       logPersistedInvite(debugLog, persistedRecord, application.result);
       const pendingWorkspaceInvites = await listPendingWorkspaceInvitesForRequest(workspaceRecordRepository, request, debugLog);
 
-      response.json(
-        createWorkspaceApiResponse(
-          projectRecordForViewer(persistedRecord, createViewerProjectionContext(request.viewer, debugLog)),
-          application.result,
-          pendingWorkspaceInvites
-        )
-      );
+      sendWorkspaceApiResponse(response, {
+        debugLog,
+        request,
+        route: 'POST /api/workspace/commands',
+        record: projectRecordForViewer(persistedRecord, createViewerProjectionContext(request.viewer, debugLog)),
+        result: application.result,
+        pendingWorkspaceInvites
+      });
     } catch (error) {
       if (error instanceof WorkspaceAccessDeniedError || error?.code === 'WORKSPACE_ACCESS_DENIED') {
         response.status(404).json({
@@ -281,13 +302,13 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
       });
       const pendingWorkspaceInvites = await listPendingWorkspaceInvitesForRequest(workspaceRecordRepository, request, debugLog);
 
-      response.json(
-        createWorkspaceApiResponse(
-          projectRecordForViewer(fullRecord, createViewerProjectionContext(request.viewer, debugLog)),
-          undefined,
-          pendingWorkspaceInvites
-        )
-      );
+      sendWorkspaceApiResponse(response, {
+        debugLog,
+        request,
+        route: 'POST /api/workspace/import',
+        record: projectRecordForViewer(fullRecord, createViewerProjectionContext(request.viewer, debugLog)),
+        pendingWorkspaceInvites
+      });
     } catch (error) {
       if (error instanceof WorkspaceAccessDeniedError || error?.code === 'WORKSPACE_ACCESS_DENIED') {
         response.status(404).json({
@@ -344,6 +365,29 @@ function createWorkspaceApiResponse(record, result = undefined, pendingWorkspace
   }
 
   return payload;
+}
+
+function sendWorkspaceApiResponse(response, {
+  debugLog = null,
+  request = null,
+  route = null,
+  record,
+  result = undefined,
+  pendingWorkspaceInvites = []
+} = {}) {
+  const payload = createWorkspaceApiResponse(record, result, pendingWorkspaceInvites);
+
+  if (typeof debugLog === 'function') {
+    debugLog('invite.response.summary', buildInviteResponseDebugFields({
+      route,
+      viewer: request?.viewer,
+      workspace: payload.workspace,
+      activeWorkspace: payload.activeWorkspace,
+      pendingWorkspaceInvites: payload.pendingWorkspaceInvites
+    }));
+  }
+
+  response.json(payload);
 }
 
 function createInvalidWorkspaceResponse() {

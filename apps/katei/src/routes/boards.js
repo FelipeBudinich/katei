@@ -8,7 +8,7 @@ import {
   createEmptyWorkspace
 } from '../../public/js/domain/workspace_read_model.js';
 import { getColumnDisplayLabel, getPriorityDisplayLabel } from '../../public/js/i18n/workspace_labels.js';
-import { createInviteDebugLogger } from '../lib/invite_debug.js';
+import { buildInviteResponseDebugFields, createInviteDebugLogger } from '../lib/invite_debug.js';
 import { WorkspaceAccessDeniedError } from '../workspaces/workspace_record_repository.js';
 
 export function createBoardsRouter({ requireSession, workspaceRecordRepository }) {
@@ -40,16 +40,26 @@ export function createBoardsRouter({ requireSession, workspaceRecordRepository }
         })
       ]);
 
-      response.render(
-        'pages/workspace',
-        buildWorkspacePageModel(
-          request.viewer,
-          response.locals.t,
-          record.workspace,
-          createWorkspaceBootstrapMeta(record),
-          pendingWorkspaceInvites
-        )
+      const pageModel = buildWorkspacePageModel(
+        request.viewer,
+        response.locals.t,
+        record.workspace,
+        createWorkspaceBootstrapMeta(record),
+        pendingWorkspaceInvites
       );
+
+      debugLog('invite.response.summary', buildInviteResponseDebugFields({
+        route: 'GET /boards',
+        viewer: request.viewer,
+        workspace: pageModel.workspace,
+        activeWorkspace: {
+          workspaceId: record.workspaceId,
+          isHomeWorkspace: record.isHomeWorkspace
+        },
+        pendingWorkspaceInvites
+      }));
+
+      response.render('pages/workspace', pageModel);
     } catch (error) {
       if (error instanceof WorkspaceAccessDeniedError || error?.code === 'WORKSPACE_ACCESS_DENIED') {
         response.status(404).send('Workspace not found.');

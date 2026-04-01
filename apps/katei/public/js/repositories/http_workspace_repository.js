@@ -127,6 +127,8 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
     });
     const data = await parseJsonResponse(response);
 
+    logInviteDebug('client.invite.payload', buildRawPayloadDebugFields('api', data));
+
     if (!response.ok) {
       throw createWorkspaceApiError(response, data, fallbackMessage);
     }
@@ -167,6 +169,7 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
 
     try {
       const payload = JSON.parse(bootstrapElement.textContent);
+      logInviteDebug('client.invite.payload', buildRawPayloadDebugFields('bootstrap', payload));
       const workspace = normalizeWorkspaceSnapshot(payload?.workspace);
 
       if (!validateActorFacingWorkspaceShape(workspace)) {
@@ -191,6 +194,14 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
     this.#setMeta(payload?.meta ?? null);
     this.pendingWorkspaceInvites = normalizePendingWorkspaceInvites(payload?.pendingWorkspaceInvites);
     const activeWorkspace = normalizeActiveWorkspace(payload?.activeWorkspace, payload?.workspace);
+    const workspace = isPlainObject(payload?.workspace) ? payload.workspace : null;
+    const rawPendingWorkspaceInvites = Array.isArray(payload?.pendingWorkspaceInvites) ? payload.pendingWorkspaceInvites : [];
+    const rawPendingWorkspaceInviteIds = rawPendingWorkspaceInvites
+      .map((invite) => normalizeOptionalWorkspaceId(invite?.inviteId))
+      .filter(Boolean);
+    const normalizedPendingWorkspaceInviteIds = this.pendingWorkspaceInvites.map((invite) => invite.inviteId);
+    const boardOrder = Array.isArray(workspace?.boardOrder) ? workspace.boardOrder.filter((boardId) => typeof boardId === 'string') : [];
+    const activeBoardId = normalizeOptionalWorkspaceId(workspace?.ui?.activeBoardId);
 
     this.activeWorkspaceId = activeWorkspace?.workspaceId ?? this.activeWorkspaceId ?? null;
     this.isHomeWorkspace =
@@ -198,6 +209,14 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
 
     logInviteDebug('client.invite.state', {
       source,
+      rawPendingWorkspaceInviteIds,
+      rawPendingWorkspaceInviteCount: rawPendingWorkspaceInvites.length,
+      normalizedPendingWorkspaceInviteIds,
+      normalizedPendingWorkspaceInviteCount: this.pendingWorkspaceInvites.length,
+      droppedInviteCount: Math.max(rawPendingWorkspaceInvites.length - this.pendingWorkspaceInvites.length, 0),
+      workspaceId: normalizeOptionalWorkspaceId(workspace?.workspaceId),
+      boardOrder,
+      activeBoardId,
       activeWorkspaceId: this.activeWorkspaceId,
       isHomeWorkspace: this.isHomeWorkspace,
       pendingWorkspaceInvitesCount: this.pendingWorkspaceInvites.length,
@@ -347,4 +366,64 @@ function normalizeOptionalIsoString(value) {
 
   const parsedValue = new Date(value);
   return Number.isNaN(parsedValue.getTime()) ? null : parsedValue.toISOString();
+}
+
+function buildRawPayloadDebugFields(source, payload) {
+  const workspace = isPlainObject(payload?.workspace) ? payload.workspace : null;
+  const rawPendingWorkspaceInvites = Array.isArray(payload?.pendingWorkspaceInvites) ? payload.pendingWorkspaceInvites : [];
+
+  return {
+    source,
+    rawPendingWorkspaceInviteIds: rawPendingWorkspaceInvites
+      .map((invite) => normalizeOptionalWorkspaceId(invite?.inviteId))
+      .filter(Boolean),
+    rawPendingWorkspaceInviteCount: rawPendingWorkspaceInvites.length,
+    rawWorkspaceId: normalizeOptionalWorkspaceId(workspace?.workspaceId),
+    rawBoardOrder: Array.isArray(workspace?.boardOrder) ? workspace.boardOrder.filter((boardId) => typeof boardId === 'string') : [],
+    rawActiveBoardId: normalizeOptionalWorkspaceId(workspace?.ui?.activeBoardId),
+    rawProjectedBoardIds: collectBoardIds(workspace),
+    rawProjectedBoardInviteIdsByBoard: collectBoardInviteIdsByBoard(workspace)
+  };
+}
+
+function collectBoardIds(workspace) {
+  const boardIds = [];
+  const seenBoardIds = new Set();
+
+  for (const boardId of Array.isArray(workspace?.boardOrder) ? workspace.boardOrder : []) {
+    if (typeof boardId !== 'string' || seenBoardIds.has(boardId) || !workspace?.boards?.[boardId]) {
+      continue;
+    }
+
+    seenBoardIds.add(boardId);
+    boardIds.push(boardId);
+  }
+
+  for (const boardId of Object.keys(workspace?.boards ?? {})) {
+    if (seenBoardIds.has(boardId)) {
+      continue;
+    }
+
+    seenBoardIds.add(boardId);
+    boardIds.push(boardId);
+  }
+
+  return boardIds;
+}
+
+function collectBoardInviteIdsByBoard(workspace) {
+  return Object.fromEntries(
+    collectBoardIds(workspace).map((boardId) => {
+      const rawInvites = Array.isArray(workspace?.boards?.[boardId]?.collaboration?.invites)
+        ? workspace.boards[boardId].collaboration.invites
+        : [];
+
+      return [
+        boardId,
+        rawInvites
+          .map((invite) => normalizeOptionalWorkspaceId(invite?.id))
+          .filter(Boolean)
+      ];
+    })
+  );
 }

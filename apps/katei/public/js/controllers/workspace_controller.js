@@ -845,6 +845,9 @@ export default class extends Controller {
       source: 'workspace-controller',
       viewerSub: this.viewerActor?.id ?? null,
       viewerEmail: this.viewerActor?.email ?? null,
+      workspaceId: this.workspace?.workspaceId ?? null,
+      workspaceBoardOrder: Array.isArray(this.workspace?.boardOrder) ? this.workspace.boardOrder : [],
+      workspaceActiveBoardId: this.workspace?.ui?.activeBoardId ?? null,
       activeWorkspaceId: detail.activeWorkspaceId,
       pendingWorkspaceInvitesCount: detail.pendingWorkspaceInvites.length,
       pendingWorkspaceInviteIds: detail.pendingWorkspaceInvites.map((invite) => invite.inviteId)

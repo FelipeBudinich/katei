@@ -1,5 +1,6 @@
 import { Controller } from '../../vendor/stimulus/stimulus.js';
 import { getBrowserTranslator } from '../i18n/browser.js';
+import { logInviteDebug } from '../lib/invite_debug.js';
 import {
   createBoardMemberRemoveDetail,
   createBoardMemberRoleChangeDetail,
@@ -142,6 +143,17 @@ export default class extends Controller {
       this.inviteSectionTarget.hidden = true;
       return;
     }
+
+    const pendingInvites = Array.isArray(this.collaborationState.pendingInvites) ? this.collaborationState.pendingInvites : [];
+
+    logInviteDebug('client.invite.render', {
+      source: 'board-collaborators',
+      boardId: this.board.id,
+      currentRoleStatus: this.collaborationState.currentRoleStatus,
+      pendingInviteIds: pendingInvites.map((invite) => invite.id),
+      acceptVisibleIds: pendingInvites.filter((invite) => invite.canRespond).map((invite) => invite.id),
+      declineVisibleIds: pendingInvites.filter((invite) => invite.canRespond).map((invite) => invite.id)
+    });
 
     this.headingTarget.textContent = this.t('collaborators.heading', { title: this.board.title });
     this.currentRoleTarget.textContent = this.t('collaborators.currentRoleValue', {
