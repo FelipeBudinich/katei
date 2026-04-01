@@ -11,10 +11,21 @@
       <div>
         <h2 class="font-serif text-3xl text-strong" data-card-editor-target="heading">{{ t('cardEditor.newHeading') }}</h2>
       </div>
-      <button type="button" class="touch-button-secondary" data-action="card-editor#close">{{ t('common.close') }}</button>
+
+      <div class="flex items-center gap-2">
+        <div data-card-editor-target="submitActions">
+          <button type="submit" form="card-editor-form" class="touch-button-primary">
+            {{ t('cardEditor.saveButton') }}
+          </button>
+        </div>
+
+        <button type="button" class="touch-button-secondary" data-action="card-editor#close">
+          {{ t('common.close') }}
+        </button>
+      </div>
     </div>
 
-    <form class="mt-6 space-y-4" data-card-editor-target="form" data-action="submit->card-editor#submit">
+    <form id="card-editor-form" class="mt-6 space-y-4" data-card-editor-target="form" data-action="submit->card-editor#submit">
       <input type="hidden" name="mode" value="create" data-card-editor-target="modeInput">
       <input type="hidden" name="boardId" value="" data-card-editor-target="boardIdInput">
       <input type="hidden" name="cardId" value="" data-card-editor-target="cardIdInput">
@@ -154,10 +165,6 @@
           </button>
         </template>
       </section>
-
-      <div class="dialog-actions pt-2" data-card-editor-target="submitActions">
-        <button type="submit" class="touch-button-primary">{{ t('cardEditor.saveButton') }}</button>
-      </div>
     </form>
   </div>
 </dialog>

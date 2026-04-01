@@ -544,10 +544,7 @@ function createMarkdownToolbar(EasyMDE, t) {
     createToolbarButton('unordered-list', t('cardEditor.markdownToolbar.bullets'), EasyMDE.toggleUnorderedList),
     createToolbarButton('ordered-list', t('cardEditor.markdownToolbar.numbers'), EasyMDE.toggleOrderedList),
     '|',
-    createToolbarButton('code', t('cardEditor.markdownToolbar.code'), EasyMDE.toggleCodeBlock),
-    createToolbarButton('link', t('cardEditor.markdownToolbar.link'), EasyMDE.drawLink),
-    '|',
-    createToolbarButton('preview', t('cardEditor.markdownToolbar.preview'), EasyMDE.togglePreview, { noDisable: true })
+    createToolbarButton('code', t('cardEditor.markdownToolbar.code'), EasyMDE.toggleCodeBlock)
   ];
 }
 
