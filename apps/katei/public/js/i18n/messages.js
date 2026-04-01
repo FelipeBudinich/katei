@@ -195,13 +195,28 @@ const EN_MESSAGES = freezeCatalog({
     moveStateCurrent: 'Current',
     moveStateSelected: 'Selected',
     markdownToolbar: {
-      bold: 'Bold',
-      italic: 'Italic',
-      heading: 'H2',
+      bold: {
+        text: 'B',
+        label: 'Bold'
+      },
+      italic: {
+        text: 'I',
+        label: 'Italic'
+      },
+      heading: {
+        text: 'H',
+        label: 'Heading 2'
+      },
       quote: 'Quote',
-      bullets: 'Bullets',
+      bullets: {
+        text: '•',
+        label: 'Bulleted list'
+      },
       numbers: 'Numbers',
-      code: 'Code',
+      code: {
+        text: 'Code',
+        label: 'Code'
+      },
       link: 'Link',
       preview: 'Preview'
     }
@@ -470,13 +485,28 @@ const ES_CL_MESSAGES = freezeCatalog({
     moveStateCurrent: 'Actual',
     moveStateSelected: 'Seleccionada',
     markdownToolbar: {
-      bold: 'Negrita',
-      italic: 'Cursiva',
-      heading: 'H2',
+      bold: {
+        text: 'B',
+        label: 'Negrita'
+      },
+      italic: {
+        text: 'I',
+        label: 'Cursiva'
+      },
+      heading: {
+        text: 'H',
+        label: 'Encabezado 2'
+      },
       quote: 'Cita',
-      bullets: 'Viñetas',
+      bullets: {
+        text: '•',
+        label: 'Lista con viñetas'
+      },
       numbers: 'Números',
-      code: 'Código',
+      code: {
+        text: 'Code',
+        label: 'Código'
+      },
       link: 'Enlace',
       preview: 'Vista previa'
     }
@@ -745,13 +775,28 @@ const JA_MESSAGES = freezeCatalog({
     moveStateCurrent: '現在',
     moveStateSelected: '選択中',
     markdownToolbar: {
-      bold: '太字',
-      italic: '斜体',
-      heading: 'H2',
+      bold: {
+        text: 'B',
+        label: '太字'
+      },
+      italic: {
+        text: 'I',
+        label: '斜体'
+      },
+      heading: {
+        text: 'H',
+        label: '見出し 2'
+      },
       quote: '引用',
-      bullets: '箇条書き',
+      bullets: {
+        text: '•',
+        label: '箇条書きリスト'
+      },
       numbers: '番号付き',
-      code: 'コード',
+      code: {
+        text: 'Code',
+        label: 'コード'
+      },
       link: 'リンク',
       preview: 'プレビュー'
     }

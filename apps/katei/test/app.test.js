@@ -343,7 +343,7 @@ test('workspace template renders the no-board header with both Options and Profi
   assert.match(html, /No Boards Viewer/);
 });
 
-test('workspace template renders the localized content controls without accordion or locale status markup', () => {
+test('workspace template renders edit localization controls and a simplified localized view dialog', () => {
   const workspace = createEmptyWorkspace();
   const html = renderWorkspacePage(
     buildWorkspacePageModel(
@@ -364,10 +364,11 @@ test('workspace template renders the localized content controls without accordio
     )
   );
   const cardEditorDialog = extractDialogHtml(html, 'card-editor');
+  const cardViewDialog = extractDialogByTarget(html, 'viewDialog');
 
   assert.match(
     cardEditorDialog,
-    /data-card-editor-target="localeSection"[\s\S]*data-card-editor-target="localeSelect"[\s\S]*data-card-editor-target="localeSummary"[\s\S]*data-card-editor-target="localeFallbackNotice"[\s\S]*data-card-editor-target="localeEditSummary"[\s\S]*data-card-editor-target="localeReadOnlyNotice"[\s\S]*data-card-editor-target="requestLocaleButton"[\s\S]*data-card-editor-target="clearLocaleRequestButton"/
+    /data-card-editor-target="localeSection"[\s\S]*data-card-editor-target="localeSelect"[\s\S]*data-card-editor-target="requestLocaleButton"[\s\S]*data-card-editor-target="clearLocaleRequestButton"/
   );
   assert.doesNotMatch(cardEditorDialog, /Localized content/);
   assert.doesNotMatch(cardEditorDialog, /data-controller="accordion"/);
@@ -375,6 +376,17 @@ test('workspace template renders the localized content controls without accordio
   assert.doesNotMatch(cardEditorDialog, /Available localizations/);
   assert.doesNotMatch(cardEditorDialog, /data-card-editor-target="localeStatusRegion"/);
   assert.doesNotMatch(cardEditorDialog, /data-card-editor-target="localeStatusTemplate"/);
+
+  assert.match(
+    cardViewDialog,
+    /data-workspace-target="viewCardTitle"[\s\S]*data-workspace-target="viewLocaleSection"[\s\S]*data-workspace-target="viewLocaleSelect"[\s\S]*data-workspace-target="viewCardBody"/
+  );
+  assert.doesNotMatch(cardViewDialog, /data-card-editor-target="titleInput"/);
+  assert.doesNotMatch(cardViewDialog, /data-card-editor-target="markdownInput"/);
+  assert.doesNotMatch(cardViewDialog, /data-card-editor-target="localeSummary"/);
+  assert.doesNotMatch(cardViewDialog, /data-card-editor-target="localeFallbackNotice"/);
+  assert.doesNotMatch(cardViewDialog, /data-card-editor-target="localeEditSummary"/);
+  assert.doesNotMatch(cardViewDialog, /data-card-editor-target="localeReadOnlyNotice"/);
 });
 
 test('GET /boards bootstraps normalized workspace snapshots when the loaded record is legacy-shaped', async () => {
@@ -1418,6 +1430,21 @@ function extractDialogHtml(html, controllerName) {
 
   if (!match) {
     throw new Error(`Dialog for controller "${controllerName}" was not rendered.`);
+  }
+
+  return match[0];
+}
+
+function extractDialogByTarget(html, targetName) {
+  const match = html.match(
+    new RegExp(
+      `<dialog\\b(?:(?!<\\/dialog>).)*data-workspace-target="${escapeForRegex(targetName)}"(?:(?!<\\/dialog>).)*<\\/dialog>`,
+      's'
+    )
+  );
+
+  if (!match) {
+    throw new Error(`Dialog for workspace target "${targetName}" was not rendered.`);
   }
 
   return match[0];

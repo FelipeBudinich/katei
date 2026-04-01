@@ -7,8 +7,6 @@
     --font-serif: var(--font-serif-family);
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
       "Courier New", monospace;
-    --color-black: #000;
-    --color-white: #fff;
     --spacing: 0.25rem;
     --container-md: 28rem;
     --container-xl: 36rem;
@@ -34,7 +32,6 @@
     --leading-tight: 1.25;
     --radius-xl: 0.75rem;
     --radius-2xl: 1rem;
-    --ease-out: cubic-bezier(0, 0, 0.2, 1);
     --default-transition-duration: 150ms;
     --default-transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
     --default-font-family: var(--font-sans-family);
@@ -190,6 +187,9 @@
   }
 }
 @layer utilities {
+  .collapse {
+    visibility: collapse;
+  }
   .visible {
     visibility: visible;
   }
@@ -1832,6 +1832,14 @@
   .EasyMDEContainer .editor-toolbar button:focus-visible {
     outline: 2px solid transparent;
     box-shadow: 0 0 0 4px var(--color-focus-ring);
+  }
+  dialog.sheet-dialog[data-controller~="card-editor"] .EasyMDEContainer .editor-toolbar button {
+    letter-spacing: normal;
+    text-transform: none;
+  }
+  dialog.sheet-dialog[data-controller~="card-editor"] .EasyMDEContainer .editor-toolbar button.heading-2::after {
+    content: none;
+    display: none;
   }
   .EasyMDEContainer .editor-toolbar i.separator {
     width: 1px;

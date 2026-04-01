@@ -26,16 +26,27 @@
       </button>
     </div>
 
-    <dl class="mt-6 space-y-4">
-      <div class="space-y-2">
-        <dt class="field-label text-sm font-semibold">{{ t('cardViewDialog.detailsLabel') }}</dt>
-        <dd class="markdown-rendered text-sm leading-6 text-muted" data-workspace-target="viewCardBody"></dd>
-      </div>
+    <div class="mt-6 space-y-4">
+      <label class="block space-y-2" hidden data-workspace-target="viewLocaleSection">
+        <span class="field-label text-sm font-semibold">{{ t('cardEditor.localeLabel') }}</span>
+        <select
+          class="field-control"
+          data-action="change->workspace#changeViewLocale"
+          data-workspace-target="viewLocaleSelect"
+        ></select>
+      </label>
 
-      <div class="space-y-2">
-        <dt class="field-label text-sm font-semibold">{{ t('cardViewDialog.updatedLabel') }}</dt>
-        <dd class="text-sm leading-6 text-muted" data-workspace-target="viewCardUpdated"></dd>
-      </div>
-    </dl>
+      <dl class="space-y-4">
+        <div class="space-y-2">
+          <dt class="field-label text-sm font-semibold">{{ t('cardViewDialog.detailsLabel') }}</dt>
+          <dd class="markdown-rendered text-sm leading-6 text-muted" data-workspace-target="viewCardBody"></dd>
+        </div>
+
+        <div class="space-y-2">
+          <dt class="field-label text-sm font-semibold">{{ t('cardViewDialog.updatedLabel') }}</dt>
+          <dd class="text-sm leading-6 text-muted" data-workspace-target="viewCardUpdated"></dd>
+        </div>
+      </dl>
+    </div>
   </div>
 </dialog>

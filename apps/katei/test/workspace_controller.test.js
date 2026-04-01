@@ -582,6 +582,100 @@ test('openEdit and openView card dialog state preserves raw localized card data 
   });
 });
 
+test('openView uses the dedicated view dialog and limits locales to present localized variants', () => {
+  const restoreDom = installViewDialogDomStubs();
+
+  try {
+    const { controller, card } = createViewDialogController();
+    const trigger = createViewTriggerDouble(card.id, 'review', { requestedLocale: 'ja' });
+
+    WorkspaceController.prototype.openView.call(controller, {
+      currentTarget: trigger
+    });
+
+    assert.equal(controller.viewDialogTarget.open, true);
+    assert.equal(controller.viewTriggerElement, trigger);
+    assert.deepEqual(
+      controller.viewLocaleSelectTarget.options.map((option) => option.value),
+      ['en', 'es-CL']
+    );
+    assert.equal(controller.viewLocaleSelectTarget.value, 'es-CL');
+    assert.equal(controller.viewDialogState.selectedLocale, 'es-CL');
+    assert.equal(controller.viewCardTitleTarget.textContent, 'Titulo por defecto');
+    assert.equal(controller.viewCardBodyTarget.innerHTML, '<p>Detalles por defecto</p>');
+    assert.equal(controller.viewCardPrioritySectionTarget.hidden, false);
+    assert.equal(controller.viewCardUpdatedTarget.textContent, 'Apr 1, 2026, 8:00 AM');
+  } finally {
+    restoreDom();
+  }
+});
+
+test('changeViewLocale rerenders the localized reader content', () => {
+  const restoreDom = installViewDialogDomStubs();
+
+  try {
+    const { controller, card } = createViewDialogController();
+
+    WorkspaceController.prototype.openView.call(controller, {
+      currentTarget: createViewTriggerDouble(card.id, 'review', { requestedLocale: 'es-CL' })
+    });
+
+    WorkspaceController.prototype.changeViewLocale.call(controller, {
+      preventDefault() {},
+      currentTarget: {
+        value: 'en'
+      }
+    });
+
+    assert.equal(controller.viewDialogState.selectedLocale, 'en');
+    assert.equal(controller.viewLocaleSelectTarget.value, 'en');
+    assert.equal(controller.viewCardTitleTarget.textContent, 'English source');
+    assert.equal(controller.viewCardBodyTarget.innerHTML, '<p>English details</p>');
+  } finally {
+    restoreDom();
+  }
+});
+
+test('syncViewDialog uses the empty-details fallback when the selected locale has no markdown body', () => {
+  const restoreDom = installViewDialogDomStubs();
+
+  try {
+    const { controller, board, card } = createViewDialogController({
+      contentByLocale: {
+        en: {
+          title: 'English source',
+          detailsMarkdown: ''
+        }
+      },
+      languagePolicy: {
+        sourceLocale: 'en',
+        defaultLocale: 'en',
+        supportedLocales: ['en', 'ja'],
+        requiredLocales: ['en']
+      }
+    });
+
+    controller.viewDialogState = {
+      board,
+      card,
+      stageId: 'review',
+      selectedLocale: 'en'
+    };
+
+    WorkspaceController.prototype.syncViewDialog.call(controller);
+
+    assert.equal(controller.viewLocaleSectionTarget.hidden, false);
+    assert.deepEqual(
+      controller.viewLocaleSelectTarget.options.map((option) => option.value),
+      ['en']
+    );
+    assert.equal(controller.viewCardTitleTarget.textContent, 'English source');
+    assert.equal(controller.viewCardBodyTarget.textContent, 'No details added.');
+  } finally {
+    restoreDom();
+  }
+});
+
 test('localized save planning calls upsertCardLocale first and keeps priority and stage updates alongside it', () => {
   const board = createBoardWithCustomStages();
   const card = {
@@ -868,5 +962,198 @@ function createColumnPanelDouble({ stageId, columnId, cardCount = 0 } = {}) {
     toggleElement,
     bodyElement,
     cardsElement
+  };
+}
+
+function createViewDialogController({
+  contentByLocale = {
+    en: {
+      title: 'English source',
+      detailsMarkdown: 'English details',
+      provenance: null
+    },
+    'es-CL': {
+      title: 'Titulo por defecto',
+      detailsMarkdown: 'Detalles por defecto',
+      provenance: null
+    }
+  },
+  languagePolicy = {
+    sourceLocale: 'en',
+    defaultLocale: 'es-CL',
+    supportedLocales: ['en', 'es-CL', 'ja'],
+    requiredLocales: ['en', 'ja']
+  }
+} = {}) {
+  const workspace = createEmptyWorkspace();
+  const board = createBoardWithCustomStages();
+  const card = {
+    id: 'card_localized',
+    priority: 'important',
+    createdAt: '2026-03-31T09:00:00.000Z',
+    updatedAt: '2026-03-31T11:00:00.000Z',
+    contentByLocale,
+    localeRequests: {
+      ja: {
+        locale: 'ja',
+        status: 'open',
+        requestedBy: { type: 'human', id: 'viewer_123' },
+        requestedAt: '2026-03-31T12:00:00.000Z'
+      }
+    }
+  };
+
+  board.languagePolicy = languagePolicy;
+  board.cards[card.id] = card;
+  board.stages.review.cardIds = [card.id];
+  workspace.boards = {
+    [board.id]: board
+  };
+  workspace.boardOrder = [board.id];
+  workspace.ui.activeBoardId = board.id;
+
+  const controller = Object.create(WorkspaceController.prototype);
+  controller.workspace = workspace;
+  controller.t = (key) => (key === 'workspace.view.noDetails' ? 'No details added.' : key);
+  controller.dateTimeFormatter = {
+    format() {
+      return 'Apr 1, 2026, 8:00 AM';
+    }
+  };
+  controller.viewDialogTarget = createDialogDouble();
+  controller.hasViewLocaleSectionTarget = true;
+  controller.viewLocaleSectionTarget = { hidden: true };
+  controller.hasViewLocaleSelectTarget = true;
+  controller.viewLocaleSelectTarget = createSelectDouble();
+  controller.viewCardTitleTarget = { textContent: '' };
+  controller.viewCardBodyTarget = createContentRegionDouble();
+  controller.viewCardPrioritySectionTarget = { hidden: true };
+  controller.viewCardPriorityTarget = { textContent: '' };
+  controller.viewCardUpdatedTarget = { textContent: '' };
+  controller.viewDialogState = null;
+  controller.viewTriggerElement = null;
+
+  return {
+    controller,
+    workspace,
+    board,
+    card
+  };
+}
+
+function createViewTriggerDouble(cardId, stageId, { requestedLocale = null } = {}) {
+  return {
+    dataset: {
+      cardId,
+      stageId,
+      columnId: stageId,
+      ...(requestedLocale ? { requestedLocale } : {})
+    },
+    isConnected: true,
+    focus() {
+      this.focused = true;
+    }
+  };
+}
+
+function createDialogDouble() {
+  return {
+    open: false,
+    showModal() {
+      this.open = true;
+    },
+    close() {
+      this.open = false;
+    },
+    querySelector() {
+      return {
+        focus() {}
+      };
+    }
+  };
+}
+
+function createSelectDouble() {
+  return {
+    options: [],
+    value: '',
+    disabled: false,
+    attributes: {},
+    replaceChildren(...options) {
+      this.options = options;
+    },
+    setAttribute(name, value) {
+      this.attributes[name] = String(value);
+    },
+    focus() {
+      this.focused = true;
+    }
+  };
+}
+
+function createContentRegionDouble() {
+  let innerHTML = '';
+  let textContent = '';
+
+  return {
+    get innerHTML() {
+      return innerHTML;
+    },
+    set innerHTML(value) {
+      innerHTML = String(value);
+      textContent = innerHTML.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    },
+    get textContent() {
+      return textContent;
+    },
+    set textContent(value) {
+      innerHTML = '';
+      textContent = String(value);
+    }
+  };
+}
+
+function installViewDialogDomStubs() {
+  const originalWindow = globalThis.window;
+  const originalDocument = globalThis.document;
+
+  globalThis.window = {
+    marked: {
+      parse(input) {
+        return `<p>${String(input)}</p>`;
+      }
+    },
+    DOMPurify: {
+      sanitize(input) {
+        return input;
+      }
+    }
+  };
+
+  globalThis.document = {
+    createElement(tagName) {
+      if (tagName === 'option') {
+        return {
+          value: '',
+          textContent: ''
+        };
+      }
+
+      return createContentRegionDouble();
+    }
+  };
+
+  return function restoreViewDialogDomStubs() {
+    if (typeof originalWindow === 'undefined') {
+      delete globalThis.window;
+    } else {
+      globalThis.window = originalWindow;
+    }
+
+    if (typeof originalDocument === 'undefined') {
+      delete globalThis.document;
+    } else {
+      globalThis.document = originalDocument;
+    }
   };
 }

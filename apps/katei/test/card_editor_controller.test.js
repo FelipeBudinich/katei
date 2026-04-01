@@ -1,10 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import CardEditorController from '../public/js/controllers/card_editor_controller.js';
 import { createCardContentProvenance } from '../public/js/domain/card_localization.js';
 import {
   createLocalizedCardEditorUiState,
   createLocalizedCardViewState
 } from '../public/js/controllers/card_editor_locale_view.js';
+import { createTranslator } from '../public/js/i18n/translate.js';
 
 test('locale dropdown state uses the board supported locales and defaults to the board default locale', () => {
   const board = createBoard();
@@ -13,6 +15,7 @@ test('locale dropdown state uses the board supported locales and defaults to the
   const state = createLocalizedCardViewState({ board, card });
 
   assert.deepEqual(state.supportedLocales, ['en', 'es-CL', 'ja']);
+  assert.deepEqual(state.availableLocales, ['en', 'es-CL']);
   assert.equal(state.selectedLocale, 'es-CL');
 });
 
@@ -37,6 +40,23 @@ test('missing selected locales surface fallback state and the rendered locale', 
 
   assert.equal(state.selectedLocale, 'ja');
   assert.equal(state.isMissingSelectedLocale, true);
+  assert.equal(state.renderedLocale, 'es-CL');
+  assert.equal(state.variant?.title, 'Titulo por defecto');
+});
+
+test('view locale selection stays constrained to available localized variants', () => {
+  const board = createBoard();
+  const card = createCard();
+
+  const state = createLocalizedCardViewState({
+    board,
+    card,
+    selectedLocale: 'ja',
+    localeSelection: 'available'
+  });
+
+  assert.deepEqual(state.availableLocales, ['en', 'es-CL']);
+  assert.equal(state.selectedLocale, 'es-CL');
   assert.equal(state.renderedLocale, 'es-CL');
   assert.equal(state.variant?.title, 'Titulo por defecto');
 });
@@ -173,6 +193,105 @@ test('switching locale updates request and save control state together', () => {
     key: 'cardEditor.editingLocaleValue',
     locale: 'es-CL'
   });
+});
+
+test('card editor EasyMDE config uses compact toolbar text with full accessible labels', () => {
+  const originalWindow = globalThis.window;
+  const easyMdeCalls = [];
+
+  class EasyMDEStub {
+    static toggleBold = Symbol('toggleBold');
+    static toggleItalic = Symbol('toggleItalic');
+    static toggleHeading2 = Symbol('toggleHeading2');
+    static toggleUnorderedList = Symbol('toggleUnorderedList');
+    static toggleCodeBlock = Symbol('toggleCodeBlock');
+
+    constructor(options) {
+      this.options = options;
+      easyMdeCalls.push(options);
+    }
+  }
+
+  globalThis.window = { EasyMDE: EasyMDEStub };
+
+  try {
+    const controller = Object.create(CardEditorController.prototype);
+    controller.editor = null;
+    controller.markdownInputTarget = { value: '' };
+    controller.t = createTranslator('en');
+
+    const editor = CardEditorController.prototype.ensureEditor.call(controller);
+    const { toolbar } = editor.options;
+
+    assert.ok(editor instanceof EasyMDEStub);
+    assert.equal(easyMdeCalls.length, 1);
+    assert.deepEqual(
+      toolbar.map((item) =>
+        item === '|'
+          ? item
+          : {
+              name: item.name,
+              text: item.text,
+              title: item.title,
+              action: item.action
+            }
+      ),
+      [
+        {
+          name: 'bold',
+          text: 'B',
+          title: 'Bold',
+          action: EasyMDEStub.toggleBold
+        },
+        {
+          name: 'italic',
+          text: 'I',
+          title: 'Italic',
+          action: EasyMDEStub.toggleItalic
+        },
+        {
+          name: 'heading-2',
+          text: 'H',
+          title: 'Heading 2',
+          action: EasyMDEStub.toggleHeading2
+        },
+        '|',
+        {
+          name: 'unordered-list',
+          text: '•',
+          title: 'Bulleted list',
+          action: EasyMDEStub.toggleUnorderedList
+        },
+        '|',
+        {
+          name: 'code',
+          text: 'Code',
+          title: 'Code',
+          action: EasyMDEStub.toggleCodeBlock
+        }
+      ]
+    );
+  } finally {
+    if (typeof originalWindow === 'undefined') {
+      delete globalThis.window;
+    } else {
+      globalThis.window = originalWindow;
+    }
+  }
+});
+
+test('card editor toolbar copy keeps compact text while localizing accessible labels', () => {
+  const spanish = createTranslator('es-CL');
+  const japanese = createTranslator('ja');
+
+  assert.equal(spanish('cardEditor.markdownToolbar.bold.text'), 'B');
+  assert.equal(spanish('cardEditor.markdownToolbar.bold.label'), 'Negrita');
+  assert.equal(spanish('cardEditor.markdownToolbar.code.text'), 'Code');
+  assert.equal(spanish('cardEditor.markdownToolbar.code.label'), 'Código');
+  assert.equal(japanese('cardEditor.markdownToolbar.heading.text'), 'H');
+  assert.equal(japanese('cardEditor.markdownToolbar.heading.label'), '見出し 2');
+  assert.equal(japanese('cardEditor.markdownToolbar.bullets.text'), '•');
+  assert.equal(japanese('cardEditor.markdownToolbar.bullets.label'), '箇条書きリスト');
 });
 
 function createBoard() {

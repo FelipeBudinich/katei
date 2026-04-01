@@ -22,6 +22,7 @@ import {
   executeWorkspaceCardEditorPlan,
   executeWorkspaceServiceAction
 } from './workspace_card_dialog.js';
+import { createLocalizedCardViewState } from './card_editor_locale_view.js';
 import {
   getBoardStageTitle,
   getDefaultBoardStageId,
@@ -42,6 +43,8 @@ export default class extends Controller {
     'createCardButton',
     'announcer',
     'viewDialog',
+    'viewLocaleSection',
+    'viewLocaleSelect',
     'viewCardTitle',
     'viewCardBody',
     'viewCardPrioritySection',
@@ -81,6 +84,7 @@ export default class extends Controller {
     this.columnCollapseState = new Map();
     this.pendingConfirmation = null;
     this.viewTriggerElement = null;
+    this.viewDialogState = null;
     this.confirmTriggerElement = null;
     this.isConfirming = false;
     this.loadWorkspace();
@@ -366,18 +370,48 @@ export default class extends Controller {
       return;
     }
 
-    this.dispatchWorkspaceEvent('open-card-editor', {
-      mode: 'view',
-      boardId: board.id,
+    this.viewTriggerElement = button;
+    this.viewDialogState = {
       board,
-      ...createRuntimeCardDialogState(card, board, {
-        requestedLocale: button.dataset.requestedLocale ?? button.dataset.locale ?? null,
-        currentActorRole: this.activeBoardCollaborationState?.currentRole ?? null,
-        canEditLocalizedContent: this.canEditActiveBoard
-      }),
+      card,
       stageId,
-      triggerElement: button
+      selectedLocale: button.dataset.requestedLocale ?? button.dataset.locale ?? null
+    };
+    this.syncViewDialog();
+
+    if (!this.viewDialogTarget.open) {
+      this.viewDialogTarget.showModal();
+    }
+
+    scheduleBrowserFrame(() => {
+      if (
+        this.hasViewLocaleSectionTarget &&
+        this.hasViewLocaleSelectTarget &&
+        !this.viewLocaleSectionTarget.hidden &&
+        this.viewLocaleSelectTarget.options.length > 0
+      ) {
+        this.viewLocaleSelectTarget.focus();
+        return;
+      }
+
+      this.viewDialogTarget
+        .querySelector?.('[data-view-dialog-initial-focus]')
+        ?.focus?.();
     });
+  }
+
+  changeViewLocale(event) {
+    event.preventDefault();
+
+    if (!this.viewDialogState) {
+      return;
+    }
+
+    this.viewDialogState = {
+      ...this.viewDialogState,
+      selectedLocale: event.currentTarget.value || null
+    };
+    this.syncViewDialog();
   }
 
   async handleCardEditorSave(event) {
@@ -668,6 +702,7 @@ export default class extends Controller {
       this.viewTriggerElement.focus();
     }
 
+    this.viewDialogState = null;
     this.viewTriggerElement = null;
   }
 
@@ -711,9 +746,35 @@ export default class extends Controller {
     this.confirmTriggerElement = null;
   }
 
-  syncViewDialog({ board, card, stageId }) {
+  syncViewDialog() {
+    const { board, card, stageId, selectedLocale } = this.viewDialogState ?? {};
+    const localizedView = createLocalizedCardViewState({
+      board,
+      card,
+      selectedLocale,
+      localeSelection: 'available'
+    });
     const shouldShowPriority = shouldShowPriorityForStage(stageId);
-    const content = getBoardCardContentVariant(card, board);
+    const content = localizedView.variant;
+    const localeOptions = localizedView.availableLocales.map((locale) => createLocaleOption(locale));
+
+    if (this.hasViewLocaleSectionTarget && this.hasViewLocaleSelectTarget) {
+      const shouldShowLocaleSection = localeOptions.length > 0;
+      this.viewLocaleSectionTarget.hidden = !shouldShowLocaleSection;
+      this.viewLocaleSelectTarget.replaceChildren(...localeOptions);
+      this.viewLocaleSelectTarget.value = localizedView.selectedLocale ?? '';
+      this.viewLocaleSelectTarget.disabled = !shouldShowLocaleSection;
+      this.viewLocaleSelectTarget.setAttribute('aria-disabled', String(!shouldShowLocaleSection));
+    }
+
+    this.viewDialogState = card
+      ? {
+          board,
+          card,
+          stageId,
+          selectedLocale: localizedView.selectedLocale
+        }
+      : null;
 
     this.viewCardTitleTarget.textContent = content?.title ?? '';
     if (content?.detailsMarkdown) {
@@ -863,4 +924,20 @@ function createColumnCollapseCacheKey(workspaceId, boardId) {
   const normalizedWorkspaceId = typeof workspaceId === 'string' && workspaceId.trim() ? workspaceId.trim() : '__workspace__';
   const normalizedBoardId = typeof boardId === 'string' && boardId.trim() ? boardId.trim() : '__board__';
   return `${normalizedWorkspaceId}::${normalizedBoardId}`;
+}
+
+function createLocaleOption(locale) {
+  const option = document.createElement('option');
+  option.value = locale;
+  option.textContent = locale;
+  return option;
+}
+
+function scheduleBrowserFrame(callback) {
+  if (typeof requestAnimationFrame === 'function') {
+    requestAnimationFrame(callback);
+    return;
+  }
+
+  callback();
 }

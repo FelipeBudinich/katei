@@ -146,6 +146,9 @@ The browser script should:
 4. assert:
    - `Link` is absent
    - `Preview` is absent
+   - toolbar button text reads `B`, `I`, `H`, `•`, `Code`
+   - toolbar `aria-label` values read `Bold`, `Italic`, `Heading 2`, `Bulleted list`, `Code`
+   - toolbar `title` values read `Bold (Cmd-B)`, `Italic (Cmd-I)`, `Heading 2 (Cmd+⌥+2)`, `Bulleted list (Cmd-L)`, `Code (Cmd-⌥-C)`
    - header buttons read `Save Card`, then `Close`
 5. fill the title field
 6. click the header save button:
@@ -244,6 +247,8 @@ Responsibilities:
 - connect to the CDP target
 - evaluate browser-side assertions
 - print one JSON result block summarizing:
+  - toolbar button text
+  - toolbar aria-label values
   - toolbar titles
   - whether `Link` and `Preview` exist
   - header button order in create and edit
@@ -255,7 +260,9 @@ The script used during verification returned a shape like this:
 ```json
 {
   "create": {
-    "toolbarTitles": ["Bold (Cmd-B)", "Italic (Cmd-I)", "H2 (Cmd+⌥+2)", "Quote (Cmd-')", "Bullets (Cmd-L)", "Numbers (Cmd-⌥-L)", "Code (Cmd-⌥-C)"],
+    "toolbarText": ["B", "I", "H", "•", "Code"],
+    "toolbarAriaLabels": ["Bold", "Italic", "Heading 2", "Bulleted list", "Code"],
+    "toolbarTitles": ["Bold (Cmd-B)", "Italic (Cmd-I)", "Heading 2 (Cmd+⌥+2)", "Bulleted list (Cmd-L)", "Code (Cmd-⌥-C)"],
     "hasLink": false,
     "hasPreview": false,
     "headerButtons": ["Save Card", "Close"],
@@ -307,6 +314,9 @@ The agent is complete when it can prove all of the following from a real rendere
 
 - `Link` is gone from the EasyMDE toolbar
 - `Preview` is gone from the EasyMDE toolbar
+- the toolbar buttons read `B`, `I`, `H`, `•`, `Code`
+- the toolbar `aria-label` values read `Bold`, `Italic`, `Heading 2`, `Bulleted list`, `Code`
+- the toolbar `title` values still include the expected shortcuts
 - `Save Card` is immediately left of `Close`
 - clicking header `Save Card` submits successfully in create mode
 - clicking header `Save Card` submits successfully in edit mode

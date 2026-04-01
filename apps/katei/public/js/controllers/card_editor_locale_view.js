@@ -2,14 +2,21 @@ import { canonicalizeContentLocale, normalizeBoardLanguagePolicy } from '../doma
 import { getCardContentVariant } from '../domain/card_localization.js';
 import { listCardLocaleStatuses } from '../domain/card_localization_requests.js';
 
-export function createLocalizedCardViewState({ board, card, selectedLocale = null } = {}) {
+export function createLocalizedCardViewState({
+  board,
+  card,
+  selectedLocale = null,
+  localeSelection = 'supported'
+} = {}) {
   const languagePolicy = normalizeBoardLanguagePolicy(board?.languagePolicy ?? null);
   const localeStatuses = card ? listCardLocaleStatuses(board, card) : [];
   const supportedLocales = getSupportedCardLocales(languagePolicy, localeStatuses);
+  const availableLocales = getAvailableCardLocales(localeStatuses);
+  const selectableLocales = localeSelection === 'available' ? availableLocales : supportedLocales;
   const resolvedSelectedLocale = resolveCardLocaleSelection({
     board,
     preferredLocale: selectedLocale,
-    supportedLocales
+    supportedLocales: selectableLocales
   });
   const variant = card ? getCardContentVariant(card, resolvedSelectedLocale, board) : null;
   const localeStatusByLocale = new Map(localeStatuses.map((entry) => [entry.locale, entry]));
@@ -17,6 +24,7 @@ export function createLocalizedCardViewState({ board, card, selectedLocale = nul
 
   return {
     supportedLocales,
+    availableLocales,
     selectedLocale: resolvedSelectedLocale,
     renderedLocale: variant?.locale ?? null,
     variant,
@@ -76,19 +84,35 @@ export function createLocalizedCardEditorUiState({
 
 export function resolveCardLocaleSelection({ board, preferredLocale = null, supportedLocales = null } = {}) {
   const languagePolicy = normalizeBoardLanguagePolicy(board?.languagePolicy ?? null);
-  const availableLocales = Array.isArray(supportedLocales)
+  const hasExplicitLocales = Array.isArray(supportedLocales);
+  const availableLocales = hasExplicitLocales
     ? supportedLocales
     : getSupportedCardLocales(languagePolicy);
   const normalizedPreferredLocale = canonicalizeContentLocale(preferredLocale);
 
-  if (normalizedPreferredLocale && (availableLocales.length === 0 || availableLocales.includes(normalizedPreferredLocale))) {
+  if (normalizedPreferredLocale && (!hasExplicitLocales || availableLocales.includes(normalizedPreferredLocale))) {
     return normalizedPreferredLocale;
+  }
+
+  if (availableLocales.length > 0) {
+    if (languagePolicy?.defaultLocale && availableLocales.includes(languagePolicy.defaultLocale)) {
+      return languagePolicy.defaultLocale;
+    }
+
+    if (languagePolicy?.sourceLocale && availableLocales.includes(languagePolicy.sourceLocale)) {
+      return languagePolicy.sourceLocale;
+    }
+
+    return availableLocales[0];
+  }
+
+  if (hasExplicitLocales) {
+    return null;
   }
 
   return (
     languagePolicy?.defaultLocale ??
     languagePolicy?.sourceLocale ??
-    availableLocales[0] ??
     normalizedPreferredLocale ??
     null
   );
@@ -116,6 +140,12 @@ function getSupportedCardLocales(languagePolicy, localeStatuses = []) {
   }
 
   return locales;
+}
+
+function getAvailableCardLocales(localeStatuses = []) {
+  return localeStatuses
+    .filter((entry) => entry.hasContent)
+    .map((entry) => entry.locale);
 }
 
 function resolveLocaleEditSummaryState({ hasCard, isReadOnly, selectedStatus, selectedLocale }) {

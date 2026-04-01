@@ -491,22 +491,33 @@ export default class extends Controller {
 
 function createMarkdownToolbar(EasyMDE, t) {
   return [
-    createToolbarButton('bold', t('cardEditor.markdownToolbar.bold'), EasyMDE.toggleBold),
-    createToolbarButton('italic', t('cardEditor.markdownToolbar.italic'), EasyMDE.toggleItalic),
-    createToolbarButton('heading-2', t('cardEditor.markdownToolbar.heading'), EasyMDE.toggleHeading2),
+    createToolbarButton('bold', getToolbarButtonCopy(t, 'bold'), EasyMDE.toggleBold),
+    createToolbarButton('italic', getToolbarButtonCopy(t, 'italic'), EasyMDE.toggleItalic),
+    createToolbarButton('heading-2', getToolbarButtonCopy(t, 'heading'), EasyMDE.toggleHeading2),
     '|',
-    createToolbarButton('unordered-list', t('cardEditor.markdownToolbar.bullets'), EasyMDE.toggleUnorderedList),
+    createToolbarButton(
+      'unordered-list',
+      getToolbarButtonCopy(t, 'bullets'),
+      EasyMDE.toggleUnorderedList
+    ),
     '|',
-    createToolbarButton('code', t('cardEditor.markdownToolbar.code'), EasyMDE.toggleCodeBlock)
+    createToolbarButton('code', getToolbarButtonCopy(t, 'code'), EasyMDE.toggleCodeBlock)
   ];
 }
 
-function createToolbarButton(name, text, action, overrides = {}) {
+function getToolbarButtonCopy(t, key) {
+  return {
+    text: t(`cardEditor.markdownToolbar.${key}.text`),
+    label: t(`cardEditor.markdownToolbar.${key}.label`)
+  };
+}
+
+function createToolbarButton(name, copy, action, overrides = {}) {
   return {
     name,
     action,
-    text,
-    title: text,
+    text: copy.text,
+    title: copy.label,
     ...overrides
   };
 }
