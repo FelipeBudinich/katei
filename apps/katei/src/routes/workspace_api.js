@@ -1,7 +1,9 @@
 import { Router } from 'express';
+import { normalizeBoardCollaboration } from '../../public/js/domain/board_collaboration.js';
 import { migrateWorkspaceSnapshot } from '../../public/js/domain/workspace_migrations.js';
 import { validateWorkspaceShape } from '../../public/js/domain/workspace_validation.js';
 import { applyWorkspaceCommand, WorkspaceCommandPermissionError } from '../workspaces/apply_workspace_command.js';
+import { createInviteDebugLogger } from '../lib/invite_debug.js';
 import { createDefaultMutationContext } from '../workspaces/mutation_context.js';
 import {
   createCommandAppliedWorkspaceRecord,
@@ -21,14 +23,18 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
   const router = Router();
 
   router.get('/api/workspace', requireSession, async (request, response, next) => {
+    const debugLog = createInviteDebugLogger({ request });
+
     try {
+      logViewerIdentity(debugLog, 'GET /api/workspace', request);
       const [record, pendingWorkspaceInvites] = await Promise.all([
         workspaceRecordRepository.loadOrCreateWorkspaceRecord({
           viewerSub: request.viewer.sub,
           viewerEmail: request.viewer.email ?? null,
-          workspaceId: resolveRequestedWorkspaceId(request)
+          workspaceId: resolveRequestedWorkspaceId(request),
+          debugLog
         }),
-        listPendingWorkspaceInvitesForRequest(workspaceRecordRepository, request)
+        listPendingWorkspaceInvitesForRequest(workspaceRecordRepository, request, debugLog)
       ]);
       response.json(createWorkspaceApiResponse(record, undefined, pendingWorkspaceInvites));
     } catch (error) {
@@ -45,6 +51,7 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
   });
 
   router.put('/api/workspace', requireSession, async (request, response, next) => {
+    const debugLog = createInviteDebugLogger({ request });
     const workspace = migrateWorkspaceSnapshot(request.body?.workspace);
     const { expectedRevision, isValid: hasValidExpectedRevision } = parseExpectedRevision(request.body?.expectedRevision);
 
@@ -62,11 +69,15 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
     }
 
     try {
+      logViewerIdentity(debugLog, 'PUT /api/workspace', request, {
+        expectedRevision
+      });
       const authoritativeRecord = createWorkspaceRecord(
         await workspaceRecordRepository.loadOrCreateAuthoritativeWorkspaceRecord({
           viewerSub: request.viewer.sub,
           viewerEmail: request.viewer.email ?? null,
-          workspaceId: resolveRequestedWorkspaceId(request)
+          workspaceId: resolveRequestedWorkspaceId(request),
+          debugLog
         })
       );
 
@@ -96,11 +107,11 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
           id: request.viewer.sub
         }
       });
-      const pendingWorkspaceInvites = await listPendingWorkspaceInvitesForRequest(workspaceRecordRepository, request);
+      const pendingWorkspaceInvites = await listPendingWorkspaceInvitesForRequest(workspaceRecordRepository, request, debugLog);
 
       response.json(
         createWorkspaceApiResponse(
-          projectRecordForViewer(fullRecord, createViewerProjectionContext(request.viewer)),
+          projectRecordForViewer(fullRecord, createViewerProjectionContext(request.viewer, debugLog)),
           undefined,
           pendingWorkspaceInvites
         )
@@ -127,6 +138,7 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
   });
 
   router.post('/api/workspace/commands', requireSession, async (request, response, next) => {
+    const debugLog = createInviteDebugLogger({ request });
     const { expectedRevision, isValid: hasValidExpectedRevision } = parseExpectedRevision(request.body?.expectedRevision);
     const command = request.body?.command;
 
@@ -139,27 +151,34 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
     }
 
     try {
+      logViewerIdentity(debugLog, 'POST /api/workspace/commands', request, {
+        commandType: command?.type ?? null,
+        clientMutationId: typeof command?.clientMutationId === 'string' ? command.clientMutationId : null,
+        expectedRevision
+      });
       const currentRecord = createWorkspaceRecord(
         await workspaceRecordRepository.loadOrCreateAuthoritativeWorkspaceRecord({
           viewerSub: request.viewer.sub,
           viewerEmail: request.viewer.email ?? null,
-          workspaceId: resolveRequestedWorkspaceId(request)
+          workspaceId: resolveRequestedWorkspaceId(request),
+          debugLog
         })
       );
-      const projectedCurrentRecord = projectRecordForViewer(currentRecord, createViewerProjectionContext(request.viewer));
+      const projectedCurrentRecord = projectRecordForViewer(currentRecord, createViewerProjectionContext(request.viewer, debugLog));
       const existingReceipt =
         typeof command?.clientMutationId === 'string' && command.clientMutationId.trim()
           ? findCommandReceipt(currentRecord, command.clientMutationId)
           : null;
 
       if (existingReceipt) {
-        const pendingWorkspaceInvites = await listPendingWorkspaceInvitesForRequest(workspaceRecordRepository, request);
+        const pendingWorkspaceInvites = await listPendingWorkspaceInvitesForRequest(workspaceRecordRepository, request, debugLog);
         response.json(createWorkspaceApiResponse(projectedCurrentRecord, existingReceipt.result, pendingWorkspaceInvites));
         return;
       }
 
       const context = createDefaultMutationContext({
-        actor: createViewerMutationActor(request.viewer)
+        actor: createViewerMutationActor(request.viewer),
+        debugLog
       });
       const application = applyWorkspaceCommand({
         record: currentRecord,
@@ -169,7 +188,7 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
       });
 
       if (application.result.noOp) {
-        const pendingWorkspaceInvites = await listPendingWorkspaceInvitesForRequest(workspaceRecordRepository, request);
+        const pendingWorkspaceInvites = await listPendingWorkspaceInvitesForRequest(workspaceRecordRepository, request, debugLog);
         response.json(createWorkspaceApiResponse(projectedCurrentRecord, application.result, pendingWorkspaceInvites));
         return;
       }
@@ -192,11 +211,12 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
         record: nextRecord,
         expectedRevision
       });
-      const pendingWorkspaceInvites = await listPendingWorkspaceInvitesForRequest(workspaceRecordRepository, request);
+      logPersistedInvite(debugLog, persistedRecord, application.result);
+      const pendingWorkspaceInvites = await listPendingWorkspaceInvitesForRequest(workspaceRecordRepository, request, debugLog);
 
       response.json(
         createWorkspaceApiResponse(
-          projectRecordForViewer(persistedRecord, createViewerProjectionContext(request.viewer)),
+          projectRecordForViewer(persistedRecord, createViewerProjectionContext(request.viewer, debugLog)),
           application.result,
           pendingWorkspaceInvites
         )
@@ -239,6 +259,7 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
   });
 
   router.post('/api/workspace/import', requireSession, async (request, response, next) => {
+    const debugLog = createInviteDebugLogger({ request });
     const workspace = migrateWorkspaceSnapshot(request.body?.workspace);
 
     if (!validateWorkspaceShape(workspace)) {
@@ -247,6 +268,7 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
     }
 
     try {
+      logViewerIdentity(debugLog, 'POST /api/workspace/import', request);
       const fullRecord = await workspaceRecordRepository.importWorkspaceSnapshot({
         viewerSub: request.viewer.sub,
         viewerEmail: request.viewer.email ?? null,
@@ -257,11 +279,11 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
           id: request.viewer.sub
         }
       });
-      const pendingWorkspaceInvites = await listPendingWorkspaceInvitesForRequest(workspaceRecordRepository, request);
+      const pendingWorkspaceInvites = await listPendingWorkspaceInvitesForRequest(workspaceRecordRepository, request, debugLog);
 
       response.json(
         createWorkspaceApiResponse(
-          projectRecordForViewer(fullRecord, createViewerProjectionContext(request.viewer)),
+          projectRecordForViewer(fullRecord, createViewerProjectionContext(request.viewer, debugLog)),
           undefined,
           pendingWorkspaceInvites
         )
@@ -296,13 +318,6 @@ function createViewerMutationActor(viewer) {
     id: viewer.sub,
     ...(typeof viewer?.email === 'string' && viewer.email.trim() ? { email: viewer.email.trim() } : {}),
     ...(typeof viewer?.name === 'string' && viewer.name.trim() ? { name: viewer.name.trim() } : {})
-  };
-}
-
-function createViewerProjectionContext(viewer) {
-  return {
-    viewerSub: viewer?.sub,
-    viewerEmail: viewer?.email ?? null
   };
 }
 
@@ -377,9 +392,53 @@ function normalizeRevision(value) {
   return Number.isInteger(value) && value >= 0 ? value : 0;
 }
 
-async function listPendingWorkspaceInvitesForRequest(workspaceRecordRepository, request) {
+async function listPendingWorkspaceInvitesForRequest(workspaceRecordRepository, request, debugLog = null) {
   return workspaceRecordRepository.listPendingWorkspaceInvitesForViewer({
     viewerSub: request.viewer.sub,
-    viewerEmail: request.viewer.email ?? null
+    viewerEmail: request.viewer.email ?? null,
+    debugLog
+  });
+}
+
+function createViewerProjectionContext(viewer, debugLog = null) {
+  return {
+    viewerSub: viewer?.sub,
+    viewerEmail: viewer?.email ?? null,
+    debugLog
+  };
+}
+
+function logViewerIdentity(debugLog, route, request, extraFields = {}) {
+  if (typeof debugLog !== 'function') {
+    return;
+  }
+
+  const viewer = request?.viewer;
+
+  debugLog('viewer.identity', {
+    route,
+    workspaceId: resolveRequestedWorkspaceId(request),
+    hasSession: Boolean(request?.kateiSession),
+    viewerSub: viewer?.sub ?? null,
+    viewerEmail: viewer?.email ?? null,
+    viewerName: typeof viewer?.name === 'string' && viewer.name.trim() ? viewer.name.trim() : null,
+    ...extraFields
+  });
+}
+
+function logPersistedInvite(debugLog, record, result) {
+  if (typeof debugLog !== 'function' || !result?.inviteId || !result?.boardId) {
+    return;
+  }
+
+  const board = record?.workspace?.boards?.[result.boardId];
+  const storedInvite =
+    board ? normalizeBoardCollaboration(board).invites.find((invite) => invite.id === result.inviteId) ?? null : null;
+
+  debugLog('invite.persisted', {
+    workspaceId: record?.workspaceId ?? null,
+    boardId: result.boardId,
+    inviteId: result.inviteId,
+    storedInvite
   });
 }

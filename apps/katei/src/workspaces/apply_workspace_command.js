@@ -286,6 +286,17 @@ function applyBoardInviteCreate(workspace, command, context) {
     throw new Error('Board invite is invalid.');
   }
 
+  logInviteDebug(context, 'invite.create', {
+    workspaceId: normalizeOptionalString(workspace?.workspaceId),
+    boardId: currentBoard.id,
+    inviteId: invite.id,
+    inputEmail: command.payload.email ?? null,
+    normalizedInviteEmail: invite.email ?? null,
+    role: invite.role,
+    inviterSub: invitedBy?.id ?? null,
+    inviterEmail: invitedBy?.email ?? null
+  });
+
   const nextWorkspace = cloneWorkspace(workspace);
   const board = getBoard(nextWorkspace, command.payload.boardId);
   const collaboration = ensureBoardCollaboration(board);
@@ -347,8 +358,24 @@ function applyBoardInviteAccept(workspace, command, context) {
   const actor = assertAuthenticatedHumanActor(context.actor, 'You must be signed in to accept a board invite.');
   const currentInvite = findBoardInvite(currentBoard, command.payload.inviteId);
   const pendingInvite = findPendingInvite(currentBoard, command.payload.inviteId, context.now);
+  const inviteEmailMatch = emailsMatchInvite(actor, currentInvite);
+  const existingMembership = getBoardMembershipForActor(currentBoard, actor);
 
-  if (!currentInvite || !emailsMatchInvite(actor, currentInvite)) {
+  logInviteDebug(context, 'invite.accept.check', {
+    workspaceId: normalizeOptionalString(workspace?.workspaceId),
+    boardId: currentBoard.id,
+    inviteId: command.payload.inviteId,
+    actorSub: actor.id,
+    actorEmail: actor.email ?? null,
+    inviteEmail: currentInvite?.email ?? null,
+    inviteActorId: currentInvite?.actor?.id ?? null,
+    inviteStatus: currentInvite?.status ?? null,
+    pendingStatus: pendingInvite?.status ?? null,
+    emailMatched: inviteEmailMatch,
+    membershipExists: Boolean(existingMembership)
+  });
+
+  if (!currentInvite || !inviteEmailMatch) {
     throw new WorkspaceCommandPermissionError('You do not have permission to respond to this invite.');
   }
 
@@ -360,7 +387,7 @@ function applyBoardInviteAccept(workspace, command, context) {
   const board = getBoard(nextWorkspace, command.payload.boardId);
   updateInviteStatus(board, command.payload.inviteId, 'accepted', context.now);
 
-  if (!getBoardMembershipForActor(board, actor)) {
+  if (!existingMembership) {
     upsertBoardMembership(board, {
       actor,
       role: currentInvite.role,
@@ -386,8 +413,22 @@ function applyBoardInviteDecline(workspace, command, context) {
   const actor = assertAuthenticatedHumanActor(context.actor, 'You must be signed in to decline a board invite.');
   const currentInvite = findBoardInvite(currentBoard, command.payload.inviteId);
   const pendingInvite = findPendingInvite(currentBoard, command.payload.inviteId, context.now);
+  const inviteEmailMatch = emailsMatchInvite(actor, currentInvite);
 
-  if (!currentInvite || !emailsMatchInvite(actor, currentInvite)) {
+  logInviteDebug(context, 'invite.decline.check', {
+    workspaceId: normalizeOptionalString(workspace?.workspaceId),
+    boardId: currentBoard.id,
+    inviteId: command.payload.inviteId,
+    actorSub: actor.id,
+    actorEmail: actor.email ?? null,
+    inviteEmail: currentInvite?.email ?? null,
+    inviteActorId: currentInvite?.actor?.id ?? null,
+    inviteStatus: currentInvite?.status ?? null,
+    pendingStatus: pendingInvite?.status ?? null,
+    emailMatched: inviteEmailMatch
+  });
+
+  if (!currentInvite || !inviteEmailMatch) {
     throw new WorkspaceCommandPermissionError('You do not have permission to respond to this invite.');
   }
 
@@ -1250,4 +1291,14 @@ function stripActorKey(membership) {
 
 function createBoardInviteId() {
   return `invite_${randomUUID().replaceAll('-', '').slice(0, 12)}`;
+}
+
+function logInviteDebug(context, event, fields) {
+  if (typeof context?.debugLog === 'function') {
+    context.debugLog(event, fields);
+  }
+}
+
+function normalizeOptionalString(value) {
+  return typeof value === 'string' ? value.trim() : '';
 }

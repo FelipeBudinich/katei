@@ -1,5 +1,6 @@
 import { Controller } from '../../vendor/stimulus/stimulus.js';
 import { getBrowserTranslator } from '../i18n/browser.js';
+import { logInviteDebug } from '../lib/invite_debug.js';
 import { createInviteDecisionDetail } from './board_collaborators_actions.js';
 import {
   createBoardListActionState,
@@ -279,21 +280,40 @@ export default class extends Controller {
     const activeWorkspaceId =
       normalizeOptionalWorkspaceId(this.activeWorkspaceId) ??
       normalizeOptionalWorkspaceId(this.workspace?.workspaceId);
+    const visibleInvites = [];
 
-    return (Array.isArray(this.pendingWorkspaceInvites) ? this.pendingWorkspaceInvites : []).filter((invite) => {
+    for (const invite of Array.isArray(this.pendingWorkspaceInvites) ? this.pendingWorkspaceInvites : []) {
       const inviteWorkspaceId = normalizeOptionalWorkspaceId(invite?.workspaceId);
       const boardId = normalizeOptionalString(invite?.boardId);
       const inviteId = normalizeOptionalString(invite?.inviteId);
       const boardTitle = normalizeOptionalString(invite?.boardTitle);
-
-      return Boolean(
+      const visible = Boolean(
         inviteWorkspaceId &&
           boardId &&
           inviteId &&
           boardTitle &&
           inviteWorkspaceId !== activeWorkspaceId
       );
-    });
+
+      logInviteDebug('client.invite.state', {
+        source: 'board-options',
+        activeWorkspaceId,
+        inviteWorkspaceId,
+        boardId,
+        inviteId,
+        boardTitle,
+        visible,
+        rejectReason: visible
+          ? null
+          : (!inviteWorkspaceId || !boardId || !inviteId || !boardTitle ? 'malformed' : 'same-workspace')
+      });
+
+      if (visible) {
+        visibleInvites.push(invite);
+      }
+    }
+
+    return visibleInvites;
   }
 
   dispatchInviteResponse(actionName, dataset = {}) {

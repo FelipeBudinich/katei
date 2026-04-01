@@ -4,6 +4,7 @@ import {
   normalizeBoardActor,
   normalizeBoardCollaboration
 } from '../domain/board_collaboration.js';
+import { logInviteDebug } from '../lib/invite_debug.js';
 import {
   canActorAdminBoard,
   canActorEditBoard,
@@ -83,6 +84,23 @@ export function getBoardCollaborationState(board, actor) {
     .filter((invite) => invite.status === 'pending')
     .filter((invite) => canAdmin || inviteMatchesActor(invite, normalizedActor))
     .map((invite) => createInviteViewModel(invite, normalizedActor, { canAdmin }));
+
+  logInviteDebug('client.invite.state', {
+    source: 'board-collaboration-state',
+    boardId: normalizeOptionalString(board?.id),
+    boardTitle: normalizeOptionalString(board?.title),
+    actorSub: normalizedActor?.id ?? null,
+    actorEmail: normalizedActor?.email ?? null,
+    pendingInviteId: pendingInvite?.id ?? null,
+    currentRoleStatus: membership?.role ?? (pendingInvite ? 'invited' : 'none'),
+    canRead,
+    canEdit,
+    canAdmin,
+    accessible: canRead || Boolean(pendingInvite),
+    pendingInviteCount: collaboration.invites.filter((invite) => invite.status === 'pending').length,
+    visiblePendingInviteIds: visiblePendingInvites.map((invite) => invite.id),
+    canRespondToPendingInvite: Boolean(visiblePendingInvites.some((invite) => invite.canRespond))
+  });
 
   return {
     boardId: normalizeOptionalString(board?.id),

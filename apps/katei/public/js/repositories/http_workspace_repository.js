@@ -1,6 +1,7 @@
 import { migrateWorkspaceSnapshot } from '../domain/workspace_migrations.js';
 import { validateWorkspaceShape } from '../domain/workspace_validation.js';
 import { canonicalizeBoardRole, normalizeBoardActor } from '../domain/board_collaboration.js';
+import { isInviteDebugEnabled, logInviteDebug } from '../lib/invite_debug.js';
 import { postWorkspaceImport, readLocalV4Workspace } from '../lib/workspace_import.js';
 import { WorkspaceRepository } from './workspace_repository.js';
 
@@ -46,7 +47,7 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
             workspace: localWorkspace,
             workspaceId: this.activeWorkspaceId
           });
-          this.#setState(importedPayload);
+          this.#setState(importedPayload, { source: 'import' });
         } catch (error) {
           if (error?.status !== 409) {
             throw error;
@@ -113,12 +114,14 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
   }
 
   async #requestWorkspace(url, options, fallbackMessage) {
+    const debugHeaders = isInviteDebugEnabled() ? { 'X-Katei-Debug-Invites': '1' } : {};
     const response = await this.fetchImpl(url, {
       credentials: 'same-origin',
       ...options,
       headers: {
         Accept: 'application/json',
         ...(options?.body ? { 'Content-Type': 'application/json' } : {}),
+        ...debugHeaders,
         ...(options?.headers ?? {})
       }
     });
@@ -141,7 +144,7 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
         }
       : { workspace };
 
-    this.#setState(payload);
+    this.#setState(payload, { source: 'api' });
     return payload;
   }
 
@@ -177,14 +180,14 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
           }
         : { workspace };
 
-      this.#setState(nextPayload);
+      this.#setState(nextPayload, { source: 'bootstrap' });
       return nextPayload;
     } catch (error) {
       return null;
     }
   }
 
-  #setState(payload) {
+  #setState(payload, { source = 'unknown' } = {}) {
     this.#setMeta(payload?.meta ?? null);
     this.pendingWorkspaceInvites = normalizePendingWorkspaceInvites(payload?.pendingWorkspaceInvites);
     const activeWorkspace = normalizeActiveWorkspace(payload?.activeWorkspace, payload?.workspace);
@@ -192,6 +195,15 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
     this.activeWorkspaceId = activeWorkspace?.workspaceId ?? this.activeWorkspaceId ?? null;
     this.isHomeWorkspace =
       typeof activeWorkspace?.isHomeWorkspace === 'boolean' ? activeWorkspace.isHomeWorkspace : this.isHomeWorkspace;
+
+    logInviteDebug('client.invite.state', {
+      source,
+      activeWorkspaceId: this.activeWorkspaceId,
+      isHomeWorkspace: this.isHomeWorkspace,
+      pendingWorkspaceInvitesCount: this.pendingWorkspaceInvites.length,
+      pendingWorkspaceInviteIds: this.pendingWorkspaceInvites.map((invite) => invite.inviteId),
+      metaRevision: Number.isInteger(this.meta?.revision) ? this.meta.revision : null
+    });
   }
 
   #setMeta(meta) {

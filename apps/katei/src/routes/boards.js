@@ -8,22 +8,35 @@ import {
   createEmptyWorkspace
 } from '../../public/js/domain/workspace_read_model.js';
 import { getColumnDisplayLabel, getPriorityDisplayLabel } from '../../public/js/i18n/workspace_labels.js';
+import { createInviteDebugLogger } from '../lib/invite_debug.js';
 import { WorkspaceAccessDeniedError } from '../workspaces/workspace_record_repository.js';
 
 export function createBoardsRouter({ requireSession, workspaceRecordRepository }) {
   const router = Router();
 
   router.get('/boards', requireSession, async (request, response, next) => {
+    const debugLog = createInviteDebugLogger({ request });
+
     try {
+      debugLog('viewer.identity', {
+        route: 'GET /boards',
+        workspaceId: resolveRequestedWorkspaceId(request),
+        hasSession: Boolean(request?.kateiSession),
+        viewerSub: request.viewer?.sub ?? null,
+        viewerEmail: request.viewer?.email ?? null,
+        viewerName: typeof request.viewer?.name === 'string' && request.viewer.name.trim() ? request.viewer.name.trim() : null
+      });
       const [record, pendingWorkspaceInvites] = await Promise.all([
         workspaceRecordRepository.loadOrCreateWorkspaceRecord({
           viewerSub: request.viewer.sub,
           viewerEmail: request.viewer.email ?? null,
-          workspaceId: resolveRequestedWorkspaceId(request)
+          workspaceId: resolveRequestedWorkspaceId(request),
+          debugLog
         }),
         workspaceRecordRepository.listPendingWorkspaceInvitesForViewer({
           viewerSub: request.viewer.sub,
-          viewerEmail: request.viewer.email ?? null
+          viewerEmail: request.viewer.email ?? null,
+          debugLog
         })
       ]);
 

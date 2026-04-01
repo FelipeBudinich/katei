@@ -3,6 +3,7 @@ import { getBoardCardContentVariant } from '../domain/workspace.js';
 import { createBrowserDateTimeFormatter, getBrowserTranslator } from '../i18n/browser.js';
 import { localizeErrorMessage } from '../i18n/errors.js';
 import { getPriorityDisplayLabel } from '../i18n/workspace_labels.js';
+import { logInviteDebug } from '../lib/invite_debug.js';
 import { renderMarkdownInto } from '../lib/markdown.js';
 import { HttpWorkspaceRepository } from '../repositories/http_workspace_repository.js';
 import { renderBoardState } from '../renderers/board_renderer.js';
@@ -832,13 +833,24 @@ export default class extends Controller {
   }
 
   createBoardOptionsEventDetail({ triggerElement = null } = {}) {
-    return {
+    const detail = {
       workspace: this.workspace,
       viewerActor: this.viewerActor,
       triggerElement,
       activeWorkspaceId: this.service?.getActiveWorkspaceId?.() ?? null,
       pendingWorkspaceInvites: this.service?.getPendingWorkspaceInvites?.() ?? []
     };
+
+    logInviteDebug('client.invite.state', {
+      source: 'workspace-controller',
+      viewerSub: this.viewerActor?.id ?? null,
+      viewerEmail: this.viewerActor?.email ?? null,
+      activeWorkspaceId: detail.activeWorkspaceId,
+      pendingWorkspaceInvitesCount: detail.pendingWorkspaceInvites.length,
+      pendingWorkspaceInviteIds: detail.pendingWorkspaceInvites.map((invite) => invite.inviteId)
+    });
+
+    return detail;
   }
 
   getCollapsedColumnsForBoard(board) {

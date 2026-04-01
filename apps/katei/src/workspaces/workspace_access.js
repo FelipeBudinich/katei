@@ -6,7 +6,7 @@ import {
 import { createDefaultBoardLanguagePolicy } from '../../public/js/domain/board_language_policy.js';
 import { createDefaultBoardStages, createDefaultBoardTemplates } from '../../public/js/domain/board_workflow.js';
 
-export function canViewerAccessWorkspace({ viewerSub, viewerEmail = null, ownerSub, workspace }) {
+export function canViewerAccessWorkspace({ viewerSub, viewerEmail = null, ownerSub, workspace, debugLog = null }) {
   const normalizedViewerSub = normalizeOptionalString(viewerSub);
   const normalizedViewerEmail = normalizeOptionalEmail(viewerEmail);
   const normalizedOwnerSub = normalizeOptionalString(ownerSub);
@@ -24,7 +24,14 @@ export function canViewerAccessWorkspace({ viewerSub, viewerEmail = null, ownerS
   }
 
   for (const board of Object.values(workspace.boards)) {
-    if (canViewerAccessBoardShell({ viewerSub: normalizedViewerSub, viewerEmail: normalizedViewerEmail, board })) {
+    if (
+      canViewerAccessBoardShell({
+        viewerSub: normalizedViewerSub,
+        viewerEmail: normalizedViewerEmail,
+        board,
+        debugLog
+      })
+    ) {
       return true;
     }
   }
@@ -42,7 +49,7 @@ export function canViewerReadBoard({ viewerSub, viewerEmail = null, board }) {
   return hasHumanBoardMembership(board, normalizedViewerSub);
 }
 
-export function filterWorkspaceForViewer({ viewerSub, viewerEmail = null, ownerSub, workspace }) {
+export function filterWorkspaceForViewer({ viewerSub, viewerEmail = null, ownerSub, workspace, debugLog = null }) {
   if (!isPlainObject(workspace)) {
     return workspace;
   }
@@ -66,7 +73,21 @@ export function filterWorkspaceForViewer({ viewerSub, viewerEmail = null, ownerS
   const visibleBoards = [];
 
   for (const boardEntry of listWorkspaceBoardEntries(normalizedWorkspace)) {
-    if (canViewerReadBoard({ viewerSub: normalizedViewerSub, viewerEmail: normalizedViewerEmail, board: boardEntry.board })) {
+    const membershipMatch = canViewerReadBoard({
+      viewerSub: normalizedViewerSub,
+      viewerEmail: normalizedViewerEmail,
+      board: boardEntry.board
+    });
+
+    if (membershipMatch) {
+      logWorkspaceProjection(debugLog, {
+        viewerSub: normalizedViewerSub,
+        viewerEmail: normalizedViewerEmail,
+        boardId: boardEntry.boardId,
+        membershipMatch,
+        pendingInviteMatch: false,
+        projectionResult: 'readable'
+      });
       visibleBoards.push({
         boardId: boardEntry.boardId,
         board: structuredClone(boardEntry.board)
@@ -74,12 +95,38 @@ export function filterWorkspaceForViewer({ viewerSub, viewerEmail = null, ownerS
       continue;
     }
 
-    if (hasPendingBoardInvite(boardEntry.board, normalizedViewerSub, normalizedViewerEmail)) {
+    const pendingInviteMatch = hasPendingBoardInvite(
+      boardEntry.board,
+      normalizedViewerSub,
+      normalizedViewerEmail,
+      debugLog
+    );
+
+    if (pendingInviteMatch) {
+      logWorkspaceProjection(debugLog, {
+        viewerSub: normalizedViewerSub,
+        viewerEmail: normalizedViewerEmail,
+        boardId: boardEntry.boardId,
+        membershipMatch: false,
+        pendingInviteMatch,
+        projectionResult: 'invite-shell'
+      });
       visibleBoards.push({
         boardId: boardEntry.boardId,
         board: createPendingInviteBoardProjection(boardEntry.board)
       });
+
+      continue;
     }
+
+    logWorkspaceProjection(debugLog, {
+      viewerSub: normalizedViewerSub,
+      viewerEmail: normalizedViewerEmail,
+      boardId: boardEntry.boardId,
+      membershipMatch: false,
+      pendingInviteMatch: false,
+      projectionResult: 'hidden'
+    });
   }
 
   return createFilteredWorkspace(normalizedWorkspace, visibleBoards);
@@ -150,9 +197,24 @@ function hasHumanBoardMembership(board, viewerSub) {
   return false;
 }
 
-function hasPendingBoardInvite(board, viewerSub, viewerEmail) {
+function hasPendingBoardInvite(board, viewerSub, viewerEmail, debugLog = null) {
   for (const invite of listPendingBoardInvites(board)) {
-    if (inviteMatchesViewer(invite, viewerSub, viewerEmail)) {
+    const matched = inviteMatchesViewer(invite, viewerSub, viewerEmail);
+
+    logWorkspaceProjection(debugLog, {
+      viewerSub,
+      viewerEmail,
+      boardId: normalizeOptionalString(board?.id),
+      inviteId: normalizeOptionalString(invite?.id),
+      inviteEmail: normalizeOptionalEmail(invite?.email),
+      inviteActorId: normalizeOptionalString(invite?.actor?.id),
+      membershipMatch: false,
+      pendingInviteMatch: matched,
+      projectionResult: matched ? 'invite-shell' : 'hidden',
+      phase: 'pending-invite-check'
+    });
+
+    if (matched) {
       return true;
     }
   }
@@ -160,8 +222,8 @@ function hasPendingBoardInvite(board, viewerSub, viewerEmail) {
   return false;
 }
 
-function canViewerAccessBoardShell({ viewerSub, viewerEmail, board }) {
-  return canViewerReadBoard({ viewerSub, viewerEmail, board }) || hasPendingBoardInvite(board, viewerSub, viewerEmail);
+function canViewerAccessBoardShell({ viewerSub, viewerEmail, board, debugLog = null }) {
+  return canViewerReadBoard({ viewerSub, viewerEmail, board }) || hasPendingBoardInvite(board, viewerSub, viewerEmail, debugLog);
 }
 
 function inviteMatchesViewer(invite, viewerSub, viewerEmail) {
@@ -324,6 +386,12 @@ function readBoardMemberships(board) {
 function normalizeOptionalEmail(value) {
   const normalizedValue = normalizeOptionalString(value).toLowerCase();
   return normalizedValue.includes('@') ? normalizedValue : '';
+}
+
+function logWorkspaceProjection(debugLog, fields) {
+  if (typeof debugLog === 'function') {
+    debugLog('workspace.projection', fields);
+  }
 }
 
 function normalizeOptionalString(value) {

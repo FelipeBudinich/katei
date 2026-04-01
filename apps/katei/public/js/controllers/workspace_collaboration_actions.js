@@ -1,4 +1,5 @@
 import { hasVisibleWorkspaceAccess } from './board_collaboration_state.js';
+import { logInviteDebug } from '../lib/invite_debug.js';
 
 export async function performWorkspaceCollaboratorAction({ service, action, detail }) {
   switch (action) {
@@ -25,11 +26,28 @@ export async function performWorkspaceInviteDecision({
   const previousWorkspaceId = normalizeOptionalWorkspaceId(activeWorkspaceId);
   const targetWorkspaceId = normalizeOptionalWorkspaceId(detail?.workspaceId);
 
+  logInviteDebug(`invite.${decision}.check`, {
+    previousWorkspaceId,
+    targetWorkspaceId,
+    boardId: detail?.boardId ?? null,
+    inviteId: detail?.inviteId ?? null,
+    actorSub: viewerActor?.id ?? null,
+    actorEmail: viewerActor?.email ?? null
+  });
+
   if (targetWorkspaceId && targetWorkspaceId !== previousWorkspaceId) {
     service.setActiveWorkspace(targetWorkspaceId);
 
     try {
       if (decision === 'accept') {
+        logInviteDebug('client.invite.state', {
+          source: 'workspace-invite-decision',
+          decision,
+          previousWorkspaceId,
+          targetWorkspaceId,
+          switchedWorkspace: true
+        });
+
         return {
           workspace: await service.acceptBoardInvite(detail.boardId, detail.inviteId),
           leftWorkspace: false
@@ -54,11 +72,29 @@ export async function performWorkspaceInviteDecision({
       : await service.declineBoardInvite(detail.boardId, detail.inviteId);
 
   if (decision === 'decline' && previousWorkspaceId && !hasVisibleWorkspaceAccess(nextWorkspace, viewerActor)) {
+    logInviteDebug('client.invite.state', {
+      source: 'workspace-invite-decision',
+      decision,
+      previousWorkspaceId,
+      targetWorkspaceId,
+      switchedWorkspace: false,
+      leftWorkspace: true
+    });
+
     return {
       workspace: await service.switchWorkspace(null),
       leftWorkspace: true
     };
   }
+
+  logInviteDebug('client.invite.state', {
+    source: 'workspace-invite-decision',
+    decision,
+    previousWorkspaceId,
+    targetWorkspaceId,
+    switchedWorkspace: targetWorkspaceId && targetWorkspaceId !== previousWorkspaceId,
+    leftWorkspace: false
+  });
 
   return {
     workspace: nextWorkspace,

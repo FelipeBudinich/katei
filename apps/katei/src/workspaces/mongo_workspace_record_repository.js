@@ -40,7 +40,7 @@ export function getWorkspaceRecordCollection({ collection, db, config, getDb = g
   return resolvedDb.collection(WORKSPACE_RECORD_COLLECTION_NAME);
 }
 
-export function projectRecordForViewer(record, { viewerSub, viewerEmail = null } = {}) {
+export function projectRecordForViewer(record, { viewerSub, viewerEmail = null, debugLog = null } = {}) {
   const normalizedRecord = createWorkspaceRecord(record);
 
   return {
@@ -49,7 +49,8 @@ export function projectRecordForViewer(record, { viewerSub, viewerEmail = null }
       viewerSub,
       viewerEmail,
       ownerSub: normalizedRecord.viewerSub,
-      workspace: normalizedRecord.workspace
+      workspace: normalizedRecord.workspace,
+      debugLog
     })
   };
 }
@@ -72,25 +73,27 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
     this.createActivityEventId = createActivityEventId;
   }
 
-  async loadOrCreateWorkspaceRecord({ viewerSub, workspaceId = null, viewerEmail = null } = {}) {
+  async loadOrCreateWorkspaceRecord({ viewerSub, workspaceId = null, viewerEmail = null, debugLog = null } = {}) {
     return this.#loadOrCreateWorkspaceRecord({
       viewerSub,
       workspaceId,
       viewerEmail,
+      debugLog,
       projectForViewer: true
     });
   }
 
-  async loadOrCreateAuthoritativeWorkspaceRecord({ viewerSub, workspaceId = null, viewerEmail = null } = {}) {
+  async loadOrCreateAuthoritativeWorkspaceRecord({ viewerSub, workspaceId = null, viewerEmail = null, debugLog = null } = {}) {
     return this.#loadOrCreateWorkspaceRecord({
       viewerSub,
       workspaceId,
       viewerEmail,
+      debugLog,
       projectForViewer: false
     });
   }
 
-  async listPendingWorkspaceInvitesForViewer({ viewerSub, viewerEmail = null } = {}) {
+  async listPendingWorkspaceInvitesForViewer({ viewerSub, viewerEmail = null, debugLog = null } = {}) {
     const collection = this.#getCollection();
     const normalizedViewerSub = normalizeViewerSub(viewerSub);
     const normalizedViewerEmail = normalizeOptionalEmail(viewerEmail);
@@ -110,7 +113,8 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
           workspaceId: record.workspaceId,
           boardId,
           viewerSub: normalizedViewerSub,
-          viewerEmail: normalizedViewerEmail
+          viewerEmail: normalizedViewerEmail,
+          debugLog
         });
 
         for (const inviteSummary of inviteSummaries) {
@@ -198,7 +202,13 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
     });
   }
 
-  async #loadOrCreateWorkspaceRecord({ viewerSub, workspaceId = null, viewerEmail = null, projectForViewer = true } = {}) {
+  async #loadOrCreateWorkspaceRecord({
+    viewerSub,
+    workspaceId = null,
+    viewerEmail = null,
+    debugLog = null,
+    projectForViewer = true
+  } = {}) {
     const collection = this.#getCollection();
     const normalizedViewerSub = normalizeViewerSub(viewerSub);
     const normalizedWorkspaceId = normalizeOptionalWorkspaceId(workspaceId);
@@ -208,6 +218,7 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
         viewerSub: normalizedViewerSub,
         viewerEmail,
         workspaceId: normalizedWorkspaceId,
+        debugLog,
         projectForViewer
       });
     }
@@ -215,7 +226,11 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
     const existingRecord = await this.#loadHomeWorkspaceRecord(normalizedViewerSub);
 
     if (existingRecord) {
-      return projectRecordForViewer(existingRecord, { viewerSub: normalizedViewerSub, viewerEmail });
+      return projectRecordForViewer(existingRecord, {
+        viewerSub: normalizedViewerSub,
+        viewerEmail,
+        debugLog
+      });
     }
 
     const initialRecord = createInitialWorkspaceRecord(normalizedViewerSub, { now: this.now() });
@@ -227,7 +242,11 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
     );
 
     const record = await this.#loadRequiredWorkspaceRecord(initialRecord.workspaceId);
-    return projectRecordForViewer(record, { viewerSub: normalizedViewerSub, viewerEmail });
+    return projectRecordForViewer(record, {
+      viewerSub: normalizedViewerSub,
+      viewerEmail,
+      debugLog
+    });
   }
 
   async #loadRequiredWorkspaceRecord(workspaceId) {
@@ -262,7 +281,7 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
     return fromWorkspaceRecordDocument(homeDocument);
   }
 
-  async #loadAccessibleWorkspaceRecord({ viewerSub, viewerEmail, workspaceId, projectForViewer = true }) {
+  async #loadAccessibleWorkspaceRecord({ viewerSub, viewerEmail, workspaceId, debugLog = null, projectForViewer = true }) {
     let record;
 
     try {
@@ -280,14 +299,15 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
         viewerSub,
         viewerEmail,
         ownerSub: record.viewerSub,
-        workspace: record.workspace
+        workspace: record.workspace,
+        debugLog
       })
     ) {
       throw new WorkspaceAccessDeniedError();
     }
 
     if (projectForViewer || record.viewerSub === viewerSub) {
-      return projectRecordForViewer(record, { viewerSub, viewerEmail });
+      return projectRecordForViewer(record, { viewerSub, viewerEmail, debugLog });
     }
 
     return record;
@@ -360,7 +380,7 @@ function normalizeOptionalWorkspaceId(workspaceId) {
 
 function createPendingWorkspaceInviteSummaries(
   board,
-  { workspaceId, boardId, viewerSub, viewerEmail = null } = {}
+  { workspaceId, boardId, viewerSub, viewerEmail = null, debugLog = null } = {}
 ) {
   if (!board || typeof board !== 'object') {
     return [];
@@ -381,7 +401,8 @@ function createPendingWorkspaceInviteSummaries(
         boardId: normalizedBoardId,
         boardTitle: normalizedBoardTitle,
         viewerSub,
-        viewerEmail
+        viewerEmail,
+        debugLog
       })
     )
     .filter(Boolean);
@@ -389,24 +410,63 @@ function createPendingWorkspaceInviteSummaries(
 
 function createPendingWorkspaceInviteSummary(
   invite,
-  { workspaceId, boardId, boardTitle, viewerSub, viewerEmail = null } = {}
+  { workspaceId, boardId, boardTitle, viewerSub, viewerEmail = null, debugLog = null } = {}
 ) {
   const normalizedInvite = normalizeBoardInvite(invite);
+  const reject = (reason, extraFields = {}) => {
+    logInviteDebug(debugLog, 'invite.lookup.scan', {
+      viewerSub,
+      viewerEmail,
+      workspaceId,
+      boardId,
+      boardTitle,
+      inviteId: normalizedInvite?.id ?? normalizeOptionalString(invite?.id),
+      inviteEmail: normalizedInvite?.email ?? normalizeOptionalEmail(invite?.email),
+      inviteActorId: normalizeOptionalString(normalizedInvite?.actor?.id ?? invite?.actor?.id),
+      inviteStatus: normalizedInvite?.status ?? normalizeOptionalString(invite?.status),
+      matched: false,
+      rejectReason: reason,
+      ...extraFields
+    });
 
-  if (
-    !normalizedInvite ||
-    normalizedInvite.status !== 'pending' ||
-    !inviteMatchesViewer(normalizedInvite, { viewerSub, viewerEmail })
-  ) {
     return null;
+  };
+
+  if (!normalizedInvite) {
+    return reject('invalid_invite');
+  }
+
+  if (normalizedInvite.status !== 'pending') {
+    return reject('not_pending');
+  }
+
+  if (!inviteMatchesViewer(normalizedInvite, { viewerSub, viewerEmail })) {
+    return reject('viewer_mismatch');
   }
 
   const invitedBy = normalizeBoardActor(normalizedInvite.invitedBy);
   const invitedAt = normalizeOptionalIsoString(normalizedInvite.invitedAt);
 
   if (!invitedBy || !invitedAt) {
-    return null;
+    return reject('malformed_summary', {
+      hasInvitedBy: Boolean(invitedBy),
+      hasInvitedAt: Boolean(invitedAt)
+    });
   }
+
+  logInviteDebug(debugLog, 'invite.lookup.scan', {
+    viewerSub,
+    viewerEmail,
+    workspaceId,
+    boardId,
+    boardTitle,
+    inviteId: normalizedInvite.id,
+    inviteEmail: normalizedInvite.email ?? null,
+    inviteActorId: normalizedInvite.actor?.id ?? null,
+    inviteStatus: normalizedInvite.status,
+    matched: true,
+    rejectReason: null
+  });
 
   return {
     workspaceId,
@@ -457,4 +517,10 @@ function didPersistWorkspaceDocument(result) {
     || (typeof result?.modifiedCount === 'number' && result.modifiedCount > 0)
     || (typeof result?.upsertedCount === 'number' && result.upsertedCount > 0)
   );
+}
+
+function logInviteDebug(debugLog, event, fields) {
+  if (typeof debugLog === 'function') {
+    debugLog(event, fields);
+  }
 }

@@ -4,18 +4,20 @@ export function createMutationContext({
   actor = null,
   now = new Date().toISOString(),
   createBoardId = createDefaultBoardId,
-  createCardId = createDefaultCardId
+  createCardId = createDefaultCardId,
+  debugLog = null
 } = {}) {
   return {
     actor: normalizeMutationActor(actor),
     now: normalizeIsoTimestamp(now, 'now'),
     createBoardId: normalizeFactory(createBoardId, 'createBoardId'),
-    createCardId: normalizeFactory(createCardId, 'createCardId')
+    createCardId: normalizeFactory(createCardId, 'createCardId'),
+    debugLog: normalizeOptionalDebugLog(debugLog)
   };
 }
 
-export function createDefaultMutationContext({ actor = null } = {}) {
-  return createMutationContext({ actor });
+export function createDefaultMutationContext({ actor = null, debugLog = null } = {}) {
+  return createMutationContext({ actor, debugLog });
 }
 
 export function createDefaultBoardId() {
@@ -105,4 +107,16 @@ function normalizeOptionalEmail(value) {
   }
 
   return normalizedEmail;
+}
+
+function normalizeOptionalDebugLog(value) {
+  if (value == null) {
+    return null;
+  }
+
+  if (typeof value !== 'function') {
+    throw new Error('Mutation context debugLog must be a function when provided.');
+  }
+
+  return value;
 }
