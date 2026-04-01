@@ -20,6 +20,7 @@ test('isWorkspaceCommandType accepts known command types and rejects unknown one
   assert.equal(isWorkspaceCommandType('card.locale.request.clear'), true);
   assert.equal(isWorkspaceCommandType('card.move'), true);
   assert.equal(isWorkspaceCommandType('board.archive'), false);
+  assert.equal(isWorkspaceCommandType('ui.columnCollapsed.set'), false);
 });
 
 test('validateWorkspaceCommand accepts valid command envelopes', () => {
@@ -201,15 +202,6 @@ test('validateWorkspaceCommand accepts valid command envelopes', () => {
       clientMutationId: 'm19',
       type: 'ui.activeBoard.set',
       payload: { boardId: 'main' }
-    },
-    {
-      clientMutationId: 'm20',
-      type: 'ui.columnCollapsed.set',
-      payload: {
-        boardId: 'main',
-        columnId: 'done',
-        isCollapsed: true
-      }
     }
   ];
 
@@ -225,6 +217,19 @@ test('validateWorkspaceCommand rejects unknown command types', () => {
       clientMutationId: 'm1',
       type: 'board.archive',
       payload: {}
+    }),
+    false
+  );
+
+  assert.equal(
+    validateWorkspaceCommand({
+      clientMutationId: 'm2',
+      type: 'ui.columnCollapsed.set',
+      payload: {
+        boardId: 'main',
+        columnId: 'doing',
+        isCollapsed: true
+      }
     }),
     false
   );
@@ -430,19 +435,6 @@ test('validateWorkspaceCommand rejects invalid payloads', () => {
   assert.equal(
     validateWorkspaceCommand({
       clientMutationId: 'm3',
-      type: 'ui.columnCollapsed.set',
-      payload: {
-        boardId: 'main',
-        columnId: 'doing',
-        isCollapsed: 'yes'
-      }
-    }),
-    false
-  );
-
-  assert.equal(
-    validateWorkspaceCommand({
-      clientMutationId: 'm4',
       type: 'board.update',
       payload: {
         boardId: 'main',

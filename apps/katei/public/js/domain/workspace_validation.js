@@ -24,13 +24,6 @@ export function validateWorkspaceShape(value) {
     return false;
   }
 
-  if (
-    value.ui.collapsedColumnsByBoard != null &&
-    !isValidCollapsedColumnsByBoard(value.ui.collapsedColumnsByBoard, value.boards)
-  ) {
-    return false;
-  }
-
   if (!Array.isArray(value.boardOrder) || value.boardOrder.length < 1) {
     return false;
   }
@@ -182,34 +175,6 @@ function isValidCard(card, cardId, board) {
       validateCardLocaleRequests(card) &&
       isValidPriority(card.priority)
   );
-}
-
-function isValidCollapsedColumnsByBoard(value, boards) {
-  if (!value || typeof value !== 'object') {
-    return false;
-  }
-
-  for (const boardId of Object.keys(value)) {
-    if (!boards[boardId] || !isValidCollapsedColumns(value[boardId], boards[boardId])) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-function isValidCollapsedColumns(value, board) {
-  if (!value || typeof value !== 'object') {
-    return false;
-  }
-
-  for (const stageId of board.stageOrder) {
-    if (value[stageId] != null && typeof value[stageId] !== 'boolean') {
-      return false;
-    }
-  }
-
-  return true;
 }
 
 function isValidWorkspaceId(workspaceId) {

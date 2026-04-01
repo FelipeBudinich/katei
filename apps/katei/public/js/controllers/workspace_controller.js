@@ -1,8 +1,5 @@
 import { Controller } from '../../vendor/stimulus/stimulus.js';
-import {
-  getBoardCardContentVariant,
-  getCollapsedColumnsForBoard
-} from '../domain/workspace.js';
+import { getBoardCardContentVariant } from '../domain/workspace.js';
 import { createBrowserDateTimeFormatter, getBrowserTranslator } from '../i18n/browser.js';
 import { localizeErrorMessage } from '../i18n/errors.js';
 import { getPriorityDisplayLabel } from '../i18n/workspace_labels.js';
@@ -81,6 +78,7 @@ export default class extends Controller {
       sub: this.viewerSubValue,
       email: this.hasViewerEmailValue ? this.viewerEmailValue : null
     });
+    this.columnCollapseState = new Map();
     this.pendingConfirmation = null;
     this.viewTriggerElement = null;
     this.confirmTriggerElement = null;
@@ -128,7 +126,7 @@ export default class extends Controller {
     });
   }
 
-  async toggleColumn(event) {
+  toggleColumn(event) {
     const board = this.activeBoard;
 
     if (!board || !this.activeBoardCollaborationState?.canRead) {
@@ -147,11 +145,11 @@ export default class extends Controller {
       return;
     }
 
-    const collapsedColumns = getCollapsedColumnsForBoard(this.workspace, board.id);
+    const collapsedColumns = this.getCollapsedColumnsForBoard(board);
     const nextCollapsedState = !collapsedColumns[stageId];
-
-    await this.runAction(
-      () => this.service.setColumnCollapsed(board.id, stageId, nextCollapsedState),
+    this.setColumnCollapsed(board, stageId, nextCollapsedState);
+    this.syncColumnPanelState(event?.currentTarget?.closest?.('.column-panel') ?? null, nextCollapsedState);
+    this.announce(
       this.t(
         nextCollapsedState
           ? 'workspace.announcements.columnCollapsed'
@@ -627,7 +625,7 @@ export default class extends Controller {
 
     renderBoardState({
       board: this.activeBoard,
-      collapsedColumns: getCollapsedColumnsForBoard(this.workspace, this.activeBoard.id),
+      collapsedColumns: this.getCollapsedColumnsForBoard(this.activeBoard),
       canReadBoard: activeBoardState.canRead,
       canEditBoard: activeBoardState.canEdit,
       regions: {
@@ -782,6 +780,60 @@ export default class extends Controller {
     };
   }
 
+  getCollapsedColumnsForBoard(board) {
+    if (!board || !Array.isArray(board.stageOrder)) {
+      return {};
+    }
+
+    if (!(this.columnCollapseState instanceof Map)) {
+      this.columnCollapseState = new Map();
+    }
+
+    const cacheKey = createColumnCollapseCacheKey(this.workspace?.workspaceId, board.id);
+    const currentState = this.columnCollapseState.get(cacheKey) ?? {};
+    const nextState = {};
+
+    for (const stageId of board.stageOrder) {
+      nextState[stageId] = Boolean(currentState[stageId]);
+    }
+
+    this.columnCollapseState.set(cacheKey, nextState);
+    return nextState;
+  }
+
+  setColumnCollapsed(board, stageId, isCollapsed) {
+    if (!board || !stageId) {
+      return;
+    }
+
+    const cacheKey = createColumnCollapseCacheKey(this.workspace?.workspaceId, board.id);
+    const currentState = this.getCollapsedColumnsForBoard(board);
+    currentState[stageId] = Boolean(isCollapsed);
+    this.columnCollapseState.set(cacheKey, currentState);
+  }
+
+  syncColumnPanelState(panelElement, isCollapsed) {
+    if (!panelElement) {
+      return;
+    }
+
+    panelElement.dataset.collapsed = String(Boolean(isCollapsed));
+
+    const toggleElement = panelElement.querySelector('[data-column-toggle]');
+    if (toggleElement) {
+      toggleElement.setAttribute('aria-expanded', String(!isCollapsed));
+    }
+
+    const bodyElement = panelElement.querySelector('.column-panel-body');
+    if (!bodyElement) {
+      return;
+    }
+
+    const cardsContainer = panelElement.querySelector('[data-column-cards]');
+    const hasCards = Boolean(cardsContainer?.childElementCount);
+    bodyElement.hidden = Boolean(isCollapsed) || !hasCards;
+  }
+
   refreshCardEditor({ boardId, cardId, locale, mode = 'edit' } = {}) {
     const board = boardId ? this.workspace?.boards?.[boardId] : null;
     const card = board?.cards?.[cardId] ?? null;
@@ -805,4 +857,10 @@ export default class extends Controller {
       stageId
     });
   }
+}
+
+function createColumnCollapseCacheKey(workspaceId, boardId) {
+  const normalizedWorkspaceId = typeof workspaceId === 'string' && workspaceId.trim() ? workspaceId.trim() : '__workspace__';
+  const normalizedBoardId = typeof boardId === 'string' && boardId.trim() ? boardId.trim() : '__board__';
+  return `${normalizedWorkspaceId}::${normalizedBoardId}`;
 }

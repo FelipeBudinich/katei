@@ -7,15 +7,9 @@ import {
 import {
   DEFAULT_PRIORITY,
   cloneWorkspace,
-  createCollapsedColumns,
   createWorkspaceBoard
 } from './workspace_read_model.js';
-import {
-  findColumnIdByCardId,
-  getBoard,
-  getCard,
-  getCollapsedColumnsForBoard
-} from './workspace_selectors.js';
+import { findColumnIdByCardId, getBoard, getCard } from './workspace_selectors.js';
 import {
   assertValidBoardId,
   assertValidColumnId,
@@ -45,8 +39,6 @@ export function createBoard(workspace, input) {
   nextWorkspace.boards[board.id] = board;
   nextWorkspace.boardOrder = [...nextWorkspace.boardOrder, board.id];
   nextWorkspace.ui.activeBoardId = board.id;
-  ensureCollapsedColumnsByBoard(nextWorkspace);
-  nextWorkspace.ui.collapsedColumnsByBoard[board.id] = createCollapsedColumns(board.stageOrder);
 
   return nextWorkspace;
 }
@@ -75,8 +67,6 @@ export function deleteBoard(workspace, boardId) {
 
   nextWorkspace.boardOrder = nextWorkspace.boardOrder.filter((currentBoardId) => currentBoardId !== boardId);
   delete nextWorkspace.boards[boardId];
-  ensureCollapsedColumnsByBoard(nextWorkspace);
-  delete nextWorkspace.ui.collapsedColumnsByBoard[boardId];
 
   if (nextWorkspace.ui.activeBoardId === boardId) {
     const nextBoardId =
@@ -91,17 +81,6 @@ export function setActiveBoard(workspace, boardId) {
   const nextWorkspace = cloneWorkspace(workspace);
   assertValidBoardId(boardId, nextWorkspace.boards);
   nextWorkspace.ui.activeBoardId = boardId;
-  return nextWorkspace;
-}
-
-export function setColumnCollapsed(workspace, boardId, columnId, isCollapsed) {
-  const nextWorkspace = cloneWorkspace(workspace);
-  const board = getBoard(nextWorkspace, boardId);
-  assertValidColumnId(columnId, board);
-  ensureCollapsedColumnsByBoard(nextWorkspace);
-  nextWorkspace.ui.collapsedColumnsByBoard[boardId] = getCollapsedColumnsForBoard(nextWorkspace, boardId);
-  nextWorkspace.ui.collapsedColumnsByBoard[boardId][columnId] = Boolean(isCollapsed);
-
   return nextWorkspace;
 }
 
@@ -262,12 +241,6 @@ function createTimestamp() {
 
 function hasOwn(value, key) {
   return Boolean(value && Object.prototype.hasOwnProperty.call(value, key));
-}
-
-function ensureCollapsedColumnsByBoard(workspace) {
-  if (!workspace.ui.collapsedColumnsByBoard || typeof workspace.ui.collapsedColumnsByBoard !== 'object') {
-    workspace.ui.collapsedColumnsByBoard = {};
-  }
 }
 
 function createClearedStages(board) {

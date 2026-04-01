@@ -240,6 +240,8 @@ test('fromWorkspaceRecordDocument migrates legacy home documents to canonical sh
     commandReceipts: []
   });
 
+  assert.equal(record.workspace.ui.collapsedColumnsByBoard, undefined);
+
   assert.equal(record.workspaceId, createHomeWorkspaceId('sub_123'));
   assert.equal(record.isHomeWorkspace, true);
   assert.equal(record.documentId, 'sub_123');

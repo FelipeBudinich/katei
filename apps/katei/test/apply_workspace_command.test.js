@@ -1,10 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {
-  createCollapsedColumns,
-  createEmptyWorkspace,
-  createWorkspaceBoard
-} from '../public/js/domain/workspace_read_model.js';
+import { createEmptyWorkspace, createWorkspaceBoard } from '../public/js/domain/workspace_read_model.js';
 import { validateWorkspaceShape } from '../public/js/domain/workspace_validation.js';
 import { createMutationContext } from '../src/workspaces/mutation_context.js';
 import {
@@ -114,7 +110,6 @@ function addBoardToWorkspace(
 
   workspace.boards[boardId] = board;
   workspace.boardOrder.push(boardId);
-  workspace.ui.collapsedColumnsByBoard[boardId] = createCollapsedColumns(board.stageOrder);
 
   return workspace;
 }
@@ -1038,11 +1033,10 @@ test('applyWorkspaceCommand returns valid workspace snapshots', () => {
     record: createRecord(),
     command: {
       clientMutationId: 'm11',
-      type: 'ui.columnCollapsed.set',
+      type: 'board.rename',
       payload: {
         boardId: 'main',
-        columnId: 'doing',
-        isCollapsed: true
+        title: 'Renamed board'
       }
     },
     expectedRevision: 0,
@@ -1050,7 +1044,8 @@ test('applyWorkspaceCommand returns valid workspace snapshots', () => {
   });
 
   assert.equal(validateWorkspaceShape(workspace), true);
-  assert.equal(workspace.ui.collapsedColumnsByBoard.main.doing, true);
+  assert.equal(workspace.boards.main.title, 'Renamed board');
+  assert.equal(workspace.ui.collapsedColumnsByBoard, undefined);
 });
 
 test('board admin can create an invite', () => {

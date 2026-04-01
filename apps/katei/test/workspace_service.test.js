@@ -187,18 +187,6 @@ test('WorkspaceService setActiveBoard calls repository.applyCommand and returns 
   });
 });
 
-test('WorkspaceService setColumnCollapsed calls repository.applyCommand and returns workspace', async () => {
-  await assertServiceCommand({
-    action: (service) => service.setColumnCollapsed('main', 'doing', true),
-    expectedType: 'ui.columnCollapsed.set',
-    expectedPayload: {
-      boardId: 'main',
-      columnId: 'doing',
-      isCollapsed: true
-    }
-  });
-});
-
 test('WorkspaceService inviteBoardMember calls repository.applyCommand and returns workspace', async () => {
   await assertServiceCommand({
     action: (service) => service.inviteBoardMember('main', 'invitee@example.com', 'editor'),

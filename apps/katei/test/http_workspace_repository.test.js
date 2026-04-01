@@ -1069,10 +1069,6 @@ function createFilteredSharedWorkspace() {
   workspace.boards.invite = inviteBoard;
   workspace.boardOrder = ['member', 'invite'];
   workspace.ui.activeBoardId = 'member';
-  workspace.ui.collapsedColumnsByBoard = {
-    member: structuredClone(workspace.ui.collapsedColumnsByBoard.main ?? workspace.ui.collapsedColumnsByBoard.member ?? {}),
-    invite: {}
-  };
 
   return workspace;
 }
@@ -1085,6 +1081,5 @@ function createEmptyActorFacingWorkspace(workspaceId) {
   workspace.boardOrder = [];
   workspace.boards = {};
   workspace.ui.activeBoardId = null;
-  workspace.ui.collapsedColumnsByBoard = {};
   return workspace;
 }

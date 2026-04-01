@@ -45,6 +45,7 @@ test('migrateWorkspaceToV6 upgrades a legacy v7 workspace to the current shared-
   assert.deepEqual(migratedWorkspace.access, {
     kind: 'private'
   });
+  assert.equal(migratedWorkspace.ui.collapsedColumnsByBoard, undefined);
   assert.deepEqual(migratedBoard.stageOrder, ['backlog', 'doing', 'done', 'archived']);
   assert.equal(migratedBoard.columnOrder, undefined);
   assert.equal(migratedBoard.columns, undefined);

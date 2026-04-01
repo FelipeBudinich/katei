@@ -1,13 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createEmptyWorkspace } from '../public/js/domain/workspace_read_model.js';
-import { findColumnIdByCardId, getActiveBoard, getCollapsedColumnsForBoard } from '../public/js/domain/workspace_selectors.js';
+import { findColumnIdByCardId, getActiveBoard } from '../public/js/domain/workspace_selectors.js';
 import { validateWorkspaceShape } from '../public/js/domain/workspace_validation.js';
-import {
-  createCard,
-  setColumnCollapsed,
-  updateCard
-} from '../public/js/domain/workspace_mutations.js';
+import { createCard, updateCard } from '../public/js/domain/workspace_mutations.js';
 
 test('createCard stores detailsMarkdown on new cards', () => {
   const workspace = createEmptyWorkspace();
@@ -212,15 +208,4 @@ test('findColumnIdByCardId returns the containing column id', () => {
 
   assert.equal(findColumnIdByCardId(board, cardId), 'backlog');
   assert.equal(findColumnIdByCardId(board, 'missing_card'), null);
-});
-
-test('getCollapsedColumnsForBoard merges stored state with default column flags', () => {
-  const workspace = setColumnCollapsed(createEmptyWorkspace(), 'main', 'doing', true);
-
-  assert.deepEqual(getCollapsedColumnsForBoard(workspace, 'main'), {
-    backlog: false,
-    doing: true,
-    done: false,
-    archived: false
-  });
 });

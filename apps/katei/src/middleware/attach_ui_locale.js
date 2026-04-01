@@ -19,7 +19,7 @@ export function createAttachUiLocaleMiddleware(config) {
     const uiLocale = resolveRequestUiLocale(request);
     const uiLocaleOptions = SUPPORTED_UI_LOCALES.map((value) => ({
       value,
-      label: getUiLocaleLabel(value, uiLocale),
+      label: getUiLocaleLabel(value, value),
       selected: value === uiLocale
     }));
 

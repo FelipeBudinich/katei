@@ -23,8 +23,7 @@ export const WORKSPACE_COMMAND_TYPES = Object.freeze([
   'card.locale.request.clear',
   'card.delete',
   'card.move',
-  'ui.activeBoard.set',
-  'ui.columnCollapsed.set'
+  'ui.activeBoard.set'
 ]);
 
 export function isWorkspaceCommandType(type) {
@@ -122,8 +121,6 @@ function validatePayload(type, payload) {
       return validateCardIdentityPayload(type, payload);
     case 'card.move':
       return validateCardMovePayload(payload);
-    case 'ui.columnCollapsed.set':
-      return validateColumnCollapsedPayload(payload);
     default:
       return invalid(`Invalid workspace command type: ${type}`);
   }
@@ -373,29 +370,6 @@ function validateCardMovePayload(payload) {
   }
 
   return requireColumnId(payload.targetColumnId, 'card.move payload.targetColumnId is required.');
-}
-
-function validateColumnCollapsedPayload(payload) {
-  const boardIdValidation = requireBoardId(payload, 'ui.columnCollapsed.set payload.boardId is required.');
-
-  if (!boardIdValidation.isValid) {
-    return boardIdValidation;
-  }
-
-  const columnIdValidation = requireColumnId(
-    payload.columnId,
-    'ui.columnCollapsed.set payload.columnId is required.'
-  );
-
-  if (!columnIdValidation.isValid) {
-    return columnIdValidation;
-  }
-
-  if (typeof payload.isCollapsed !== 'boolean') {
-    return invalid('ui.columnCollapsed.set payload.isCollapsed must be a boolean.');
-  }
-
-  return valid();
 }
 
 function validateWorkspaceCommandRequestInternal(request) {

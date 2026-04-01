@@ -33,6 +33,7 @@ test('owner can access and keep every board in a shared workspace projection', (
   }), true);
   assert.deepEqual(filteredWorkspace.boardOrder, ['main', 'member', 'invite']);
   assert.equal(filteredWorkspace.ui.activeBoardId, 'main');
+  assert.equal(filteredWorkspace.ui.collapsedColumnsByBoard, undefined);
   assert.equal(firstCardTitle(filteredWorkspace.boards.main), 'Owner board card');
   assert.equal(firstCardTitle(filteredWorkspace.boards.invite), 'Invite board card');
 });

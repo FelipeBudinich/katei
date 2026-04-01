@@ -58,6 +58,10 @@ export function normalizeWorkspaceToCurrentSchema(
   delete migratedWorkspace.accessLevel;
   delete migratedWorkspace.visibility;
 
+  if (isPlainObject(migratedWorkspace.ui)) {
+    delete migratedWorkspace.ui.collapsedColumnsByBoard;
+  }
+
   if (!isPlainObject(migratedWorkspace.boards)) {
     return migratedWorkspace;
   }

@@ -212,26 +212,17 @@ function createFilteredWorkspace(workspace, visibleBoards) {
   const nextBoardOrder = visibleBoards.map(({ boardId }) => boardId);
   const currentActiveBoardId = normalizeOptionalString(workspace?.ui?.activeBoardId);
   const nextActiveBoardId = nextBoardOrder.includes(currentActiveBoardId) ? currentActiveBoardId : (nextBoardOrder[0] ?? null);
-  const nextCollapsedColumnsByBoard = {};
+  const nextUi = isPlainObject(workspace?.ui) ? structuredClone(workspace.ui) : {};
 
-  if (isPlainObject(workspace?.ui?.collapsedColumnsByBoard)) {
-    for (const boardId of nextBoardOrder) {
-      if (!Object.prototype.hasOwnProperty.call(workspace.ui.collapsedColumnsByBoard, boardId)) {
-        continue;
-      }
-
-      nextCollapsedColumnsByBoard[boardId] = structuredClone(workspace.ui.collapsedColumnsByBoard[boardId]);
-    }
-  }
+  delete nextUi.collapsedColumnsByBoard;
 
   return {
     ...workspace,
     boardOrder: nextBoardOrder,
     boards: Object.fromEntries(visibleBoards.map(({ boardId, board }) => [boardId, board])),
     ui: {
-      ...(isPlainObject(workspace?.ui) ? workspace.ui : {}),
-      activeBoardId: nextActiveBoardId,
-      collapsedColumnsByBoard: nextCollapsedColumnsByBoard
+      ...nextUi,
+      activeBoardId: nextActiveBoardId
     }
   };
 }

@@ -37,16 +37,10 @@ import {
 } from '../../public/js/domain/card_localization_requests.js';
 import {
   cloneWorkspace,
-  createCollapsedColumns,
   createWorkspaceBoard,
   DEFAULT_PRIORITY
 } from '../../public/js/domain/workspace_read_model.js';
-import {
-  findColumnIdByCardId,
-  getBoard,
-  getCard,
-  getCollapsedColumnsForBoard
-} from '../../public/js/domain/workspace_selectors.js';
+import { findColumnIdByCardId, getBoard, getCard } from '../../public/js/domain/workspace_selectors.js';
 import {
   assertValidColumnId,
   normalizeBoardTitle,
@@ -160,8 +154,6 @@ function applyCommandToWorkspace({ workspace, command, context }) {
       return applyCardMove(workspace, command, context);
     case 'ui.activeBoard.set':
       return applySetActiveBoard(workspace, command, context);
-    case 'ui.columnCollapsed.set':
-      return applySetColumnCollapsed(workspace, command, context);
     default:
       throw new Error(`Unsupported workspace command type: ${command.type}`);
   }
@@ -196,10 +188,6 @@ function applyBoardCreate(workspace, command, context) {
   nextWorkspace.boards[board.id] = board;
   nextWorkspace.boardOrder = [...nextWorkspace.boardOrder, board.id];
   nextWorkspace.ui.activeBoardId = board.id;
-  ensureCollapsedColumnsByBoard(nextWorkspace);
-  nextWorkspace.ui.collapsedColumnsByBoard[board.id] = createCollapsedColumns(
-    normalizedSchema?.stageOrder ?? board.stageOrder
-  );
 
   return {
     workspace: nextWorkspace,
@@ -244,7 +232,6 @@ function applyBoardUpdate(workspace, command, context) {
   board.title = normalizedTitle;
   applyNormalizedSchemaToBoard(board, normalizedSchema, { preserveCardIdsFrom: currentBoard });
   board.updatedAt = context.now;
-  syncCollapsedColumnsForBoard(nextWorkspace, board.id, normalizedSchema.stageOrder);
 
   return {
     workspace: nextWorkspace,
@@ -517,8 +504,6 @@ function applyBoardDelete(workspace, command, context) {
 
   nextWorkspace.boardOrder = nextWorkspace.boardOrder.filter((currentBoardId) => currentBoardId !== boardId);
   delete nextWorkspace.boards[boardId];
-  ensureCollapsedColumnsByBoard(nextWorkspace);
-  delete nextWorkspace.ui.collapsedColumnsByBoard[boardId];
 
   if (nextWorkspace.ui.activeBoardId === boardId) {
     const nextBoardId =
@@ -952,41 +937,6 @@ function applySetActiveBoard(workspace, command, context) {
   };
 }
 
-function applySetColumnCollapsed(workspace, command, context) {
-  const { boardId, columnId, isCollapsed } = command.payload;
-  const board = getBoard(workspace, boardId);
-  assertActorCanReadBoard(board, context.actor);
-  assertValidColumnId(columnId, board);
-
-  const currentCollapsedColumns = getCollapsedColumnsForBoard(workspace, boardId);
-
-  if (currentCollapsedColumns[columnId] === Boolean(isCollapsed)) {
-    return {
-      workspace,
-      result: createCommandResult(command, {
-        noOp: true,
-        boardId,
-        columnId,
-        isCollapsed: Boolean(isCollapsed)
-      })
-    };
-  }
-
-  const nextWorkspace = cloneWorkspace(workspace);
-  ensureCollapsedColumnsByBoard(nextWorkspace);
-  nextWorkspace.ui.collapsedColumnsByBoard[boardId] = getCollapsedColumnsForBoard(nextWorkspace, boardId);
-  nextWorkspace.ui.collapsedColumnsByBoard[boardId][columnId] = Boolean(isCollapsed);
-
-  return {
-    workspace: nextWorkspace,
-    result: createCommandResult(command, {
-      boardId,
-      columnId,
-      isCollapsed: Boolean(isCollapsed)
-    })
-  };
-}
-
 function assertAuthenticatedHumanActor(actor, errorMessage) {
   const normalizedActor = normalizeBoardActor(actor);
 
@@ -1207,26 +1157,6 @@ function assertExpectedRevision(expectedRevision) {
 
 function isBoardResetNoOp(board) {
   return board.stageOrder.every((stageId) => board.stages[stageId]?.cardIds?.length === 0);
-}
-
-function ensureCollapsedColumnsByBoard(workspace) {
-  if (!workspace.ui.collapsedColumnsByBoard || typeof workspace.ui.collapsedColumnsByBoard !== 'object') {
-    workspace.ui.collapsedColumnsByBoard = {};
-  }
-}
-
-function syncCollapsedColumnsForBoard(workspace, boardId, stageOrder) {
-  ensureCollapsedColumnsByBoard(workspace);
-  const currentState = workspace.ui.collapsedColumnsByBoard[boardId] ?? {};
-  const nextState = createCollapsedColumns(stageOrder);
-
-  for (const stageId of stageOrder) {
-    if (Object.prototype.hasOwnProperty.call(currentState, stageId)) {
-      nextState[stageId] = Boolean(currentState[stageId]);
-    }
-  }
-
-  workspace.ui.collapsedColumnsByBoard[boardId] = nextState;
 }
 
 function hasOwn(value, key) {

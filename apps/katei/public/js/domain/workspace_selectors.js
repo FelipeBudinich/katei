@@ -1,9 +1,4 @@
-import {
-  COLUMN_ORDER,
-  COLUMN_TITLES,
-  PRIORITY_ORDER,
-  createCollapsedColumns
-} from './workspace_read_model.js';
+import { COLUMN_ORDER, COLUMN_TITLES, PRIORITY_ORDER } from './workspace_read_model.js';
 import { assertValidBoardId, assertValidColumnId } from './workspace_validation.js';
 
 export function sortCardIdsForColumn(board, columnId) {
@@ -49,18 +44,6 @@ export function getBoard(workspace, boardId) {
 
 export function getActiveBoard(workspace) {
   return getBoard(workspace, workspace.ui.activeBoardId);
-}
-
-export function getCollapsedColumnsForBoard(workspace, boardId) {
-  const board = getBoard(workspace, boardId);
-  const storedState = workspace?.ui?.collapsedColumnsByBoard?.[boardId] ?? {};
-  const collapsedColumns = createCollapsedColumns(board.stageOrder);
-
-  for (const stageId of board.stageOrder) {
-    collapsedColumns[stageId] = Boolean(storedState[stageId]);
-  }
-
-  return collapsedColumns;
 }
 
 export function getCard(board, cardId) {

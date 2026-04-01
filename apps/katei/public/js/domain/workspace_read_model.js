@@ -46,10 +46,7 @@ export function createEmptyWorkspace({ workspaceId = WORKSPACE_ID, creator = und
     }),
     access: createWorkspaceAccess(),
     ui: {
-      activeBoardId: board.id,
-      collapsedColumnsByBoard: {
-        [board.id]: createCollapsedColumns()
-      }
+      activeBoardId: board.id
     },
     boardOrder: [board.id],
     boards: {
@@ -92,16 +89,6 @@ export function createWorkspaceBoard({ id, title, createdAt, updatedAt, creator 
     languagePolicy: createDefaultBoardLanguagePolicy(),
     cards: {}
   };
-}
-
-export function createCollapsedColumns(stageIds = COLUMN_ORDER) {
-  const collapsedColumns = {};
-
-  for (const stageId of stageIds) {
-    collapsedColumns[stageId] = false;
-  }
-
-  return collapsedColumns;
 }
 
 export function cloneWorkspace(workspace) {

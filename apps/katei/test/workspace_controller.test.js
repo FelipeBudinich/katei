@@ -228,6 +228,87 @@ test('workspace controller sync-board-options payload includes pendingWorkspaceI
   });
 });
 
+test('toggleColumn keeps collapse state client-local and updates the DOM without mutating workspace state', () => {
+  const viewerActor = createActor('viewer_1', 'viewer@example.com', 'Viewer');
+  const workspace = createViewerWorkspace('workspace_local_columns', viewerActor);
+  const controller = Object.create(WorkspaceController.prototype);
+  const panel = createColumnPanelDouble({
+    stageId: 'backlog',
+    columnId: 'backlog',
+    cardCount: 2
+  });
+  const service = {
+    calls: 0,
+    setColumnCollapsed() {
+      this.calls += 1;
+    }
+  };
+  const announcements = [];
+
+  controller.workspace = workspace;
+  controller.viewerActor = viewerActor;
+  controller.service = service;
+  controller.t = (key, values = {}) => (values.column ? `${key}:${values.column}` : key);
+  controller.announce = (message) => announcements.push(message);
+
+  WorkspaceController.prototype.toggleColumn.call(controller, {
+    currentTarget: panel.toggleElement
+  });
+
+  assert.strictEqual(controller.workspace, workspace);
+  assert.equal(service.calls, 0);
+  assert.equal(panel.element.dataset.collapsed, 'true');
+  assert.equal(panel.toggleElement.attributes['aria-expanded'], 'false');
+  assert.equal(panel.bodyElement.hidden, true);
+  assert.equal(controller.getCollapsedColumnsForBoard(workspace.boards.main).backlog, true);
+  assert.equal(announcements.length, 1);
+});
+
+test('workspace controller scopes transient collapse state by workspace id and preserves per-column independence', () => {
+  const viewerActor = createActor('viewer_1', 'viewer@example.com', 'Viewer');
+  const workspaceA = createViewerWorkspace('workspace_alpha', viewerActor);
+  const workspaceB = createViewerWorkspace('workspace_beta', viewerActor);
+  const controller = Object.create(WorkspaceController.prototype);
+
+  controller.workspace = workspaceA;
+  controller.setColumnCollapsed(workspaceA.boards.main, 'backlog', true);
+  controller.setColumnCollapsed(workspaceA.boards.main, 'doing', false);
+
+  assert.deepEqual(controller.getCollapsedColumnsForBoard(workspaceA.boards.main), {
+    backlog: true,
+    doing: false,
+    done: false,
+    archived: false
+  });
+
+  controller.workspace = workspaceB;
+
+  assert.deepEqual(controller.getCollapsedColumnsForBoard(workspaceB.boards.main), {
+    backlog: false,
+    doing: false,
+    done: false,
+    archived: false
+  });
+
+  controller.setColumnCollapsed(workspaceB.boards.main, 'doing', true);
+
+  assert.deepEqual(controller.getCollapsedColumnsForBoard(workspaceB.boards.main), {
+    backlog: false,
+    doing: true,
+    done: false,
+    archived: false
+  });
+
+  controller.workspace = workspaceA;
+
+  assert.deepEqual(controller.getCollapsedColumnsForBoard(workspaceA.boards.main), {
+    backlog: true,
+    doing: false,
+    done: false,
+    archived: false
+  });
+});
+
 test('performWorkspaceInviteDecision keeps the active workspace when accepting an invite', async () => {
   const viewerActor = createActor('invitee_sub', 'invitee@example.com', 'Invitee');
   const sharedWorkspace = createViewerWorkspace('workspace_shared', viewerActor);
@@ -736,5 +817,56 @@ function createActor(id, email, displayName) {
     id,
     email,
     displayName
+  };
+}
+
+function createColumnPanelDouble({ stageId, columnId, cardCount = 0 } = {}) {
+  const bodyElement = {
+    hidden: false
+  };
+  const cardsElement = {
+    childElementCount: cardCount
+  };
+  const element = {
+    dataset: {
+      collapsed: 'false',
+      stageId,
+      columnId
+    },
+    querySelector(selector) {
+      if (selector === '[data-column-toggle]') {
+        return toggleElement;
+      }
+
+      if (selector === '.column-panel-body') {
+        return bodyElement;
+      }
+
+      if (selector === '[data-column-cards]') {
+        return cardsElement;
+      }
+
+      return null;
+    }
+  };
+  const toggleElement = {
+    dataset: {
+      stageId,
+      columnId
+    },
+    attributes: {},
+    setAttribute(name, value) {
+      this.attributes[name] = String(value);
+    },
+    closest(selector) {
+      return selector === '.column-panel' ? element : null;
+    }
+  };
+
+  return {
+    element,
+    toggleElement,
+    bodyElement,
+    cardsElement
   };
 }

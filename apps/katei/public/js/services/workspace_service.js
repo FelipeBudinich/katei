@@ -70,14 +70,6 @@ export class WorkspaceService {
     });
   }
 
-  async setColumnCollapsed(boardId, columnId, isCollapsed) {
-    return this.#applyCommand('ui.columnCollapsed.set', {
-      boardId,
-      columnId,
-      isCollapsed
-    });
-  }
-
   async resetBoard(boardId) {
     return this.#applyCommand('board.reset', {
       boardId

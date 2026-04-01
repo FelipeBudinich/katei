@@ -1,5 +1,4 @@
-{% set isCollapsed = collapsedColumns and collapsedColumns[column.id] %}
-<section class="column-panel" data-stage-id="{{ column.id }}" data-column-id="{{ column.id }}" data-collapsed="{{ 'true' if isCollapsed else 'false' }}">
+<section class="column-panel" data-stage-id="{{ column.id }}" data-column-id="{{ column.id }}" data-collapsed="false">
   <header class="column-panel-header">
     <button
       type="button"
@@ -8,7 +7,7 @@
       data-stage-id="{{ column.id }}"
       data-column-id="{{ column.id }}"
       data-action="workspace#toggleColumn"
-      aria-expanded="{{ 'false' if isCollapsed else 'true' }}"
+      aria-expanded="true"
       aria-controls="column-panel-body-{{ column.id }}"
     >
       <span class="column-header-toggle-title font-serif text-2xl text-strong" data-column-field="title">
@@ -22,7 +21,7 @@
     </button>
   </header>
 
-  <div id="column-panel-body-{{ column.id }}" class="column-panel-body"{% if isCollapsed or not column.cardIds.length %} hidden{% endif %}>
+  <div id="column-panel-body-{{ column.id }}" class="column-panel-body"{% if not column.cardIds.length %} hidden{% endif %}>
     <div class="column-card-list space-y-3" data-column-cards>
       {% if column.cardIds.length %}
         {% for cardId in column.cardIds %}
