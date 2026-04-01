@@ -31,12 +31,6 @@
       </button>
     </div>
 
-    <div class="ui-locale-control-row mt-4">
-      {% include "partials/ui-locale-badge.njk" %}
-      {% set uiLocalePickerId = 'board-options-ui-locale-picker' %}
-      {% include "partials/ui-locale-picker.njk" %}
-    </div>
-
     <section class="mt-6 space-y-3">
       <p class="field-label text-sm font-semibold">{{ t('boardOptionsDialog.switchBoardLabel') }}</p>
       <ul class="space-y-3" data-board-options-target="boardList"></ul>
@@ -122,16 +116,6 @@
       >
         {{ t('boardOptionsDialog.deleteBoard') }}
       </button>
-    </div>
-
-    <div
-      class="dialog-actions mt-4"
-      data-controller="session"
-      data-session-auth-url-value="/auth/logout"
-      data-session-redirect-url-value="/"
-    >
-      <button type="button" class="touch-button-secondary" data-action="session#logout">{{ t('common.logout') }}</button>
-      <p class="sr-only" aria-live="polite" data-session-target="status"></p>
     </div>
   </div>
 </dialog>

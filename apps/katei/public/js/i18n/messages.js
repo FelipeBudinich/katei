@@ -41,6 +41,7 @@ const EN_MESSAGES = freezeCatalog({
   workspace: {
     viewerSignedIn: 'Signed in',
     boardOptions: 'Options',
+    profileOptions: 'Profile',
     addCard: 'Add Card',
     detailsLabel: 'Details',
     updatedLabel: 'Updated',
@@ -127,6 +128,10 @@ const EN_MESSAGES = freezeCatalog({
     noVisibleBoards: 'No visible boards in this workspace.',
     stateActive: 'Active board',
     stateAvailable: 'Available'
+  },
+  profileOptionsDialog: {
+    sectionLabel: 'Profile',
+    heading: 'Profile options'
   },
   collaborators: {
     sectionLabel: 'Collaboration',
@@ -317,6 +322,7 @@ const ES_CL_MESSAGES = freezeCatalog({
   workspace: {
     viewerSignedIn: 'Sesión iniciada',
     boardOptions: 'Opciones',
+    profileOptions: 'Perfil',
     addCard: 'Agregar tarjeta',
     detailsLabel: 'Detalles',
     updatedLabel: 'Actualizado',
@@ -403,6 +409,10 @@ const ES_CL_MESSAGES = freezeCatalog({
     noVisibleBoards: 'No hay tableros visibles en este espacio de trabajo.',
     stateActive: 'Tablero activo',
     stateAvailable: 'Disponible'
+  },
+  profileOptionsDialog: {
+    sectionLabel: 'Perfil',
+    heading: 'Opciones de perfil'
   },
   collaborators: {
     sectionLabel: 'Colaboración',
@@ -593,6 +603,7 @@ const JA_MESSAGES = freezeCatalog({
   workspace: {
     viewerSignedIn: 'サインイン済み',
     boardOptions: 'オプション',
+    profileOptions: 'プロフィール',
     addCard: 'カードを追加',
     detailsLabel: '詳細',
     updatedLabel: '更新日時',
@@ -679,6 +690,10 @@ const JA_MESSAGES = freezeCatalog({
     noVisibleBoards: 'このワークスペースで表示できるボードはありません。',
     stateActive: '現在のボード',
     stateAvailable: '利用可能'
+  },
+  profileOptionsDialog: {
+    sectionLabel: 'プロフィール',
+    heading: 'プロフィール設定'
   },
   collaborators: {
     sectionLabel: '共同編集',

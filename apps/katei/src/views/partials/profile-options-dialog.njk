@@ -1,0 +1,50 @@
+<dialog
+  class="sheet-dialog"
+  data-controller="profile-options"
+  data-profile-options-target="dialog"
+  data-action="
+    workspace:open-profile-options@window->profile-options#openFromEvent
+    click->profile-options#backdropClose
+    cancel->profile-options#close
+  "
+>
+  <div class="sheet-panel">
+    <div class="dialog-handle mx-auto h-1.5 w-16 rounded-full lg:hidden"></div>
+
+    <div class="dialog-header-row mt-4">
+      <div class="min-w-0 space-y-2">
+        <p class="field-label text-sm font-semibold">{{ t('profileOptionsDialog.sectionLabel') }}</p>
+        <h2 class="font-serif text-3xl text-strong">{{ t('profileOptionsDialog.heading') }}</h2>
+      </div>
+
+      <button
+        type="button"
+        class="touch-button-secondary"
+        data-profile-options-initial-focus
+        data-action="profile-options#close"
+      >
+        {{ t('common.close') }}
+      </button>
+    </div>
+
+    <div class="mt-4">
+      {% include "partials/viewer-chip.njk" %}
+    </div>
+
+    <div class="ui-locale-control-row mt-4">
+      {% include "partials/ui-locale-badge.njk" %}
+      {% set uiLocalePickerId = 'profile-options-ui-locale-picker' %}
+      {% include "partials/ui-locale-picker.njk" %}
+    </div>
+
+    <div
+      class="dialog-actions mt-6"
+      data-controller="session"
+      data-session-auth-url-value="/auth/logout"
+      data-session-redirect-url-value="/"
+    >
+      <button type="button" class="touch-button-secondary" data-action="session#logout">{{ t('common.logout') }}</button>
+      <p class="sr-only" aria-live="polite" data-session-target="status"></p>
+    </div>
+  </div>
+</dialog>

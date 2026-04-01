@@ -121,6 +121,12 @@ export default class extends Controller {
     });
   }
 
+  openProfileOptions(event) {
+    this.dispatchWorkspaceEvent('open-profile-options', {
+      triggerElement: event?.currentTarget ?? null
+    });
+  }
+
   async toggleColumn(event) {
     const board = this.activeBoard;
 

@@ -33,27 +33,7 @@
     <header class="top-bar">
       <div class="top-bar-heading-group">
         {% if viewer %}
-          <div class="viewer-chip">
-            {% if viewer.picture %}
-              <img
-                src="{{ viewer.picture }}"
-                alt=""
-                class="viewer-chip-avatar"
-                width="44"
-                height="44"
-                loading="lazy"
-                referrerpolicy="no-referrer"
-              >
-            {% else %}
-              <span class="viewer-chip-avatar viewer-chip-avatar--fallback" aria-hidden="true">
-                {{ (viewer.name or viewer.sub) | first | upper }}
-              </span>
-            {% endif %}
-            <div class="viewer-chip-copy">
-              <span class="viewer-chip-label">{{ t('workspace.viewerSignedIn') }}</span>
-              <span class="viewer-chip-name">{{ viewer.name or viewer.sub }}</span>
-            </div>
-          </div>
+          {% include "partials/viewer-chip.njk" %}
         {% endif %}
 
         <h1 class="top-bar-title font-serif text-3xl leading-tight text-strong" data-workspace-target="boardTitle">
@@ -64,6 +44,9 @@
       <div class="top-bar-actions">
         <button type="button" class="touch-button-secondary" data-action="workspace#openBoardOptions">
           {{ t('workspace.boardOptions') }}
+        </button>
+        <button type="button" class="touch-button-secondary" data-action="workspace#openProfileOptions">
+          {{ t('workspace.profileOptions') }}
         </button>
         <button
           type="button"
@@ -90,6 +73,7 @@
   {% include "partials/card-editor-sheet.njk" %}
   {% include "partials/card-view-dialog.njk" %}
   {% include "partials/board-options-dialog.njk" %}
+  {% include "partials/profile-options-dialog.njk" %}
   {% include "partials/board-collaborators-sheet.njk" %}
   {% include "partials/board-editor-sheet.njk" %}
   {% include "partials/confirm-dialog.njk" %}
