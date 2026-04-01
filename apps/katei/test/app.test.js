@@ -286,6 +286,7 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
 
   assert.doesNotMatch(boardOptionsDialog, /ui-locale-control-row/);
   assert.doesNotMatch(boardOptionsDialog, /session#logout/);
+  assert.match(boardOptionsDialog, /class="dialog-actions board-options-actions mt-6"/);
   assert.match(boardOptionsDialog, /board-options#createBoard/);
   assert.match(boardOptionsDialog, /board-options#openCollaborators/);
   assert.match(boardOptionsDialog, /board-options#renameBoard/);
@@ -295,6 +296,7 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
   assert.match(profileOptionsDialog, /viewer-chip/);
   assert.match(profileOptionsDialog, /ui-locale-control-row/);
   assert.doesNotMatch(profileOptionsDialog, /ui-locale-badge/);
+  assert.match(response.text, /<div\s+class="dialog-actions mt-6"\s+data-controller="session"/);
   assert.match(profileOptionsDialog, /<form method="get" action="\/boards" class="ui-locale-picker">/);
   assert.match(profileOptionsDialog, /id="profile-options-ui-locale-picker"/);
   assert.match(profileOptionsDialog, /<option value="en" selected>\s*English\s*<\/option>/);
