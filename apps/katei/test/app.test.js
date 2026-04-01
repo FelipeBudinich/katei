@@ -353,8 +353,9 @@ test('workspace template renders the localized content controls without accordio
 
   assert.match(
     cardEditorDialog,
-    /data-card-editor-target="localeSection"[\s\S]*Localized content[\s\S]*data-card-editor-target="localeSelect"[\s\S]*data-card-editor-target="localeSummary"[\s\S]*data-card-editor-target="localeFallbackNotice"[\s\S]*data-card-editor-target="localeEditSummary"[\s\S]*data-card-editor-target="localeReadOnlyNotice"[\s\S]*data-card-editor-target="requestLocaleButton"[\s\S]*data-card-editor-target="clearLocaleRequestButton"/
+    /data-card-editor-target="localeSection"[\s\S]*data-card-editor-target="localeSelect"[\s\S]*data-card-editor-target="localeSummary"[\s\S]*data-card-editor-target="localeFallbackNotice"[\s\S]*data-card-editor-target="localeEditSummary"[\s\S]*data-card-editor-target="localeReadOnlyNotice"[\s\S]*data-card-editor-target="requestLocaleButton"[\s\S]*data-card-editor-target="clearLocaleRequestButton"/
   );
+  assert.doesNotMatch(cardEditorDialog, /Localized content/);
   assert.doesNotMatch(cardEditorDialog, /data-controller="accordion"/);
   assert.doesNotMatch(cardEditorDialog, /data-accordion-/);
   assert.doesNotMatch(cardEditorDialog, /Available localizations/);
