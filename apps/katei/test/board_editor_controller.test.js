@@ -6,7 +6,7 @@ import {
   parseBoardEditorFormInput
 } from '../public/js/controllers/board_editor_schema.js';
 
-test('createBoardEditorFormState serializes the current board schema for editing', () => {
+test('createBoardEditorFormState serializes the current board schema without exposing templates for editing', () => {
   const board = createEmptyWorkspace().boards.main;
   board.templates.default = [
     {
@@ -22,7 +22,7 @@ test('createBoardEditorFormState serializes the current board schema for editing
   assert.equal(formState.title, '過程');
   assert.match(formState.stageDefinitions, /backlog \| Backlog \| doing, done/);
   assert.match(formState.stageDefinitions, /archived \| Archived \| backlog, doing, done \| card\.delete/);
-  assert.match(formState.templates, /starter \| Starter \| backlog/);
+  assert.equal(Object.prototype.hasOwnProperty.call(formState, 'templates'), false);
 });
 
 test('createBoardEditorFormState serializes a fourth stage segment only when actions exist', () => {
@@ -54,15 +54,14 @@ test('createBoardEditorFormState serializes a fourth stage segment only when act
   assert.match(formState.stageDefinitions, /archive-bin \| Archive Bin \|  \| card\.delete/);
 });
 
-test('parseBoardEditorFormInput parses valid schema edits and generates template ids when omitted', () => {
+test('parseBoardEditorFormInput parses valid schema edits and clears templates from board editor submissions', () => {
   const parsedInput = parseBoardEditorFormInput({
     title: 'Editorial board',
     sourceLocale: 'en',
     defaultLocale: 'ja',
     supportedLocales: 'en, ja',
     requiredLocales: 'en',
-    stageDefinitions: ['backlog | Backlog | review', 'review | Review | backlog'].join('\n'),
-    templates: 'Starter template | backlog'
+    stageDefinitions: ['backlog | Backlog | review', 'review | Review | backlog'].join('\n')
   });
 
   assert.equal(parsedInput.title, 'Editorial board');
@@ -86,13 +85,7 @@ test('parseBoardEditorFormInput parses valid schema edits and generates template
       actionIds: []
     }
   ]);
-  assert.deepEqual(parsedInput.templates, [
-    {
-      id: 'starter-template',
-      title: 'Starter template',
-      initialStageId: 'backlog'
-    }
-  ]);
+  assert.deepEqual(parsedInput.templates, []);
 });
 
 test('parseBoardEditorFormInput accepts 2-, 3-, and 4-segment stage lines and preserves empty transitions before actions', () => {
@@ -106,8 +99,7 @@ test('parseBoardEditorFormInput accepts 2-, 3-, and 4-segment stage lines and pr
       'backlog | Backlog',
       'archived | Archived | backlog',
       'archive-bin | Archive Bin | | card.delete'
-    ].join('\n'),
-    templates: ''
+    ].join('\n')
   });
 
   assert.deepEqual(parsedInput.stageDefinitions, [
@@ -130,6 +122,7 @@ test('parseBoardEditorFormInput accepts 2-, 3-, and 4-segment stage lines and pr
       actionIds: ['card.delete']
     }
   ]);
+  assert.deepEqual(parsedInput.templates, []);
 });
 
 test('parseBoardEditorFormInput rejects source-locale changes that existing cards cannot satisfy', () => {
@@ -160,8 +153,7 @@ test('parseBoardEditorFormInput rejects source-locale changes that existing card
           defaultLocale: 'ja',
           supportedLocales: 'en, ja',
           requiredLocales: 'ja',
-          stageDefinitions: ['backlog | Backlog | doing', 'doing | Doing | backlog'].join('\n'),
-          templates: ''
+          stageDefinitions: ['backlog | Backlog | doing', 'doing | Doing | backlog'].join('\n')
         },
         {
           currentBoard: board
@@ -171,27 +163,45 @@ test('parseBoardEditorFormInput rejects source-locale changes that existing card
   );
 });
 
-test('parseBoardEditorFormInput generates unique template ids when repeated titles omit ids', () => {
-  const parsedInput = parseBoardEditorFormInput({
-    title: 'Editorial board',
-    sourceLocale: 'en',
-    defaultLocale: 'en',
-    supportedLocales: 'en',
-    requiredLocales: 'en',
-    stageDefinitions: ['backlog | Backlog | review', 'review | Review | backlog'].join('\n'),
-    templates: ['Starter template | backlog', 'Starter template | review'].join('\n')
-  });
-
-  assert.deepEqual(parsedInput.templates, [
+test('parseBoardEditorFormInput clears legacy templates when editing an existing board', () => {
+  const board = createEmptyWorkspace().boards.main;
+  board.templates.default = [
     {
-      id: 'starter-template',
-      title: 'Starter template',
+      id: 'starter',
+      title: 'Starter',
       initialStageId: 'backlog'
+    }
+  ];
+  board.stages.backlog.templateIds = ['starter'];
+
+  const parsedInput = parseBoardEditorFormInput(
+    {
+      title: 'Editorial board',
+      sourceLocale: 'en',
+      defaultLocale: 'en',
+      supportedLocales: 'en',
+      requiredLocales: 'en',
+      stageDefinitions: ['backlog | Backlog | review', 'review | Review | backlog'].join('\n'),
+      templates: 'Starter template | backlog'
     },
     {
-      id: 'starter-template-2',
-      title: 'Starter template',
-      initialStageId: 'review'
+      currentBoard: board
+    }
+  );
+
+  assert.deepEqual(parsedInput.stageDefinitions, [
+    {
+      id: 'backlog',
+      title: 'Backlog',
+      allowedTransitionStageIds: ['review'],
+      actionIds: []
+    },
+    {
+      id: 'review',
+      title: 'Review',
+      allowedTransitionStageIds: ['backlog'],
+      actionIds: []
     }
   ]);
+  assert.deepEqual(parsedInput.templates, []);
 });

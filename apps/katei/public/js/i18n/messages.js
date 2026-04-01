@@ -240,8 +240,6 @@ const EN_MESSAGES = freezeCatalog({
     stagesLabel: 'Stages',
     stagesHelp:
       'One line per stage: stage-id | Display title | target-a, target-b | action-a, action-b. Example: archived | Archived | backlog, doing, done | card.delete',
-    templatesLabel: 'Templates',
-    templatesHelp: 'One line per template: template-id | Title | initial-stage-id. You can also omit the id.',
     saveButton: 'Save Board',
     createButton: 'Create Board'
   },
@@ -530,8 +528,6 @@ const ES_CL_MESSAGES = freezeCatalog({
     stagesLabel: 'Etapas',
     stagesHelp:
       'Una línea por etapa: stage-id | Título visible | destino-a, destino-b | acción-a, acción-b. Ejemplo: archived | Archived | backlog, doing, done | card.delete',
-    templatesLabel: 'Plantillas',
-    templatesHelp: 'Una línea por plantilla: template-id | Título | initial-stage-id. El id puede omitirse.',
     saveButton: 'Guardar tablero',
     createButton: 'Crear tablero'
   },
@@ -820,8 +816,6 @@ const JA_MESSAGES = freezeCatalog({
     stagesLabel: 'ステージ',
     stagesHelp:
       '1 行ごとに入力: stage-id | 表示名 | 遷移先-a, 遷移先-b | action-a, action-b。例: archived | Archived | backlog, doing, done | card.delete',
-    templatesLabel: 'テンプレート',
-    templatesHelp: '1 行ごとに入力: template-id | タイトル | initial-stage-id。id は省略できます。',
     saveButton: 'ボードを保存',
     createButton: 'ボードを作成'
   },

@@ -408,6 +408,35 @@ test('workspace template renders edit localization controls and a simplified loc
   assert.doesNotMatch(cardViewDialog, /data-card-editor-target="localeReadOnlyNotice"/);
 });
 
+test('workspace template renders the board editor without a templates field', () => {
+  const workspace = createEmptyWorkspace();
+  const html = renderWorkspacePage(
+    buildWorkspacePageModel(
+      {
+        sub: 'sub_board_editor',
+        name: 'Board Editor Viewer'
+      },
+      createTranslator('en'),
+      workspace,
+      {
+        revision: 1,
+        updatedAt: '2026-04-02T11:00:00.000Z',
+        lastChangedBy: 'sub_board_editor',
+        isPristine: false,
+        workspaceId: 'workspace_board_editor',
+        isHomeWorkspace: true
+      }
+    )
+  );
+  const boardEditorDialog = extractDialogHtml(html, 'board-editor');
+
+  assert.match(boardEditorDialog, /name="stageDefinitions"/);
+  assert.match(boardEditorDialog, /data-board-editor-target="stageDefinitionsInput"/);
+  assert.doesNotMatch(boardEditorDialog, /name="templates"/);
+  assert.doesNotMatch(boardEditorDialog, /data-board-editor-target="templatesInput"/);
+  assert.doesNotMatch(boardEditorDialog, />\s*Templates\s*</);
+});
+
 test('GET /boards bootstraps normalized workspace snapshots when the loaded record is legacy-shaped', async () => {
   const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([
     createLegacyWorkspaceRecord({

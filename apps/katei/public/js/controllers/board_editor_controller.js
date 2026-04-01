@@ -16,7 +16,6 @@ export default class extends Controller {
     'supportedLocalesInput',
     'requiredLocalesInput',
     'stageDefinitionsInput',
-    'templatesInput',
     'submitButton',
     'error'
   ];
@@ -41,7 +40,6 @@ export default class extends Controller {
     this.supportedLocalesInputTarget.value = formState.supportedLocales;
     this.requiredLocalesInputTarget.value = formState.requiredLocales;
     this.stageDefinitionsInputTarget.value = formState.stageDefinitions;
-    this.templatesInputTarget.value = formState.templates;
     this.headingTarget.textContent = isRenameMode ? this.t('boardEditor.renameHeading') : this.t('boardEditor.newHeading');
     this.submitButtonTarget.textContent = isRenameMode ? this.t('boardEditor.saveButton') : this.t('boardEditor.createButton');
     this.hideError();
@@ -81,8 +79,7 @@ export default class extends Controller {
           defaultLocale: formData.get('defaultLocale'),
           supportedLocales: formData.get('supportedLocales'),
           requiredLocales: formData.get('requiredLocales'),
-          stageDefinitions: formData.get('stageDefinitions'),
-          templates: formData.get('templates')
+          stageDefinitions: formData.get('stageDefinitions')
         },
         {
           currentBoard: this.currentBoard

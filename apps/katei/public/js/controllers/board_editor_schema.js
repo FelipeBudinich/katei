@@ -17,7 +17,6 @@ export function createBoardEditorFormState(board = null) {
         allowedTransitionStageIds: [...stage.allowedTransitionStageIds],
         actionIds: [...stage.actionIds]
       }));
-  const templates = Array.isArray(board?.templates?.default) ? board.templates.default : [];
 
   return {
     title: board?.title ?? '',
@@ -27,9 +26,6 @@ export function createBoardEditorFormState(board = null) {
     requiredLocales: baseLanguagePolicy.requiredLocales.join(', '),
     stageDefinitions: stageDefinitions
       .map((stage) => serializeStageDefinition(stage))
-      .join('\n'),
-    templates: templates
-      .map((template) => `${template.id} | ${template.title} | ${template.initialStageId}`)
       .join('\n')
   };
 }
@@ -49,7 +45,7 @@ export function parseBoardEditorFormInput(input, { currentBoard = null } = {}) {
       requiredLocales: splitInlineList(input?.requiredLocales)
     },
     stageDefinitions: parseStageDefinitions(input?.stageDefinitions),
-    templates: parseTemplates(input?.templates)
+    templates: []
   });
 
   assertBoardSchemaCompatibleWithBoard(currentBoard, normalizedSchema);
@@ -58,7 +54,7 @@ export function parseBoardEditorFormInput(input, { currentBoard = null } = {}) {
     title,
     languagePolicy: normalizedSchema.languagePolicy,
     stageDefinitions: normalizedSchema.stageDefinitions,
-    templates: normalizedSchema.templates
+    templates: []
   };
 }
 
@@ -92,51 +88,11 @@ function parseStageDefinitions(rawValue) {
   });
 }
 
-function parseTemplates(rawValue) {
-  const lines = splitMultilineInput(rawValue);
-  const templates = [];
-  const usedTemplateIds = new Set();
-
-  for (const [index, line] of lines.entries()) {
-    const segments = splitPipeSegments(line);
-
-    if (segments.length < 2 || segments.length > 3) {
-      throw new Error(
-        'Each template must use "template-id | Title | initial-stage-id" or "Title | initial-stage-id".'
-      );
-    }
-
-    let templateId = '';
-    let title = '';
-    let initialStageId = '';
-
-    if (segments.length === 2) {
-      [title, initialStageId] = segments;
-      templateId = createTemplateIdFromTitle(title, usedTemplateIds, index);
-    } else {
-      [templateId, title, initialStageId] = segments;
-    }
-
-    usedTemplateIds.add(templateId);
-    templates.push({
-      id: templateId,
-      title,
-      initialStageId
-    });
-  }
-
-  return templates;
-}
-
 function splitMultilineInput(value) {
   return String(value ?? '')
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean);
-}
-
-function splitPipeSegments(line) {
-  return line.split('|').map((segment) => segment.trim()).filter((segment) => segment.length > 0);
 }
 
 function splitStagePipeSegments(line) {
@@ -148,23 +104,6 @@ function splitInlineList(value) {
     .split(/[\n,]/)
     .map((entry) => entry.trim())
     .filter(Boolean);
-}
-
-function createTemplateIdFromTitle(title, usedTemplateIds, index) {
-  const baseId =
-    title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '') || `template-${index + 1}`;
-  let nextId = baseId;
-  let suffix = 2;
-
-  while (usedTemplateIds.has(nextId)) {
-    nextId = `${baseId}-${suffix}`;
-    suffix += 1;
-  }
-
-  return nextId;
 }
 
 function serializeStageDefinition(stage) {
