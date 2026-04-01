@@ -246,6 +246,111 @@ test('loadOrCreateAuthoritativeWorkspaceRecord preserves the full stored shared 
   assert.equal(firstCardTitle(record.workspace.boards.invite), 'Invite board card');
 });
 
+test('listPendingWorkspaceInvitesForViewer finds a pending invite in another workspace', async () => {
+  const collection = createWorkspaceRecordCollectionDouble([
+    toWorkspaceRecordDocument(createSharedWorkspaceRecordFixture('workspace_other_invite')),
+    toWorkspaceRecordDocument(createInviteWorkspaceRecordFixture('workspace_invited_casa'))
+  ]);
+  const repository = new MongoWorkspaceRecordRepository({ collection });
+
+  const pendingWorkspaceInvites = await repository.listPendingWorkspaceInvitesForViewer({
+    viewerSub: 'sub_invited',
+    viewerEmail: 'invitee@example.com'
+  });
+
+  assert.deepEqual(pendingWorkspaceInvites, [
+    {
+      workspaceId: 'workspace_other_invite',
+      boardId: 'invite',
+      boardTitle: 'Invite board',
+      inviteId: 'invite_1',
+      role: 'viewer',
+      invitedAt: '2026-04-01T10:15:00.000Z',
+      invitedBy: {
+        id: 'sub_owner',
+        email: 'owner@example.com',
+        displayName: null
+      }
+    },
+    {
+      workspaceId: 'workspace_invited_casa',
+      boardId: 'casa',
+      boardTitle: 'Casa',
+      inviteId: 'invite_casa_1',
+      role: 'editor',
+      invitedAt: '2026-04-01T10:20:00.000Z',
+      invitedBy: {
+        id: 'sub_owner_casa',
+        email: 'owner-casa@example.com',
+        displayName: 'Casa owner'
+      }
+    }
+  ]);
+});
+
+test('listPendingWorkspaceInvitesForViewer matches invite emails case-insensitively', async () => {
+  const collection = createWorkspaceRecordCollectionDouble([
+    toWorkspaceRecordDocument(
+      createInviteWorkspaceRecordFixture('workspace_case_email', {
+        viewerEmail: 'INVITEE@EXAMPLE.COM'
+      })
+    )
+  ]);
+  const repository = new MongoWorkspaceRecordRepository({ collection });
+
+  const pendingWorkspaceInvites = await repository.listPendingWorkspaceInvitesForViewer({
+    viewerSub: 'sub_someone_else',
+    viewerEmail: 'invitee@example.com'
+  });
+
+  assert.equal(pendingWorkspaceInvites.length, 1);
+  assert.equal(pendingWorkspaceInvites[0].workspaceId, 'workspace_case_email');
+});
+
+test('listPendingWorkspaceInvitesForViewer ignores non-pending invites', async () => {
+  const collection = createWorkspaceRecordCollectionDouble([
+    toWorkspaceRecordDocument(
+      createInviteWorkspaceRecordFixture('workspace_not_pending', {
+        inviteStatus: 'accepted'
+      })
+    )
+  ]);
+  const repository = new MongoWorkspaceRecordRepository({ collection });
+
+  const pendingWorkspaceInvites = await repository.listPendingWorkspaceInvitesForViewer({
+    viewerSub: 'sub_invited',
+    viewerEmail: 'invitee@example.com'
+  });
+
+  assert.deepEqual(pendingWorkspaceInvites, []);
+});
+
+test('listPendingWorkspaceInvitesForViewer ignores malformed or non-matching invites', async () => {
+  const malformedRecord = createInviteWorkspaceRecordFixture('workspace_malformed_invites');
+
+  malformedRecord.workspace.boards.casa.collaboration.invites.push(
+    { id: 'invite_missing_role', email: 'invitee@example.com', status: 'pending' },
+    { id: 'invite_other_viewer', email: 'other@example.com', role: 'viewer', status: 'pending', invitedBy: { type: 'human', id: 'sub_owner' }, invitedAt: '2026-04-01T10:21:00.000Z' },
+    { id: 'invite_actor_other', actor: { type: 'human', id: 'sub_other' }, role: 'viewer', status: 'pending', invitedBy: { type: 'human', id: 'sub_owner' }, invitedAt: '2026-04-01T10:22:00.000Z' },
+    { id: 'invite_duplicate', actor: { type: 'human', id: 'sub_invited' }, email: 'invitee@example.com', role: 'viewer', status: 'pending', invitedBy: { type: 'human', id: 'sub_owner' }, invitedAt: '2026-04-01T10:23:00.000Z' }
+  );
+  malformedRecord.workspace.boards.casa.collaboration.invites.push(
+    structuredClone(malformedRecord.workspace.boards.casa.collaboration.invites.at(-1))
+  );
+  const collection = createWorkspaceRecordCollectionDouble([toWorkspaceRecordDocument(malformedRecord)]);
+  const repository = new MongoWorkspaceRecordRepository({ collection });
+
+  const pendingWorkspaceInvites = await repository.listPendingWorkspaceInvitesForViewer({
+    viewerSub: 'sub_invited',
+    viewerEmail: 'invitee@example.com'
+  });
+
+  assert.deepEqual(
+    pendingWorkspaceInvites.map((invite) => invite.inviteId),
+    ['invite_casa_1', 'invite_duplicate']
+  );
+});
+
 test('replaceWorkspaceSnapshot stores a validated full-workspace snapshot with metadata', async () => {
   const collection = createWorkspaceRecordCollectionDouble();
   const nowValues = ['2026-04-01T10:00:00.000Z', '2026-04-01T11:15:00.000Z'];
@@ -561,6 +666,14 @@ function createWorkspaceRecordCollectionDouble(initialDocuments = []) {
   );
 
   return {
+    find() {
+      return {
+        async toArray() {
+          return [...documents.values()].map((document) => structuredClone(document));
+        }
+      };
+    },
+
     async updateOne(filter, update, options = {}) {
       const documentId = filter._id;
 
@@ -768,6 +881,67 @@ function createSharedWorkspaceRecordFixture(workspaceId) {
       workspace,
       actor: { type: 'human', id: 'sub_owner' },
       now: '2026-04-01T11:15:00.000Z'
+    }
+  );
+  record.isHomeWorkspace = false;
+  return record;
+}
+
+function createInviteWorkspaceRecordFixture(
+  workspaceId,
+  {
+    viewerSub = 'sub_invited',
+    viewerEmail = 'invitee@example.com',
+    inviteStatus = 'pending'
+  } = {}
+) {
+  const ownerActor = {
+    type: 'human',
+    id: 'sub_owner_casa',
+    email: 'owner-casa@example.com',
+    displayName: 'Casa owner'
+  };
+  let workspace = createEmptyWorkspace({
+    workspaceId,
+    creator: ownerActor
+  });
+
+  workspace.boards.main.title = 'Owner home';
+  workspace.boards.main.collaboration.memberships = [
+    {
+      actor: ownerActor,
+      role: 'admin',
+      joinedAt: workspace.boards.main.createdAt
+    }
+  ];
+  workspace = addSharedBoard(workspace, 'casa', 'Casa', {
+    invites: [
+      {
+        id: 'invite_casa_1',
+        actor: {
+          type: 'human',
+          id: viewerSub
+        },
+        email: viewerEmail,
+        role: 'editor',
+        status: inviteStatus,
+        invitedBy: ownerActor,
+        invitedAt: '2026-04-01T10:20:00.000Z'
+      }
+    ]
+  });
+  workspace.boardOrder = ['main', 'casa'];
+  workspace.ui.activeBoardId = 'main';
+
+  const record = createUpdatedWorkspaceRecord(
+    createInitialWorkspaceRecord('sub_owner_casa', {
+      workspaceId,
+      now: '2026-04-01T10:00:00.000Z'
+    }),
+    {
+      workspace,
+      actor: { type: 'human', id: 'sub_owner_casa' },
+      now: '2026-04-01T10:30:00.000Z'
     }
   );
   record.isHomeWorkspace = false;

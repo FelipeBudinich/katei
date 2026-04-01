@@ -1,5 +1,5 @@
-import { Controller } from '/vendor/stimulus/stimulus.js';
-import { getBrowserTranslator } from '/js/i18n/browser.js';
+import { Controller } from '../../vendor/stimulus/stimulus.js';
+import { getBrowserTranslator } from '../i18n/browser.js';
 import { createInviteDecisionDetail } from './board_collaborators_actions.js';
 import {
   createBoardListActionState,
@@ -15,6 +15,9 @@ export default class extends Controller {
     'pendingSummary',
     'boardList',
     'boardItemTemplate',
+    'inviteSection',
+    'inviteList',
+    'inviteItemTemplate',
     'renameButton',
     'resetButton',
     'deleteButton',
@@ -27,12 +30,17 @@ export default class extends Controller {
     this.workspace = null;
     this.viewerActor = null;
     this.optionsState = null;
+    this.pendingWorkspaceInvites = [];
+    this.activeWorkspaceId = null;
     this.restoreFocusElement = null;
   }
 
   openFromEvent(event) {
     this.restoreFocusElement = event.detail?.triggerElement ?? null;
-    this.syncWorkspace(event.detail?.workspace, event.detail?.viewerActor);
+    this.syncWorkspace(event.detail?.workspace, event.detail?.viewerActor, {
+      pendingWorkspaceInvites: event.detail?.pendingWorkspaceInvites,
+      activeWorkspaceId: event.detail?.activeWorkspaceId
+    });
 
     if (!this.dialogTarget.open) {
       this.dialogTarget.showModal();
@@ -44,7 +52,10 @@ export default class extends Controller {
   }
 
   syncFromEvent(event) {
-    this.syncWorkspace(event.detail?.workspace, event.detail?.viewerActor);
+    this.syncWorkspace(event.detail?.workspace, event.detail?.viewerActor, {
+      pendingWorkspaceInvites: event.detail?.pendingWorkspaceInvites,
+      activeWorkspaceId: event.detail?.activeWorkspaceId
+    });
   }
 
   backdropClose(event) {
@@ -145,13 +156,22 @@ export default class extends Controller {
     return this.workspace ? this.workspace.boards[this.workspace.ui.activeBoardId] : null;
   }
 
-  syncWorkspace(workspace, viewerActor = this.viewerActor) {
+  syncWorkspace(
+    workspace,
+    viewerActor = this.viewerActor,
+    {
+      pendingWorkspaceInvites = this.pendingWorkspaceInvites,
+      activeWorkspaceId = this.activeWorkspaceId
+    } = {}
+  ) {
     if (!workspace) {
       return;
     }
 
     this.workspace = workspace;
     this.viewerActor = viewerActor ?? this.viewerActor;
+    this.pendingWorkspaceInvites = Array.isArray(pendingWorkspaceInvites) ? pendingWorkspaceInvites : [];
+    this.activeWorkspaceId = normalizeOptionalWorkspaceId(activeWorkspaceId);
     this.optionsState = createBoardOptionsState(this.workspace, this.viewerActor);
     this.render();
   }
@@ -175,6 +195,7 @@ export default class extends Controller {
       this.collaboratorBadgeTarget.hidden = true;
       this.collaboratorBadgeTarget.textContent = '';
       this.boardListTarget.replaceChildren(...(this.optionsState?.boardStates ?? []).map((boardState) => this.createBoardListItem(boardState)));
+      this.renderPendingWorkspaceInvites();
       return;
     }
 
@@ -195,6 +216,7 @@ export default class extends Controller {
 
     const items = this.optionsState.boardStates.map((boardState) => this.createBoardListItem(boardState));
     this.boardListTarget.replaceChildren(...items);
+    this.renderPendingWorkspaceInvites();
   }
 
   createBoardListItem(boardState) {
@@ -224,12 +246,66 @@ export default class extends Controller {
     return item;
   }
 
+  createInviteListItem(invite) {
+    const item = this.inviteItemTemplateTarget.content.firstElementChild.cloneNode(true);
+    const titleElement = item.querySelector('[data-board-options-field="inviteTitle"]');
+    const metaElement = item.querySelector('[data-board-options-field="inviteMeta"]');
+    const roleElement = item.querySelector('[data-board-options-field="inviteRole"]');
+    const acceptButton = item.querySelector('[data-board-options-field="inviteAcceptButton"]');
+    const declineButton = item.querySelector('[data-board-options-field="inviteDeclineButton"]');
+
+    titleElement.textContent = invite.boardTitle;
+    metaElement.textContent = this.t('boardOptionsDialog.inviteFrom', {
+      inviter: getInviterLabel(invite.invitedBy)
+    });
+    roleElement.textContent = this.t('boardOptionsDialog.inviteRole', {
+      role: this.t(getBoardRoleTranslationKey(invite.role))
+    });
+
+    for (const button of [acceptButton, declineButton]) {
+      button.dataset.workspaceId = invite.workspaceId;
+      button.dataset.boardId = invite.boardId;
+      button.dataset.inviteId = invite.inviteId;
+    }
+
+    return item;
+  }
+
+  renderPendingWorkspaceInvites() {
+    const inviteItems = this.getVisiblePendingWorkspaceInvites().map((invite) => this.createInviteListItem(invite));
+
+    this.inviteSectionTarget.hidden = inviteItems.length === 0;
+    this.inviteListTarget.replaceChildren(...inviteItems);
+  }
+
+  getVisiblePendingWorkspaceInvites() {
+    const activeWorkspaceId =
+      normalizeOptionalWorkspaceId(this.activeWorkspaceId) ??
+      normalizeOptionalWorkspaceId(this.workspace?.workspaceId);
+
+    return (Array.isArray(this.pendingWorkspaceInvites) ? this.pendingWorkspaceInvites : []).filter((invite) => {
+      const inviteWorkspaceId = normalizeOptionalWorkspaceId(invite?.workspaceId);
+      const boardId = normalizeOptionalString(invite?.boardId);
+      const inviteId = normalizeOptionalString(invite?.inviteId);
+      const boardTitle = normalizeOptionalString(invite?.boardTitle);
+
+      return Boolean(
+        inviteWorkspaceId &&
+          boardId &&
+          inviteId &&
+          boardTitle &&
+          inviteWorkspaceId !== activeWorkspaceId
+      );
+    });
+  }
+
   dispatchInviteResponse(actionName, dataset = {}) {
     if (!dataset.boardId || !dataset.inviteId) {
       return;
     }
 
     const detail = createInviteDecisionDetail({
+      workspaceId: dataset.workspaceId,
       boardId: dataset.boardId,
       inviteId: dataset.inviteId
     });
@@ -249,4 +325,18 @@ export default class extends Controller {
 
     this.restoreFocusElement = null;
   }
+}
+
+function getInviterLabel(invitedBy) {
+  return normalizeOptionalString(invitedBy?.displayName)
+    || normalizeOptionalString(invitedBy?.email)
+    || normalizeOptionalString(invitedBy?.id);
+}
+
+function normalizeOptionalWorkspaceId(workspaceId) {
+  return typeof workspaceId === 'string' && workspaceId.trim() ? workspaceId.trim() : null;
+}
+
+function normalizeOptionalString(value) {
+  return typeof value === 'string' ? value.trim() : '';
 }

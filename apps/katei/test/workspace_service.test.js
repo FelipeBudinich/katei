@@ -23,6 +23,29 @@ test('WorkspaceService exposes the repository active workspace id', () => {
   assert.equal(service.getActiveWorkspaceId(), 'workspace_home');
 });
 
+test('WorkspaceService exposes the repository pending workspace invites', () => {
+  const workspace = createEmptyWorkspace();
+  const pendingWorkspaceInvites = [
+    {
+      workspaceId: 'workspace_shared',
+      boardId: 'casa',
+      boardTitle: 'Casa',
+      inviteId: 'invite_1',
+      role: 'viewer',
+      invitedAt: '2026-04-01T10:00:00.000Z',
+      invitedBy: {
+        id: 'sub_owner',
+        email: 'owner@example.com',
+        displayName: 'Owner'
+      }
+    }
+  ];
+  const repository = createRepositoryDouble({ workspace, pendingWorkspaceInvites });
+  const service = new WorkspaceService(repository);
+
+  assert.deepEqual(service.getPendingWorkspaceInvites(), pendingWorkspaceInvites);
+});
+
 test('WorkspaceService setActiveWorkspace delegates to the repository switch helper', () => {
   const workspace = createEmptyWorkspace();
   const repository = createRepositoryDouble({ workspace });
@@ -381,9 +404,10 @@ async function assertServiceCommand({ action, expectedType, expectedPayload }) {
   assert.deepEqual(repository.applyCommandCalls[0].payload, expectedPayload);
 }
 
-function createRepositoryDouble({ workspace, activeWorkspaceId = null }) {
+function createRepositoryDouble({ workspace, activeWorkspaceId = null, pendingWorkspaceInvites = [] }) {
   return {
     activeWorkspaceId,
+    pendingWorkspaceInvites,
     loadCalls: 0,
     saveCalls: [],
     applyCommandCalls: [],
@@ -391,6 +415,9 @@ function createRepositoryDouble({ workspace, activeWorkspaceId = null }) {
     events: [],
     getActiveWorkspaceId() {
       return this.activeWorkspaceId;
+    },
+    getPendingWorkspaceInvites() {
+      return this.pendingWorkspaceInvites;
     },
     setActiveWorkspace(workspaceId) {
       this.activeWorkspaceId = workspaceId ?? null;

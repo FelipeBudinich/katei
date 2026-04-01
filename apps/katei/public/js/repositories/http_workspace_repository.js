@@ -1,5 +1,6 @@
 import { migrateWorkspaceSnapshot } from '../domain/workspace_migrations.js';
 import { validateWorkspaceShape } from '../domain/workspace_validation.js';
+import { canonicalizeBoardRole, normalizeBoardActor } from '../domain/board_collaboration.js';
 import { postWorkspaceImport, readLocalV4Workspace } from '../lib/workspace_import.js';
 import { WorkspaceRepository } from './workspace_repository.js';
 
@@ -21,6 +22,7 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
     this.storage = storage ?? null;
     this.document = document ?? null;
     this.meta = null;
+    this.pendingWorkspaceInvites = [];
     this.revision = null;
     this.hasConsumedBootstrap = false;
   }
@@ -62,6 +64,10 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
 
   getActiveWorkspaceId() {
     return this.activeWorkspaceId;
+  }
+
+  getPendingWorkspaceInvites() {
+    return this.pendingWorkspaceInvites;
   }
 
   setActiveWorkspace(workspaceId) {
@@ -180,6 +186,7 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
 
   #setState(payload) {
     this.#setMeta(payload?.meta ?? null);
+    this.pendingWorkspaceInvites = normalizePendingWorkspaceInvites(payload?.pendingWorkspaceInvites);
     const activeWorkspace = normalizeActiveWorkspace(payload?.activeWorkspace, payload?.workspace);
 
     this.activeWorkspaceId = activeWorkspace?.workspaceId ?? this.activeWorkspaceId ?? null;
@@ -277,4 +284,55 @@ function isValidEmptyActorFacingWorkspace(workspace) {
       && isPlainObject(workspace.ui)
       && (workspace.ui.activeBoardId == null || normalizeOptionalWorkspaceId(workspace.ui.activeBoardId) == null)
   );
+}
+
+function normalizePendingWorkspaceInvites(invites) {
+  if (!Array.isArray(invites)) {
+    return [];
+  }
+
+  return invites
+    .map((invite) => normalizePendingWorkspaceInvite(invite))
+    .filter(Boolean);
+}
+
+function normalizePendingWorkspaceInvite(invite) {
+  if (!isPlainObject(invite)) {
+    return null;
+  }
+
+  const workspaceId = normalizeOptionalWorkspaceId(invite.workspaceId);
+  const boardId = normalizeOptionalWorkspaceId(invite.boardId);
+  const boardTitle = typeof invite.boardTitle === 'string' ? invite.boardTitle.trim() : '';
+  const inviteId = normalizeOptionalWorkspaceId(invite.inviteId);
+  const role = canonicalizeBoardRole(invite.role);
+  const invitedAt = normalizeOptionalIsoString(invite.invitedAt);
+  const invitedBy = normalizeBoardActor(invite.invitedBy);
+
+  if (!workspaceId || !boardId || !boardTitle || !inviteId || !role || !invitedAt || !invitedBy) {
+    return null;
+  }
+
+  return {
+    workspaceId,
+    boardId,
+    boardTitle,
+    inviteId,
+    role,
+    invitedAt,
+    invitedBy: {
+      id: invitedBy.id,
+      email: invitedBy.email ?? null,
+      displayName: invitedBy.displayName ?? null
+    }
+  };
+}
+
+function normalizeOptionalIsoString(value) {
+  if (typeof value !== 'string' || !value.trim()) {
+    return null;
+  }
+
+  const parsedValue = new Date(value);
+  return Number.isNaN(parsedValue.getTime()) ? null : parsedValue.toISOString();
 }

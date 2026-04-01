@@ -15,11 +15,17 @@ export function createBoardsRouter({ requireSession, workspaceRecordRepository }
 
   router.get('/boards', requireSession, async (request, response, next) => {
     try {
-      const record = await workspaceRecordRepository.loadOrCreateWorkspaceRecord({
-        viewerSub: request.viewer.sub,
-        viewerEmail: request.viewer.email ?? null,
-        workspaceId: resolveRequestedWorkspaceId(request)
-      });
+      const [record, pendingWorkspaceInvites] = await Promise.all([
+        workspaceRecordRepository.loadOrCreateWorkspaceRecord({
+          viewerSub: request.viewer.sub,
+          viewerEmail: request.viewer.email ?? null,
+          workspaceId: resolveRequestedWorkspaceId(request)
+        }),
+        workspaceRecordRepository.listPendingWorkspaceInvitesForViewer({
+          viewerSub: request.viewer.sub,
+          viewerEmail: request.viewer.email ?? null
+        })
+      ]);
 
       response.render(
         'pages/workspace',
@@ -27,7 +33,8 @@ export function createBoardsRouter({ requireSession, workspaceRecordRepository }
           request.viewer,
           response.locals.t,
           record.workspace,
-          createWorkspaceBootstrapMeta(record)
+          createWorkspaceBootstrapMeta(record),
+          pendingWorkspaceInvites
         )
       );
     } catch (error) {
@@ -43,7 +50,13 @@ export function createBoardsRouter({ requireSession, workspaceRecordRepository }
   return router;
 }
 
-export function buildWorkspacePageModel(viewer, t, workspace = createEmptyWorkspace(), workspaceMeta = null) {
+export function buildWorkspacePageModel(
+  viewer,
+  t,
+  workspace = createEmptyWorkspace(),
+  workspaceMeta = null,
+  pendingWorkspaceInvites = []
+) {
   const normalizedWorkspace = migrateWorkspaceSnapshot(workspace);
   const activeBoard = getProjectedActiveBoard(normalizedWorkspace);
   const columnDisplayTitles = buildColumnDisplayTitles(t);
@@ -69,7 +82,8 @@ export function buildWorkspacePageModel(viewer, t, workspace = createEmptyWorksp
       ? serializeWorkspaceBootstrapPayload({
           workspace: normalizedWorkspace,
           activeWorkspace: createActiveWorkspaceDescriptor(normalizedWorkspace, workspaceMeta),
-          meta: workspaceMeta
+          meta: workspaceMeta,
+          pendingWorkspaceInvites: Array.isArray(pendingWorkspaceInvites) ? pendingWorkspaceInvites : []
         })
       : null
   };

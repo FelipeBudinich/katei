@@ -15,6 +15,14 @@ export class WorkspaceService {
     return this.repository.activeWorkspaceId ?? null;
   }
 
+  getPendingWorkspaceInvites() {
+    if (typeof this.repository.getPendingWorkspaceInvites === 'function') {
+      return this.repository.getPendingWorkspaceInvites();
+    }
+
+    return Array.isArray(this.repository.pendingWorkspaceInvites) ? this.repository.pendingWorkspaceInvites : [];
+  }
+
   setActiveWorkspace(workspaceId) {
     if (typeof this.repository.setActiveWorkspace === 'function') {
       this.repository.setActiveWorkspace(workspaceId);

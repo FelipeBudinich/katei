@@ -355,6 +355,67 @@ test('HttpWorkspaceRepository prefers bootstrap payload on first load and consum
   );
 });
 
+test('HttpWorkspaceRepository bootstraps pendingWorkspaceInvites from the server-rendered payload', async () => {
+  const pendingWorkspaceInvites = [createPendingWorkspaceInvitePayload()];
+  const repository = new HttpWorkspaceRepository({
+    fetchImpl: createFetchDouble([]).fetch,
+    viewerSub: 'sub_123',
+    storage: null,
+    document: createDocumentDouble({
+      'workspace-bootstrap': JSON.stringify(
+        createWorkspaceApiPayload(createEmptyWorkspace(), {}, undefined, pendingWorkspaceInvites)
+      )
+    })
+  });
+
+  await repository.loadWorkspace();
+
+  assert.deepEqual(repository.getPendingWorkspaceInvites(), [createPendingWorkspaceInviteSummary()]);
+});
+
+test('HttpWorkspaceRepository updates pendingWorkspaceInvites from API responses', async () => {
+  const pendingWorkspaceInvites = [createPendingWorkspaceInvitePayload()];
+  const fetchDouble = createFetchDouble([
+    createJsonResponse(createWorkspaceApiPayload(createEmptyWorkspace(), {}, undefined, pendingWorkspaceInvites))
+  ]);
+  const repository = new HttpWorkspaceRepository({
+    fetchImpl: fetchDouble.fetch,
+    viewerSub: 'sub_123',
+    storage: null
+  });
+
+  await repository.loadWorkspace();
+
+  assert.deepEqual(repository.getPendingWorkspaceInvites(), [createPendingWorkspaceInviteSummary()]);
+});
+
+test('HttpWorkspaceRepository drops malformed pendingWorkspaceInvites without crashing', async () => {
+  const fetchDouble = createFetchDouble([
+    createJsonResponse(
+      createWorkspaceApiPayload(
+        createEmptyWorkspace(),
+        {},
+        undefined,
+        [
+          createPendingWorkspaceInvitePayload(),
+          null,
+          { workspaceId: 'workspace_missing_fields' },
+          { ...createPendingWorkspaceInvitePayload(), invitedAt: 'not-a-date' }
+        ]
+      )
+    )
+  ]);
+  const repository = new HttpWorkspaceRepository({
+    fetchImpl: fetchDouble.fetch,
+    viewerSub: 'sub_123',
+    storage: null
+  });
+
+  await repository.loadWorkspace();
+
+  assert.deepEqual(repository.getPendingWorkspaceInvites(), [createPendingWorkspaceInviteSummary()]);
+});
+
 test('HttpWorkspaceRepository normalizes older bootstrap payloads before using them', async () => {
   const repository = new HttpWorkspaceRepository({
     fetchImpl: createFetchDouble([]).fetch,
@@ -783,7 +844,7 @@ test('HttpWorkspaceRepository rejects invalid applyCommand responses', async () 
   );
 });
 
-function createWorkspaceApiPayload(workspace, meta = {}, result = undefined) {
+function createWorkspaceApiPayload(workspace, meta = {}, result = undefined, pendingWorkspaceInvites = []) {
   const payload = {
     ok: true,
     workspace,
@@ -796,7 +857,8 @@ function createWorkspaceApiPayload(workspace, meta = {}, result = undefined) {
       updatedAt: meta.updatedAt ?? '2026-04-03T10:00:00.000Z',
       lastChangedBy: meta.lastChangedBy ?? null,
       isPristine: meta.isPristine ?? true
-    }
+    },
+    pendingWorkspaceInvites
   };
 
   if (result !== undefined) {
@@ -804,6 +866,34 @@ function createWorkspaceApiPayload(workspace, meta = {}, result = undefined) {
   }
 
   return payload;
+}
+
+function createPendingWorkspaceInviteSummary() {
+  return {
+    workspaceId: 'workspace_shared',
+    boardId: 'casa',
+    boardTitle: 'Casa',
+    inviteId: 'invite_1',
+    role: 'viewer',
+    invitedAt: '2026-04-03T10:00:00.000Z',
+    invitedBy: {
+      id: 'sub_owner',
+      email: 'owner@example.com',
+      displayName: 'Owner'
+    }
+  };
+}
+
+function createPendingWorkspaceInvitePayload() {
+  return {
+    ...createPendingWorkspaceInviteSummary(),
+    invitedBy: {
+      type: 'human',
+      id: 'sub_owner',
+      email: 'owner@example.com',
+      displayName: 'Owner'
+    }
+  };
 }
 
 function createLegacyV4Workspace({

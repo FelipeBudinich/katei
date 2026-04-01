@@ -1,4 +1,5 @@
 import { getMongoDb } from '../data/mongo_client.js';
+import { normalizeBoardActor, normalizeBoardInvite } from '../../public/js/domain/board_collaboration.js';
 import {
   WorkspaceAccessDeniedError,
   WorkspaceImportConflictError,
@@ -87,6 +88,45 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
       viewerEmail,
       projectForViewer: false
     });
+  }
+
+  async listPendingWorkspaceInvitesForViewer({ viewerSub, viewerEmail = null } = {}) {
+    const collection = this.#getCollection();
+    const normalizedViewerSub = normalizeViewerSub(viewerSub);
+    const normalizedViewerEmail = normalizeOptionalEmail(viewerEmail);
+    const documents = await collection.find({}).toArray();
+    const summaries = [];
+    const seenInviteKeys = new Set();
+
+    for (const document of documents) {
+      const record = fromWorkspaceRecordDocument(document);
+
+      if (!record?.workspace?.boards || typeof record.workspace.boards !== 'object') {
+        continue;
+      }
+
+      for (const [boardId, board] of Object.entries(record.workspace.boards)) {
+        const inviteSummaries = createPendingWorkspaceInviteSummaries(board, {
+          workspaceId: record.workspaceId,
+          boardId,
+          viewerSub: normalizedViewerSub,
+          viewerEmail: normalizedViewerEmail
+        });
+
+        for (const inviteSummary of inviteSummaries) {
+          const inviteKey = `${inviteSummary.workspaceId}:${inviteSummary.boardId}:${inviteSummary.inviteId}`;
+
+          if (seenInviteKeys.has(inviteKey)) {
+            continue;
+          }
+
+          seenInviteKeys.add(inviteKey);
+          summaries.push(inviteSummary);
+        }
+      }
+    }
+
+    return summaries;
   }
 
   async replaceWorkspaceSnapshot({ viewerSub, workspaceId = null, viewerEmail = null, workspace, actor, expectedRevision } = {}) {
@@ -316,6 +356,99 @@ function createNowIsoString() {
 
 function normalizeOptionalWorkspaceId(workspaceId) {
   return typeof workspaceId === 'string' && workspaceId.trim() ? workspaceId.trim() : null;
+}
+
+function createPendingWorkspaceInviteSummaries(
+  board,
+  { workspaceId, boardId, viewerSub, viewerEmail = null } = {}
+) {
+  if (!board || typeof board !== 'object') {
+    return [];
+  }
+
+  const normalizedBoardId = normalizeOptionalWorkspaceId(boardId);
+  const normalizedBoardTitle = normalizeOptionalString(board.title);
+  const invites = Array.isArray(board?.collaboration?.invites) ? board.collaboration.invites : [];
+
+  if (!normalizedBoardId || !normalizedBoardTitle || invites.length === 0) {
+    return [];
+  }
+
+  return invites
+    .map((invite) =>
+      createPendingWorkspaceInviteSummary(invite, {
+        workspaceId,
+        boardId: normalizedBoardId,
+        boardTitle: normalizedBoardTitle,
+        viewerSub,
+        viewerEmail
+      })
+    )
+    .filter(Boolean);
+}
+
+function createPendingWorkspaceInviteSummary(
+  invite,
+  { workspaceId, boardId, boardTitle, viewerSub, viewerEmail = null } = {}
+) {
+  const normalizedInvite = normalizeBoardInvite(invite);
+
+  if (
+    !normalizedInvite ||
+    normalizedInvite.status !== 'pending' ||
+    !inviteMatchesViewer(normalizedInvite, { viewerSub, viewerEmail })
+  ) {
+    return null;
+  }
+
+  const invitedBy = normalizeBoardActor(normalizedInvite.invitedBy);
+  const invitedAt = normalizeOptionalIsoString(normalizedInvite.invitedAt);
+
+  if (!invitedBy || !invitedAt) {
+    return null;
+  }
+
+  return {
+    workspaceId,
+    boardId,
+    boardTitle,
+    inviteId: normalizedInvite.id,
+    role: normalizedInvite.role,
+    invitedAt,
+    invitedBy: {
+      id: invitedBy.id,
+      email: invitedBy.email ?? null,
+      displayName: invitedBy.displayName ?? null
+    }
+  };
+}
+
+function inviteMatchesViewer(invite, { viewerSub, viewerEmail = null } = {}) {
+  const inviteActorId = normalizeOptionalString(invite?.actor?.id);
+  const inviteEmail = normalizeOptionalEmail(invite?.email);
+
+  return Boolean(
+    (inviteActorId && inviteActorId === viewerSub) ||
+      (inviteEmail && viewerEmail && inviteEmail === viewerEmail)
+  );
+}
+
+function normalizeOptionalString(value) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function normalizeOptionalEmail(value) {
+  const normalizedValue = normalizeOptionalString(value).toLowerCase();
+  return normalizedValue || null;
+}
+
+function normalizeOptionalIsoString(value) {
+  if (typeof value !== 'string' || !value.trim()) {
+    return null;
+  }
+
+  const parsedValue = new Date(value);
+  return Number.isNaN(parsedValue.getTime()) ? null : parsedValue.toISOString();
 }
 
 function didPersistWorkspaceDocument(result) {

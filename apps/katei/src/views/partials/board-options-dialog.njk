@@ -36,6 +36,11 @@
       <ul class="space-y-3" data-board-options-target="boardList"></ul>
     </section>
 
+    <section class="mt-6 space-y-3" hidden data-board-options-target="inviteSection">
+      <p class="field-label text-sm font-semibold">{{ t('boardOptionsDialog.invitesHeading') }}</p>
+      <ul class="space-y-3" data-board-options-target="inviteList"></ul>
+    </section>
+
     <template data-board-options-target="boardItemTemplate">
       <li class="paper-panel px-4 py-4">
         <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
@@ -72,6 +77,37 @@
               data-action="board-options#declineInvite"
             >
               {{ t('boardOptionsDialog.declineInviteButton') }}
+            </button>
+          </div>
+        </div>
+      </li>
+    </template>
+
+    <template data-board-options-target="inviteItemTemplate">
+      <li class="paper-panel px-4 py-4">
+        <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+          <div class="min-w-0 space-y-1">
+            <p class="text-base text-strong" data-board-options-field="inviteTitle">{{ t('boardOptionsDialog.boardTitlePlaceholder') }}</p>
+            <p class="text-sm leading-6 text-muted" data-board-options-field="inviteMeta"></p>
+            <p class="text-xs uppercase tracking-[0.24em] text-subtle" data-board-options-field="inviteRole"></p>
+          </div>
+
+          <div class="action-wrap-grid sm:justify-self-end">
+            <button
+              type="button"
+              class="touch-button-secondary"
+              data-board-options-field="inviteAcceptButton"
+              data-action="board-options#acceptInvite"
+            >
+              {{ t('boardOptionsDialog.acceptInvite') }}
+            </button>
+            <button
+              type="button"
+              class="touch-button-secondary"
+              data-board-options-field="inviteDeclineButton"
+              data-action="board-options#declineInvite"
+            >
+              {{ t('boardOptionsDialog.declineInvite') }}
             </button>
           </div>
         </div>

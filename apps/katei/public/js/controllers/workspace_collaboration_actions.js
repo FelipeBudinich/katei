@@ -22,12 +22,38 @@ export async function performWorkspaceInviteDecision({
   viewerActor,
   activeWorkspaceId = null
 }) {
+  const previousWorkspaceId = normalizeOptionalWorkspaceId(activeWorkspaceId);
+  const targetWorkspaceId = normalizeOptionalWorkspaceId(detail?.workspaceId);
+
+  if (targetWorkspaceId && targetWorkspaceId !== previousWorkspaceId) {
+    service.setActiveWorkspace(targetWorkspaceId);
+
+    try {
+      if (decision === 'accept') {
+        return {
+          workspace: await service.acceptBoardInvite(detail.boardId, detail.inviteId),
+          leftWorkspace: false
+        };
+      }
+
+      await service.declineBoardInvite(detail.boardId, detail.inviteId);
+
+      return {
+        workspace: await service.switchWorkspace(previousWorkspaceId),
+        leftWorkspace: false
+      };
+    } catch (error) {
+      service.setActiveWorkspace(previousWorkspaceId);
+      throw error;
+    }
+  }
+
   const nextWorkspace =
     decision === 'accept'
       ? await service.acceptBoardInvite(detail.boardId, detail.inviteId)
       : await service.declineBoardInvite(detail.boardId, detail.inviteId);
 
-  if (decision === 'decline' && activeWorkspaceId && !hasVisibleWorkspaceAccess(nextWorkspace, viewerActor)) {
+  if (decision === 'decline' && previousWorkspaceId && !hasVisibleWorkspaceAccess(nextWorkspace, viewerActor)) {
     return {
       workspace: await service.switchWorkspace(null),
       leftWorkspace: true
@@ -38,4 +64,8 @@ export async function performWorkspaceInviteDecision({
     workspace: nextWorkspace,
     leftWorkspace: false
   };
+}
+
+function normalizeOptionalWorkspaceId(workspaceId) {
+  return typeof workspaceId === 'string' && workspaceId.trim() ? workspaceId.trim() : null;
 }

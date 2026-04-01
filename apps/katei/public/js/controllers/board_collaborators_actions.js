@@ -8,8 +8,11 @@ export function createInviteMemberDetail({ boardId, email, role }) {
   };
 }
 
-export function createInviteDecisionDetail({ boardId, inviteId }) {
+export function createInviteDecisionDetail({ workspaceId = null, boardId, inviteId }) {
+  const normalizedWorkspaceId = normalizeOptionalString(workspaceId);
+
   return {
+    ...(normalizedWorkspaceId ? { workspaceId: normalizedWorkspaceId } : {}),
     boardId: normalizeRequiredString(boardId),
     inviteId: normalizeRequiredString(inviteId)
   };
@@ -56,4 +59,8 @@ function normalizeRequiredString(value) {
   }
 
   return normalizedValue;
+}
+
+function normalizeOptionalString(value) {
+  return typeof value === 'string' ? value.trim() : '';
 }

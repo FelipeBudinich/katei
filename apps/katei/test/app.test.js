@@ -231,7 +231,8 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
       isPristine: false,
       workspaceId: record.workspaceId,
       isHomeWorkspace: true
-    }
+    },
+    pendingWorkspaceInvites: []
   });
   assert.equal(bootstrapPayload.workspace.boards.main.title, 'Roadmap alpha');
   assert.equal(
@@ -394,6 +395,44 @@ test('GET /boards bootstraps normalized workspace snapshots when the loaded reco
     bootstrapPayload.workspace.boards.main.cards.card_legacy_1.contentByLocale.en.title,
     'Legacy bootstrap task'
   );
+  assert.deepEqual(bootstrapPayload.pendingWorkspaceInvites, []);
+});
+
+test('GET /boards bootstrap includes pendingWorkspaceInvites and matches the API payload field', async () => {
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([
+    createCrossWorkspaceInviteRecordFixture('workspace_invited_casa')
+  ]);
+  const app = createTestApp({
+    googleTokenVerifier: async () => ({ sub: 'sub_123' }),
+    workspaceRecordRepository
+  });
+
+  const boardsResponse = await request(app)
+    .get('/boards')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_123', email: 'member@example.com', name: 'Tester' }));
+  const apiResponse = await request(app)
+    .get('/api/workspace')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_123', email: 'member@example.com', name: 'Tester' }));
+  const bootstrapPayload = readWorkspaceBootstrapPayload(boardsResponse.text);
+
+  assert.equal(boardsResponse.status, 200);
+  assert.equal(apiResponse.status, 200);
+  assert.deepEqual(bootstrapPayload.pendingWorkspaceInvites, apiResponse.body.pendingWorkspaceInvites);
+  assert.deepEqual(bootstrapPayload.pendingWorkspaceInvites, [
+    {
+      workspaceId: 'workspace_invited_casa',
+      boardId: 'casa',
+      boardTitle: 'Casa',
+      inviteId: 'invite_casa_1',
+      role: 'editor',
+      invitedAt: '2026-04-02T10:20:00.000Z',
+      invitedBy: {
+        id: 'sub_owner_casa',
+        email: 'owner-casa@example.com',
+        displayName: 'Casa owner'
+      }
+    }
+  ]);
 });
 
 test('GET /boards loads an accessible shared workspace by workspaceId and rejects inaccessible ones', async () => {
@@ -1580,6 +1619,10 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = []) {
       return loadFullRecord({ viewerSub, viewerEmail, workspaceId });
     },
 
+    async listPendingWorkspaceInvitesForViewer({ viewerSub, viewerEmail = null } = {}) {
+      return listPendingWorkspaceInvites(records.values(), { viewerSub, viewerEmail });
+    },
+
     async replaceWorkspaceSnapshot({ viewerSub, viewerEmail = null, workspaceId = null, workspace, actor, expectedRevision }) {
       this.replaceCalls.push({
         viewerSub,
@@ -1665,4 +1708,126 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = []) {
       return structuredClone(record);
     }
   };
+}
+
+function createCrossWorkspaceInviteRecordFixture(
+  workspaceId,
+  {
+    viewerSub = 'sub_123',
+    viewerEmail = 'member@example.com',
+    inviteStatus = 'pending'
+  } = {}
+) {
+  const ownerActor = {
+    type: 'human',
+    id: 'sub_owner_casa',
+    email: 'owner-casa@example.com',
+    displayName: 'Casa owner'
+  };
+  let workspace = createEmptyWorkspace({
+    workspaceId,
+    creator: ownerActor
+  });
+
+  workspace.boards.main.title = 'Owner board';
+  workspace.boards.main.collaboration.memberships = [
+    {
+      actor: ownerActor,
+      role: 'admin',
+      joinedAt: workspace.boards.main.createdAt
+    }
+  ];
+
+  const sourceBoard = createEmptyWorkspace({
+    workspaceId: `${workspaceId}_casa`,
+    creator: ownerActor
+  }).boards.main;
+  const invitedBoard = structuredClone(sourceBoard);
+  invitedBoard.id = 'casa';
+  invitedBoard.title = 'Casa';
+  invitedBoard.collaboration.memberships = [];
+  invitedBoard.collaboration.invites = [
+    {
+      id: 'invite_casa_1',
+      actor: { type: 'human', id: viewerSub },
+      email: viewerEmail,
+      role: 'editor',
+      status: inviteStatus,
+      invitedBy: ownerActor,
+      invitedAt: '2026-04-02T10:20:00.000Z'
+    }
+  ];
+  workspace.boards.casa = invitedBoard;
+  workspace.boardOrder = ['main', 'casa'];
+  workspace.ui.activeBoardId = 'main';
+
+  const record = createUpdatedWorkspaceRecord(
+    createInitialWorkspaceRecord('sub_owner_casa', {
+      workspaceId,
+      now: '2026-04-02T10:00:00.000Z'
+    }),
+    {
+      workspace,
+      actor: { type: 'human', id: 'sub_owner_casa' },
+      now: '2026-04-02T10:30:00.000Z'
+    }
+  );
+  record.isHomeWorkspace = false;
+  return record;
+}
+
+function listPendingWorkspaceInvites(records, { viewerSub, viewerEmail = null } = {}) {
+  const normalizedViewerEmail = normalizeOptionalEmail(viewerEmail);
+  const inviteSummaries = [];
+  const seenInviteKeys = new Set();
+
+  for (const record of records) {
+    const workspace = createWorkspaceRecord(record).workspace;
+
+    for (const [boardId, board] of Object.entries(workspace.boards ?? {})) {
+      const invites = Array.isArray(board?.collaboration?.invites) ? board.collaboration.invites : [];
+
+      for (const invite of invites) {
+        if (invite?.status !== 'pending') {
+          continue;
+        }
+
+        const matchesViewer =
+          (typeof invite?.actor?.id === 'string' && invite.actor.id.trim() === viewerSub) ||
+          (normalizeOptionalEmail(invite?.email) && normalizeOptionalEmail(invite.email) === normalizedViewerEmail);
+
+        if (!matchesViewer) {
+          continue;
+        }
+
+        const summary = {
+          workspaceId: record.workspaceId,
+          boardId,
+          boardTitle: board.title,
+          inviteId: invite.id,
+          role: invite.role,
+          invitedAt: invite.invitedAt,
+          invitedBy: {
+            id: invite.invitedBy?.id ?? null,
+            email: invite.invitedBy?.email ?? null,
+            displayName: invite.invitedBy?.displayName ?? invite.invitedBy?.name ?? null
+          }
+        };
+        const inviteKey = `${summary.workspaceId}:${summary.boardId}:${summary.inviteId}`;
+
+        if (seenInviteKeys.has(inviteKey)) {
+          continue;
+        }
+
+        seenInviteKeys.add(inviteKey);
+        inviteSummaries.push(summary);
+      }
+    }
+  }
+
+  return inviteSummaries;
+}
+
+function normalizeOptionalEmail(value) {
+  return typeof value === 'string' && value.trim() ? value.trim().toLowerCase() : null;
 }

@@ -4,6 +4,7 @@ import {
   createEmptyWorkspace,
   createWorkspaceBoard
 } from '../public/js/domain/workspace_read_model.js';
+import WorkspaceController from '../public/js/controllers/workspace_controller.js';
 import {
   getBoardCollaborationState,
   hasVisibleWorkspaceAccess
@@ -104,6 +105,129 @@ test('performWorkspaceCollaboratorAction routes collaborator UI actions through 
   }
 });
 
+test('workspace controller includes pendingWorkspaceInvites and activeWorkspaceId when opening board options', () => {
+  const workspace = createViewerWorkspace('workspace_home', createActor('viewer_1', 'viewer@example.com', 'Viewer'));
+  const pendingWorkspaceInvites = [
+    {
+      workspaceId: 'workspace_invited_casa',
+      boardId: 'casa',
+      boardTitle: 'Casa',
+      inviteId: 'invite_casa_1',
+      role: 'editor',
+      invitedAt: '2026-03-31T10:20:00.000Z',
+      invitedBy: {
+        id: 'sub_owner_casa',
+        email: 'owner-casa@example.com',
+        displayName: 'Casa owner'
+      }
+    }
+  ];
+  const controller = Object.create(WorkspaceController.prototype);
+  const dispatchedEvents = [];
+  const triggerElement = { id: 'open-board-options-button' };
+
+  controller.workspace = workspace;
+  controller.viewerActor = createActor('viewer_1', 'viewer@example.com', 'Viewer');
+  controller.service = {
+    getActiveWorkspaceId() {
+      return 'workspace_home';
+    },
+    getPendingWorkspaceInvites() {
+      return pendingWorkspaceInvites;
+    }
+  };
+  controller.dispatchWorkspaceEvent = (name, detail) => {
+    dispatchedEvents.push({ name, detail });
+  };
+
+  WorkspaceController.prototype.openBoardOptions.call(controller, {
+    currentTarget: triggerElement
+  });
+
+  assert.deepEqual(dispatchedEvents, [
+    {
+      name: 'open-board-options',
+      detail: {
+        workspace,
+        viewerActor: controller.viewerActor,
+        triggerElement,
+        activeWorkspaceId: 'workspace_home',
+        pendingWorkspaceInvites
+      }
+    }
+  ]);
+});
+
+test('workspace controller sync-board-options payload includes pendingWorkspaceInvites and activeWorkspaceId during render', () => {
+  const controller = Object.create(WorkspaceController.prototype);
+  const dispatchedEvents = [];
+
+  controller.workspace = createEmptyWorkspace();
+  controller.workspace.boardOrder = [];
+  controller.workspace.boards = {};
+  controller.workspace.ui.activeBoardId = null;
+  controller.viewerActor = createActor('viewer_1', 'viewer@example.com', 'Viewer');
+  controller.service = {
+    getActiveWorkspaceId() {
+      return 'workspace_home';
+    },
+    getPendingWorkspaceInvites() {
+      return [
+        {
+          workspaceId: 'workspace_invited_casa',
+          boardId: 'casa',
+          boardTitle: 'Casa',
+          inviteId: 'invite_casa_1',
+          role: 'editor',
+          invitedAt: '2026-03-31T10:20:00.000Z',
+          invitedBy: {
+            id: 'sub_owner_casa',
+            email: 'owner-casa@example.com',
+            displayName: 'Casa owner'
+          }
+        }
+      ];
+    }
+  };
+  controller.t = (key) => key;
+  controller.hasCreateCardButtonTarget = true;
+  controller.createCardButtonTarget = {
+    hidden: false,
+    disabled: false,
+    setAttribute() {}
+  };
+  controller.hasBoardAccessNoticeTarget = true;
+  controller.boardAccessNoticeTarget = {
+    hidden: true,
+    textContent: ''
+  };
+  controller.hasBoardTitleTarget = true;
+  controller.boardTitleTarget = {
+    textContent: ''
+  };
+  controller.hasDesktopColumnsTarget = true;
+  controller.desktopColumnsTarget = {
+    hidden: false,
+    replaceChildren() {}
+  };
+  controller.dispatchWorkspaceEvent = (name, detail) => {
+    dispatchedEvents.push({ name, detail });
+  };
+
+  WorkspaceController.prototype.render.call(controller);
+
+  assert.deepEqual(dispatchedEvents[0], {
+    name: 'sync-board-options',
+    detail: {
+      workspace: controller.workspace,
+      viewerActor: controller.viewerActor,
+      triggerElement: null,
+      activeWorkspaceId: 'workspace_home',
+      pendingWorkspaceInvites: controller.service.getPendingWorkspaceInvites()
+    }
+  });
+});
+
 test('performWorkspaceInviteDecision keeps the active workspace when accepting an invite', async () => {
   const viewerActor = createActor('invitee_sub', 'invitee@example.com', 'Invitee');
   const sharedWorkspace = createViewerWorkspace('workspace_shared', viewerActor);
@@ -131,6 +255,41 @@ test('performWorkspaceInviteDecision keeps the active workspace when accepting a
     {
       method: 'acceptBoardInvite',
       args: ['main', 'invite_1']
+    }
+  ]);
+});
+
+test('performWorkspaceInviteDecision lands in the invited workspace for cross-workspace acceptance', async () => {
+  const viewerActor = createActor('invitee_sub', 'invitee@example.com', 'Invitee');
+  const invitedWorkspace = createViewerWorkspace('workspace_invited_casa', viewerActor);
+  const service = createCollaborationServiceDouble({
+    acceptWorkspace: invitedWorkspace
+  });
+
+  const result = await performWorkspaceInviteDecision({
+    service,
+    decision: 'accept',
+    detail: {
+      workspaceId: 'workspace_invited_casa',
+      boardId: 'casa',
+      inviteId: 'invite_casa_1'
+    },
+    viewerActor,
+    activeWorkspaceId: 'workspace_home'
+  });
+
+  assert.deepEqual(result, {
+    workspace: invitedWorkspace,
+    leftWorkspace: false
+  });
+  assert.deepEqual(service.calls, [
+    {
+      method: 'setActiveWorkspace',
+      args: ['workspace_invited_casa']
+    },
+    {
+      method: 'acceptBoardInvite',
+      args: ['casa', 'invite_casa_1']
     }
   ]);
 });
@@ -170,6 +329,46 @@ test('performWorkspaceInviteDecision returns to the home workspace when declinin
     {
       method: 'switchWorkspace',
       args: [null]
+    }
+  ]);
+});
+
+test('performWorkspaceInviteDecision restores the previous workspace after cross-workspace decline', async () => {
+  const viewerActor = createActor('invitee_sub', 'invitee@example.com', 'Invitee');
+  const homeWorkspace = createViewerWorkspace('workspace_home', viewerActor);
+  const service = createCollaborationServiceDouble({
+    declineWorkspace: createEmptyWorkspace({ workspaceId: 'workspace_invited_casa' }),
+    switchWorkspace: homeWorkspace
+  });
+
+  const result = await performWorkspaceInviteDecision({
+    service,
+    decision: 'decline',
+    detail: {
+      workspaceId: 'workspace_invited_casa',
+      boardId: 'casa',
+      inviteId: 'invite_casa_1'
+    },
+    viewerActor,
+    activeWorkspaceId: 'workspace_home'
+  });
+
+  assert.deepEqual(result, {
+    workspace: homeWorkspace,
+    leftWorkspace: false
+  });
+  assert.deepEqual(service.calls, [
+    {
+      method: 'setActiveWorkspace',
+      args: ['workspace_invited_casa']
+    },
+    {
+      method: 'declineBoardInvite',
+      args: ['casa', 'invite_casa_1']
+    },
+    {
+      method: 'switchWorkspace',
+      args: ['workspace_home']
     }
   ]);
 });
@@ -494,7 +693,12 @@ function createCollaborationServiceDouble({
   switchWorkspace = workspace
 } = {}) {
   return {
+    activeWorkspaceId: null,
     calls: [],
+    setActiveWorkspace(...args) {
+      this.calls.push({ method: 'setActiveWorkspace', args });
+      this.activeWorkspaceId = args[0] ?? null;
+    },
     async inviteBoardMember(...args) {
       this.calls.push({ method: 'inviteBoardMember', args });
       return structuredClone(workspace);

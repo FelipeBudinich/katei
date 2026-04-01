@@ -30,7 +30,10 @@ test('GET /api/workspace returns normalized actor-filtered shared workspace data
     memberRole: 'viewer',
     includeInvite: true
   });
-  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord]);
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([
+    sharedRecord,
+    createCrossWorkspaceInviteRecordFixture('workspace_invited_casa')
+  ]);
   const app = createTestApp({ workspaceRecordRepository });
 
   const response = await request(app)
@@ -45,6 +48,35 @@ test('GET /api/workspace returns normalized actor-filtered shared workspace data
   assert.equal(firstCardTitle(response.body.workspace.boards.member), 'Member board card');
   assert.deepEqual(response.body.workspace.boards.invite.cards, {});
   assert.equal(response.body.workspace.boards.invite.collaboration.invites[0].email, 'member@example.com');
+  assert.deepEqual(response.body.pendingWorkspaceInvites, [
+    {
+      workspaceId: 'workspace_shared_api_get',
+      boardId: 'invite',
+      boardTitle: 'Invite board',
+      inviteId: 'invite_1',
+      role: 'viewer',
+      invitedAt: '2026-04-04T10:15:00.000Z',
+      invitedBy: {
+        id: 'sub_owner',
+        email: 'owner@example.com',
+        displayName: null
+      }
+    },
+    {
+      workspaceId: 'workspace_invited_casa',
+      boardId: 'casa',
+      boardTitle: 'Casa',
+      inviteId: 'invite_casa_1',
+      role: 'editor',
+      invitedAt: '2026-04-04T10:20:00.000Z',
+      invitedBy: {
+        id: 'sub_owner_casa',
+        email: 'owner-casa@example.com',
+        displayName: 'Casa owner'
+      }
+    }
+  ]);
+  assert.deepEqual(Object.keys(response.body), ['ok', 'workspace', 'activeWorkspace', 'meta', 'pendingWorkspaceInvites']);
 });
 
 test('POST /api/workspace/commands returns the filtered resulting workspace', async () => {
@@ -52,7 +84,10 @@ test('POST /api/workspace/commands returns the filtered resulting workspace', as
     memberRole: 'admin',
     includeInvite: false
   });
-  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord]);
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([
+    sharedRecord,
+    createCrossWorkspaceInviteRecordFixture('workspace_command_invite')
+  ]);
   const app = createTestApp({ workspaceRecordRepository });
 
   const response = await request(app)
@@ -75,6 +110,9 @@ test('POST /api/workspace/commands returns the filtered resulting workspace', as
   assert.deepEqual(response.body.workspace.boardOrder, ['member']);
   assert.equal(response.body.workspace.boards.main, undefined);
   assert.equal(response.body.workspace.boards.member.title, 'Member board renamed');
+  assert.equal(response.body.pendingWorkspaceInvites.length, 1);
+  assert.equal(response.body.pendingWorkspaceInvites[0].workspaceId, 'workspace_command_invite');
+  assert.deepEqual(Object.keys(response.body), ['ok', 'workspace', 'activeWorkspace', 'meta', 'pendingWorkspaceInvites', 'result']);
 });
 
 test('PUT /api/workspace rejects shared snapshot replacement when hidden boards exist', async () => {
@@ -109,7 +147,12 @@ test('PUT /api/workspace rejects shared snapshot replacement when hidden boards 
 });
 
 test('POST /api/workspace/import still accepts older snapshots and returns the normalized shape', async () => {
-  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble();
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([
+    createCrossWorkspaceInviteRecordFixture('workspace_import_invite', {
+      viewerSub: 'sub_legacy',
+      viewerEmail: 'legacy@example.com'
+    })
+  ]);
   const app = createTestApp({ workspaceRecordRepository });
   const legacyWorkspace = createLegacyWorkspaceSnapshot();
 
@@ -123,6 +166,31 @@ test('POST /api/workspace/import still accepts older snapshots and returns the n
   assert.equal(response.body.workspace.boards.main.columnOrder, undefined);
   assert.equal(response.body.workspace.boards.main.cards.card_legacy_1.title, undefined);
   assert.equal(response.body.workspace.boards.main.cards.card_legacy_1.contentByLocale.en.title, 'Legacy import card');
+  assert.equal(response.body.pendingWorkspaceInvites.length, 1);
+  assert.equal(response.body.pendingWorkspaceInvites[0].workspaceId, 'workspace_import_invite');
+  assert.deepEqual(Object.keys(response.body), ['ok', 'workspace', 'activeWorkspace', 'meta', 'pendingWorkspaceInvites']);
+});
+
+test('PUT /api/workspace responses include pendingWorkspaceInvites without changing the actor-facing payload shape', async () => {
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([
+    createCrossWorkspaceInviteRecordFixture('workspace_put_invite')
+  ]);
+  const app = createTestApp({ workspaceRecordRepository });
+  const workspace = createCard(createEmptyWorkspace(), 'main', {
+    title: 'Ship launch checklist',
+    detailsMarkdown: 'Owner: Mina',
+    priority: 'urgent'
+  });
+
+  const response = await request(app)
+    .put('/api/workspace')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_123', email: 'member@example.com', name: 'Tester' }))
+    .send({ workspace, expectedRevision: 0 });
+
+  assert.equal(response.status, 200);
+  assert.equal(response.body.pendingWorkspaceInvites.length, 1);
+  assert.equal(response.body.pendingWorkspaceInvites[0].workspaceId, 'workspace_put_invite');
+  assert.deepEqual(Object.keys(response.body), ['ok', 'workspace', 'activeWorkspace', 'meta', 'pendingWorkspaceInvites']);
 });
 
 function createTestApp({ workspaceRecordRepository } = {}) {
@@ -130,7 +198,9 @@ function createTestApp({ workspaceRecordRepository } = {}) {
     env: {
       NODE_ENV: 'test',
       GOOGLE_CLIENT_ID: 'test-google-client-id',
-      KATEI_SESSION_SECRET: 'test-session-secret'
+      KATEI_SESSION_SECRET: 'test-session-secret',
+      MONGODB_URI: 'mongodb://127.0.0.1:27017',
+      MONGODB_DB_NAME: 'katei_test'
     },
     googleTokenVerifier: async () => ({ sub: 'sub_any' }),
     workspaceRecordRepository: workspaceRecordRepository ?? createWorkspaceRecordRepositoryDouble()
@@ -214,6 +284,10 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = []) {
 
     async loadOrCreateAuthoritativeWorkspaceRecord({ viewerSub, viewerEmail = null, workspaceId = null } = {}) {
       return loadFullRecord({ viewerSub, viewerEmail, workspaceId });
+    },
+
+    async listPendingWorkspaceInvitesForViewer({ viewerSub, viewerEmail = null } = {}) {
+      return listPendingWorkspaceInvites(records.values(), { viewerSub, viewerEmail });
     },
 
     async replaceWorkspaceSnapshot({ viewerSub, viewerEmail = null, workspaceId = null, workspace, actor, expectedRevision }) {
@@ -356,6 +430,120 @@ function createSharedWorkspaceRecordFixture(workspaceId, { memberRole = 'viewer'
   );
   record.isHomeWorkspace = false;
   return record;
+}
+
+function createCrossWorkspaceInviteRecordFixture(
+  workspaceId,
+  {
+    viewerSub = 'sub_123',
+    viewerEmail = 'member@example.com',
+    inviteStatus = 'pending'
+  } = {}
+) {
+  const ownerActor = {
+    type: 'human',
+    id: 'sub_owner_casa',
+    email: 'owner-casa@example.com',
+    displayName: 'Casa owner'
+  };
+  let workspace = createEmptyWorkspace({
+    workspaceId,
+    creator: ownerActor
+  });
+
+  workspace.boards.main.title = 'Owner board';
+  workspace.boards.main.collaboration.memberships = [
+    {
+      actor: ownerActor,
+      role: 'admin',
+      joinedAt: workspace.boards.main.createdAt
+    }
+  ];
+  workspace = addSharedBoard(workspace, 'casa', 'Casa', {
+    invites: [
+      {
+        id: 'invite_casa_1',
+        actor: { type: 'human', id: viewerSub },
+        email: viewerEmail,
+        role: 'editor',
+        status: inviteStatus,
+        invitedBy: ownerActor,
+        invitedAt: '2026-04-04T10:20:00.000Z'
+      }
+    ]
+  });
+  workspace.boardOrder = ['main', 'casa'];
+  workspace.ui.activeBoardId = 'main';
+
+  const record = createUpdatedWorkspaceRecord(
+    createInitialWorkspaceRecord('sub_owner_casa', {
+      workspaceId,
+      now: '2026-04-04T10:00:00.000Z'
+    }),
+    {
+      workspace,
+      actor: { type: 'human', id: 'sub_owner_casa' },
+      now: '2026-04-04T10:30:00.000Z'
+    }
+  );
+  record.isHomeWorkspace = false;
+  return record;
+}
+
+function listPendingWorkspaceInvites(records, { viewerSub, viewerEmail = null } = {}) {
+  const normalizedViewerEmail = normalizeOptionalEmail(viewerEmail);
+  const inviteSummaries = [];
+  const seenInviteKeys = new Set();
+
+  for (const record of records) {
+    const workspace = createWorkspaceRecord(record).workspace;
+
+    for (const [boardId, board] of Object.entries(workspace.boards ?? {})) {
+      const invites = Array.isArray(board?.collaboration?.invites) ? board.collaboration.invites : [];
+
+      for (const invite of invites) {
+        if (invite?.status !== 'pending') {
+          continue;
+        }
+
+        const matchesViewer =
+          (typeof invite?.actor?.id === 'string' && invite.actor.id.trim() === viewerSub) ||
+          (normalizeOptionalEmail(invite?.email) && normalizeOptionalEmail(invite.email) === normalizedViewerEmail);
+
+        if (!matchesViewer) {
+          continue;
+        }
+
+        const summary = {
+          workspaceId: record.workspaceId,
+          boardId,
+          boardTitle: board.title,
+          inviteId: invite.id,
+          role: invite.role,
+          invitedAt: invite.invitedAt,
+          invitedBy: {
+            id: invite.invitedBy?.id ?? null,
+            email: invite.invitedBy?.email ?? null,
+            displayName: invite.invitedBy?.displayName ?? invite.invitedBy?.name ?? null
+          }
+        };
+        const inviteKey = `${summary.workspaceId}:${summary.boardId}:${summary.inviteId}`;
+
+        if (seenInviteKeys.has(inviteKey)) {
+          continue;
+        }
+
+        seenInviteKeys.add(inviteKey);
+        inviteSummaries.push(summary);
+      }
+    }
+  }
+
+  return inviteSummaries;
+}
+
+function normalizeOptionalEmail(value) {
+  return typeof value === 'string' && value.trim() ? value.trim().toLowerCase() : null;
 }
 
 function addSharedBoard(workspace, boardId, title, { memberships = [], invites = [], card = null } = {}) {

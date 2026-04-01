@@ -1,4 +1,4 @@
-import { Controller } from '/vendor/stimulus/stimulus.js';
+import { Controller } from '../../vendor/stimulus/stimulus.js';
 import {
   getBoardCardContentVariant,
   getCollapsedColumnsForBoard
@@ -114,11 +114,12 @@ export default class extends Controller {
       return;
     }
 
-    this.dispatchWorkspaceEvent('open-board-options', {
-      workspace: this.workspace,
-      viewerActor: this.viewerActor,
-      triggerElement: event?.currentTarget ?? null
-    });
+    this.dispatchWorkspaceEvent(
+      'open-board-options',
+      this.createBoardOptionsEventDetail({
+        triggerElement: event?.currentTarget ?? null
+      })
+    );
   }
 
   openProfileOptions(event) {
@@ -602,10 +603,7 @@ export default class extends Controller {
         this.desktopColumnsTarget.replaceChildren();
       }
 
-      this.dispatchWorkspaceEvent('sync-board-options', {
-        workspace: this.workspace,
-        viewerActor: this.viewerActor
-      });
+      this.dispatchWorkspaceEvent('sync-board-options', this.createBoardOptionsEventDetail());
       this.dispatchWorkspaceEvent('sync-board-collaborators', {
         workspace: this.workspace,
         viewerActor: this.viewerActor,
@@ -641,10 +639,7 @@ export default class extends Controller {
       dateTimeFormatter: this.dateTimeFormatter
     });
 
-    this.dispatchWorkspaceEvent('sync-board-options', {
-      workspace: this.workspace,
-      viewerActor: this.viewerActor
-    });
+    this.dispatchWorkspaceEvent('sync-board-options', this.createBoardOptionsEventDetail());
     this.dispatchWorkspaceEvent('sync-board-collaborators', {
       workspace: this.workspace,
       viewerActor: this.viewerActor,
@@ -775,6 +770,16 @@ export default class extends Controller {
 
   dispatchWorkspaceEvent(name, detail) {
     window.dispatchEvent(new CustomEvent(`workspace:${name}`, { detail }));
+  }
+
+  createBoardOptionsEventDetail({ triggerElement = null } = {}) {
+    return {
+      workspace: this.workspace,
+      viewerActor: this.viewerActor,
+      triggerElement,
+      activeWorkspaceId: this.service?.getActiveWorkspaceId?.() ?? null,
+      pendingWorkspaceInvites: this.service?.getPendingWorkspaceInvites?.() ?? []
+    };
   }
 
   refreshCardEditor({ boardId, cardId, locale, mode = 'edit' } = {}) {

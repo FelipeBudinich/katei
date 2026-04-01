@@ -495,9 +495,7 @@ function createMarkdownToolbar(EasyMDE, t) {
     createToolbarButton('italic', t('cardEditor.markdownToolbar.italic'), EasyMDE.toggleItalic),
     createToolbarButton('heading-2', t('cardEditor.markdownToolbar.heading'), EasyMDE.toggleHeading2),
     '|',
-    createToolbarButton('quote', t('cardEditor.markdownToolbar.quote'), EasyMDE.toggleBlockquote),
     createToolbarButton('unordered-list', t('cardEditor.markdownToolbar.bullets'), EasyMDE.toggleUnorderedList),
-    createToolbarButton('ordered-list', t('cardEditor.markdownToolbar.numbers'), EasyMDE.toggleOrderedList),
     '|',
     createToolbarButton('code', t('cardEditor.markdownToolbar.code'), EasyMDE.toggleCodeBlock)
   ];
