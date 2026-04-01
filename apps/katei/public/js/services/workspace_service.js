@@ -1,3 +1,5 @@
+import { logInviteAcceptDebug } from '../lib/invite_debug.js';
+
 export class WorkspaceService {
   constructor(repository) {
     this.repository = repository;
@@ -21,6 +23,33 @@ export class WorkspaceService {
     }
 
     return Array.isArray(this.repository.pendingWorkspaceInvites) ? this.repository.pendingWorkspaceInvites : [];
+  }
+
+  getDebugContext() {
+    const meta =
+      typeof this.repository.getMeta === 'function'
+        ? this.repository.getMeta()
+        : this.repository.meta ?? null;
+    const cachedRevision =
+      typeof this.repository.getRevision === 'function'
+        ? this.repository.getRevision()
+        : (Number.isInteger(this.repository.revision) ? this.repository.revision : null);
+    const revisionWorkspaceId =
+      typeof this.repository.getLastRevisionWorkspaceId === 'function'
+        ? this.repository.getLastRevisionWorkspaceId()
+        : this.repository.lastRevisionWorkspaceId ?? null;
+    const revisionSource =
+      typeof this.repository.getLastStateSource === 'function'
+        ? this.repository.getLastStateSource()
+        : this.repository.lastStateSource ?? null;
+
+    return {
+      activeWorkspaceId: this.getActiveWorkspaceId(),
+      cachedRevision,
+      revisionWorkspaceId,
+      revisionSource,
+      meta
+    };
   }
 
   setActiveWorkspace(workspaceId) {
@@ -180,6 +209,20 @@ export class WorkspaceService {
   }
 
   async #applyCommand(type, payload) {
+    if (isInviteDecisionType(type)) {
+      const debugContext = this.getDebugContext();
+      logInviteAcceptDebug('client.service.applyCommand', {
+        commandType: type,
+        targetWorkspaceId: debugContext.activeWorkspaceId,
+        commandPayload: payload,
+        expectedRevision: debugContext.cachedRevision,
+        cachedWorkspaceId: debugContext.revisionWorkspaceId,
+        cachedRevision: debugContext.cachedRevision,
+        cachedRevisionSource: debugContext.revisionSource,
+        cachedMetaRevision: Number.isInteger(debugContext.meta?.revision) ? debugContext.meta.revision : null
+      });
+    }
+
     const response = await this.repository.applyCommand({
       clientMutationId: createClientMutationId(),
       type,
@@ -215,4 +258,8 @@ function buildBoardSchemaPayload(input) {
   }
 
   return payload;
+}
+
+function isInviteDecisionType(type) {
+  return type === 'board.invite.accept' || type === 'board.invite.decline';
 }

@@ -3,7 +3,7 @@ import { getBoardCardContentVariant } from '../domain/workspace.js';
 import { createBrowserDateTimeFormatter, getBrowserTranslator } from '../i18n/browser.js';
 import { localizeErrorMessage } from '../i18n/errors.js';
 import { getPriorityDisplayLabel } from '../i18n/workspace_labels.js';
-import { logInviteDebug } from '../lib/invite_debug.js';
+import { logInviteAcceptDebug, logInviteDebug } from '../lib/invite_debug.js';
 import { renderMarkdownInto } from '../lib/markdown.js';
 import { HttpWorkspaceRepository } from '../repositories/http_workspace_repository.js';
 import { renderBoardState } from '../renderers/board_renderer.js';
@@ -236,6 +236,26 @@ export default class extends Controller {
   }
 
   async handleAcceptInvite(event) {
+    const detail = event?.detail ?? {};
+    const debugContext = this.service?.getDebugContext?.() ?? {};
+    const pendingWorkspaceInvites = this.service?.getPendingWorkspaceInvites?.() ?? [];
+    const inviteSummary = findPendingWorkspaceInviteSummary(pendingWorkspaceInvites, detail);
+    const currentInvite = findWorkspaceInvite(this.workspace, detail?.boardId, detail?.inviteId);
+
+    logInviteAcceptDebug('client.controller.handleAcceptInvite', {
+      inviteId: detail?.inviteId ?? null,
+      inviteWorkspaceId: detail?.workspaceId ?? this.workspace?.workspaceId ?? null,
+      inviteBoardId: detail?.boardId ?? null,
+      inviteStatus: currentInvite?.status ?? inviteSummary?.status ?? null,
+      currentActiveWorkspaceId: this.service?.getActiveWorkspaceId?.() ?? null,
+      currentActiveWorkspaceRevision: debugContext.cachedRevision ?? null,
+      currentActiveWorkspaceRevisionSource: debugContext.revisionSource ?? null,
+      currentActiveWorkspaceRevisionWorkspaceId: debugContext.revisionWorkspaceId ?? null,
+      inviteWorkspaceSummaryRevision: Number.isInteger(inviteSummary?.revision) ? inviteSummary.revision : null,
+      inviteWorkspaceSummaryRevisionSource:
+        Number.isInteger(inviteSummary?.revision) ? 'pendingWorkspaceInvites' : 'not-available'
+    });
+
     await this.runInviteDecision('accept', event.detail, this.t('workspace.announcements.inviteAccepted'));
   }
 
@@ -584,6 +604,21 @@ export default class extends Controller {
 
   async runInviteDecision(decision, detail, successMessage) {
     try {
+      const activeWorkspaceId = this.service?.getActiveWorkspaceId?.() ?? null;
+      const targetWorkspaceId = normalizeOptionalWorkspaceId(detail?.workspaceId) ?? activeWorkspaceId;
+      const debugContext = this.service?.getDebugContext?.() ?? {};
+
+      logInviteAcceptDebug('client.controller.runInviteDecision', {
+        decision,
+        resolvedWorkspaceId: targetWorkspaceId,
+        resolvedBoardId: detail?.boardId ?? null,
+        resolvedInviteId: detail?.inviteId ?? null,
+        resolvedRevision: debugContext.cachedRevision ?? null,
+        revisionWorkspaceId: debugContext.revisionWorkspaceId ?? null,
+        revisionSource: debugContext.revisionSource ?? null,
+        revisionReadFrom: describeRevisionOrigin(debugContext, targetWorkspaceId, activeWorkspaceId)
+      });
+
       const result = await performWorkspaceInviteDecision({
         service: this.service,
         decision,
@@ -955,4 +990,50 @@ function scheduleBrowserFrame(callback) {
   }
 
   callback();
+}
+
+function findPendingWorkspaceInviteSummary(pendingWorkspaceInvites, detail) {
+  if (!Array.isArray(pendingWorkspaceInvites)) {
+    return null;
+  }
+
+  return pendingWorkspaceInvites.find((invite) =>
+    invite?.workspaceId === detail?.workspaceId
+      && invite?.boardId === detail?.boardId
+      && invite?.inviteId === detail?.inviteId
+  ) ?? null;
+}
+
+function findWorkspaceInvite(workspace, boardId, inviteId) {
+  const normalizedBoardId = normalizeOptionalWorkspaceId(boardId);
+  const normalizedInviteId = normalizeOptionalWorkspaceId(inviteId);
+  const invites = Array.isArray(workspace?.boards?.[normalizedBoardId]?.collaboration?.invites)
+    ? workspace.boards[normalizedBoardId].collaboration.invites
+    : [];
+
+  return invites.find((invite) => invite?.id === normalizedInviteId) ?? null;
+}
+
+function describeRevisionOrigin(debugContext, targetWorkspaceId, activeWorkspaceId) {
+  if (!Number.isInteger(debugContext?.cachedRevision)) {
+    return 'not-available';
+  }
+
+  if (debugContext?.revisionWorkspaceId && targetWorkspaceId && debugContext.revisionWorkspaceId === targetWorkspaceId) {
+    return 'invite-workspace-context';
+  }
+
+  if (debugContext?.revisionWorkspaceId && activeWorkspaceId && debugContext.revisionWorkspaceId === activeWorkspaceId) {
+    return 'active-workspace-context';
+  }
+
+  if (debugContext?.revisionSource === 'bootstrap') {
+    return 'bootstrap-state';
+  }
+
+  return 'prior-api-state';
+}
+
+function normalizeOptionalWorkspaceId(value) {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
 }

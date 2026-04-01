@@ -1,5 +1,5 @@
 import { hasVisibleWorkspaceAccess } from './board_collaboration_state.js';
-import { logInviteDebug } from '../lib/invite_debug.js';
+import { logInviteAcceptDebug, logInviteDebug } from '../lib/invite_debug.js';
 
 export async function performWorkspaceCollaboratorAction({ service, action, detail }) {
   switch (action) {
@@ -25,6 +25,7 @@ export async function performWorkspaceInviteDecision({
 }) {
   const previousWorkspaceId = normalizeOptionalWorkspaceId(activeWorkspaceId);
   const targetWorkspaceId = normalizeOptionalWorkspaceId(detail?.workspaceId);
+  const initialDebugContext = getServiceDebugContext(service);
 
   logInviteDebug(`invite.${decision}.check`, {
     previousWorkspaceId,
@@ -35,8 +36,39 @@ export async function performWorkspaceInviteDecision({
     actorEmail: viewerActor?.email ?? null
   });
 
+  logInviteAcceptDebug('client.inviteDecision.entry', {
+    decision,
+    previousWorkspaceId,
+    targetWorkspaceId,
+    boardId: detail?.boardId ?? null,
+    inviteId: detail?.inviteId ?? null,
+    commandPayload: {
+      boardId: detail?.boardId ?? null,
+      inviteId: detail?.inviteId ?? null
+    },
+    serviceWorkspaceId: initialDebugContext.activeWorkspaceId,
+    expectedRevision: initialDebugContext.cachedRevision,
+    revisionWorkspaceId: initialDebugContext.revisionWorkspaceId,
+    revisionSource: initialDebugContext.revisionSource,
+    revisionReadFrom: describeRevisionOrigin(initialDebugContext, targetWorkspaceId, previousWorkspaceId)
+  });
+
   if (targetWorkspaceId && targetWorkspaceId !== previousWorkspaceId) {
     service.setActiveWorkspace(targetWorkspaceId);
+    const switchedDebugContext = getServiceDebugContext(service);
+
+    logInviteAcceptDebug('client.inviteDecision.workspaceSwitch', {
+      decision,
+      previousWorkspaceId,
+      targetWorkspaceId,
+      boardId: detail?.boardId ?? null,
+      inviteId: detail?.inviteId ?? null,
+      serviceWorkspaceId: switchedDebugContext.activeWorkspaceId,
+      expectedRevision: switchedDebugContext.cachedRevision,
+      revisionWorkspaceId: switchedDebugContext.revisionWorkspaceId,
+      revisionSource: switchedDebugContext.revisionSource,
+      revisionReadFrom: describeRevisionOrigin(switchedDebugContext, targetWorkspaceId, previousWorkspaceId)
+    });
 
     try {
       if (decision === 'accept') {
@@ -104,4 +136,41 @@ export async function performWorkspaceInviteDecision({
 
 function normalizeOptionalWorkspaceId(workspaceId) {
   return typeof workspaceId === 'string' && workspaceId.trim() ? workspaceId.trim() : null;
+}
+
+function getServiceDebugContext(service) {
+  if (typeof service?.getDebugContext === 'function') {
+    return service.getDebugContext();
+  }
+
+  const activeWorkspaceId = typeof service?.getActiveWorkspaceId === 'function'
+    ? service.getActiveWorkspaceId()
+    : service?.activeWorkspaceId ?? null;
+
+  return {
+    activeWorkspaceId,
+    cachedRevision: null,
+    revisionWorkspaceId: null,
+    revisionSource: null
+  };
+}
+
+function describeRevisionOrigin(debugContext, targetWorkspaceId, previousWorkspaceId) {
+  if (!Number.isInteger(debugContext.cachedRevision)) {
+    return 'not-available';
+  }
+
+  if (debugContext.revisionWorkspaceId && targetWorkspaceId && debugContext.revisionWorkspaceId === targetWorkspaceId) {
+    return 'invite-workspace-context';
+  }
+
+  if (debugContext.revisionWorkspaceId && previousWorkspaceId && debugContext.revisionWorkspaceId === previousWorkspaceId) {
+    return 'active-workspace-context';
+  }
+
+  if (debugContext.revisionSource === 'bootstrap') {
+    return 'bootstrap-state';
+  }
+
+  return 'prior-api-state';
 }

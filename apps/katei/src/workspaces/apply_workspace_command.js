@@ -76,7 +76,31 @@ export function applyWorkspaceCommand({
   assertValidWorkspaceCommand(command);
   assertExpectedRevision(expectedRevision);
 
+  if (isInviteDecisionType(command?.type)) {
+    logInviteAcceptDebug(mutationContext, 'server.command.precondition', {
+      commandType: command.type,
+      workspaceId: normalizeOptionalString(currentRecord.workspace?.workspaceId),
+      boardId: command.payload?.boardId ?? null,
+      inviteId: command.payload?.inviteId ?? null,
+      expectedRevision,
+      currentRevision: currentRecord.revision,
+      revisionMatches: currentRecord.revision === expectedRevision
+    });
+  }
+
   if (currentRecord.revision !== expectedRevision) {
+    if (isInviteDecisionType(command?.type)) {
+      logInviteAcceptDebug(mutationContext, 'server.command.conflict', {
+        commandType: command.type,
+        workspaceId: normalizeOptionalString(currentRecord.workspace?.workspaceId),
+        boardId: command.payload?.boardId ?? null,
+        inviteId: command.payload?.inviteId ?? null,
+        expectedRevision,
+        currentRevision: currentRecord.revision,
+        rejectionStage: 'pre-apply-revision-check'
+      });
+    }
+
     throw new WorkspaceRevisionConflictError();
   }
 
@@ -374,6 +398,17 @@ function applyBoardInviteAccept(workspace, command, context) {
     emailMatched: inviteEmailMatch,
     membershipExists: Boolean(existingMembership)
   });
+  logInviteAcceptDebug(context, 'server.command.invite.accept.check', {
+    workspaceId: normalizeOptionalString(workspace?.workspaceId),
+    boardId: currentBoard.id,
+    inviteId: command.payload.inviteId,
+    actorSub: actor.id,
+    actorEmail: actor.email ?? null,
+    inviteExists: Boolean(currentInvite),
+    inviteStatus: currentInvite?.status ?? null,
+    emailMatched: inviteEmailMatch,
+    membershipExists: Boolean(existingMembership)
+  });
 
   if (!currentInvite || !inviteEmailMatch) {
     throw new WorkspaceCommandPermissionError('You do not have permission to respond to this invite.');
@@ -425,6 +460,16 @@ function applyBoardInviteDecline(workspace, command, context) {
     inviteActorId: currentInvite?.actor?.id ?? null,
     inviteStatus: currentInvite?.status ?? null,
     pendingStatus: pendingInvite?.status ?? null,
+    emailMatched: inviteEmailMatch
+  });
+  logInviteAcceptDebug(context, 'server.command.invite.decline.check', {
+    workspaceId: normalizeOptionalString(workspace?.workspaceId),
+    boardId: currentBoard.id,
+    inviteId: command.payload.inviteId,
+    actorSub: actor.id,
+    actorEmail: actor.email ?? null,
+    inviteExists: Boolean(currentInvite),
+    inviteStatus: currentInvite?.status ?? null,
     emailMatched: inviteEmailMatch
   });
 
@@ -1297,6 +1342,16 @@ function logInviteDebug(context, event, fields) {
   if (typeof context?.debugLog === 'function') {
     context.debugLog(event, fields);
   }
+}
+
+function logInviteAcceptDebug(context, event, fields) {
+  if (typeof context?.acceptDebugLog === 'function') {
+    context.acceptDebugLog(event, fields);
+  }
+}
+
+function isInviteDecisionType(type) {
+  return type === 'board.invite.accept' || type === 'board.invite.decline';
 }
 
 function normalizeOptionalString(value) {

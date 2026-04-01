@@ -10,6 +10,14 @@ export function logInviteDebug(event, fields = {}, { win = globalThis.window, st
   console.info('[invite-debug]', event, fields);
 }
 
+export function logInviteAcceptDebug(event, fields = {}, { win = globalThis.window, storage = globalThis.localStorage } = {}) {
+  if (!isInviteDebugEnabled({ win, storage })) {
+    return;
+  }
+
+  console.info('[invite-accept-debug]', event, fields);
+}
+
 export function isInviteDebugEnabled({ win = globalThis.window, storage = globalThis.localStorage } = {}) {
   if (win?.__KATEI_DEBUG_INVITES__ === true) {
     return true;

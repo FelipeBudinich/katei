@@ -3,7 +3,7 @@ import { normalizeBoardCollaboration } from '../../public/js/domain/board_collab
 import { migrateWorkspaceSnapshot } from '../../public/js/domain/workspace_migrations.js';
 import { validateWorkspaceShape } from '../../public/js/domain/workspace_validation.js';
 import { applyWorkspaceCommand, WorkspaceCommandPermissionError } from '../workspaces/apply_workspace_command.js';
-import { buildInviteResponseDebugFields, createInviteDebugLogger } from '../lib/invite_debug.js';
+import { buildInviteResponseDebugFields, createInviteAcceptDebugLogger, createInviteDebugLogger } from '../lib/invite_debug.js';
 import { createDefaultMutationContext } from '../workspaces/mutation_context.js';
 import {
   createCommandAppliedWorkspaceRecord,
@@ -145,8 +145,12 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
 
   router.post('/api/workspace/commands', requireSession, async (request, response, next) => {
     const debugLog = createInviteDebugLogger({ request });
+    const acceptDebugLog = createInviteAcceptDebugLogger({ request });
     const { expectedRevision, isValid: hasValidExpectedRevision } = parseExpectedRevision(request.body?.expectedRevision);
     const command = request.body?.command;
+    const requestedWorkspaceId = resolveRequestedWorkspaceId(request);
+    let currentRecord = null;
+    let application = null;
 
     if (!hasValidExpectedRevision) {
       response.status(400).json({
@@ -162,14 +166,20 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
         clientMutationId: typeof command?.clientMutationId === 'string' ? command.clientMutationId : null,
         expectedRevision
       });
-      const currentRecord = createWorkspaceRecord(
+      currentRecord = createWorkspaceRecord(
         await workspaceRecordRepository.loadOrCreateAuthoritativeWorkspaceRecord({
           viewerSub: request.viewer.sub,
           viewerEmail: request.viewer.email ?? null,
-          workspaceId: resolveRequestedWorkspaceId(request),
+          workspaceId: requestedWorkspaceId,
           debugLog
         })
       );
+      logInviteAcceptRouteState(acceptDebugLog, 'server.route.loaded', {
+        requestedWorkspaceId,
+        command,
+        expectedRevision,
+        currentRecord
+      });
       const projectedCurrentRecord = projectRecordForViewer(currentRecord, createViewerProjectionContext(request.viewer, debugLog));
       const existingReceipt =
         typeof command?.clientMutationId === 'string' && command.clientMutationId.trim()
@@ -191,13 +201,21 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
 
       const context = createDefaultMutationContext({
         actor: createViewerMutationActor(request.viewer),
-        debugLog
+        debugLog,
+        acceptDebugLog
       });
-      const application = applyWorkspaceCommand({
+      application = applyWorkspaceCommand({
         record: currentRecord,
         command,
         expectedRevision,
         context
+      });
+      logInviteAcceptRouteState(acceptDebugLog, 'server.route.applied', {
+        requestedWorkspaceId,
+        command,
+        expectedRevision,
+        currentRecord,
+        application
       });
 
       if (application.result.noOp) {
@@ -231,6 +249,14 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
         record: nextRecord,
         expectedRevision
       });
+      logInviteAcceptRouteState(acceptDebugLog, 'server.route.persisted', {
+        requestedWorkspaceId,
+        command,
+        expectedRevision,
+        currentRecord: persistedRecord,
+        application,
+        rejectionStage: 'persisted'
+      });
       logPersistedInvite(debugLog, persistedRecord, application.result);
       const pendingWorkspaceInvites = await listPendingWorkspaceInvitesForRequest(workspaceRecordRepository, request, debugLog);
 
@@ -243,6 +269,36 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
         pendingWorkspaceInvites
       });
     } catch (error) {
+      if (error instanceof WorkspaceRevisionConflictError || error?.code === 'WORKSPACE_REVISION_CONFLICT') {
+        let conflictRecord = currentRecord;
+
+        if (application && isInviteDecisionCommand(command)) {
+          try {
+            conflictRecord = createWorkspaceRecord(
+              await workspaceRecordRepository.loadOrCreateAuthoritativeWorkspaceRecord({
+                viewerSub: request.viewer.sub,
+                viewerEmail: request.viewer.email ?? null,
+                workspaceId: requestedWorkspaceId,
+                debugLog
+              })
+            );
+          } catch (reloadError) {
+            conflictRecord = currentRecord;
+          }
+        }
+
+        logInviteAcceptRouteState(acceptDebugLog, 'server.route.conflict', {
+          requestedWorkspaceId,
+          command,
+          expectedRevision,
+          currentRecord: conflictRecord,
+          loadedRecordRevision: Number.isInteger(currentRecord?.revision) ? currentRecord.revision : null,
+          application,
+          error,
+          rejectionStage: application ? 'persist-optimistic-concurrency' : 'pre-apply-revision-check'
+        });
+      }
+
       if (error instanceof WorkspaceAccessDeniedError || error?.code === 'WORKSPACE_ACCESS_DENIED') {
         response.status(404).json({
           ok: false,
@@ -485,4 +541,53 @@ function logPersistedInvite(debugLog, record, result) {
     inviteId: result.inviteId,
     storedInvite
   });
+}
+
+function logInviteAcceptRouteState(log, event, fields) {
+  if (typeof log !== 'function' || !isInviteDecisionCommand(fields?.command)) {
+    return;
+  }
+
+  log(event, buildInviteDecisionRouteFields(fields));
+}
+
+function buildInviteDecisionRouteFields({
+  requestedWorkspaceId = null,
+  command = null,
+  expectedRevision = null,
+  currentRecord = null,
+  loadedRecordRevision = null,
+  application = null,
+  error = null,
+  rejectionStage = null
+} = {}) {
+  const boardId = normalizeOptionalString(command?.payload?.boardId) || null;
+  const inviteId = normalizeOptionalString(command?.payload?.inviteId) || null;
+  const workspaceId = normalizeOptionalString(requestedWorkspaceId)
+    || normalizeOptionalString(currentRecord?.workspaceId)
+    || normalizeOptionalString(currentRecord?.workspace?.workspaceId)
+    || null;
+  const board = boardId ? currentRecord?.workspace?.boards?.[boardId] ?? null : null;
+  const invite = board ? normalizeBoardCollaboration(board).invites.find((entry) => entry.id === inviteId) ?? null : null;
+
+  return {
+    commandType: command?.type ?? null,
+    workspaceId,
+    boardId,
+    inviteId,
+    expectedRevision,
+    loadedRecordRevision: Number.isInteger(loadedRecordRevision) ? loadedRecordRevision : Number.isInteger(currentRecord?.revision) ? currentRecord.revision : null,
+    currentPersistedRevision: Number.isInteger(currentRecord?.revision) ? currentRecord.revision : null,
+    inviteExistsInWorkspace: Boolean(invite),
+    inviteStatus: invite?.status ?? null,
+    boardExistsInWorkspace: Boolean(board),
+    resultNoOp: application?.result?.noOp ?? null,
+    resultInviteId: application?.result?.inviteId ?? null,
+    rejectionStage,
+    errorMessage: error?.message ?? null
+  };
+}
+
+function isInviteDecisionCommand(command) {
+  return command?.type === 'board.invite.accept' || command?.type === 'board.invite.decline';
 }

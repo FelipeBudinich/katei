@@ -16,6 +16,20 @@ export function createInviteDebugLogger({
   };
 }
 
+export function createInviteAcceptDebugLogger({
+  request = null,
+  enabled = shouldDebugInvites(request),
+  sink = console.info.bind(console)
+} = {}) {
+  if (!enabled || typeof sink !== 'function') {
+    return () => {};
+  }
+
+  return function logInviteAcceptDebug(event, fields = {}) {
+    sink('[invite-accept-debug]', event, normalizeDebugFields(fields));
+  };
+}
+
 export function shouldDebugInvites(request) {
   return Boolean(
     isTruthyFlag(request?.get?.('x-katei-debug-invites'))

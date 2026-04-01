@@ -1,7 +1,7 @@
 import { migrateWorkspaceSnapshot } from '../domain/workspace_migrations.js';
 import { validateWorkspaceShape } from '../domain/workspace_validation.js';
 import { canonicalizeBoardRole } from '../domain/board_collaboration.js';
-import { isInviteDebugEnabled, logInviteDebug } from '../lib/invite_debug.js';
+import { isInviteDebugEnabled, logInviteAcceptDebug, logInviteDebug } from '../lib/invite_debug.js';
 import { postWorkspaceImport, readLocalV4Workspace } from '../lib/workspace_import.js';
 import { WorkspaceRepository } from './workspace_repository.js';
 
@@ -25,6 +25,8 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
     this.meta = null;
     this.pendingWorkspaceInvites = [];
     this.revision = null;
+    this.lastStateSource = null;
+    this.lastRevisionWorkspaceId = null;
     this.hasConsumedBootstrap = false;
   }
 
@@ -71,6 +73,22 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
     return this.pendingWorkspaceInvites;
   }
 
+  getMeta() {
+    return this.meta;
+  }
+
+  getRevision() {
+    return this.revision;
+  }
+
+  getLastStateSource() {
+    return this.lastStateSource;
+  }
+
+  getLastRevisionWorkspaceId() {
+    return this.lastRevisionWorkspaceId;
+  }
+
   setActiveWorkspace(workspaceId) {
     this.activeWorkspaceId = normalizeOptionalWorkspaceId(workspaceId);
   }
@@ -114,6 +132,21 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
   }
 
   async #requestWorkspace(url, options, fallbackMessage) {
+    const parsedRequestBody = parseRequestBody(options?.body);
+    const inviteDecisionDebugFields = buildInviteAcceptRequestDebugFields({
+      url,
+      method: options?.method ?? 'GET',
+      body: parsedRequestBody,
+      activeWorkspaceId: this.activeWorkspaceId,
+      cachedRevision: this.revision,
+      cachedRevisionWorkspaceId: this.lastRevisionWorkspaceId,
+      cachedRevisionSource: this.lastStateSource
+    });
+
+    if (inviteDecisionDebugFields) {
+      logInviteAcceptDebug('client.repository.request', inviteDecisionDebugFields);
+    }
+
     const debugHeaders = isInviteDebugEnabled() ? { 'X-Katei-Debug-Invites': '1' } : {};
     const response = await this.fetchImpl(url, {
       credentials: 'same-origin',
@@ -128,6 +161,15 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
     const data = await parseJsonResponse(response);
 
     logInviteDebug('client.invite.payload', buildRawPayloadDebugFields('api', data));
+
+    if (inviteDecisionDebugFields) {
+      logInviteAcceptDebug('client.repository.response', {
+        ...inviteDecisionDebugFields,
+        responseStatus: response.status,
+        responseOk: response.ok,
+        conflictBody: response.ok ? null : data
+      });
+    }
 
     if (!response.ok) {
       throw createWorkspaceApiError(response, data, fallbackMessage);
@@ -206,6 +248,11 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
     this.activeWorkspaceId = activeWorkspace?.workspaceId ?? this.activeWorkspaceId ?? null;
     this.isHomeWorkspace =
       typeof activeWorkspace?.isHomeWorkspace === 'boolean' ? activeWorkspace.isHomeWorkspace : this.isHomeWorkspace;
+    this.lastStateSource = source;
+    this.lastRevisionWorkspaceId = normalizeOptionalWorkspaceId(activeWorkspace?.workspaceId)
+      ?? normalizeOptionalWorkspaceId(workspace?.workspaceId)
+      ?? this.lastRevisionWorkspaceId
+      ?? null;
 
     logInviteDebug('client.invite.state', {
       source,
@@ -453,4 +500,46 @@ function normalizeOptionalString(value) {
 function normalizeOptionalEmail(value) {
   const normalizedValue = normalizeOptionalString(value).toLowerCase();
   return normalizedValue || null;
+}
+
+function parseRequestBody(body) {
+  if (typeof body !== 'string' || !body.trim()) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(body);
+  } catch (error) {
+    return null;
+  }
+}
+
+function buildInviteAcceptRequestDebugFields({
+  url,
+  method = 'GET',
+  body = null,
+  activeWorkspaceId = null,
+  cachedRevision = null,
+  cachedRevisionWorkspaceId = null,
+  cachedRevisionSource = null
+} = {}) {
+  const commandType = normalizeOptionalString(body?.command?.type);
+
+  if (commandType !== 'board.invite.accept' && commandType !== 'board.invite.decline') {
+    return null;
+  }
+
+  return {
+    requestMethod: method,
+    requestUrl: url,
+    requestWorkspaceId: normalizeOptionalWorkspaceId(body?.workspaceId),
+    requestBoardId: normalizeOptionalWorkspaceId(body?.command?.payload?.boardId),
+    requestInviteId: normalizeOptionalWorkspaceId(body?.command?.payload?.inviteId),
+    requestExpectedRevision: Number.isInteger(body?.expectedRevision) ? body.expectedRevision : null,
+    commandType,
+    activeWorkspaceId,
+    cachedRevision: Number.isInteger(cachedRevision) ? cachedRevision : null,
+    cachedRevisionWorkspaceId: normalizeOptionalWorkspaceId(cachedRevisionWorkspaceId),
+    cachedRevisionSource: normalizeOptionalString(cachedRevisionSource) || null
+  };
 }

@@ -5,19 +5,21 @@ export function createMutationContext({
   now = new Date().toISOString(),
   createBoardId = createDefaultBoardId,
   createCardId = createDefaultCardId,
-  debugLog = null
+  debugLog = null,
+  acceptDebugLog = null
 } = {}) {
   return {
     actor: normalizeMutationActor(actor),
     now: normalizeIsoTimestamp(now, 'now'),
     createBoardId: normalizeFactory(createBoardId, 'createBoardId'),
     createCardId: normalizeFactory(createCardId, 'createCardId'),
-    debugLog: normalizeOptionalDebugLog(debugLog)
+    debugLog: normalizeOptionalDebugLog(debugLog),
+    acceptDebugLog: normalizeOptionalDebugLog(acceptDebugLog)
   };
 }
 
-export function createDefaultMutationContext({ actor = null, debugLog = null } = {}) {
-  return createMutationContext({ actor, debugLog });
+export function createDefaultMutationContext({ actor = null, debugLog = null, acceptDebugLog = null } = {}) {
+  return createMutationContext({ actor, debugLog, acceptDebugLog });
 }
 
 export function createDefaultBoardId() {
