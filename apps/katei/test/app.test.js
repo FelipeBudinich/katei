@@ -296,7 +296,10 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
   assert.match(profileOptionsDialog, /viewer-chip/);
   assert.match(profileOptionsDialog, /ui-locale-control-row/);
   assert.doesNotMatch(profileOptionsDialog, /ui-locale-badge/);
-  assert.match(response.text, /<div\s+class="dialog-actions mt-6"\s+data-controller="session"/);
+  assert.match(
+    profileOptionsDialog,
+    /<div class="mt-4 grid gap-3 sm:grid-cols-\[minmax\(0,1fr\)_auto\] sm:items-center">\s*<div class="min-w-0">\s*<div class="viewer-chip">[\s\S]*?<\/div>\s*<\/div>\s*<div\s+class="dialog-actions"\s+data-controller="session"/
+  );
   assert.match(profileOptionsDialog, /<form method="get" action="\/boards" class="ui-locale-picker">/);
   assert.match(profileOptionsDialog, /id="profile-options-ui-locale-picker"/);
   assert.match(profileOptionsDialog, /<option value="en" selected>\s*English\s*<\/option>/);
@@ -305,6 +308,20 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
   assert.match(profileOptionsDialog, /data-session-auth-url-value="\/auth\/logout"/);
   assert.match(profileOptionsDialog, /data-session-redirect-url-value="\/"/);
   assert.match(profileOptionsDialog, /session#logout/);
+
+  const profileLocaleRowIndex = profileOptionsDialog.indexOf('ui-locale-control-row mt-4');
+  const profileIdentityActionsIndex = profileOptionsDialog.indexOf(
+    'mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center'
+  );
+  const profileViewerChipIndex = profileOptionsDialog.indexOf('viewer-chip');
+  const profileSessionActionsIndex = profileOptionsDialog.indexOf('data-controller="session"');
+  assert.notEqual(profileLocaleRowIndex, -1);
+  assert.notEqual(profileIdentityActionsIndex, -1);
+  assert.notEqual(profileViewerChipIndex, -1);
+  assert.notEqual(profileSessionActionsIndex, -1);
+  assert.ok(profileLocaleRowIndex < profileIdentityActionsIndex);
+  assert.ok(profileIdentityActionsIndex < profileViewerChipIndex);
+  assert.ok(profileViewerChipIndex < profileSessionActionsIndex);
 });
 
 test('workspace template renders the no-board header with both Options and Profile entry points', () => {

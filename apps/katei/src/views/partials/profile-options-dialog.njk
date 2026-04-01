@@ -27,23 +27,25 @@
       </button>
     </div>
 
-    <div class="mt-4">
-      {% include "partials/viewer-chip.njk" %}
-    </div>
-
     <div class="ui-locale-control-row mt-4">
       {% set uiLocalePickerId = 'profile-options-ui-locale-picker' %}
       {% include "partials/ui-locale-picker.njk" %}
     </div>
 
-    <div
-      class="dialog-actions mt-6"
-      data-controller="session"
-      data-session-auth-url-value="/auth/logout"
-      data-session-redirect-url-value="/"
-    >
-      <button type="button" class="touch-button-secondary" data-action="session#logout">{{ t('common.logout') }}</button>
-      <p class="sr-only" aria-live="polite" data-session-target="status"></p>
+    <div class="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+      <div class="min-w-0">
+        {% include "partials/viewer-chip.njk" %}
+      </div>
+
+      <div
+        class="dialog-actions"
+        data-controller="session"
+        data-session-auth-url-value="/auth/logout"
+        data-session-redirect-url-value="/"
+      >
+        <button type="button" class="touch-button-secondary" data-action="session#logout">{{ t('common.logout') }}</button>
+        <p class="sr-only" aria-live="polite" data-session-target="status"></p>
+      </div>
     </div>
   </div>
 </dialog>
