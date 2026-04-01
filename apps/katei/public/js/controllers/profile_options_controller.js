@@ -1,4 +1,4 @@
-import { Controller } from '/vendor/stimulus/stimulus.js';
+import { Controller } from '../../vendor/stimulus/stimulus.js';
 
 export default class extends Controller {
   static targets = ['dialog'];

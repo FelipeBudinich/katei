@@ -1,4 +1,4 @@
-import { Controller } from '/vendor/stimulus/stimulus.js';
+import { Controller } from '../../vendor/stimulus/stimulus.js';
 import { getBrowserTranslator } from '/js/i18n/browser.js';
 import { localizeErrorMessage } from '/js/i18n/errors.js';
 import { markDisableAutoSelectPending } from '/js/utils/google_identity.js';

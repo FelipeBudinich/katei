@@ -166,6 +166,19 @@ test('GET / redirects authenticated users to /boards', async () => {
   assert.equal(response.headers.location, '/boards');
 });
 
+test('GET /vendor/stimulus/stimulus.js serves the vendored library asset', async () => {
+  const app = createTestApp({
+    googleTokenVerifier: async () => ({ sub: 'sub_123' })
+  });
+
+  const response = await request(app).get('/vendor/stimulus/stimulus.js');
+
+  assert.equal(response.status, 200);
+  assert.match(response.text, /Stimulus 3\.2\./);
+  assert.match(response.text, /class Controller/);
+  assert.doesNotMatch(response.text, /node_modules\/@hotwired\/stimulus\/dist\/stimulus\.js/);
+});
+
 test('GET /boards redirects anonymous users to /', async () => {
   const app = createTestApp({
     googleTokenVerifier: async () => ({ sub: 'sub_123' })

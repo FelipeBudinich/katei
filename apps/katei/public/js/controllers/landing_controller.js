@@ -1,4 +1,4 @@
-import { Controller } from '/vendor/stimulus/stimulus.js';
+import { Controller } from '../../vendor/stimulus/stimulus.js';
 import { isLandingControllerConnected } from '/js/controllers/landing_controller_connection.js';
 import { getBrowserTranslator } from '/js/i18n/browser.js';
 import { localizeErrorMessage } from '/js/i18n/errors.js';

@@ -1,4 +1,4 @@
-import { Controller } from '/vendor/stimulus/stimulus.js';
+import { Controller } from '../../vendor/stimulus/stimulus.js';
 import { createBoardEditorFormState, parseBoardEditorFormInput } from './board_editor_schema.js';
 import { getBrowserTranslator } from '../i18n/browser.js';
 import { localizeErrorMessage } from '../i18n/errors.js';

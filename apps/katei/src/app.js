@@ -1,6 +1,5 @@
 import express from 'express';
 import nunjucks from 'nunjucks';
-import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import cookieParser from 'cookie-parser';
@@ -14,13 +13,11 @@ import { createMongoWorkspaceRecordRepository } from './workspaces/mongo_workspa
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const appRoot = path.resolve(__dirname, '..');
-const repoRoot = path.resolve(appRoot, '../..');
 
 export function createApp({ env = process.env, googleTokenVerifier, workspaceRecordRepository } = {}) {
   const app = express();
   const config = createRuntimeConfig(env);
   const viewsPath = path.join(__dirname, 'views');
-  const stimulusDistPath = resolveStimulusDistPath();
   const verifyGoogleIdToken = googleTokenVerifier || createGoogleIdTokenVerifier({
     clientId: config.googleClientId
   });
@@ -41,10 +38,6 @@ export function createApp({ env = process.env, googleTokenVerifier, workspaceRec
   app.use(cookieParser());
   app.use(createAttachUiLocaleMiddleware(config));
   app.use(express.static(path.join(appRoot, 'public')));
-
-  if (stimulusDistPath) {
-    app.use('/vendor/stimulus', express.static(stimulusDistPath));
-  }
 
   app.use(createAttachSessionMiddleware(config));
   app.use(createWebRouter({
@@ -90,13 +83,4 @@ function handleUnexpectedError(error, request, response, next) {
   }
 
   next(error);
-}
-
-function resolveStimulusDistPath() {
-  const candidates = [
-    path.join(appRoot, 'node_modules', '@hotwired', 'stimulus', 'dist'),
-    path.join(repoRoot, 'node_modules', '@hotwired', 'stimulus', 'dist')
-  ];
-
-  return candidates.find((candidate) => fs.existsSync(candidate));
 }

@@ -1,4 +1,4 @@
-import { Application } from '/vendor/stimulus/stimulus.js';
+import { Application } from '../vendor/stimulus/stimulus.js';
 import WorkspaceController from '/js/controllers/workspace_controller.js';
 import BoardOptionsController from '/js/controllers/board_options_controller.js';
 import ProfileOptionsController from '/js/controllers/profile_options_controller.js';
