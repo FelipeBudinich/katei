@@ -613,7 +613,7 @@ export default class extends Controller {
         resolvedWorkspaceId: targetWorkspaceId,
         resolvedBoardId: detail?.boardId ?? null,
         resolvedInviteId: detail?.inviteId ?? null,
-        resolvedRevision: debugContext.cachedRevision ?? null,
+        cachedRevisionBeforeDecision: debugContext.cachedRevision ?? null,
         revisionWorkspaceId: debugContext.revisionWorkspaceId ?? null,
         revisionSource: debugContext.revisionSource ?? null,
         revisionReadFrom: describeRevisionOrigin(debugContext, targetWorkspaceId, activeWorkspaceId)

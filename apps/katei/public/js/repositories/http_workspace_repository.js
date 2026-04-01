@@ -116,22 +116,53 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
     return payload.workspace;
   }
 
-  async applyCommand(command) {
+  async resolveWorkspaceRevision(workspaceId = null) {
+    const targetWorkspaceId = normalizeOptionalWorkspaceId(workspaceId) ?? this.activeWorkspaceId;
+
+    if (
+      Number.isInteger(this.revision)
+      && (
+        (!targetWorkspaceId && !this.lastRevisionWorkspaceId)
+        || (targetWorkspaceId && this.lastRevisionWorkspaceId === targetWorkspaceId)
+      )
+    ) {
+      return this.revision;
+    }
+
+    const payload = await this.#requestWorkspace(
+      this.#buildWorkspaceUrl('/api/workspace', targetWorkspaceId),
+      {
+        method: 'GET'
+      },
+      'Unable to load workspace.',
+      { updateState: false }
+    );
+
+    return Number.isInteger(payload?.meta?.revision) ? payload.meta.revision : 0;
+  }
+
+  async applyCommand(command, {
+    workspaceId = null,
+    expectedRevision = null
+  } = {}) {
+    const targetWorkspaceId = normalizeOptionalWorkspaceId(workspaceId) ?? this.activeWorkspaceId;
+    const commandExpectedRevision = Number.isInteger(expectedRevision) ? expectedRevision : (this.revision ?? 0);
+
     return this.#requestWorkspace(
       '/api/workspace/commands',
       {
         method: 'POST',
         body: JSON.stringify({
           command,
-          workspaceId: this.activeWorkspaceId,
-          expectedRevision: this.revision ?? 0
+          workspaceId: targetWorkspaceId,
+          expectedRevision: commandExpectedRevision
         })
       },
       'Unable to apply workspace command.'
     );
   }
 
-  async #requestWorkspace(url, options, fallbackMessage) {
+  async #requestWorkspace(url, options, fallbackMessage, { updateState = true } = {}) {
     const parsedRequestBody = parseRequestBody(options?.body);
     const inviteDecisionDebugFields = buildInviteAcceptRequestDebugFields({
       url,
@@ -188,7 +219,10 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
         }
       : { workspace };
 
-    this.#setState(payload, { source: 'api' });
+    if (updateState) {
+      this.#setState(payload, { source: 'api' });
+    }
+
     return payload;
   }
 
@@ -277,12 +311,14 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
     this.revision = Number.isInteger(meta?.revision) ? meta.revision : null;
   }
 
-  #buildWorkspaceUrl(pathname) {
-    if (!this.activeWorkspaceId) {
+  #buildWorkspaceUrl(pathname, workspaceId = this.activeWorkspaceId) {
+    const targetWorkspaceId = normalizeOptionalWorkspaceId(workspaceId);
+
+    if (!targetWorkspaceId) {
       return pathname;
     }
 
-    return `${pathname}?workspaceId=${encodeURIComponent(this.activeWorkspaceId)}`;
+    return `${pathname}?workspaceId=${encodeURIComponent(targetWorkspaceId)}`;
   }
 }
 

@@ -120,18 +120,18 @@ export class WorkspaceService {
     });
   }
 
-  async acceptBoardInvite(boardId, inviteId) {
-    return this.#applyCommand('board.invite.accept', {
+  async acceptBoardInvite(boardId, inviteId, workspaceId = null) {
+    return this.#applyInviteDecisionCommand('board.invite.accept', {
       boardId,
       inviteId
-    });
+    }, workspaceId);
   }
 
-  async declineBoardInvite(boardId, inviteId) {
-    return this.#applyCommand('board.invite.decline', {
+  async declineBoardInvite(boardId, inviteId, workspaceId = null) {
+    return this.#applyInviteDecisionCommand('board.invite.decline', {
       boardId,
       inviteId
-    });
+    }, workspaceId);
   }
 
   async setBoardMemberRole(boardId, actor, role) {
@@ -208,14 +208,62 @@ export class WorkspaceService {
     });
   }
 
-  async #applyCommand(type, payload) {
+  async #applyInviteDecisionCommand(type, payload, workspaceId) {
+    const targetWorkspaceId = normalizeOptionalWorkspaceId(workspaceId) ?? this.getActiveWorkspaceId();
+    const expectedRevision = await this.#resolveWorkspaceRevision(targetWorkspaceId);
+
+    return this.#applyCommand(type, payload, {
+      workspaceId: targetWorkspaceId,
+      expectedRevision
+    });
+  }
+
+  async #resolveWorkspaceRevision(workspaceId) {
+    const targetWorkspaceId = normalizeOptionalWorkspaceId(workspaceId);
+    const debugContext = this.getDebugContext();
+    const cachedRevisionMatchesTargetWorkspace =
+      Number.isInteger(debugContext.cachedRevision)
+      && (
+        (!targetWorkspaceId && !debugContext.revisionWorkspaceId)
+        || (targetWorkspaceId && debugContext.revisionWorkspaceId === targetWorkspaceId)
+      );
+
+    if (cachedRevisionMatchesTargetWorkspace) {
+      return debugContext.cachedRevision;
+    }
+
+    if (typeof this.repository.resolveWorkspaceRevision === 'function') {
+      const resolvedRevision = await this.repository.resolveWorkspaceRevision(targetWorkspaceId);
+
+      if (Number.isInteger(resolvedRevision)) {
+        return resolvedRevision;
+      }
+    }
+
+    if (
+      targetWorkspaceId
+      && debugContext.revisionWorkspaceId
+      && debugContext.revisionWorkspaceId !== targetWorkspaceId
+    ) {
+      throw new Error('Unable to resolve the target workspace revision for this invite decision.');
+    }
+
+    return Number.isInteger(debugContext.cachedRevision) ? debugContext.cachedRevision : 0;
+  }
+
+  async #applyCommand(type, payload, {
+    workspaceId = null,
+    expectedRevision = null
+  } = {}) {
+    const targetWorkspaceId = normalizeOptionalWorkspaceId(workspaceId) ?? this.getActiveWorkspaceId();
+
     if (isInviteDecisionType(type)) {
       const debugContext = this.getDebugContext();
       logInviteAcceptDebug('client.service.applyCommand', {
         commandType: type,
-        targetWorkspaceId: debugContext.activeWorkspaceId,
+        targetWorkspaceId,
         commandPayload: payload,
-        expectedRevision: debugContext.cachedRevision,
+        expectedRevision: Number.isInteger(expectedRevision) ? expectedRevision : debugContext.cachedRevision,
         cachedWorkspaceId: debugContext.revisionWorkspaceId,
         cachedRevision: debugContext.cachedRevision,
         cachedRevisionSource: debugContext.revisionSource,
@@ -227,6 +275,9 @@ export class WorkspaceService {
       clientMutationId: createClientMutationId(),
       type,
       payload
+    }, {
+      workspaceId: targetWorkspaceId,
+      expectedRevision
     });
 
     return response?.workspace ?? response;
@@ -262,4 +313,8 @@ function buildBoardSchemaPayload(input) {
 
 function isInviteDecisionType(type) {
   return type === 'board.invite.accept' || type === 'board.invite.decline';
+}
+
+function normalizeOptionalWorkspaceId(workspaceId) {
+  return typeof workspaceId === 'string' && workspaceId.trim() ? workspaceId.trim() : null;
 }

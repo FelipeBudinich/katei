@@ -335,7 +335,7 @@ test('performWorkspaceInviteDecision keeps the active workspace when accepting a
   assert.deepEqual(service.calls, [
     {
       method: 'acceptBoardInvite',
-      args: ['main', 'invite_1']
+      args: ['main', 'invite_1', 'workspace_shared']
     }
   ]);
 });
@@ -370,7 +370,7 @@ test('performWorkspaceInviteDecision lands in the invited workspace for cross-wo
     },
     {
       method: 'acceptBoardInvite',
-      args: ['casa', 'invite_casa_1']
+      args: ['casa', 'invite_casa_1', 'workspace_invited_casa']
     }
   ]);
 });
@@ -405,7 +405,7 @@ test('performWorkspaceInviteDecision returns to the home workspace when declinin
   assert.deepEqual(service.calls, [
     {
       method: 'declineBoardInvite',
-      args: ['main', 'invite_1']
+      args: ['main', 'invite_1', 'workspace_shared']
     },
     {
       method: 'switchWorkspace',
@@ -445,7 +445,7 @@ test('performWorkspaceInviteDecision restores the previous workspace after cross
     },
     {
       method: 'declineBoardInvite',
-      args: ['casa', 'invite_casa_1']
+      args: ['casa', 'invite_casa_1', 'workspace_invited_casa']
     },
     {
       method: 'switchWorkspace',

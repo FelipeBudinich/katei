@@ -589,6 +589,121 @@ test('HttpWorkspaceRepository applyCommand sends expectedRevision and updates lo
   });
 });
 
+test('HttpWorkspaceRepository resolves a cross-workspace revision without replacing the active cached workspace state', async () => {
+  const homeWorkspace = createEmptyWorkspace({
+    workspaceId: 'workspace_home'
+  });
+  const sharedWorkspace = createEmptyWorkspace({
+    workspaceId: 'workspace_shared'
+  });
+  const repository = new HttpWorkspaceRepository({
+    fetchImpl: createFetchDouble([]).fetch,
+    viewerSub: 'sub_123',
+    storage: null,
+    document: createDocumentDouble({
+      'workspace-bootstrap': JSON.stringify(
+        createWorkspaceApiPayload(homeWorkspace, {
+          revision: 344,
+          updatedAt: '2026-04-03T14:00:00.000Z',
+          lastChangedBy: 'sub_123',
+          isPristine: false,
+          workspaceId: 'workspace_home',
+          isHomeWorkspace: true
+        })
+      )
+    })
+  });
+
+  await repository.loadWorkspace();
+  const fetchDouble = createFetchDouble([
+    createJsonResponse(createWorkspaceApiPayload(sharedWorkspace, {
+      revision: 3,
+      updatedAt: '2026-04-03T15:00:00.000Z',
+      lastChangedBy: 'sub_owner',
+      isPristine: false,
+      workspaceId: 'workspace_shared',
+      isHomeWorkspace: false
+    }))
+  ]);
+  repository.fetchImpl = fetchDouble.fetch;
+
+  const resolvedRevision = await repository.resolveWorkspaceRevision('workspace_shared');
+
+  assert.equal(resolvedRevision, 3);
+  assert.equal(repository.activeWorkspaceId, 'workspace_home');
+  assert.equal(repository.revision, 344);
+  assert.equal(repository.lastRevisionWorkspaceId, 'workspace_home');
+  assert.equal(fetchDouble.calls[0].url, '/api/workspace?workspaceId=workspace_shared');
+  assert.equal(fetchDouble.calls[0].options.method, 'GET');
+});
+
+test('HttpWorkspaceRepository applyCommand honors explicit workspace command context', async () => {
+  const sharedWorkspace = createEmptyWorkspace({
+    workspaceId: 'workspace_shared'
+  });
+  const repository = new HttpWorkspaceRepository({
+    fetchImpl: createFetchDouble([]).fetch,
+    viewerSub: 'sub_123',
+    storage: null,
+    document: createDocumentDouble({
+      'workspace-bootstrap': JSON.stringify(
+        createWorkspaceApiPayload(createEmptyWorkspace({
+          workspaceId: 'workspace_home'
+        }), {
+          revision: 344,
+          updatedAt: '2026-04-03T14:00:00.000Z',
+          lastChangedBy: 'sub_123',
+          isPristine: false,
+          workspaceId: 'workspace_home',
+          isHomeWorkspace: true
+        })
+      )
+    })
+  });
+
+  await repository.loadWorkspace();
+  const fetchDouble = createFetchDouble([
+    createJsonResponse(createWorkspaceApiPayload(sharedWorkspace, {
+      revision: 4,
+      updatedAt: '2026-04-03T15:05:00.000Z',
+      lastChangedBy: 'sub_123',
+      isPristine: false,
+      workspaceId: 'workspace_shared',
+      isHomeWorkspace: false
+    }, {
+      clientMutationId: 'm_cross_accept',
+      type: 'board.invite.accept',
+      noOp: false
+    }))
+  ]);
+  repository.fetchImpl = fetchDouble.fetch;
+
+  await repository.applyCommand({
+    clientMutationId: 'm_cross_accept',
+    type: 'board.invite.accept',
+    payload: {
+      boardId: 'casa',
+      inviteId: 'invite_1'
+    }
+  }, {
+    workspaceId: 'workspace_shared',
+    expectedRevision: 3
+  });
+
+  assert.deepEqual(JSON.parse(fetchDouble.calls[0].options.body), {
+    command: {
+      clientMutationId: 'm_cross_accept',
+      type: 'board.invite.accept',
+      payload: {
+        boardId: 'casa',
+        inviteId: 'invite_1'
+      }
+    },
+    workspaceId: 'workspace_shared',
+    expectedRevision: 3
+  });
+});
+
 test('HttpWorkspaceRepository targets the selected active workspace on subsequent loads', async () => {
   const sharedWorkspace = createEmptyWorkspace({
     workspaceId: 'workspace_shared'

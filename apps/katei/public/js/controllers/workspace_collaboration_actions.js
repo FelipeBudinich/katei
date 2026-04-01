@@ -25,6 +25,7 @@ export async function performWorkspaceInviteDecision({
 }) {
   const previousWorkspaceId = normalizeOptionalWorkspaceId(activeWorkspaceId);
   const targetWorkspaceId = normalizeOptionalWorkspaceId(detail?.workspaceId);
+  const decisionWorkspaceId = targetWorkspaceId ?? previousWorkspaceId;
   const initialDebugContext = getServiceDebugContext(service);
 
   logInviteDebug(`invite.${decision}.check`, {
@@ -47,7 +48,7 @@ export async function performWorkspaceInviteDecision({
       inviteId: detail?.inviteId ?? null
     },
     serviceWorkspaceId: initialDebugContext.activeWorkspaceId,
-    expectedRevision: initialDebugContext.cachedRevision,
+    cachedRevisionBeforeDecision: initialDebugContext.cachedRevision,
     revisionWorkspaceId: initialDebugContext.revisionWorkspaceId,
     revisionSource: initialDebugContext.revisionSource,
     revisionReadFrom: describeRevisionOrigin(initialDebugContext, targetWorkspaceId, previousWorkspaceId)
@@ -64,7 +65,7 @@ export async function performWorkspaceInviteDecision({
       boardId: detail?.boardId ?? null,
       inviteId: detail?.inviteId ?? null,
       serviceWorkspaceId: switchedDebugContext.activeWorkspaceId,
-      expectedRevision: switchedDebugContext.cachedRevision,
+      cachedRevisionAfterWorkspaceSwitch: switchedDebugContext.cachedRevision,
       revisionWorkspaceId: switchedDebugContext.revisionWorkspaceId,
       revisionSource: switchedDebugContext.revisionSource,
       revisionReadFrom: describeRevisionOrigin(switchedDebugContext, targetWorkspaceId, previousWorkspaceId)
@@ -81,12 +82,12 @@ export async function performWorkspaceInviteDecision({
         });
 
         return {
-          workspace: await service.acceptBoardInvite(detail.boardId, detail.inviteId),
+          workspace: await service.acceptBoardInvite(detail.boardId, detail.inviteId, decisionWorkspaceId),
           leftWorkspace: false
         };
       }
 
-      await service.declineBoardInvite(detail.boardId, detail.inviteId);
+      await service.declineBoardInvite(detail.boardId, detail.inviteId, decisionWorkspaceId);
 
       return {
         workspace: await service.switchWorkspace(previousWorkspaceId),
@@ -100,8 +101,8 @@ export async function performWorkspaceInviteDecision({
 
   const nextWorkspace =
     decision === 'accept'
-      ? await service.acceptBoardInvite(detail.boardId, detail.inviteId)
-      : await service.declineBoardInvite(detail.boardId, detail.inviteId);
+      ? await service.acceptBoardInvite(detail.boardId, detail.inviteId, decisionWorkspaceId)
+      : await service.declineBoardInvite(detail.boardId, detail.inviteId, decisionWorkspaceId);
 
   if (decision === 'decline' && previousWorkspaceId && !hasVisibleWorkspaceAccess(nextWorkspace, viewerActor)) {
     logInviteDebug('client.invite.state', {

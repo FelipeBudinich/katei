@@ -232,6 +232,95 @@ test('WorkspaceService declineBoardInvite calls repository.applyCommand and retu
   });
 });
 
+test('WorkspaceService invite acceptance resolves the target workspace revision for cross-workspace invites', async () => {
+  const workspace = createEmptyWorkspace({ workspaceId: 'workspace_shared' });
+  const repository = createRepositoryDouble({
+    workspace,
+    activeWorkspaceId: 'workspace_home',
+    revision: 344,
+    lastRevisionWorkspaceId: 'workspace_home',
+    resolveWorkspaceRevisionMap: {
+      workspace_shared: 3
+    }
+  });
+  const service = new WorkspaceService(repository);
+
+  const resultWorkspace = await service.acceptBoardInvite('casa', 'invite_1', 'workspace_shared');
+
+  assert.deepEqual(resultWorkspace, workspace);
+  assert.deepEqual(repository.resolveWorkspaceRevisionCalls, ['workspace_shared']);
+  assert.equal(repository.applyCommandCalls.length, 1);
+  assert.equal(repository.applyCommandCalls[0].type, 'board.invite.accept');
+  assert.deepEqual(repository.applyCommandCalls[0].payload, {
+    boardId: 'casa',
+    inviteId: 'invite_1'
+  });
+  assert.deepEqual(repository.applyCommandContexts, [
+    {
+      workspaceId: 'workspace_shared',
+      expectedRevision: 3
+    }
+  ]);
+});
+
+test('WorkspaceService invite decline resolves the target workspace revision for cross-workspace invites', async () => {
+  const workspace = createEmptyWorkspace({ workspaceId: 'workspace_shared' });
+  const repository = createRepositoryDouble({
+    workspace,
+    activeWorkspaceId: 'workspace_home',
+    revision: 344,
+    lastRevisionWorkspaceId: 'workspace_home',
+    resolveWorkspaceRevisionMap: {
+      workspace_shared: 3
+    }
+  });
+  const service = new WorkspaceService(repository);
+
+  const resultWorkspace = await service.declineBoardInvite('casa', 'invite_1', 'workspace_shared');
+
+  assert.deepEqual(resultWorkspace, workspace);
+  assert.deepEqual(repository.resolveWorkspaceRevisionCalls, ['workspace_shared']);
+  assert.equal(repository.applyCommandCalls.length, 1);
+  assert.equal(repository.applyCommandCalls[0].type, 'board.invite.decline');
+  assert.deepEqual(repository.applyCommandCalls[0].payload, {
+    boardId: 'casa',
+    inviteId: 'invite_1'
+  });
+  assert.deepEqual(repository.applyCommandContexts, [
+    {
+      workspaceId: 'workspace_shared',
+      expectedRevision: 3
+    }
+  ]);
+});
+
+test('WorkspaceService same-workspace invite decisions reuse the cached active workspace revision', async () => {
+  const workspace = createEmptyWorkspace({ workspaceId: 'workspace_home' });
+  const repository = createRepositoryDouble({
+    workspace,
+    activeWorkspaceId: 'workspace_home',
+    revision: 344,
+    lastRevisionWorkspaceId: 'workspace_home'
+  });
+  const service = new WorkspaceService(repository);
+
+  await service.acceptBoardInvite('main', 'invite_accept_1', 'workspace_home');
+  await service.declineBoardInvite('main', 'invite_decline_1', 'workspace_home');
+
+  assert.deepEqual(repository.resolveWorkspaceRevisionCalls, []);
+  assert.equal(repository.applyCommandCalls.length, 2);
+  assert.deepEqual(repository.applyCommandContexts, [
+    {
+      workspaceId: 'workspace_home',
+      expectedRevision: 344
+    },
+    {
+      workspaceId: 'workspace_home',
+      expectedRevision: 344
+    }
+  ]);
+});
+
 test('WorkspaceService setBoardMemberRole calls repository.applyCommand and returns workspace', async () => {
   await assertServiceCommand({
     action: (service) =>
@@ -392,13 +481,28 @@ async function assertServiceCommand({ action, expectedType, expectedPayload }) {
   assert.deepEqual(repository.applyCommandCalls[0].payload, expectedPayload);
 }
 
-function createRepositoryDouble({ workspace, activeWorkspaceId = null, pendingWorkspaceInvites = [] }) {
+function createRepositoryDouble({
+  workspace,
+  activeWorkspaceId = null,
+  pendingWorkspaceInvites = [],
+  revision = null,
+  lastRevisionWorkspaceId = null,
+  lastStateSource = 'api',
+  resolveWorkspaceRevisionMap = {}
+}) {
+  const revisionLookup = new Map(Object.entries(resolveWorkspaceRevisionMap));
+
   return {
     activeWorkspaceId,
     pendingWorkspaceInvites,
+    revision,
+    lastRevisionWorkspaceId,
+    lastStateSource,
     loadCalls: 0,
     saveCalls: [],
     applyCommandCalls: [],
+    applyCommandContexts: [],
+    resolveWorkspaceRevisionCalls: [],
     setActiveWorkspaceCalls: [],
     events: [],
     getActiveWorkspaceId() {
@@ -406,6 +510,15 @@ function createRepositoryDouble({ workspace, activeWorkspaceId = null, pendingWo
     },
     getPendingWorkspaceInvites() {
       return this.pendingWorkspaceInvites;
+    },
+    getRevision() {
+      return this.revision;
+    },
+    getLastRevisionWorkspaceId() {
+      return this.lastRevisionWorkspaceId;
+    },
+    getLastStateSource() {
+      return this.lastStateSource;
     },
     setActiveWorkspace(workspaceId) {
       this.activeWorkspaceId = workspaceId ?? null;
@@ -417,8 +530,14 @@ function createRepositoryDouble({ workspace, activeWorkspaceId = null, pendingWo
       this.loadCalls += 1;
       return structuredClone(workspace);
     },
-    async applyCommand(command) {
+    async resolveWorkspaceRevision(workspaceId) {
+      const normalizedWorkspaceId = typeof workspaceId === 'string' && workspaceId.trim() ? workspaceId.trim() : null;
+      this.resolveWorkspaceRevisionCalls.push(normalizedWorkspaceId);
+      return revisionLookup.get(normalizedWorkspaceId) ?? null;
+    },
+    async applyCommand(command, options = {}) {
       this.applyCommandCalls.push(structuredClone(command));
+      this.applyCommandContexts.push(structuredClone(options));
       return {
         workspace: structuredClone(workspace),
         meta: {
