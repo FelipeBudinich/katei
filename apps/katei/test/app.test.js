@@ -280,8 +280,7 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
 
   assert.match(profileOptionsDialog, /viewer-chip/);
   assert.match(profileOptionsDialog, /ui-locale-control-row/);
-  assert.match(profileOptionsDialog, /<span class="ui-locale-badge-label">\s*UI language\s*<\/span>/);
-  assert.doesNotMatch(profileOptionsDialog, /ui-locale-badge-value/);
+  assert.doesNotMatch(profileOptionsDialog, /ui-locale-badge/);
   assert.match(profileOptionsDialog, /<form method="get" action="\/boards" class="ui-locale-picker">/);
   assert.match(profileOptionsDialog, /id="profile-options-ui-locale-picker"/);
   assert.match(profileOptionsDialog, /<option value="en" selected>\s*English\s*<\/option>/);
@@ -323,8 +322,7 @@ test('workspace template renders the no-board header with both Options and Profi
   assert.match(html, />\s*Profile\s*</);
   assert.match(html, /id="profile-options-ui-locale-picker"/);
   assert.match(html, /data-controller="profile-options"/);
-  assert.match(html, /<span class="ui-locale-badge-label">\s*UI language\s*<\/span>/);
-  assert.doesNotMatch(html, /ui-locale-badge-value/);
+  assert.doesNotMatch(html, /ui-locale-badge/);
   assert.match(html, /<form method="get" action="\/boards" class="ui-locale-picker">/);
   assert.match(html, /<option value="en" selected>\s*English\s*<\/option>/);
   assert.match(html, /onchange="this\.form\.submit\(\)"/);
