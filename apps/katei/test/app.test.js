@@ -319,6 +319,58 @@ test('workspace template renders the no-board header with both Options and Profi
   assert.match(html, /No Boards Viewer/);
 });
 
+test('workspace template renders the card editor locale accordion with accessible wiring and preserved locale hooks', () => {
+  const workspace = createEmptyWorkspace();
+  const html = renderWorkspacePage(
+    buildWorkspacePageModel(
+      {
+        sub: 'sub_locale_editor',
+        name: 'Locale Editor'
+      },
+      createTranslator('en'),
+      workspace,
+      {
+        revision: 1,
+        updatedAt: '2026-04-02T11:00:00.000Z',
+        lastChangedBy: 'sub_locale_editor',
+        isPristine: false,
+        workspaceId: 'workspace_locale_editor',
+        isHomeWorkspace: true
+      }
+    )
+  );
+  const cardEditorDialog = extractDialogHtml(html, 'card-editor');
+
+  assert.match(
+    cardEditorDialog,
+    /data-card-editor-target="localeSection"[\s\S]*data-controller="accordion"[\s\S]*data-accordion-open-index-value="0"[\s\S]*workspace:open-card-editor@window->accordion#reset/
+  );
+  assert.match(
+    cardEditorDialog,
+    /id="card-editor-locale-content-trigger"[^>]*aria-expanded="true"[^>]*aria-controls="card-editor-locale-content-panel"/
+  );
+  assert.match(
+    cardEditorDialog,
+    /id="card-editor-available-localizations-trigger"[^>]*aria-expanded="false"[^>]*aria-controls="card-editor-available-localizations-panel"/
+  );
+  assert.match(
+    cardEditorDialog,
+    /id="card-editor-locale-content-panel"[^>]*role="region"[^>]*aria-labelledby="card-editor-locale-content-trigger"/
+  );
+  assert.match(
+    cardEditorDialog,
+    /id="card-editor-available-localizations-panel"[^>]*role="region"[^>]*aria-labelledby="card-editor-available-localizations-trigger"[^>]*hidden/
+  );
+  assert.match(
+    cardEditorDialog,
+    /id="card-editor-locale-content-panel"[\s\S]*data-card-editor-target="localeSelect"[\s\S]*data-card-editor-target="localeSummary"[\s\S]*data-card-editor-target="localeFallbackNotice"[\s\S]*data-card-editor-target="localeEditSummary"[\s\S]*data-card-editor-target="localeReadOnlyNotice"[\s\S]*data-card-editor-target="requestLocaleButton"[\s\S]*data-card-editor-target="clearLocaleRequestButton"/
+  );
+  assert.match(
+    cardEditorDialog,
+    /id="card-editor-available-localizations-panel"[\s\S]*data-card-editor-target="localeStatusRegion"[\s\S]*data-card-editor-target="localeStatusTemplate"/
+  );
+});
+
 test('GET /boards bootstraps normalized workspace snapshots when the loaded record is legacy-shaped', async () => {
   const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([
     createLegacyWorkspaceRecord({
