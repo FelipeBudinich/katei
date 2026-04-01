@@ -5,6 +5,7 @@ import {
   createWorkspaceBoard
 } from '../public/js/domain/workspace_read_model.js';
 import {
+  createBoardListActionState,
   createBoardOptionsState,
   getBoardRoleTranslationKey
 } from '../public/js/controllers/board_collaboration_state.js';
@@ -27,42 +28,7 @@ test('board options state surfaces the active actor role and pending invite coun
 });
 
 test('board options state includes readable boards and invite-only boards without exposing inaccessible ones', () => {
-  const viewerActor = createActor('viewer_1', 'viewer@example.com', 'Viewer');
-  const workspace = createEmptyWorkspace({
-    workspaceId: 'workspace_shared',
-    creator: createActor('owner_main', 'owner-main@example.com', 'Main owner')
-  });
-  const mainBoard = workspace.boards.main;
-
-  addMembership(mainBoard, viewerActor, 'viewer');
-  workspace.ui.activeBoardId = 'main';
-
-  const sharedBoard = createBoard({
-    id: 'shared',
-    title: 'Shared board',
-    creator: createActor('owner_shared', 'owner-shared@example.com', 'Shared owner')
-  });
-  addMembership(sharedBoard, viewerActor, 'viewer');
-
-  const inviteBoard = createBoard({
-    id: 'invite',
-    title: 'Invited board',
-    creator: createActor('owner_invite', 'owner-invite@example.com', 'Invite owner')
-  });
-  inviteBoard.collaboration.invites.push(createInvite('invite_2', viewerActor.email, 'editor', inviteBoard.collaboration.memberships[0].actor));
-
-  const secretBoard = createBoard({
-    id: 'secret',
-    title: 'Secret board',
-    creator: createActor('owner_secret', 'owner-secret@example.com', 'Secret owner')
-  });
-
-  workspace.boardOrder = ['main', 'shared', 'invite', 'secret'];
-  workspace.boards.shared = sharedBoard;
-  workspace.boards.invite = inviteBoard;
-  workspace.boards.secret = secretBoard;
-
-  const optionsState = createBoardOptionsState(workspace, viewerActor);
+  const { optionsState } = createSharedBoardOptionsFixture();
 
   assert.deepEqual(
     optionsState.boardStates.map((boardState) => boardState.boardId),
@@ -74,6 +40,35 @@ test('board options state includes readable boards and invite-only boards withou
   assert.equal(optionsState.boardStates[1].currentRoleStatus, 'viewer');
   assert.equal(optionsState.boardStates[2].currentRoleStatus, 'invited');
   assert.equal(optionsState.boardStates[2].canSwitch, false);
+});
+
+test('board list action state keeps switch and invite responses mutually exclusive', () => {
+  const { optionsState } = createSharedBoardOptionsFixture();
+  const activeBoardActions = createBoardListActionState(optionsState.boardStates[0]);
+  const switchableBoardActions = createBoardListActionState(optionsState.boardStates[1]);
+  const invitedBoardActions = createBoardListActionState(optionsState.boardStates[2]);
+
+  assert.deepEqual(activeBoardActions, {
+    canRespondToInvite: false,
+    inviteId: '',
+    switchHidden: true,
+    inviteAcceptHidden: true,
+    inviteDeclineHidden: true
+  });
+  assert.deepEqual(switchableBoardActions, {
+    canRespondToInvite: false,
+    inviteId: '',
+    switchHidden: false,
+    inviteAcceptHidden: true,
+    inviteDeclineHidden: true
+  });
+  assert.deepEqual(invitedBoardActions, {
+    canRespondToInvite: true,
+    inviteId: 'invite_2',
+    switchHidden: true,
+    inviteAcceptHidden: false,
+    inviteDeclineHidden: false
+  });
 });
 
 test('board role translation keys stay stable for member and invite states', () => {
@@ -127,6 +122,49 @@ function createInvite(id, email, role, invitedBy) {
     status: 'pending',
     invitedBy,
     invitedAt: '2026-03-31T10:10:00.000Z'
+  };
+}
+
+function createSharedBoardOptionsFixture() {
+  const viewerActor = createActor('viewer_1', 'viewer@example.com', 'Viewer');
+  const workspace = createEmptyWorkspace({
+    workspaceId: 'workspace_shared',
+    creator: createActor('owner_main', 'owner-main@example.com', 'Main owner')
+  });
+  const mainBoard = workspace.boards.main;
+
+  addMembership(mainBoard, viewerActor, 'viewer');
+  workspace.ui.activeBoardId = 'main';
+
+  const sharedBoard = createBoard({
+    id: 'shared',
+    title: 'Shared board',
+    creator: createActor('owner_shared', 'owner-shared@example.com', 'Shared owner')
+  });
+  addMembership(sharedBoard, viewerActor, 'viewer');
+
+  const inviteBoard = createBoard({
+    id: 'invite',
+    title: 'Invited board',
+    creator: createActor('owner_invite', 'owner-invite@example.com', 'Invite owner')
+  });
+  inviteBoard.collaboration.invites.push(createInvite('invite_2', viewerActor.email, 'editor', inviteBoard.collaboration.memberships[0].actor));
+
+  const secretBoard = createBoard({
+    id: 'secret',
+    title: 'Secret board',
+    creator: createActor('owner_secret', 'owner-secret@example.com', 'Secret owner')
+  });
+
+  workspace.boardOrder = ['main', 'shared', 'invite', 'secret'];
+  workspace.boards.shared = sharedBoard;
+  workspace.boards.invite = inviteBoard;
+  workspace.boards.secret = secretBoard;
+
+  return {
+    viewerActor,
+    workspace,
+    optionsState: createBoardOptionsState(workspace, viewerActor)
   };
 }
 

@@ -42,6 +42,8 @@ function createTestApp({ env = {}, googleTokenVerifier, workspaceRecordRepositor
       NODE_ENV: 'test',
       GOOGLE_CLIENT_ID: 'test-google-client-id',
       KATEI_SESSION_SECRET: 'test-session-secret',
+      MONGODB_URI: 'mongodb://127.0.0.1:27017',
+      MONGODB_DB_NAME: 'katei_test',
       ...env
     },
     googleTokenVerifier,
@@ -248,6 +250,10 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
   assert.match(response.text, /<script defer src="\/vendor\/easymde\/easymde\.min\.js"><\/script>/);
   assert.match(response.text, /id="board-options-ui-locale-picker"/);
   assert.match(response.text, /<form method="get" action="\/boards" class="ui-locale-picker">/);
+  assert.match(response.text, /data-board-options-field="inviteAcceptButton"/);
+  assert.match(response.text, /data-board-options-field="inviteDeclineButton"/);
+  assert.match(response.text, /board-options:accept-invite->workspace#handleAcceptInvite/);
+  assert.match(response.text, /board-options:decline-invite->workspace#handleDeclineInvite/);
 });
 
 test('GET /boards bootstraps normalized workspace snapshots when the loaded record is legacy-shaped', async () => {

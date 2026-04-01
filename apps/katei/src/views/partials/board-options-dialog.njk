@@ -52,14 +52,34 @@
             </p>
           </div>
 
-          <button
-            type="button"
-            class="touch-button-secondary"
-            data-board-options-field="switchButton"
-            data-action="board-options#switchBoard"
-          >
-            {{ t('boardOptionsDialog.switchButton') }}
-          </button>
+          <div class="action-wrap-grid sm:justify-self-end">
+            <button
+              type="button"
+              class="touch-button-secondary"
+              data-board-options-field="switchButton"
+              data-action="board-options#switchBoard"
+            >
+              {{ t('boardOptionsDialog.switchButton') }}
+            </button>
+            <button
+              type="button"
+              class="touch-button-secondary"
+              hidden
+              data-board-options-field="inviteAcceptButton"
+              data-action="board-options#acceptInvite"
+            >
+              {{ t('boardOptionsDialog.acceptInviteButton') }}
+            </button>
+            <button
+              type="button"
+              class="touch-button-secondary"
+              hidden
+              data-board-options-field="inviteDeclineButton"
+              data-action="board-options#declineInvite"
+            >
+              {{ t('boardOptionsDialog.declineInviteButton') }}
+            </button>
+          </div>
         </div>
       </li>
     </template>

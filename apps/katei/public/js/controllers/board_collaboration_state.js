@@ -54,6 +54,19 @@ export function createBoardOptionsState(workspace, actor) {
   };
 }
 
+export function createBoardListActionState(boardState) {
+  const inviteId = normalizeOptionalString(boardState?.pendingInvite?.id);
+  const canRespondToInvite = Boolean(inviteId && boardState?.pendingInvite && !boardState?.canSwitch);
+
+  return {
+    canRespondToInvite,
+    inviteId,
+    switchHidden: !boardState?.canSwitch,
+    inviteAcceptHidden: !canRespondToInvite,
+    inviteDeclineHidden: !canRespondToInvite
+  };
+}
+
 export function getBoardCollaborationState(board, actor) {
   const normalizedActor = normalizeBoardActor(actor);
   const collaboration = normalizeBoardCollaboration(board);

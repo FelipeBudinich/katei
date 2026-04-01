@@ -1,6 +1,8 @@
 import { Controller } from '/vendor/stimulus/stimulus.js';
 import { getBrowserTranslator } from '/js/i18n/browser.js';
+import { createInviteDecisionDetail } from './board_collaborators_actions.js';
 import {
+  createBoardListActionState,
   createBoardOptionsState,
   getBoardRoleTranslationKey
 } from './board_collaboration_state.js';
@@ -131,6 +133,14 @@ export default class extends Controller {
     });
   }
 
+  acceptInvite(event) {
+    this.dispatchInviteResponse('accept-invite', event.currentTarget.dataset);
+  }
+
+  declineInvite(event) {
+    this.dispatchInviteResponse('decline-invite', event.currentTarget.dataset);
+  }
+
   get activeBoard() {
     return this.workspace ? this.workspace.boards[this.workspace.ui.activeBoardId] : null;
   }
@@ -192,15 +202,40 @@ export default class extends Controller {
     const titleElement = item.querySelector('[data-board-options-field="title"]');
     const stateElement = item.querySelector('[data-board-options-field="state"]');
     const switchButton = item.querySelector('[data-board-options-field="switchButton"]');
+    const inviteAcceptButton = item.querySelector('[data-board-options-field="inviteAcceptButton"]');
+    const inviteDeclineButton = item.querySelector('[data-board-options-field="inviteDeclineButton"]');
+    const actionState = createBoardListActionState(boardState);
 
     titleElement.textContent = boardState.title;
     stateElement.textContent = boardState.isActive
       ? this.t('boardOptionsDialog.stateActive')
       : this.t(getBoardRoleTranslationKey(boardState.currentRoleStatus));
     switchButton.dataset.boardId = boardState.boardId;
-    switchButton.hidden = !boardState.canSwitch;
+    switchButton.hidden = actionState.switchHidden;
+
+    for (const button of [inviteAcceptButton, inviteDeclineButton]) {
+      button.dataset.boardId = boardState.boardId;
+      button.dataset.inviteId = actionState.inviteId;
+    }
+
+    inviteAcceptButton.hidden = actionState.inviteAcceptHidden;
+    inviteDeclineButton.hidden = actionState.inviteDeclineHidden;
 
     return item;
+  }
+
+  dispatchInviteResponse(actionName, dataset = {}) {
+    if (!dataset.boardId || !dataset.inviteId) {
+      return;
+    }
+
+    const detail = createInviteDecisionDetail({
+      boardId: dataset.boardId,
+      inviteId: dataset.inviteId
+    });
+
+    this.closeDialog({ restoreFocus: false });
+    this.dispatch(actionName, { detail });
   }
 
   closeDialog({ restoreFocus = true } = {}) {
