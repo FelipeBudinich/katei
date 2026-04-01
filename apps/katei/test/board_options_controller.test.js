@@ -352,7 +352,6 @@ function createBoardOptionsControllerDouble() {
     'inviteDeclineButton'
   ]);
   controller.renameButtonTarget = createToggleTarget();
-  controller.resetButtonTarget = createToggleTarget();
   controller.deleteButtonTarget = createToggleTarget();
   controller.collaboratorsButtonTarget = createToggleTarget();
   controller.collaboratorBadgeTarget = createTextTarget({ hidden: true });

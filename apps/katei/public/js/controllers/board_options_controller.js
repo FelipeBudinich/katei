@@ -19,7 +19,6 @@ export default class extends Controller {
     'inviteList',
     'inviteItemTemplate',
     'renameButton',
-    'resetButton',
     'deleteButton',
     'collaboratorsButton',
     'collaboratorBadge'
@@ -189,7 +188,6 @@ export default class extends Controller {
       this.pendingSummaryTarget.hidden = true;
       this.pendingSummaryTarget.textContent = '';
       this.renameButtonTarget.hidden = true;
-      this.resetButtonTarget.hidden = true;
       this.deleteButtonTarget.hidden = true;
       this.collaboratorsButtonTarget.hidden = true;
       this.collaboratorBadgeTarget.hidden = true;
@@ -208,7 +206,6 @@ export default class extends Controller {
       count: activeBoardState.pendingInviteCount
     });
     this.renameButtonTarget.hidden = !activeBoardState.canAdmin;
-    this.resetButtonTarget.hidden = !activeBoardState.canAdmin;
     this.deleteButtonTarget.hidden = !activeBoardState.canAdmin || this.workspace.boardOrder.length === 1;
     this.collaboratorsButtonTarget.hidden = !this.activeBoard;
     this.collaboratorBadgeTarget.hidden = activeBoardState.pendingInviteCount === 0;

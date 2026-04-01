@@ -290,7 +290,8 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
   assert.match(boardOptionsDialog, /board-options#createBoard/);
   assert.match(boardOptionsDialog, /board-options#openCollaborators/);
   assert.match(boardOptionsDialog, /board-options#renameBoard/);
-  assert.match(boardOptionsDialog, /board-options#resetBoard/);
+  assert.doesNotMatch(boardOptionsDialog, /board-options#resetBoard/);
+  assert.doesNotMatch(boardOptionsDialog, /data-board-options-target="resetButton"/);
   assert.match(boardOptionsDialog, /board-options#deleteBoard/);
 
   assert.match(profileOptionsDialog, /viewer-chip/);
