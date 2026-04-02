@@ -7,8 +7,108 @@ import {
   getCardContentVariant,
   getMissingRequiredLocales,
   listCardLocales,
+  resolveDefaultCardLocale,
   upsertCardContentVariant
 } from '../public/js/domain/card_localization.js';
+
+test('resolveDefaultCardLocale applies requested, ui, board, and first-available precedence in order', () => {
+  const board = {
+    languagePolicy: {
+      sourceLocale: 'en',
+      defaultLocale: 'es-CL',
+      supportedLocales: ['en', 'es-CL', 'ja'],
+      requiredLocales: ['en']
+    }
+  };
+
+  assert.equal(
+    resolveDefaultCardLocale({
+      board,
+      requestedLocale: 'ja',
+      uiLocale: 'en',
+      candidateLocales: ['en', 'es-CL', 'ja']
+    }),
+    'ja'
+  );
+
+  assert.equal(
+    resolveDefaultCardLocale({
+      board,
+      uiLocale: 'en',
+      candidateLocales: ['en', 'es-CL', 'ja']
+    }),
+    'en'
+  );
+
+  assert.equal(
+    resolveDefaultCardLocale({
+      board,
+      uiLocale: 'fr',
+      candidateLocales: ['en', 'es-CL']
+    }),
+    'es-CL'
+  );
+
+  assert.equal(
+    resolveDefaultCardLocale({
+      board: {
+        languagePolicy: {
+          sourceLocale: 'en',
+          defaultLocale: 'es-CL',
+          supportedLocales: ['en', 'es-CL', 'ja'],
+          requiredLocales: ['en']
+        }
+      },
+      uiLocale: 'fr',
+      candidateLocales: ['en']
+    }),
+    'en'
+  );
+
+  assert.equal(
+    resolveDefaultCardLocale({
+      board,
+      uiLocale: 'fr',
+      candidateLocales: ['ja']
+    }),
+    'ja'
+  );
+});
+
+test('getCardContentVariant prefers an exact ui locale before board default when no explicit locale is requested', () => {
+  const board = {
+    languagePolicy: {
+      sourceLocale: 'en',
+      defaultLocale: 'es-CL',
+      supportedLocales: ['en', 'es-CL', 'ja'],
+      requiredLocales: ['en']
+    }
+  };
+
+  assert.equal(
+    getCardContentVariant(
+      {
+        id: 'card_ui_locale',
+        contentByLocale: {
+          en: {
+            title: 'English source',
+            detailsMarkdown: 'English details',
+            provenance: null
+          },
+          'es-CL': {
+            title: 'Titulo por defecto',
+            detailsMarkdown: 'Detalles por defecto',
+            provenance: null
+          }
+        }
+      },
+      null,
+      board,
+      { uiLocale: 'en' }
+    )?.locale,
+    'en'
+  );
+});
 
 test('getCardContentVariant reads explicit localized variants and listCardLocales canonicalizes keys', () => {
   const card = {

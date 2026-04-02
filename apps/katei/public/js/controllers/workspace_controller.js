@@ -434,6 +434,7 @@ export default class extends Controller {
       board,
       ...createRuntimeCardDialogState(card, board, {
         requestedLocale: button.dataset.requestedLocale ?? button.dataset.locale ?? null,
+        uiLocale: this.t.locale,
         currentActorRole: this.activeBoardCollaborationState?.currentRole ?? null,
         canEditLocalizedContent: this.canEditActiveBoard
       }),
@@ -652,7 +653,7 @@ export default class extends Controller {
         cardId,
         title: this.t('workspace.confirmations.deleteCardTitle'),
         message: this.t('workspace.confirmations.deleteCardMessage', {
-          title: getBoardCardContentVariant(card, board)?.title ?? ''
+          title: getBoardCardContentVariant(card, board, { uiLocale: this.t.locale })?.title ?? ''
         }),
         confirmLabel: this.t('workspace.confirmations.deleteCardConfirm')
       }
@@ -911,6 +912,7 @@ export default class extends Controller {
       board,
       card,
       selectedLocale,
+      uiLocale: this.t.locale,
       localeSelection: 'available'
     });
     const shouldShowPriority = shouldShowPriorityForStage(stageId);
@@ -1138,6 +1140,7 @@ export default class extends Controller {
       board,
       ...createRuntimeCardDialogState(card, board, {
         requestedLocale: locale,
+        uiLocale: this.t.locale,
         currentActorRole: boardState?.currentRole ?? null,
         canEditLocalizedContent: boardState?.canEdit ?? false
       }),

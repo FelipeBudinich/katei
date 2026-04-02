@@ -19,6 +19,26 @@ test('locale dropdown state uses the board supported locales and defaults to the
   assert.equal(state.selectedLocale, 'es-CL');
 });
 
+test('locale dropdown defaults to the exact ui locale when it exists for the card', () => {
+  const board = createBoard();
+  const card = createCard();
+
+  const state = createLocalizedCardViewState({ board, card, uiLocale: 'en' });
+
+  assert.equal(state.selectedLocale, 'en');
+  assert.equal(state.renderedLocale, 'en');
+});
+
+test('locale dropdown falls back to board defaults when the ui locale is unavailable', () => {
+  const board = createBoard();
+  const card = createCard();
+
+  const state = createLocalizedCardViewState({ board, card, uiLocale: 'fr' });
+
+  assert.equal(state.selectedLocale, 'es-CL');
+  assert.equal(state.renderedLocale, 'es-CL');
+});
+
 test('switching locale changes the displayed card variant', () => {
   const board = createBoard();
   const card = createCard();

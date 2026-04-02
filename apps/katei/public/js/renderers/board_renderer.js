@@ -17,8 +17,8 @@ export function getBoardRenderStages(board) {
     .filter(({ stageId, stage }) => typeof stageId === 'string' && stage?.id === stageId);
 }
 
-export function getCardRenderState(board, card) {
-  const content = getBoardCardContentVariant(card, board);
+export function getCardRenderState(board, card, uiLocale = null) {
+  const content = getBoardCardContentVariant(card, board, { uiLocale });
 
   return {
     title: content?.title ?? '',
@@ -62,13 +62,14 @@ export function renderBoardState({
         canEditBoard,
         templates,
         t,
+        uiLocale: t.locale,
         dateTimeFormatter
       })
     )
   );
 }
 
-function createStagePanel({ board, stageId, stage, collapsedColumns, canReadBoard, canEditBoard, templates, t, dateTimeFormatter }) {
+function createStagePanel({ board, stageId, stage, collapsedColumns, canReadBoard, canEditBoard, templates, t, uiLocale, dateTimeFormatter }) {
   const columnNode = cloneTemplate(templates.columnTemplate);
   const isCollapsed = Boolean(collapsedColumns[stageId]);
   columnNode.dataset.stageId = stage.id;
@@ -124,6 +125,7 @@ function createStagePanel({ board, stageId, stage, collapsedColumns, canReadBoar
             stageId,
             canEditBoard,
             templates,
+            uiLocale,
             dateTimeFormatter
           })
         );
@@ -134,9 +136,9 @@ function createStagePanel({ board, stageId, stage, collapsedColumns, canReadBoar
   return columnNode;
 }
 
-function createCardElement({ board, card, stageId, canEditBoard, templates, dateTimeFormatter }) {
+function createCardElement({ board, card, stageId, canEditBoard, templates, uiLocale, dateTimeFormatter }) {
   const cardNode = cloneTemplate(templates.cardTemplate);
-  const renderState = getCardRenderState(board, card);
+  const renderState = getCardRenderState(board, card, uiLocale);
   cardNode.dataset.cardId = card.id;
   cardNode.dataset.stageId = stageId;
   cardNode.dataset.columnId = stageId;

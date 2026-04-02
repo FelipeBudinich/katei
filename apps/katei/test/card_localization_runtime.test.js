@@ -97,7 +97,7 @@ test('updateCard updates only source-locale content and provenance', () => {
   });
 });
 
-test('getBoardCardContentVariant resolves default, then source, then first available locale', () => {
+test('getBoardCardContentVariant resolves ui locale, then default, then source, then first available locale', () => {
   const board = {
     languagePolicy: {
       sourceLocale: 'en',
@@ -106,6 +106,24 @@ test('getBoardCardContentVariant resolves default, then source, then first avail
       requiredLocales: ['en']
     }
   };
+
+  assert.equal(
+    getBoardCardContentVariant(
+      createCardWithContent({
+        'es-CL': {
+          title: 'Titulo por defecto',
+          detailsMarkdown: 'Detalles por defecto'
+        },
+        en: {
+          title: 'English title',
+          detailsMarkdown: 'English details'
+        }
+      }),
+      board,
+      { uiLocale: 'en' }
+    )?.locale,
+    'en'
+  );
 
   assert.equal(
     getBoardCardContentVariant(

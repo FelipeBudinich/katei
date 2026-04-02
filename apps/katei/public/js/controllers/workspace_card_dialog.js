@@ -1,14 +1,16 @@
 import { canonicalizeContentLocale } from '../domain/board_language_policy.js';
-import { getCardContentVariant, getBoardCardContentVariant } from '../domain/workspace.js';
+import { getBoardCardContentVariant } from '../domain/workspace.js';
 import { listCardLocaleStatuses } from '../domain/card_localization_requests.js';
 
 export function createRuntimeCardDialogState(
   card,
   board,
-  { requestedLocale = null, currentActorRole = null, canEditLocalizedContent = false } = {}
+  { requestedLocale = null, uiLocale = null, currentActorRole = null, canEditLocalizedContent = false } = {}
 ) {
-  const content = getCardContentVariant(card, requestedLocale, board)
-    ?? getBoardCardContentVariant(card, board);
+  const content = getBoardCardContentVariant(card, board, {
+    requestedLocale,
+    uiLocale
+  });
 
   return {
     card,

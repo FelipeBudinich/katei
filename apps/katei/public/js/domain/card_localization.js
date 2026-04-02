@@ -31,41 +31,63 @@ export function createCardContentProvenance({
   };
 }
 
-export function getCardContentVariant(card, locale, board) {
-  const requestedLocale = canonicalizeContentLocale(locale);
-  const localizedContent = getLocalizedContentMap(card);
+export function resolveDefaultCardLocale({
+  board,
+  requestedLocale = null,
+  uiLocale = null,
+  candidateLocales = []
+} = {}) {
   const languagePolicy = normalizeBoardLanguagePolicy(board?.languagePolicy ?? null);
-  const preferredLocales = [];
-  const primaryPreferredLocale = requestedLocale ?? languagePolicy?.defaultLocale ?? languagePolicy?.sourceLocale ?? null;
+  const normalizedRequestedLocale = canonicalizeContentLocale(requestedLocale);
+  const normalizedUiLocale = canonicalizeContentLocale(uiLocale);
+  const orderedCandidateLocales = [];
+  const seenCandidateLocales = new Set();
 
-  if (requestedLocale) {
-    preferredLocales.push(requestedLocale);
-  }
+  for (const candidateLocale of candidateLocales) {
+    const normalizedCandidateLocale = canonicalizeContentLocale(candidateLocale);
 
-  if (languagePolicy?.defaultLocale && !preferredLocales.includes(languagePolicy.defaultLocale)) {
-    preferredLocales.push(languagePolicy.defaultLocale);
-  }
-
-  if (languagePolicy?.sourceLocale && !preferredLocales.includes(languagePolicy.sourceLocale)) {
-    preferredLocales.push(languagePolicy.sourceLocale);
-  }
-
-  for (const preferredLocale of preferredLocales) {
-    if (!localizedContent.has(preferredLocale)) {
+    if (!normalizedCandidateLocale || seenCandidateLocales.has(normalizedCandidateLocale)) {
       continue;
     }
 
-    return materializeVariant(localizedContent.get(preferredLocale), preferredLocale, {
-      isFallback: primaryPreferredLocale != null && primaryPreferredLocale !== preferredLocale,
-      source: 'localized'
-    });
+    seenCandidateLocales.add(normalizedCandidateLocale);
+    orderedCandidateLocales.push(normalizedCandidateLocale);
   }
 
-  if (localizedContent.size > 0) {
-    const [firstLocale] = [...localizedContent.keys()].sort((left, right) => left.localeCompare(right));
+  const candidateLocaleSet = new Set(orderedCandidateLocales);
 
-    return materializeVariant(localizedContent.get(firstLocale), firstLocale, {
-      isFallback: primaryPreferredLocale != null && primaryPreferredLocale !== firstLocale,
+  if (normalizedRequestedLocale && candidateLocaleSet.has(normalizedRequestedLocale)) {
+    return normalizedRequestedLocale;
+  }
+
+  if (normalizedUiLocale && candidateLocaleSet.has(normalizedUiLocale)) {
+    return normalizedUiLocale;
+  }
+
+  if (languagePolicy?.defaultLocale && candidateLocaleSet.has(languagePolicy.defaultLocale)) {
+    return languagePolicy.defaultLocale;
+  }
+
+  if (languagePolicy?.sourceLocale && candidateLocaleSet.has(languagePolicy.sourceLocale)) {
+    return languagePolicy.sourceLocale;
+  }
+
+  return orderedCandidateLocales[0] ?? null;
+}
+
+export function getCardContentVariant(card, locale, board, { uiLocale = null } = {}) {
+  const localizedContent = getLocalizedContentMap(card);
+  const candidateLocales = [...localizedContent.keys()].sort((left, right) => left.localeCompare(right));
+  const resolvedLocale = resolveDefaultCardLocale({
+    board,
+    requestedLocale: locale,
+    uiLocale,
+    candidateLocales
+  });
+
+  if (resolvedLocale && localizedContent.has(resolvedLocale)) {
+    return materializeVariant(localizedContent.get(resolvedLocale), resolvedLocale, {
+      isFallback: canonicalizeContentLocale(locale) !== resolvedLocale,
       source: 'localized'
     });
   }
@@ -89,8 +111,8 @@ export function getStoredCardContentVariant(card, locale) {
   return normalizeStoredVariant(storedVariant);
 }
 
-export function getBoardCardContentVariant(card, board) {
-  return getCardContentVariant(card, resolveBoardCardContentLocale(board), board);
+export function getBoardCardContentVariant(card, board, { requestedLocale = null, uiLocale = null } = {}) {
+  return getCardContentVariant(card, requestedLocale, board, { uiLocale });
 }
 
 export function listCardLocales(card) {
@@ -402,11 +424,6 @@ function normalizeRequiredString(value, errorMessage) {
   }
 
   return normalizedValue;
-}
-
-function resolveBoardCardContentLocale(board) {
-  const languagePolicy = normalizeBoardLanguagePolicy(board?.languagePolicy ?? null);
-  return languagePolicy?.defaultLocale ?? languagePolicy?.sourceLocale ?? null;
 }
 
 function isPlainObject(value) {

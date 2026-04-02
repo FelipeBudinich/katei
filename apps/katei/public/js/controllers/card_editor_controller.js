@@ -142,7 +142,8 @@ export default class extends Controller {
     this.pendingGenerateLocale = null;
     this.selectedLocale = resolveCardLocaleSelection({
       board,
-      preferredLocale: requestedLocale ?? locale
+      preferredLocale: requestedLocale ?? locale,
+      uiLocale: this.t.locale
     });
     this.triggerElement = triggerElement ?? this.triggerElement ?? null;
     this.modeInputTarget.value = nextMode;
@@ -364,6 +365,7 @@ export default class extends Controller {
       board: this.board,
       card: this.card,
       selectedLocale: this.selectedLocale,
+      uiLocale: this.t.locale,
       mode: this.mode,
       currentActorRole: this.currentActorRole,
       canEditLocalizedContent: this.canEditLocalizedContent

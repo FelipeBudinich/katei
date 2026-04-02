@@ -1035,11 +1035,12 @@ test('openEdit and openView card dialog state preserves raw localized card data 
 
   const editState = createRuntimeCardDialogState(card, board, {
     requestedLocale: 'ja',
+    uiLocale: 'en',
     currentActorRole: 'editor',
     canEditLocalizedContent: true
   });
   const viewState = createRuntimeCardDialogState(card, board, {
-    requestedLocale: 'en',
+    uiLocale: 'en',
     currentActorRole: 'viewer',
     canEditLocalizedContent: false
   });
@@ -1060,7 +1061,7 @@ test('openEdit and openView card dialog state preserves raw localized card data 
   });
 
   assert.equal(viewState.card, card);
-  assert.equal(viewState.requestedLocale, 'en');
+  assert.equal(viewState.requestedLocale, null);
   assert.equal(viewState.currentActorRole, 'viewer');
   assert.equal(viewState.canEditLocalizedContent, false);
   assert.deepEqual(viewState.displayVariant, {
@@ -1068,7 +1069,7 @@ test('openEdit and openView card dialog state preserves raw localized card data 
     title: 'English source',
     detailsMarkdown: 'English details',
     provenance: null,
-    isFallback: false,
+    isFallback: true,
     source: 'localized'
   });
 });

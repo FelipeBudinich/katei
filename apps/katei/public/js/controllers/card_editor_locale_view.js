@@ -1,12 +1,13 @@
 import { canonicalizeContentLocale, normalizeBoardLanguagePolicy } from '../domain/board_language_policy.js';
 import { normalizeBoardAiLocalization } from '../domain/board_ai_localization.js';
-import { getCardContentVariant } from '../domain/card_localization.js';
+import { getCardContentVariant, resolveDefaultCardLocale } from '../domain/card_localization.js';
 import { listCardLocaleStatuses } from '../domain/card_localization_requests.js';
 
 export function createLocalizedCardViewState({
   board,
   card,
   selectedLocale = null,
+  uiLocale = null,
   localeSelection = 'supported'
 } = {}) {
   const languagePolicy = normalizeBoardLanguagePolicy(board?.languagePolicy ?? null);
@@ -17,9 +18,10 @@ export function createLocalizedCardViewState({
   const resolvedSelectedLocale = resolveCardLocaleSelection({
     board,
     preferredLocale: selectedLocale,
+    uiLocale,
     supportedLocales: selectableLocales
   });
-  const variant = card ? getCardContentVariant(card, resolvedSelectedLocale, board) : null;
+  const variant = card ? getCardContentVariant(card, resolvedSelectedLocale, board, { uiLocale }) : null;
   const localeStatusByLocale = new Map(localeStatuses.map((entry) => [entry.locale, entry]));
   const selectedStatus = resolvedSelectedLocale ? localeStatusByLocale.get(resolvedSelectedLocale) ?? null : null;
 
@@ -43,11 +45,12 @@ export function createLocalizedCardEditorUiState({
   board,
   card,
   selectedLocale = null,
+  uiLocale = null,
   mode = 'create',
   canEditLocalizedContent = false,
   currentActorRole = null
 } = {}) {
-  const localizedView = createLocalizedCardViewState({ board, card, selectedLocale });
+  const localizedView = createLocalizedCardViewState({ board, card, selectedLocale, uiLocale });
   const isReadOnly = mode === 'view' || !canEditLocalizedContent;
   const selectedStatus = localizedView.selectedStatus;
   const hasCard = Boolean(card);
@@ -107,40 +110,28 @@ export function createLocalizedCardEditorUiState({
   };
 }
 
-export function resolveCardLocaleSelection({ board, preferredLocale = null, supportedLocales = null } = {}) {
+export function resolveCardLocaleSelection({ board, preferredLocale = null, uiLocale = null, supportedLocales = null } = {}) {
   const languagePolicy = normalizeBoardLanguagePolicy(board?.languagePolicy ?? null);
   const hasExplicitLocales = Array.isArray(supportedLocales);
   const availableLocales = hasExplicitLocales
     ? supportedLocales
     : getSupportedCardLocales(languagePolicy);
-  const normalizedPreferredLocale = canonicalizeContentLocale(preferredLocale);
+  const resolvedLocale = resolveDefaultCardLocale({
+    board,
+    requestedLocale: preferredLocale,
+    uiLocale,
+    candidateLocales: availableLocales
+  });
 
-  if (normalizedPreferredLocale && (!hasExplicitLocales || availableLocales.includes(normalizedPreferredLocale))) {
-    return normalizedPreferredLocale;
-  }
-
-  if (availableLocales.length > 0) {
-    if (languagePolicy?.defaultLocale && availableLocales.includes(languagePolicy.defaultLocale)) {
-      return languagePolicy.defaultLocale;
-    }
-
-    if (languagePolicy?.sourceLocale && availableLocales.includes(languagePolicy.sourceLocale)) {
-      return languagePolicy.sourceLocale;
-    }
-
-    return availableLocales[0];
+  if (resolvedLocale) {
+    return resolvedLocale;
   }
 
   if (hasExplicitLocales) {
     return null;
   }
 
-  return (
-    languagePolicy?.defaultLocale ??
-    languagePolicy?.sourceLocale ??
-    normalizedPreferredLocale ??
-    null
-  );
+  return canonicalizeContentLocale(preferredLocale) ?? null;
 }
 
 function getSupportedCardLocales(languagePolicy, localeStatuses = []) {
