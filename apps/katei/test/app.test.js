@@ -317,6 +317,10 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
   );
   assert.doesNotMatch(response.text, /board-options:delete-board->workspace#confirmDeleteBoard/);
   assert.match(boardCollaboratorsDialog, /type="email"[\s\S]*?name="email"[\s\S]*?autocomplete="email"/);
+  assert.match(
+    boardCollaboratorsDialog,
+    /<select[\s\S]*?name="role"[\s\S]*?data-board-collaborators-field="memberRoleSelect"/
+  );
 
   assert.match(profileOptionsDialog, /viewer-chip/);
   assert.match(profileOptionsDialog, /ui-locale-control-row/);
