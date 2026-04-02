@@ -1,4 +1,5 @@
 import { canonicalizeContentLocale, normalizeBoardLanguagePolicy } from '../domain/board_language_policy.js';
+import { normalizeBoardAiLocalization } from '../domain/board_ai_localization.js';
 import { getCardContentVariant } from '../domain/card_localization.js';
 import { listCardLocaleStatuses } from '../domain/card_localization_requests.js';
 
@@ -51,6 +52,19 @@ export function createLocalizedCardEditorUiState({
   const selectedStatus = localizedView.selectedStatus;
   const hasCard = Boolean(card);
   const hasSelectedLocale = Boolean(localizedView.selectedLocale);
+  const languagePolicy = normalizeBoardLanguagePolicy(board?.languagePolicy ?? null);
+  const boardAiLocalization = normalizeBoardAiLocalization(board?.aiLocalization ?? null);
+  const hasSavedOpenAiKey = boardAiLocalization.hasApiKey === true;
+  const isSourceLocaleSelected =
+    hasSelectedLocale &&
+    localizedView.selectedLocale === languagePolicy?.sourceLocale;
+  const canGenerateSelectedLocale =
+    hasCard &&
+    !isReadOnly &&
+    hasSelectedLocale &&
+    hasSavedOpenAiKey &&
+    !isSourceLocaleSelected &&
+    !selectedStatus?.hasContent;
   const canRequestSelectedLocale =
     hasCard &&
     !isReadOnly &&
@@ -62,6 +76,14 @@ export function createLocalizedCardEditorUiState({
     !isReadOnly &&
     hasSelectedLocale &&
     Boolean(selectedStatus?.isRequested);
+  const generateBlockedReason = resolveGenerateBlockedReason({
+    hasCard,
+    isReadOnly,
+    hasSelectedLocale,
+    hasSavedOpenAiKey,
+    isSourceLocaleSelected,
+    hasSelectedLocaleContent: Boolean(selectedStatus?.hasContent)
+  });
 
   return {
     ...localizedView,
@@ -71,6 +93,9 @@ export function createLocalizedCardEditorUiState({
     isReadOnly,
     showSaveControls: !isReadOnly,
     showReadOnlyNotice: hasCard && isReadOnly,
+    showGenerateLocaleButton: canGenerateSelectedLocale,
+    canGenerateLocale: canGenerateSelectedLocale,
+    generateBlockedReason,
     showRequestLocaleButton: canRequestSelectedLocale,
     showClearLocaleRequestButton: canClearSelectedLocaleRequest,
     localeEditSummaryState: resolveLocaleEditSummaryState({
@@ -178,4 +203,35 @@ function resolveLocaleEditSummaryState({ hasCard, isReadOnly, selectedStatus, se
     key: 'cardEditor.editingLocaleValue',
     locale: selectedLocale
   };
+}
+
+function resolveGenerateBlockedReason({
+  hasCard,
+  isReadOnly,
+  hasSelectedLocale,
+  hasSavedOpenAiKey,
+  isSourceLocaleSelected,
+  hasSelectedLocaleContent
+}) {
+  if (!hasCard || !hasSelectedLocale) {
+    return null;
+  }
+
+  if (isReadOnly) {
+    return 'cardEditor.generateLocaleBlockedReadOnly';
+  }
+
+  if (!hasSavedOpenAiKey) {
+    return 'cardEditor.generateLocaleBlockedNoAiKey';
+  }
+
+  if (isSourceLocaleSelected) {
+    return 'cardEditor.generateLocaleBlockedSourceLocale';
+  }
+
+  if (hasSelectedLocaleContent) {
+    return 'cardEditor.generateLocaleBlockedAlreadyPresent';
+  }
+
+  return null;
 }

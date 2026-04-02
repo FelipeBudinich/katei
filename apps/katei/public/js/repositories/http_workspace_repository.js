@@ -399,6 +399,7 @@ function createWorkspaceApiError(response, data, fallbackMessage) {
   const message = response.status === 409 ? WORKSPACE_CONFLICT_ERROR_MESSAGE : (data?.error || fallbackMessage);
   const error = new Error(message);
   error.status = response.status;
+  error.code = typeof data?.errorCode === 'string' ? data.errorCode : undefined;
   error.data = data;
   return error;
 }

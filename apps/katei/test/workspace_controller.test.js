@@ -25,6 +25,7 @@ import {
   createCardLocaleRequestAction,
   createRuntimeCardDialogState
 } from '../public/js/controllers/workspace_card_dialog.js';
+import { createTranslator } from '../public/js/i18n/translate.js';
 
 test('resolveBoardStageId accepts stage ids and legacy column ids for the active board flow', () => {
   const board = createBoardWithCustomStages();
@@ -1295,6 +1296,174 @@ test('locale request and clear flows call the matching service methods', () => {
       args: ['main', 'card_1', 'ja']
     }
   );
+});
+
+test('handleGenerateCardLocalization calls the service, applies workspace state, and refreshes the editor when it is still open', async () => {
+  const initialWorkspace = createEmptyWorkspace();
+  const updatedWorkspace = createEmptyWorkspace();
+  const controller = Object.create(WorkspaceController.prototype);
+  const refreshCalls = [];
+  const announcements = [];
+  const dispatchedEvents = [];
+  const serviceCalls = [];
+  let renderCalls = 0;
+
+  updatedWorkspace.workspaceId = initialWorkspace.workspaceId;
+
+  controller.workspace = initialWorkspace;
+  controller.service = {
+    async generateCardLocalization(...args) {
+      serviceCalls.push(args);
+      return updatedWorkspace;
+    }
+  };
+  controller.t = createTranslator('en');
+  controller.render = () => {
+    renderCalls += 1;
+  };
+  controller.announce = (message) => {
+    announcements.push(message);
+  };
+  controller.refreshCardEditor = (detail) => {
+    refreshCalls.push(detail);
+  };
+  controller.isCardEditorOpenFor = () => true;
+  controller.dispatchWorkspaceEvent = (name, detail) => {
+    dispatchedEvents.push({ name, detail });
+  };
+
+  await WorkspaceController.prototype.handleGenerateCardLocalization.call(controller, {
+    detail: {
+      boardId: 'main',
+      cardId: 'card_1',
+      locale: 'ja'
+    }
+  });
+
+  assert.deepEqual(serviceCalls, [['main', 'card_1', 'ja']]);
+  assert.equal(controller.workspace, updatedWorkspace);
+  assert.equal(renderCalls, 1);
+  assert.deepEqual(announcements, ['Localization generated.']);
+  assert.deepEqual(refreshCalls, [
+    {
+      boardId: 'main',
+      cardId: 'card_1',
+      locale: 'ja',
+      mode: 'edit'
+    }
+  ]);
+  assert.deepEqual(dispatchedEvents, [
+    {
+      name: 'card-localization-generation-finished',
+      detail: {
+        boardId: 'main',
+        cardId: 'card_1',
+        locale: 'ja',
+        success: true
+      }
+    }
+  ]);
+});
+
+test('handleGenerateCardLocalization ignores repeated clicks while the same localization is already pending', async () => {
+  const controller = Object.create(WorkspaceController.prototype);
+  const serviceCalls = [];
+  let resolveWorkspace;
+
+  controller.workspace = createEmptyWorkspace();
+  controller.service = {
+    async generateCardLocalization(...args) {
+      serviceCalls.push(args);
+      return new Promise((resolve) => {
+        resolveWorkspace = () => resolve(createEmptyWorkspace());
+      });
+    }
+  };
+  controller.t = createTranslator('en');
+  controller.render = () => {};
+  controller.announce = () => {};
+  controller.refreshCardEditor = () => {};
+  controller.isCardEditorOpenFor = () => false;
+  controller.dispatchWorkspaceEvent = () => {};
+
+  const detail = {
+    detail: {
+      boardId: 'main',
+      cardId: 'card_1',
+      locale: 'ja'
+    }
+  };
+  const firstCall = WorkspaceController.prototype.handleGenerateCardLocalization.call(controller, detail);
+  const secondCall = WorkspaceController.prototype.handleGenerateCardLocalization.call(controller, detail);
+
+  resolveWorkspace();
+  await Promise.all([firstCall, secondCall]);
+
+  assert.deepEqual(serviceCalls, [['main', 'card_1', 'ja']]);
+});
+
+test('handleGenerateCardLocalization reports localized failures and skips refresh when generation fails', async () => {
+  const controller = Object.create(WorkspaceController.prototype);
+  const refreshCalls = [];
+  const announcements = [];
+  const dispatchedEvents = [];
+  const error = new Error('This workspace changed elsewhere. Refresh to continue.');
+  const originalConsoleError = console.error;
+
+  error.data = {
+    errorCode: 'LOCALIZATION_HUMAN_AUTHORED_CONFLICT'
+  };
+
+  controller.workspace = createEmptyWorkspace();
+  controller.service = {
+    async generateCardLocalization() {
+      throw error;
+    }
+  };
+  controller.t = createTranslator('en');
+  controller.render = () => {
+    throw new Error('render should not be called on failed generation');
+  };
+  controller.announce = (message) => {
+    announcements.push(message);
+  };
+  controller.refreshCardEditor = (detail) => {
+    refreshCalls.push(detail);
+  };
+  controller.isCardEditorOpenFor = () => true;
+  controller.dispatchWorkspaceEvent = (name, detail) => {
+    dispatchedEvents.push({ name, detail });
+  };
+
+  console.error = () => {};
+
+  try {
+    await WorkspaceController.prototype.handleGenerateCardLocalization.call(controller, {
+      detail: {
+        boardId: 'main',
+        cardId: 'card_1',
+        locale: 'ja'
+      }
+    });
+  } finally {
+    console.error = originalConsoleError;
+  }
+
+  assert.deepEqual(announcements, [
+    'Cannot overwrite human-authored localization with AI-generated content.'
+  ]);
+  assert.deepEqual(refreshCalls, []);
+  assert.deepEqual(dispatchedEvents, [
+    {
+      name: 'card-localization-generation-finished',
+      detail: {
+        boardId: 'main',
+        cardId: 'card_1',
+        locale: 'ja',
+        success: false
+      }
+    }
+  ]);
 });
 
 function createBoardWithCustomStages() {

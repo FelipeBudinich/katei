@@ -1,7 +1,7 @@
 <dialog
   class="sheet-dialog"
   data-controller="card-editor"
-  data-action="workspace:open-card-editor@window->card-editor#openFromEvent click->card-editor#backdropClose cancel->card-editor#close"
+  data-action="workspace:open-card-editor@window->card-editor#openFromEvent workspace:card-localization-generation-finished@window->card-editor#finishLocaleGeneration click->card-editor#backdropClose cancel->card-editor#close"
   data-card-editor-target="dialog"
 >
   <div class="sheet-panel">
@@ -55,6 +55,16 @@
               type="button"
               class="touch-button-secondary"
               hidden
+              data-card-editor-target="generateLocaleButton"
+              data-action="card-editor#generateSelectedLocale"
+            >
+              {{ t('cardEditor.generateLocaleButton') }}
+            </button>
+
+            <button
+              type="button"
+              class="touch-button-secondary"
+              hidden
               data-card-editor-target="requestLocaleButton"
               data-action="card-editor#requestSelectedLocale"
             >
@@ -71,6 +81,8 @@
               {{ t('cardEditor.clearLocaleRequestButton') }}
             </button>
           </div>
+
+          <p class="text-sm leading-6 text-muted" aria-live="polite" hidden data-card-editor-target="generateLocaleHelp"></p>
         </div>
       </section>
 

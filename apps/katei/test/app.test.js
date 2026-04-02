@@ -418,7 +418,7 @@ test('workspace template renders edit localization controls and a simplified loc
 
   assert.match(
     cardEditorDialog,
-    /data-card-editor-target="localeSection"[\s\S]*<select[\s\S]*name="locale"[\s\S]*data-card-editor-target="localeSelect"[\s\S]*data-card-editor-target="requestLocaleButton"[\s\S]*data-card-editor-target="clearLocaleRequestButton"/
+    /data-card-editor-target="localeSection"[\s\S]*<select[\s\S]*name="locale"[\s\S]*data-card-editor-target="localeSelect"[\s\S]*data-card-editor-target="generateLocaleButton"[\s\S]*data-card-editor-target="requestLocaleButton"[\s\S]*data-card-editor-target="clearLocaleRequestButton"[\s\S]*data-card-editor-target="generateLocaleHelp"/
   );
   assert.doesNotMatch(cardEditorDialog, /Localized content/);
   assert.doesNotMatch(cardEditorDialog, /data-controller="accordion"/);

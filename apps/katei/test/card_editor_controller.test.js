@@ -145,6 +145,94 @@ test('clear-request button appears when the selected locale is already requested
   });
 });
 
+test('generate button appears when the selected locale is missing, editable, and the board has an OpenAI key', () => {
+  const uiState = createLocalizedCardEditorUiState({
+    board: createBoardWithOpenAiKey(),
+    card: createCard(),
+    selectedLocale: 'ja',
+    mode: 'edit',
+    canEditLocalizedContent: true,
+    currentActorRole: 'editor'
+  });
+
+  assert.equal(uiState.showGenerateLocaleButton, true);
+  assert.equal(uiState.canGenerateLocale, true);
+  assert.equal(uiState.generateBlockedReason, null);
+});
+
+test('generate button stays hidden when the selected locale already has human-authored content', () => {
+  const uiState = createLocalizedCardEditorUiState({
+    board: createBoardWithOpenAiKey(),
+    card: createCardWithHumanJapaneseLocalization(),
+    selectedLocale: 'ja',
+    mode: 'edit',
+    canEditLocalizedContent: true,
+    currentActorRole: 'editor'
+  });
+
+  assert.equal(uiState.showGenerateLocaleButton, false);
+  assert.equal(uiState.canGenerateLocale, false);
+  assert.equal(uiState.generateBlockedReason, 'cardEditor.generateLocaleBlockedAlreadyPresent');
+});
+
+test('generate button stays hidden when the board has no saved OpenAI key', () => {
+  const uiState = createLocalizedCardEditorUiState({
+    board: createBoard(),
+    card: createCard(),
+    selectedLocale: 'ja',
+    mode: 'edit',
+    canEditLocalizedContent: true,
+    currentActorRole: 'editor'
+  });
+
+  assert.equal(uiState.showGenerateLocaleButton, false);
+  assert.equal(uiState.canGenerateLocale, false);
+  assert.equal(uiState.generateBlockedReason, 'cardEditor.generateLocaleBlockedNoAiKey');
+});
+
+test('card editor dispatches generate event with board, card, and locale payload', () => {
+  const controller = Object.create(CardEditorController.prototype);
+  const dispatchedEvents = [];
+  let renderCalls = 0;
+
+  controller.isReadOnlyLocaleView = false;
+  controller.card = createCard();
+  controller.mode = 'edit';
+  controller.selectedLocale = 'ja';
+  controller.localizedEditorUiState = {
+    canGenerateLocale: true
+  };
+  controller.boardIdInputTarget = { value: 'board_localized' };
+  controller.cardIdInputTarget = { value: 'card_1' };
+  controller.renderLocaleEditingState = () => {
+    renderCalls += 1;
+  };
+  controller.dispatch = (name, payload) => {
+    dispatchedEvents.push({ name, payload });
+  };
+
+  CardEditorController.prototype.generateSelectedLocale.call(controller, {
+    preventDefault() {}
+  });
+
+  assert.equal(controller.isGeneratingLocale, true);
+  assert.equal(controller.pendingGenerateLocale, 'ja');
+  assert.equal(renderCalls, 1);
+  assert.deepEqual(dispatchedEvents, [
+    {
+      name: 'generate-locale',
+      payload: {
+        detail: {
+          mode: 'edit',
+          boardId: 'board_localized',
+          cardId: 'card_1',
+          locale: 'ja'
+        }
+      }
+    }
+  ]);
+});
+
 test('viewers stay read-only in the localized card dialog state', () => {
   const uiState = createLocalizedCardEditorUiState({
     board: createBoard(),
@@ -306,6 +394,17 @@ function createBoard() {
   };
 }
 
+function createBoardWithOpenAiKey() {
+  return {
+    ...createBoard(),
+    aiLocalization: {
+      provider: 'openai',
+      hasApiKey: true,
+      apiKeyLast4: '1234'
+    }
+  };
+}
+
 function createBoardWithFrench() {
   return {
     ...createBoard(),
@@ -314,6 +413,23 @@ function createBoardWithFrench() {
       supportedLocales: ['en', 'es-CL', 'ja', 'fr']
     }
   };
+}
+
+function createCardWithHumanJapaneseLocalization() {
+  const card = createCard();
+
+  card.contentByLocale.ja = {
+    title: '手動の日本語タイトル',
+    detailsMarkdown: '人が編集しました。',
+    provenance: createCardContentProvenance({
+      actor: { type: 'human', id: 'viewer_123' },
+      timestamp: '2026-03-31T13:00:00.000Z',
+      includesHumanInput: true
+    })
+  };
+  delete card.localeRequests.ja;
+
+  return card;
 }
 
 function createCard() {

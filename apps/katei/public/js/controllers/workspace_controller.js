@@ -95,6 +95,7 @@ export default class extends Controller {
     this.viewDialogState = null;
     this.confirmTriggerElement = null;
     this.isConfirming = false;
+    this.pendingLocalizationGenerationKeys = new Set();
 
     if (typeof this.browserWindow?.addEventListener === 'function') {
       this.browserWindow.addEventListener('popstate', this.handlePopState);
@@ -582,6 +583,53 @@ export default class extends Controller {
         cardId: event.detail?.cardId,
         locale: event.detail?.locale,
         mode: 'edit'
+      });
+    }
+  }
+
+  async handleGenerateCardLocalization(event) {
+    const boardId = normalizeOptionalWorkspaceId(event.detail?.boardId);
+    const cardId = normalizeOptionalWorkspaceId(event.detail?.cardId);
+    const locale = normalizeOptionalWorkspaceId(event.detail?.locale);
+    const requestKey = createLocalizationGenerationRequestKey({ boardId, cardId, locale });
+
+    if (!requestKey) {
+      return;
+    }
+
+    if (!(this.pendingLocalizationGenerationKeys instanceof Set)) {
+      this.pendingLocalizationGenerationKeys = new Set();
+    }
+
+    if (this.pendingLocalizationGenerationKeys.has(requestKey)) {
+      return;
+    }
+
+    this.pendingLocalizationGenerationKeys.add(requestKey);
+    let success = false;
+
+    try {
+      success = await this.runAction(
+        () => this.service.generateCardLocalization(boardId, cardId, locale),
+        this.t('workspace.announcements.localizationGenerated')
+      );
+
+      if (success && this.isCardEditorOpenFor({ boardId, cardId })) {
+        this.refreshCardEditor({
+          boardId,
+          cardId,
+          locale,
+          mode: 'edit'
+        });
+      }
+    } finally {
+      this.pendingLocalizationGenerationKeys.delete(requestKey);
+
+      this.dispatchWorkspaceEvent('card-localization-generation-finished', {
+        boardId,
+        cardId,
+        locale,
+        success
       });
     }
   }
@@ -1096,6 +1144,19 @@ export default class extends Controller {
       stageId
     });
   }
+
+  isCardEditorOpenFor({ boardId, cardId } = {}) {
+    const cardEditorDialog = this.element?.querySelector?.('[data-controller="card-editor"]');
+
+    if (!cardEditorDialog?.open) {
+      return false;
+    }
+
+    const currentBoardIdInput = cardEditorDialog.querySelector?.('[data-card-editor-target="boardIdInput"]');
+    const currentCardIdInput = cardEditorDialog.querySelector?.('[data-card-editor-target="cardIdInput"]');
+
+    return currentBoardIdInput?.value === boardId && currentCardIdInput?.value === cardId;
+  }
 }
 
 function createColumnCollapseCacheKey(workspaceId, boardId) {
@@ -1109,6 +1170,18 @@ function createLocaleOption(locale) {
   option.value = locale;
   option.textContent = locale;
   return option;
+}
+
+function createLocalizationGenerationRequestKey({ boardId, cardId, locale } = {}) {
+  const normalizedBoardId = normalizeOptionalWorkspaceId(boardId);
+  const normalizedCardId = normalizeOptionalWorkspaceId(cardId);
+  const normalizedLocale = normalizeOptionalWorkspaceId(locale);
+
+  if (!normalizedBoardId || !normalizedCardId || !normalizedLocale) {
+    return null;
+  }
+
+  return `${normalizedBoardId}::${normalizedCardId}::${normalizedLocale}`;
 }
 
 function scheduleBrowserFrame(callback) {

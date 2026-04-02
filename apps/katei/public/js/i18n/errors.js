@@ -1,3 +1,13 @@
+const KNOWN_ERROR_KEY_BY_CODE = Object.freeze({
+  BOARD_OPENAI_KEY_MISSING: 'errors.boardOpenAiKeyMissing',
+  BOARD_OPENAI_KEY_UNAVAILABLE: 'errors.boardOpenAiKeyUnavailable',
+  TARGET_LOCALE_UNSUPPORTED: 'errors.targetLocaleUnsupported',
+  SOURCE_LOCALE_MISSING: 'errors.sourceLocaleMissing',
+  LOCALIZATION_HUMAN_AUTHORED_CONFLICT: 'errors.localizationHumanAuthoredConflict',
+  LOCALIZATION_ALREADY_PRESENT: 'errors.localizationAlreadyPresent',
+  OPENAI_UPSTREAM_ERROR: 'errors.localizationGenerateFailed'
+});
+
 const KNOWN_ERROR_KEY_BY_MESSAGE = Object.freeze({
   'Sign-in request origin is not allowed.': 'errors.authOriginNotAllowed',
   'Google credential is required.': 'errors.googleCredentialRequired',
@@ -40,6 +50,15 @@ const KNOWN_ERROR_KEY_BY_MESSAGE = Object.freeze({
 
 export function localizeErrorMessage(error, t, { fallbackKey = 'errors.genericUnexpected' } = {}) {
   const message = getErrorMessage(error);
+  const code = getErrorCode(error);
+
+  if (code) {
+    const translationKey = KNOWN_ERROR_KEY_BY_CODE[code];
+
+    if (translationKey && typeof t === 'function') {
+      return t(translationKey);
+    }
+  }
 
   if (!message) {
     return translateFallback(t, fallbackKey);
@@ -61,6 +80,18 @@ function getErrorMessage(error) {
 
   if (typeof error === 'string') {
     return error;
+  }
+
+  return '';
+}
+
+function getErrorCode(error) {
+  if (typeof error?.code === 'string' && error.code.trim()) {
+    return error.code.trim();
+  }
+
+  if (typeof error?.data?.errorCode === 'string' && error.data.errorCode.trim()) {
+    return error.data.errorCode.trim();
   }
 
   return '';

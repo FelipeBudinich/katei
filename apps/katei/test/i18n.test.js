@@ -112,10 +112,19 @@ test('workspace label helpers translate stable workspace ids and counts', () => 
 
 test('localizeErrorMessage translates known current UI errors and falls back safely', () => {
   const translate = createTranslator('es-CL');
+  const localizationConflictError = new Error('This workspace changed elsewhere. Refresh to continue.');
+
+  localizationConflictError.data = {
+    errorCode: 'LOCALIZATION_HUMAN_AUTHORED_CONFLICT'
+  };
 
   assert.equal(
     localizeErrorMessage(new Error('Unable to verify the Google credential.'), translate),
     'No se pudo verificar la credencial de Google.'
+  );
+  assert.equal(
+    localizeErrorMessage(localizationConflictError, translate),
+    'No se puede sobrescribir una localización editada por una persona con contenido generado por IA.'
   );
   assert.equal(localizeErrorMessage(new Error('Custom exploded.'), translate), 'Custom exploded.');
   assert.equal(localizeErrorMessage(null, translate), 'Algo salió mal.');

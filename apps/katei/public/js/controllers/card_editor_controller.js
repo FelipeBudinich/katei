@@ -34,6 +34,8 @@ export default class extends Controller {
     'localeFallbackNotice',
     'localeEditSummary',
     'localeReadOnlyNotice',
+    'generateLocaleButton',
+    'generateLocaleHelp',
     'requestLocaleButton',
     'clearLocaleRequestButton',
     'editActions',
@@ -57,6 +59,8 @@ export default class extends Controller {
     this.canEditLocalizedContent = false;
     this.localizedEditorUiState = null;
     this.triggerElement = null;
+    this.isGeneratingLocale = false;
+    this.pendingGenerateLocale = null;
   }
 
   disconnect() {
@@ -120,6 +124,8 @@ export default class extends Controller {
     this.currentActorRole = currentActorRole ?? null;
     this.canEditLocalizedContent = Boolean(canEditLocalizedContent);
     this.isReadOnlyLocaleView = nextMode === 'view' || !this.canEditLocalizedContent;
+    this.isGeneratingLocale = false;
+    this.pendingGenerateLocale = null;
     this.selectedLocale = resolveCardLocaleSelection({
       board,
       preferredLocale: requestedLocale ?? locale
@@ -277,6 +283,56 @@ export default class extends Controller {
     });
   }
 
+  generateSelectedLocale(event) {
+    event.preventDefault();
+
+    if (
+      this.isReadOnlyLocaleView ||
+      !this.card ||
+      !this.selectedLocale ||
+      this.isGeneratingLocale ||
+      !this.localizedEditorUiState?.canGenerateLocale
+    ) {
+      return;
+    }
+
+    this.isGeneratingLocale = true;
+    this.pendingGenerateLocale = this.selectedLocale;
+    this.renderLocaleEditingState(this.localizedEditorUiState);
+
+    this.dispatch('generate-locale', {
+      detail: {
+        mode: this.mode,
+        boardId: this.boardIdInputTarget.value,
+        cardId: this.cardIdInputTarget.value,
+        locale: this.selectedLocale
+      }
+    });
+  }
+
+  finishLocaleGeneration(event) {
+    const detail = event?.detail ?? {};
+
+    if (!this.isGeneratingLocale || !this.pendingGenerateLocale) {
+      return;
+    }
+
+    if (
+      detail.boardId !== this.boardIdInputTarget.value ||
+      detail.cardId !== this.cardIdInputTarget.value ||
+      detail.locale !== this.pendingGenerateLocale
+    ) {
+      return;
+    }
+
+    this.isGeneratingLocale = false;
+    this.pendingGenerateLocale = null;
+
+    if (this.localizedEditorUiState) {
+      this.renderLocaleEditingState(this.localizedEditorUiState);
+    }
+  }
+
   closeDialog() {
     if (this.dialogTarget.open) {
       this.dialogTarget.close();
@@ -381,6 +437,11 @@ export default class extends Controller {
       this.localeSummaryTarget.textContent = '';
       this.localeFallbackNoticeTarget.textContent = '';
       this.localeFallbackNoticeTarget.hidden = true;
+      this.generateLocaleButtonTarget.hidden = true;
+      this.generateLocaleButtonTarget.disabled = true;
+      this.generateLocaleButtonTarget.setAttribute('aria-disabled', 'true');
+      this.generateLocaleHelpTarget.hidden = true;
+      this.generateLocaleHelpTarget.textContent = '';
       return;
     }
 
@@ -470,6 +531,22 @@ export default class extends Controller {
 
     this.requestLocaleButtonTarget.hidden = !localizedView.showRequestLocaleButton;
     this.clearLocaleRequestButtonTarget.hidden = !localizedView.showClearLocaleRequestButton;
+
+    const showGenerateLocaleButton = localizedView.showGenerateLocaleButton;
+    const isGenerateDisabled = !localizedView.canGenerateLocale || this.isGeneratingLocale;
+
+    this.generateLocaleButtonTarget.hidden = !showGenerateLocaleButton;
+    this.generateLocaleButtonTarget.disabled = isGenerateDisabled;
+    this.generateLocaleButtonTarget.setAttribute('aria-disabled', String(isGenerateDisabled));
+    this.generateLocaleButtonTarget.textContent = this.t(
+      this.isGeneratingLocale
+        ? 'cardEditor.generatingLocaleButton'
+        : 'cardEditor.generateLocaleButton'
+    );
+    this.generateLocaleHelpTarget.hidden = !showGenerateLocaleButton;
+    this.generateLocaleHelpTarget.textContent = showGenerateLocaleButton
+      ? this.t('cardEditor.generateLocaleHelp')
+      : '';
   }
 
   getMoveOptionButtons() {
@@ -486,6 +563,8 @@ export default class extends Controller {
     this.canEditLocalizedContent = false;
     this.localizedEditorUiState = null;
     this.triggerElement = null;
+    this.isGeneratingLocale = false;
+    this.pendingGenerateLocale = null;
   }
 }
 
