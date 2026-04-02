@@ -10,6 +10,7 @@ import {
   createMongoWorkspaceRecordRepository,
   getWorkspaceRecordCollection
 } from '../src/workspaces/mongo_workspace_record_repository.js';
+import { encryptBoardSecret } from '../src/security/board_secret_crypto.js';
 import {
   WORKSPACE_RECORD_COLLECTION_NAME,
   createHomeWorkspaceId,
@@ -244,6 +245,39 @@ test('loadOrCreateAuthoritativeWorkspaceRecord preserves the full stored shared 
   assert.equal(record.workspace.ui.activeBoardId, 'main');
   assert.equal(firstCardTitle(record.workspace.boards.main), 'Owner board card');
   assert.equal(firstCardTitle(record.workspace.boards.invite), 'Invite board card');
+});
+
+test('loadOrCreateAuthoritativeWorkspaceRecord keeps encrypted board AI secrets for the owner home workspace', async () => {
+  const homeRecord = createInitialWorkspaceRecord('sub_owner_home', {
+    now: '2026-04-01T10:00:00.000Z'
+  });
+  homeRecord.workspace.boards.main.aiLocalization = {
+    provider: 'openai',
+    hasApiKey: true,
+    apiKeyLast4: '9876'
+  };
+  homeRecord.workspace.boards.main.aiLocalizationSecrets = {
+    openAiApiKeyEncrypted: encryptBoardSecret('sk-home-9876', {
+      boardSecretEncryptionKey: 'test-board-secret-encryption-key'
+    })
+  };
+
+  const collection = createWorkspaceRecordCollectionDouble([toWorkspaceRecordDocument(homeRecord)]);
+  const repository = new MongoWorkspaceRecordRepository({ collection });
+
+  const record = await repository.loadOrCreateAuthoritativeWorkspaceRecord({
+    viewerSub: 'sub_owner_home',
+    workspaceId: homeRecord.workspaceId
+  });
+
+  assert.deepEqual(record.workspace.boards.main.aiLocalization, {
+    provider: 'openai',
+    hasApiKey: true,
+    apiKeyLast4: '9876'
+  });
+  assert.deepEqual(record.workspace.boards.main.aiLocalizationSecrets, {
+    openAiApiKeyEncrypted: homeRecord.workspace.boards.main.aiLocalizationSecrets.openAiApiKeyEncrypted
+  });
 });
 
 test('listPendingWorkspaceInvitesForViewer finds a pending invite in another workspace', async () => {

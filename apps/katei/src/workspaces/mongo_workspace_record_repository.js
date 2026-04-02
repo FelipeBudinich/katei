@@ -281,11 +281,15 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
     const existingRecord = await this.#loadHomeWorkspaceRecord(normalizedViewerSub);
 
     if (existingRecord) {
-      return projectRecordForViewer(existingRecord, {
-        viewerSub: normalizedViewerSub,
-        viewerEmail,
-        debugLog
-      });
+      if (projectForViewer) {
+        return projectRecordForViewer(existingRecord, {
+          viewerSub: normalizedViewerSub,
+          viewerEmail,
+          debugLog
+        });
+      }
+
+      return existingRecord;
     }
 
     const initialRecord = createInitialWorkspaceRecord(normalizedViewerSub, { now: this.now() });
@@ -297,11 +301,16 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
     );
 
     const record = await this.#loadRequiredWorkspaceRecord(initialRecord.workspaceId);
-    return projectRecordForViewer(record, {
-      viewerSub: normalizedViewerSub,
-      viewerEmail,
-      debugLog
-    });
+
+    if (projectForViewer) {
+      return projectRecordForViewer(record, {
+        viewerSub: normalizedViewerSub,
+        viewerEmail,
+        debugLog
+      });
+    }
+
+    return record;
   }
 
   async #loadRequiredWorkspaceRecord(workspaceId) {
@@ -361,7 +370,7 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
       throw new WorkspaceAccessDeniedError();
     }
 
-    if (projectForViewer || record.viewerSub === viewerSub) {
+    if (projectForViewer) {
       return projectRecordForViewer(record, { viewerSub, viewerEmail, debugLog });
     }
 
