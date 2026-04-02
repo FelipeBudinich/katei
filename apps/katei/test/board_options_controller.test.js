@@ -92,20 +92,17 @@ test('board options state keeps same-workspace invite rows separate from cross-w
 });
 
 test('board list action state keeps switch and invite responses mutually exclusive', () => {
-  const { workspace, optionsState } = createSharedBoardOptionsFixture();
-  const boardCount = workspace.boardOrder.length;
-  const activeBoardActions = createBoardListActionState(optionsState.boardStates[0], { boardCount });
-  const switchableBoardActions = createBoardListActionState(optionsState.boardStates[1], { boardCount });
-  const invitedBoardActions = createBoardListActionState(optionsState.boardStates[2], { boardCount });
+  const { optionsState } = createSharedBoardOptionsFixture();
+  const activeBoardActions = createBoardListActionState(optionsState.boardStates[0]);
+  const switchableBoardActions = createBoardListActionState(optionsState.boardStates[1]);
+  const invitedBoardActions = createBoardListActionState(optionsState.boardStates[2]);
 
   assert.deepEqual(activeBoardActions, {
     canRespondToInvite: false,
     canOpenCollaborators: true,
     canRename: false,
-    canDelete: false,
     inviteId: '',
     collaboratorsHidden: false,
-    deleteHidden: true,
     renameHidden: true,
     switchHidden: true,
     inviteAcceptHidden: true,
@@ -115,10 +112,8 @@ test('board list action state keeps switch and invite responses mutually exclusi
     canRespondToInvite: false,
     canOpenCollaborators: false,
     canRename: false,
-    canDelete: false,
     inviteId: '',
     collaboratorsHidden: true,
-    deleteHidden: true,
     renameHidden: true,
     switchHidden: false,
     inviteAcceptHidden: true,
@@ -128,10 +123,8 @@ test('board list action state keeps switch and invite responses mutually exclusi
     canRespondToInvite: true,
     canOpenCollaborators: false,
     canRename: false,
-    canDelete: false,
     inviteId: 'invite_2',
     collaboratorsHidden: true,
-    deleteHidden: true,
     renameHidden: true,
     switchHidden: true,
     inviteAcceptHidden: false,
@@ -139,38 +132,29 @@ test('board list action state keeps switch and invite responses mutually exclusi
   });
 });
 
-test('board list action state shows collaborators, rename, and delete only for the active admin board when another board exists', () => {
-  const { workspace, optionsState } = createAdminBoardOptionsFixture();
-  const boardCount = workspace.boardOrder.length;
-  const activeBoardActions = createBoardListActionState(optionsState.boardStates[0], { boardCount });
-  const inactiveBoardActions = createBoardListActionState(optionsState.boardStates[1], { boardCount });
+test('board list action state shows collaborators and rename only for the active admin board', () => {
+  const { optionsState } = createAdminBoardOptionsFixture();
+  const activeBoardActions = createBoardListActionState(optionsState.boardStates[0]);
+  const inactiveBoardActions = createBoardListActionState(optionsState.boardStates[1]);
 
   assert.equal(activeBoardActions.canOpenCollaborators, true);
   assert.equal(activeBoardActions.canRename, true);
-  assert.equal(activeBoardActions.canDelete, true);
   assert.equal(activeBoardActions.collaboratorsHidden, false);
   assert.equal(activeBoardActions.renameHidden, false);
-  assert.equal(activeBoardActions.deleteHidden, false);
   assert.equal(inactiveBoardActions.canOpenCollaborators, false);
   assert.equal(inactiveBoardActions.canRename, false);
-  assert.equal(inactiveBoardActions.canDelete, false);
   assert.equal(inactiveBoardActions.collaboratorsHidden, true);
   assert.equal(inactiveBoardActions.renameHidden, true);
-  assert.equal(inactiveBoardActions.deleteHidden, true);
 });
 
-test('board list action state hides delete for the last remaining board', () => {
-  const { workspace, optionsState } = createSingleBoardAdminBoardOptionsFixture();
-  const activeBoardActions = createBoardListActionState(optionsState.boardStates[0], {
-    boardCount: workspace.boardOrder.length
-  });
+test('board list action state still shows collaborators and rename for the last remaining admin board', () => {
+  const { optionsState } = createSingleBoardAdminBoardOptionsFixture();
+  const activeBoardActions = createBoardListActionState(optionsState.boardStates[0]);
 
   assert.equal(activeBoardActions.canOpenCollaborators, true);
   assert.equal(activeBoardActions.collaboratorsHidden, false);
   assert.equal(activeBoardActions.canRename, true);
   assert.equal(activeBoardActions.renameHidden, false);
-  assert.equal(activeBoardActions.canDelete, false);
-  assert.equal(activeBoardActions.deleteHidden, true);
 });
 
 test('board role translation keys stay stable for member and invite states', () => {
@@ -276,7 +260,7 @@ test('board options controller renders incoming invite rows from multiple worksp
   assert.equal(controller.boardListTarget.children[2].fields.inviteAcceptButton.hidden, false);
 });
 
-test('board options controller shows Collaborators, Edit Board, and Delete Board only on the active admin row', () => {
+test('board options controller shows Collaborators and Edit Board only on the active admin row', () => {
   const { workspace, viewerActor, optionsState } = createAdminBoardOptionsFixture();
   const controller = createBoardOptionsControllerDouble();
 
@@ -290,12 +274,10 @@ test('board options controller shows Collaborators, Edit Board, and Delete Board
   assert.equal(controller.boardListTarget.children[0].fields.collaboratorBadge.hidden, true);
   assert.equal(controller.boardListTarget.children[0].fields.collaboratorBadge.textContent, '0');
   assert.equal(controller.boardListTarget.children[0].fields.renameButton.hidden, false);
-  assert.equal(controller.boardListTarget.children[0].fields.deleteButton.hidden, false);
   assert.equal(controller.boardListTarget.children[0].fields.switchButton.hidden, true);
   assert.equal(controller.boardListTarget.children[1].fields.collaboratorsButton.hidden, true);
   assert.equal(controller.boardListTarget.children[1].fields.collaboratorBadge.hidden, true);
   assert.equal(controller.boardListTarget.children[1].fields.renameButton.hidden, true);
-  assert.equal(controller.boardListTarget.children[1].fields.deleteButton.hidden, true);
   assert.equal(controller.boardListTarget.children[1].fields.switchButton.hidden, false);
 });
 
@@ -312,7 +294,7 @@ test('board options controller shows the collaborator badge count on the active 
   assert.equal(controller.boardListTarget.children[0].fields.collaboratorBadge.textContent, '1');
 });
 
-test('board options controller hides Delete Board when only one board remains', () => {
+test('board options controller still shows Collaborators and Edit Board when only one board remains', () => {
   const { workspace, viewerActor } = createSingleBoardAdminBoardOptionsFixture();
   const controller = createBoardOptionsControllerDouble();
 
@@ -320,7 +302,7 @@ test('board options controller hides Delete Board when only one board remains', 
 
   assert.equal(controller.boardListTarget.children.length, 1);
   assert.equal(controller.boardListTarget.children[0].fields.collaboratorsButton.hidden, false);
-  assert.equal(controller.boardListTarget.children[0].fields.deleteButton.hidden, true);
+  assert.equal(controller.boardListTarget.children[0].fields.renameButton.hidden, false);
 });
 
 test('board options controller renameBoard dispatches the active board id from a row action', () => {
@@ -341,32 +323,6 @@ test('board options controller renameBoard dispatches the active board id from a
   assert.deepEqual(dispatched, [
     {
       name: 'rename-board',
-      detail: {
-        boardId: 'main'
-      }
-    }
-  ]);
-  assert.deepEqual(controller.closeDialogCalls, [{ restoreFocus: false }]);
-});
-
-test('board options controller deleteBoard dispatches the active board id from a row action', () => {
-  const { workspace, viewerActor } = createAdminBoardOptionsFixture();
-  const controller = createBoardOptionsControllerDouble();
-  const dispatched = [];
-
-  controller.dispatch = (name, options) => dispatched.push({ name, detail: options?.detail ?? null });
-  BoardOptionsController.prototype.syncWorkspace.call(controller, workspace, viewerActor);
-  BoardOptionsController.prototype.deleteBoard.call(controller, {
-    currentTarget: {
-      dataset: {
-        boardId: 'shared'
-      }
-    }
-  });
-
-  assert.deepEqual(dispatched, [
-    {
-      name: 'delete-board',
       detail: {
         boardId: 'main'
       }
@@ -631,7 +587,6 @@ function createBoardOptionsControllerDouble() {
     'collaboratorsButton',
     'collaboratorBadge',
     'renameButton',
-    'deleteButton',
     'inviteAcceptButton',
     'inviteDeclineButton'
   ]);

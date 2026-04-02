@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { createTranslator } from '../public/js/i18n/translate.js';
 import { createEmptyWorkspace } from '../public/js/domain/workspace_read_model.js';
+import BoardEditorController from '../public/js/controllers/board_editor_controller.js';
 import {
   createBoardEditorFormState,
   parseBoardEditorFormInput
@@ -205,3 +207,173 @@ test('parseBoardEditorFormInput clears legacy templates when editing an existing
   ]);
   assert.deepEqual(parsedInput.templates, []);
 });
+
+test('board editor hides delete actions in create mode', async () => {
+  const controller = createBoardEditorControllerDouble();
+
+  await withImmediateAnimationFrame(() => {
+    BoardEditorController.prototype.openFromEvent.call(controller, {
+      detail: {
+        mode: 'create',
+        canDeleteBoard: false
+      }
+    });
+  });
+
+  assert.equal(controller.dialogTarget.open, true);
+  assert.equal(controller.deleteActionsTarget.hidden, true);
+  assert.equal(controller.deleteButtonTarget.dataset.boardId, '');
+});
+
+test('board editor shows delete actions for a deletable board in rename mode', async () => {
+  const controller = createBoardEditorControllerDouble();
+  const board = createEmptyWorkspace().boards.main;
+
+  await withImmediateAnimationFrame(() => {
+    BoardEditorController.prototype.openFromEvent.call(controller, {
+      detail: {
+        mode: 'rename',
+        board,
+        canDeleteBoard: true
+      }
+    });
+  });
+
+  assert.equal(controller.dialogTarget.open, true);
+  assert.equal(controller.deleteActionsTarget.hidden, false);
+  assert.equal(controller.deleteButtonTarget.dataset.boardId, 'main');
+  assert.equal(controller.boardIdInputTarget.value, 'main');
+});
+
+test('board editor keeps delete actions hidden when rename mode cannot delete the board', async () => {
+  const controller = createBoardEditorControllerDouble();
+  const board = createEmptyWorkspace().boards.main;
+
+  await withImmediateAnimationFrame(() => {
+    BoardEditorController.prototype.openFromEvent.call(controller, {
+      detail: {
+        mode: 'rename',
+        board,
+        canDeleteBoard: false
+      }
+    });
+  });
+
+  assert.equal(controller.deleteActionsTarget.hidden, true);
+  assert.equal(controller.deleteButtonTarget.dataset.boardId, '');
+});
+
+test('board editor closeForAction closes first and clears the delete board id after handoff', async () => {
+  const controller = createBoardEditorControllerDouble();
+  const board = createEmptyWorkspace().boards.main;
+
+  await withImmediateAnimationFrame(() => {
+    BoardEditorController.prototype.openFromEvent.call(controller, {
+      detail: {
+        mode: 'rename',
+        board,
+        canDeleteBoard: true
+      }
+    });
+  });
+
+  BoardEditorController.prototype.closeForAction.call(controller);
+
+  assert.equal(controller.dialogTarget.open, false);
+  assert.equal(controller.deleteActionsTarget.hidden, true);
+  assert.equal(controller.currentBoard, null);
+  assert.equal(controller.deleteButtonTarget.dataset.boardId, 'main');
+
+  await Promise.resolve();
+
+  assert.equal(controller.deleteButtonTarget.dataset.boardId, '');
+});
+
+function createBoardEditorControllerDouble() {
+  const controller = Object.create(BoardEditorController.prototype);
+
+  controller.t = createTranslator('en');
+  controller.currentBoard = null;
+  controller.dialogTarget = createDialogTarget();
+  controller.formTarget = {
+    resetCalls: 0,
+    reset() {
+      this.resetCalls += 1;
+    }
+  };
+  controller.headingTarget = createTextTarget();
+  controller.modeInputTarget = createValueTarget('create');
+  controller.boardIdInputTarget = createValueTarget('');
+  controller.titleInputTarget = createFocusableValueTarget('');
+  controller.sourceLocaleInputTarget = createValueTarget('');
+  controller.defaultLocaleInputTarget = createValueTarget('');
+  controller.supportedLocalesInputTarget = createValueTarget('');
+  controller.requiredLocalesInputTarget = createValueTarget('');
+  controller.stageDefinitionsInputTarget = createValueTarget('');
+  controller.deleteActionsTarget = {
+    hidden: true
+  };
+  controller.deleteButtonTarget = {
+    dataset: {}
+  };
+  controller.submitButtonTarget = createTextTarget();
+  controller.errorTarget = createTextTarget({ hidden: true });
+  controller.hasErrorTarget = true;
+  controller.dispatch = () => {};
+
+  return controller;
+}
+
+function createDialogTarget() {
+  return {
+    open: false,
+    showModalCalls: 0,
+    closeCalls: 0,
+    showModal() {
+      this.open = true;
+      this.showModalCalls += 1;
+    },
+    close() {
+      this.open = false;
+      this.closeCalls += 1;
+    }
+  };
+}
+
+function createTextTarget({ hidden = false } = {}) {
+  return {
+    hidden,
+    textContent: ''
+  };
+}
+
+function createValueTarget(value = '') {
+  return {
+    value
+  };
+}
+
+function createFocusableValueTarget(value = '') {
+  return {
+    value,
+    focused: false,
+    focus() {
+      this.focused = true;
+    }
+  };
+}
+
+async function withImmediateAnimationFrame(callback) {
+  const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
+  globalThis.requestAnimationFrame = (frameCallback) => frameCallback();
+
+  try {
+    return await callback();
+  } finally {
+    if (typeof originalRequestAnimationFrame === 'function') {
+      globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+    } else {
+      delete globalThis.requestAnimationFrame;
+    }
+  }
+}

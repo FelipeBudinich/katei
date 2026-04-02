@@ -16,6 +16,8 @@ export default class extends Controller {
     'supportedLocalesInput',
     'requiredLocalesInput',
     'stageDefinitionsInput',
+    'deleteActions',
+    'deleteButton',
     'submitButton',
     'error'
   ];
@@ -23,10 +25,11 @@ export default class extends Controller {
   connect() {
     this.t = getBrowserTranslator();
     this.currentBoard = null;
+    this.resetDialogState();
   }
 
   openFromEvent(event) {
-    const { mode, board } = event.detail;
+    const { mode, board, canDeleteBoard = false } = event.detail;
     const isRenameMode = mode === 'rename';
     const formState = createBoardEditorFormState(board);
 
@@ -42,6 +45,11 @@ export default class extends Controller {
     this.stageDefinitionsInputTarget.value = formState.stageDefinitions;
     this.headingTarget.textContent = isRenameMode ? this.t('boardEditor.renameHeading') : this.t('boardEditor.newHeading');
     this.submitButtonTarget.textContent = isRenameMode ? this.t('boardEditor.saveButton') : this.t('boardEditor.createButton');
+    this.syncDeleteAction({
+      boardId: board?.id ?? '',
+      isRenameMode,
+      canDeleteBoard
+    });
     this.hideError();
 
     if (!this.dialogTarget.open) {
@@ -63,6 +71,15 @@ export default class extends Controller {
     }
 
     this.closeDialog();
+  }
+
+  closeForAction() {
+    this.closeDialog({ clearDeleteBoardId: false });
+    queueMicrotask(() => {
+      if (!this.dialogTarget.open) {
+        this.resetDialogState();
+      }
+    });
   }
 
   submit(event) {
@@ -101,12 +118,28 @@ export default class extends Controller {
     this.closeDialog();
   }
 
-  closeDialog() {
+  closeDialog({ clearDeleteBoardId = true } = {}) {
     if (this.dialogTarget.open) {
       this.dialogTarget.close();
     }
 
+    this.resetDialogState({ clearDeleteBoardId });
+  }
+
+  syncDeleteAction({ boardId = '', isRenameMode = false, canDeleteBoard = false } = {}) {
+    const shouldShowDeleteAction = Boolean(isRenameMode && canDeleteBoard && boardId);
+
+    this.deleteActionsTarget.hidden = !shouldShowDeleteAction;
+    this.deleteButtonTarget.dataset.boardId = shouldShowDeleteAction ? boardId : '';
+  }
+
+  resetDialogState({ clearDeleteBoardId = true } = {}) {
     this.currentBoard = null;
+    this.deleteActionsTarget.hidden = true;
+
+    if (clearDeleteBoardId) {
+      this.deleteButtonTarget.dataset.boardId = '';
+    }
   }
 
   showError(message) {

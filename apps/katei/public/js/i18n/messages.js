@@ -242,7 +242,8 @@ const EN_MESSAGES = freezeCatalog({
     stagesHelp:
       'One line per stage: stage-id | Display title | target-a, target-b | action-a, action-b. Example: archived | Archived | backlog, doing, done | card.delete',
     saveButton: 'Save Board',
-    createButton: 'Create Board'
+    createButton: 'Create Board',
+    deleteButton: 'Delete Board'
   },
   confirmDialog: {
     deleteCardTitle: 'Delete card?',
@@ -531,7 +532,8 @@ const ES_CL_MESSAGES = freezeCatalog({
     stagesHelp:
       'Una línea por etapa: stage-id | Título visible | destino-a, destino-b | acción-a, acción-b. Ejemplo: archived | Archived | backlog, doing, done | card.delete',
     saveButton: 'Guardar tablero',
-    createButton: 'Crear tablero'
+    createButton: 'Crear tablero',
+    deleteButton: 'Eliminar tablero'
   },
   confirmDialog: {
     deleteCardTitle: '¿Eliminar tarjeta?',
@@ -820,7 +822,8 @@ const JA_MESSAGES = freezeCatalog({
     stagesHelp:
       '1 行ごとに入力: stage-id | 表示名 | 遷移先-a, 遷移先-b | action-a, action-b。例: archived | Archived | backlog, doing, done | card.delete',
     saveButton: 'ボードを保存',
-    createButton: 'ボードを作成'
+    createButton: 'ボードを作成',
+    deleteButton: 'ボードを削除'
   },
   confirmDialog: {
     deleteCardTitle: 'カードを削除しますか？',

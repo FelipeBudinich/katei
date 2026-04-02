@@ -294,8 +294,6 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
   assert.match(boardOptionsDialog, /data-board-options-field="collaboratorBadge"/);
   assert.match(boardOptionsDialog, /data-board-options-field="renameButton"/);
   assert.match(boardOptionsDialog, /data-board-options-field="renameButton"[\s\S]*?board-options#renameBoard/);
-  assert.match(boardOptionsDialog, /data-board-options-field="deleteButton"/);
-  assert.match(boardOptionsDialog, /data-board-options-field="deleteButton"[\s\S]*?board-options#deleteBoard/);
   assert.doesNotMatch(
     boardOptionsDialog,
     /class="dialog-actions board-options-actions mt-6"[\s\S]*?data-board-options-target="renameButton"/
@@ -305,6 +303,8 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
   assert.doesNotMatch(boardOptionsDialog, /data-board-options-target="collaboratorsButton"/);
   assert.doesNotMatch(boardOptionsDialog, /data-board-options-target="collaboratorBadge"/);
   assert.doesNotMatch(boardOptionsDialog, /data-board-options-target="deleteButton"/);
+  assert.doesNotMatch(boardOptionsDialog, /data-board-options-field="deleteButton"/);
+  assert.doesNotMatch(boardOptionsDialog, /board-options#deleteBoard/);
   assert.doesNotMatch(
     boardOptionsDialog,
     /class="dialog-actions board-options-actions mt-6"[\s\S]*?board-options#openCollaborators/
@@ -313,6 +313,7 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
     boardOptionsDialog,
     /class="dialog-actions board-options-actions mt-6"[\s\S]*?board-options#deleteBoard/
   );
+  assert.doesNotMatch(response.text, /board-options:delete-board->workspace#confirmDeleteBoard/);
 
   assert.match(profileOptionsDialog, /viewer-chip/);
   assert.match(profileOptionsDialog, /ui-locale-control-row/);
@@ -453,6 +454,9 @@ test('workspace template renders the board editor without a templates field', ()
 
   assert.match(boardEditorDialog, /name="stageDefinitions"/);
   assert.match(boardEditorDialog, /data-board-editor-target="stageDefinitionsInput"/);
+  assert.match(boardEditorDialog, /data-board-editor-target="deleteActions"/);
+  assert.match(boardEditorDialog, /data-board-editor-target="deleteButton"/);
+  assert.match(boardEditorDialog, /board-editor#closeForAction workspace#confirmDeleteBoard/);
   assert.doesNotMatch(boardEditorDialog, /name="templates"/);
   assert.doesNotMatch(boardEditorDialog, /data-board-editor-target="templatesInput"/);
   assert.doesNotMatch(boardEditorDialog, />\s*Templates\s*</);

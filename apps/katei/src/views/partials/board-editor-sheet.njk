@@ -105,6 +105,19 @@
 
       <p class="text-sm leading-6" style="color: var(--color-danger);" hidden data-board-editor-target="error"></p>
 
+      <section class="pt-2" hidden data-board-editor-target="deleteActions">
+        <div class="action-wrap-grid">
+          <button
+            type="button"
+            class="touch-button-danger"
+            data-board-editor-target="deleteButton"
+            data-action="board-editor#closeForAction workspace#confirmDeleteBoard"
+          >
+            {{ t('boardEditor.deleteButton') }}
+          </button>
+        </div>
+      </section>
+
       <div class="dialog-actions pt-2">
         <button type="submit" class="touch-button-primary" data-board-editor-target="submitButton">
           {{ t('boardEditor.saveButton') }}

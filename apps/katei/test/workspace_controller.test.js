@@ -228,6 +228,73 @@ test('workspace controller sync-board-options payload includes pendingWorkspaceI
   });
 });
 
+test('openCreateBoard opens the board editor without delete access', () => {
+  const controller = Object.create(WorkspaceController.prototype);
+  const dispatchedEvents = [];
+
+  controller.dispatchWorkspaceEvent = (name, detail) => {
+    dispatchedEvents.push({ name, detail });
+  };
+
+  WorkspaceController.prototype.openCreateBoard.call(controller);
+
+  assert.deepEqual(dispatchedEvents, [
+    {
+      name: 'open-board-editor',
+      detail: {
+        mode: 'create',
+        canDeleteBoard: false
+      }
+    }
+  ]);
+});
+
+test('openRenameBoard opens the board editor with delete access when another board exists', () => {
+  const adminActor = createActor('admin_1', 'admin@example.com', 'Admin');
+  const workspace = createEmptyWorkspace({
+    workspaceId: 'workspace_admin',
+    creator: adminActor
+  });
+  const controller = Object.create(WorkspaceController.prototype);
+  const dispatchedEvents = [];
+
+  workspace.boards.shared = createWorkspaceBoard({
+    id: 'shared',
+    title: 'Shared board',
+    createdAt: '2026-03-31T10:00:00.000Z',
+    updatedAt: '2026-03-31T10:00:00.000Z',
+    creator: adminActor
+  });
+  workspace.boards.shared.collaboration.memberships.push({
+    actor: adminActor,
+    role: 'admin',
+    joinedAt: '2026-03-31T10:05:00.000Z'
+  });
+  workspace.boardOrder = ['main', 'shared'];
+  workspace.ui.activeBoardId = 'main';
+
+  controller.workspace = workspace;
+  controller.viewerActor = adminActor;
+  controller.announce = () => {};
+  controller.t = (key) => key;
+  controller.dispatchWorkspaceEvent = (name, detail) => {
+    dispatchedEvents.push({ name, detail });
+  };
+
+  WorkspaceController.prototype.openRenameBoard.call(controller);
+
+  assert.deepEqual(dispatchedEvents, [
+    {
+      name: 'open-board-editor',
+      detail: {
+        mode: 'rename',
+        board: workspace.boards.main,
+        canDeleteBoard: true
+      }
+    }
+  ]);
+});
+
 test('confirmDeleteBoard opens the delete confirmation for the requested board', () => {
   const adminActor = createActor('admin_1', 'admin@example.com', 'Admin');
   const workspace = createEmptyWorkspace({
@@ -253,7 +320,7 @@ test('confirmDeleteBoard opens the delete confirmation for the requested board',
     detail: {
       boardId: 'main'
     },
-    target: triggerElement
+    currentTarget: triggerElement
   });
 
   assert.deepEqual(confirmations, [
@@ -264,6 +331,65 @@ test('confirmDeleteBoard opens the delete confirmation for the requested board',
         boardId: 'main',
         title: 'workspace.confirmations.deleteBoardTitle',
         message: `workspace.confirmations.deleteBoardMessage:${workspace.boards.main.title}`,
+        confirmLabel: 'workspace.confirmations.deleteBoardConfirm'
+      }
+    }
+  ]);
+  assert.deepEqual(announcements, []);
+});
+
+test('confirmDeleteBoard accepts a board id from a board editor delete button dataset', () => {
+  const adminActor = createActor('admin_1', 'admin@example.com', 'Admin');
+  const workspace = createEmptyWorkspace({
+    workspaceId: 'workspace_admin',
+    creator: adminActor
+  });
+  const sharedBoard = createWorkspaceBoard({
+    id: 'shared',
+    title: 'Shared board',
+    createdAt: '2026-03-31T10:00:00.000Z',
+    updatedAt: '2026-03-31T10:00:00.000Z',
+    creator: adminActor
+  });
+  const controller = Object.create(WorkspaceController.prototype);
+  const confirmations = [];
+  const announcements = [];
+  const triggerElement = {
+    id: 'board-editor-delete-button',
+    dataset: {
+      boardId: 'shared'
+    }
+  };
+
+  sharedBoard.collaboration.memberships.push({
+    actor: adminActor,
+    role: 'admin',
+    joinedAt: '2026-03-31T10:05:00.000Z'
+  });
+  workspace.boards.shared = sharedBoard;
+  workspace.boardOrder = ['main', 'shared'];
+  controller.workspace = workspace;
+  controller.viewerActor = adminActor;
+  controller.t = (key, values = {}) => (values.title ? `${key}:${values.title}` : key);
+  controller.openConfirmDialog = (options) => {
+    confirmations.push(options);
+  };
+  controller.announce = (message) => {
+    announcements.push(message);
+  };
+
+  WorkspaceController.prototype.confirmDeleteBoard.call(controller, {
+    currentTarget: triggerElement
+  });
+
+  assert.deepEqual(confirmations, [
+    {
+      triggerElement,
+      confirmation: {
+        type: 'delete-board',
+        boardId: 'shared',
+        title: 'workspace.confirmations.deleteBoardTitle',
+        message: `workspace.confirmations.deleteBoardMessage:${sharedBoard.title}`,
         confirmLabel: 'workspace.confirmations.deleteBoardConfirm'
       }
     }

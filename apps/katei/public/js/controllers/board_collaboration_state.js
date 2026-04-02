@@ -68,21 +68,18 @@ export function createBoardOptionsState(
   };
 }
 
-export function createBoardListActionState(boardState, { boardCount = 0 } = {}) {
+export function createBoardListActionState(boardState) {
   const inviteId = normalizeOptionalString(boardState?.pendingInvite?.id);
   const canRespondToInvite = Boolean(inviteId && boardState?.pendingInvite && !boardState?.canSwitch);
   const canOpenCollaborators = Boolean(boardState?.isActive);
   const canRename = Boolean(boardState?.isActive && boardState?.canAdmin);
-  const canDelete = Boolean(boardState?.isActive && boardState?.canAdmin && boardCount > 1);
 
   return {
     canRespondToInvite,
     canOpenCollaborators,
     canRename,
-    canDelete,
     inviteId,
     collaboratorsHidden: !canOpenCollaborators,
-    deleteHidden: !canDelete,
     renameHidden: !canRename,
     switchHidden: !boardState?.canSwitch,
     inviteAcceptHidden: !canRespondToInvite,

@@ -86,19 +86,6 @@ export default class extends Controller {
     });
   }
 
-  deleteBoard() {
-    if (!this.activeBoard) {
-      return;
-    }
-
-    this.closeDialog({ restoreFocus: false });
-    this.dispatch('delete-board', {
-      detail: {
-        boardId: this.activeBoard.id
-      }
-    });
-  }
-
   resetBoard() {
     if (!this.activeBoard) {
       return;
@@ -150,10 +137,6 @@ export default class extends Controller {
 
   get activeBoard() {
     return this.workspace ? this.workspace.boards[this.workspace.ui.activeBoardId] : null;
-  }
-
-  get boardCount() {
-    return Array.isArray(this.workspace?.boardOrder) ? this.workspace.boardOrder.length : 0;
   }
 
   syncWorkspace(
@@ -218,12 +201,9 @@ export default class extends Controller {
     const renameButton = item.querySelector('[data-board-options-field="renameButton"]');
     const collaboratorsButton = item.querySelector('[data-board-options-field="collaboratorsButton"]');
     const collaboratorBadge = item.querySelector('[data-board-options-field="collaboratorBadge"]');
-    const deleteButton = item.querySelector('[data-board-options-field="deleteButton"]');
     const inviteAcceptButton = item.querySelector('[data-board-options-field="inviteAcceptButton"]');
     const inviteDeclineButton = item.querySelector('[data-board-options-field="inviteDeclineButton"]');
-    const actionState = createBoardListActionState(boardState, {
-      boardCount: this.boardCount
-    });
+    const actionState = createBoardListActionState(boardState);
 
     titleElement.textContent = boardState.title;
     stateElement.textContent = boardState.isActive
@@ -235,7 +215,6 @@ export default class extends Controller {
     collaboratorBadge.hidden = actionState.collaboratorsHidden || boardState.pendingInviteCount === 0;
     collaboratorBadge.textContent = String(boardState.pendingInviteCount);
     renameButton.hidden = actionState.renameHidden;
-    deleteButton.hidden = actionState.deleteHidden;
 
     for (const button of [inviteAcceptButton, inviteDeclineButton]) {
       button.dataset.boardId = boardState.boardId;
@@ -301,9 +280,7 @@ export default class extends Controller {
 
   getBoardRowInviteActionState() {
     return (this.optionsState?.boardStates ?? []).map((boardState) => {
-      const actionState = createBoardListActionState(boardState, {
-        boardCount: this.boardCount
-      });
+      const actionState = createBoardListActionState(boardState);
 
       return {
         boardId: boardState.boardId,

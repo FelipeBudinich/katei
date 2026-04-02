@@ -165,7 +165,10 @@ export default class extends Controller {
   }
 
   openCreateBoard() {
-    this.dispatchWorkspaceEvent('open-board-editor', { mode: 'create' });
+    this.dispatchWorkspaceEvent('open-board-editor', {
+      mode: 'create',
+      canDeleteBoard: false
+    });
   }
 
   openRenameBoard() {
@@ -178,7 +181,8 @@ export default class extends Controller {
 
     this.dispatchWorkspaceEvent('open-board-editor', {
       mode: 'rename',
-      board: this.activeBoard
+      board: this.activeBoard,
+      canDeleteBoard: Array.isArray(this.workspace?.boardOrder) && this.workspace.boardOrder.length > 1
     });
   }
 
@@ -264,7 +268,7 @@ export default class extends Controller {
   }
 
   confirmDeleteBoard(event) {
-    const boardId = event.detail?.boardId ?? this.activeBoard?.id;
+    const boardId = event.detail?.boardId ?? event.currentTarget?.dataset.boardId ?? this.activeBoard?.id;
     const board = boardId ? this.workspace?.boards?.[boardId] : null;
     const boardState = board ? getBoardCollaborationState(board, this.viewerActor) : null;
 
@@ -278,7 +282,7 @@ export default class extends Controller {
     }
 
     this.openConfirmDialog({
-      triggerElement: event.target,
+      triggerElement: event.currentTarget ?? event.target,
       confirmation: {
         type: 'delete-board',
         boardId,
