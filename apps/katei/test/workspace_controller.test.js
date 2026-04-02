@@ -1122,6 +1122,49 @@ test('createRuntimeCardDialogState defaults to the ui locale when no explicit lo
   assert.equal(viewState.displayVariant?.title, '日本語タイトル');
 });
 
+test('openView defaults to ui-locale content when that locale exists for the card', () => {
+  const restoreDom = installViewDialogDomStubs();
+
+  try {
+    const { controller, card } = createViewDialogController({
+      uiLocale: 'ja',
+      contentByLocale: {
+        en: {
+          title: 'English source',
+          detailsMarkdown: 'English details',
+          provenance: null
+        },
+        ja: {
+          title: '日本語タイトル',
+          detailsMarkdown: '日本語本文',
+          provenance: null
+        }
+      },
+      languagePolicy: {
+        sourceLocale: 'en',
+        defaultLocale: 'en',
+        supportedLocales: ['en', 'ja'],
+        requiredLocales: ['en']
+      }
+    });
+
+    WorkspaceController.prototype.openView.call(controller, {
+      currentTarget: createViewTriggerDouble(card.id, 'review')
+    });
+
+    assert.deepEqual(
+      controller.viewLocaleSelectTarget.options.map((option) => option.value),
+      ['en', 'ja']
+    );
+    assert.equal(controller.viewLocaleSelectTarget.value, 'ja');
+    assert.equal(controller.viewDialogState.selectedLocale, 'ja');
+    assert.equal(controller.viewCardTitleTarget.textContent, '日本語タイトル');
+    assert.equal(controller.viewCardBodyTarget.innerHTML, '<p>日本語本文</p>');
+  } finally {
+    restoreDom();
+  }
+});
+
 test('openView uses the dedicated view dialog and limits locales to present localized variants', () => {
   const restoreDom = installViewDialogDomStubs();
 

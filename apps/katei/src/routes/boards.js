@@ -84,12 +84,25 @@ export function createBoardsRouter({ requireSession, workspaceRecordRepository }
 export function buildWorkspacePageModel(
   viewer,
   t,
-  uiLocale = null,
-  workspace = createEmptyWorkspace(),
-  workspaceMeta = null,
-  pendingWorkspaceInvites = [],
-  accessibleWorkspaces = []
+  uiLocaleOrWorkspace = null,
+  workspaceOrMeta = createEmptyWorkspace(),
+  workspaceMetaOrPendingWorkspaceInvites = null,
+  pendingWorkspaceInvitesOrAccessibleWorkspaces = [],
+  accessibleWorkspacesArg = []
 ) {
+  const {
+    uiLocale,
+    workspace,
+    workspaceMeta,
+    pendingWorkspaceInvites,
+    accessibleWorkspaces
+  } = normalizeBuildWorkspacePageModelArgs(
+    uiLocaleOrWorkspace,
+    workspaceOrMeta,
+    workspaceMetaOrPendingWorkspaceInvites,
+    pendingWorkspaceInvitesOrAccessibleWorkspaces,
+    accessibleWorkspacesArg
+  );
   const normalizedWorkspace = migrateWorkspaceSnapshot(workspace);
   const activeBoard = getProjectedActiveBoard(normalizedWorkspace);
   const columnDisplayTitles = buildColumnDisplayTitles(t);
@@ -189,4 +202,36 @@ function resolveRequestedWorkspaceId(request) {
   return typeof request?.query?.workspaceId === 'string' && request.query.workspaceId.trim()
     ? request.query.workspaceId.trim()
     : null;
+}
+
+function normalizeBuildWorkspacePageModelArgs(
+  uiLocaleOrWorkspace,
+  workspaceOrMeta,
+  workspaceMetaOrPendingWorkspaceInvites,
+  pendingWorkspaceInvitesOrAccessibleWorkspaces,
+  accessibleWorkspacesArg
+) {
+  if (typeof uiLocaleOrWorkspace === 'string' || uiLocaleOrWorkspace == null) {
+    return {
+      uiLocale: uiLocaleOrWorkspace ?? null,
+      workspace: workspaceOrMeta ?? createEmptyWorkspace(),
+      workspaceMeta: workspaceMetaOrPendingWorkspaceInvites ?? null,
+      pendingWorkspaceInvites: Array.isArray(pendingWorkspaceInvitesOrAccessibleWorkspaces)
+        ? pendingWorkspaceInvitesOrAccessibleWorkspaces
+        : [],
+      accessibleWorkspaces: Array.isArray(accessibleWorkspacesArg) ? accessibleWorkspacesArg : []
+    };
+  }
+
+  return {
+    uiLocale: null,
+    workspace: uiLocaleOrWorkspace ?? createEmptyWorkspace(),
+    workspaceMeta: workspaceOrMeta ?? null,
+    pendingWorkspaceInvites: Array.isArray(workspaceMetaOrPendingWorkspaceInvites)
+      ? workspaceMetaOrPendingWorkspaceInvites
+      : [],
+    accessibleWorkspaces: Array.isArray(pendingWorkspaceInvitesOrAccessibleWorkspaces)
+      ? pendingWorkspaceInvitesOrAccessibleWorkspaces
+      : []
+  };
 }
