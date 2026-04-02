@@ -96,6 +96,47 @@ test('GET /api/workspace returns normalized actor-filtered shared workspace data
   assert.deepEqual(Object.keys(response.body), ['ok', 'workspace', 'activeWorkspace', 'meta', 'pendingWorkspaceInvites', 'accessibleWorkspaces']);
 });
 
+test('GET /api/workspace treats another viewer home workspace as an external accessible workspace', async () => {
+  const homeRecord = createHomeWorkspaceRecordFixture({
+    viewerSub: 'sub_member',
+    boardTitle: '過程'
+  });
+  const foreignHomeRecord = createHomeWorkspaceRecordFixture({
+    viewerSub: 'sub_owner_casa',
+    boardTitle: 'Casa'
+  });
+  foreignHomeRecord.workspace.boards.main.collaboration.memberships.push({
+    actor: { type: 'human', id: 'sub_member', email: 'member@example.com' },
+    role: 'viewer',
+    joinedAt: '2026-04-04T10:05:00.000Z'
+  });
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([
+    homeRecord,
+    foreignHomeRecord
+  ]);
+  const app = createTestApp({ workspaceRecordRepository });
+
+  const response = await request(app)
+    .get('/api/workspace')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_member', email: 'member@example.com', name: 'Member' }));
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(response.body.pendingWorkspaceInvites, []);
+  assert.deepEqual(response.body.accessibleWorkspaces, [
+    {
+      workspaceId: foreignHomeRecord.workspaceId,
+      isHomeWorkspace: false,
+      boards: [
+        {
+          boardId: 'main',
+          boardTitle: 'Casa',
+          role: 'viewer'
+        }
+      ]
+    }
+  ]);
+});
+
 test('POST /api/workspace/commands returns the filtered resulting workspace', async () => {
   const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_api_commands', {
     memberRole: 'admin',
@@ -646,7 +687,7 @@ function listAccessibleWorkspaces(records, { viewerSub, viewerEmail = null, excl
     seenWorkspaceIds.add(projectedRecord.workspaceId);
     summaries.push({
       workspaceId: projectedRecord.workspaceId,
-      isHomeWorkspace: projectedRecord.isHomeWorkspace === true,
+      isHomeWorkspace: projectedRecord.workspaceId === createHomeWorkspaceId(viewerSub),
       boards
     });
   }

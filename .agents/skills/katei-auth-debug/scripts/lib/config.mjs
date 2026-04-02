@@ -70,6 +70,7 @@ export function normalizeKateiAuthDebugConfig(rawConfig, { configPath = DEFAULT_
   const chrome = normalizeChromeConfig(rawConfig.chrome);
   const page = normalizePageConfig(rawConfig.page);
   const boardLifecycle = normalizeBoardLifecycleConfig(rawConfig.boardLifecycle);
+  const workspaceSwitchRepro = normalizeWorkspaceSwitchReproConfig(rawConfig.workspaceSwitchRepro);
 
   return {
     configPath,
@@ -79,7 +80,8 @@ export function normalizeKateiAuthDebugConfig(rawConfig, { configPath = DEFAULT_
     auth,
     chrome,
     page,
-    boardLifecycle
+    boardLifecycle,
+    workspaceSwitchRepro
   };
 }
 
@@ -152,6 +154,73 @@ function normalizeBoardLifecycleConfig(rawBoardLifecycle = {}) {
       'boardLifecycle.stageDefinitions'
     )
   };
+}
+
+function normalizeWorkspaceSwitchReproConfig(rawWorkspaceSwitchRepro = {}) {
+  if (
+    rawWorkspaceSwitchRepro != null
+    && (typeof rawWorkspaceSwitchRepro !== 'object' || Array.isArray(rawWorkspaceSwitchRepro))
+  ) {
+    throw new Error('workspaceSwitchRepro config must be an object when provided.');
+  }
+
+  const scenarios = rawWorkspaceSwitchRepro?.scenarios;
+
+  if (scenarios === undefined) {
+    return {
+      scenarios: null
+    };
+  }
+
+  if (!Array.isArray(scenarios)) {
+    throw new Error('workspaceSwitchRepro.scenarios must be an array when provided.');
+  }
+
+  return {
+    scenarios: scenarios.map((scenario, index) => normalizeWorkspaceSwitchReproScenario(scenario, index))
+  };
+}
+
+function normalizeWorkspaceSwitchReproScenario(rawScenario, index) {
+  if (!rawScenario || typeof rawScenario !== 'object' || Array.isArray(rawScenario)) {
+    throw new Error(`workspaceSwitchRepro.scenarios[${index}] must be an object.`);
+  }
+
+  if (!rawScenario.target || typeof rawScenario.target !== 'object' || Array.isArray(rawScenario.target)) {
+    throw new Error(`workspaceSwitchRepro.scenarios[${index}].target must be an object.`);
+  }
+
+  const scenario = {
+    id: normalizeNonEmptyString(rawScenario.id) || `scenario-${index + 1}`,
+    description: normalizeNonEmptyString(rawScenario.description) || `Scenario ${index + 1}`,
+    action: normalizeWorkspaceSwitchReproAction(rawScenario.action),
+    target: {
+      boardId: normalizeNonEmptyString(rawScenario.target.boardId) || null,
+      boardTitle: normalizeNonEmptyString(rawScenario.target.boardTitle) || null,
+      workspaceId: normalizeNonEmptyString(rawScenario.target.workspaceId) || null,
+      workspaceRelation: normalizeWorkspaceRelation(rawScenario.target.workspaceRelation)
+    }
+  };
+
+  if (!scenario.target.boardId && !scenario.target.boardTitle) {
+    throw new Error(`workspaceSwitchRepro.scenarios[${index}].target must define boardId or boardTitle.`);
+  }
+
+  return scenario;
+}
+
+function normalizeWorkspaceSwitchReproAction(value) {
+  const normalizedValue = normalizeNonEmptyString(value);
+
+  if (!normalizedValue) {
+    return 'switch';
+  }
+
+  if (normalizedValue === 'switch' || normalizedValue === 'accept-invite') {
+    return normalizedValue;
+  }
+
+  throw new Error('workspaceSwitchRepro.scenarios[].action must be "switch" or "accept-invite" when provided.');
 }
 
 function normalizeInspectSelectors(rawInspectSelectors) {
@@ -254,6 +323,20 @@ function normalizeLocale(value, fieldName) {
   }
 
   return normalizedValue.replaceAll('_', '-');
+}
+
+function normalizeWorkspaceRelation(value) {
+  const normalizedValue = normalizeNonEmptyString(value);
+
+  if (!normalizedValue) {
+    return null;
+  }
+
+  if (normalizedValue === 'external') {
+    return 'external';
+  }
+
+  throw new Error(`Unsupported workspace relation: ${value}`);
 }
 
 function normalizePositiveInteger(value, fieldName) {

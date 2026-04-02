@@ -591,6 +591,55 @@ test('GET /boards bootstrap includes accessibleWorkspaces and matches the API pa
   ]);
 });
 
+test('GET /boards bootstrap treats another viewer home workspace as an external accessible workspace', async () => {
+  const homeRecord = createHomeWorkspaceRecordFixture({
+    viewerSub: 'sub_member',
+    boardTitle: '過程'
+  });
+  const foreignHomeRecord = createHomeWorkspaceRecordFixture({
+    viewerSub: 'sub_owner_casa',
+    boardTitle: 'Casa'
+  });
+  foreignHomeRecord.workspace.boards.main.collaboration.memberships.push({
+    actor: { type: 'human', id: 'sub_member', email: 'member@example.com' },
+    role: 'viewer',
+    joinedAt: '2026-04-02T10:05:00.000Z'
+  });
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([
+    homeRecord,
+    foreignHomeRecord
+  ]);
+  const app = createTestApp({
+    googleTokenVerifier: async () => ({ sub: 'sub_member' }),
+    workspaceRecordRepository
+  });
+
+  const boardsResponse = await request(app)
+    .get('/boards')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_member', email: 'member@example.com', name: 'Member' }));
+  const apiResponse = await request(app)
+    .get('/api/workspace')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_member', email: 'member@example.com', name: 'Member' }));
+  const bootstrapPayload = readWorkspaceBootstrapPayload(boardsResponse.text);
+
+  assert.equal(boardsResponse.status, 200);
+  assert.equal(apiResponse.status, 200);
+  assert.deepEqual(bootstrapPayload.accessibleWorkspaces, apiResponse.body.accessibleWorkspaces);
+  assert.deepEqual(bootstrapPayload.accessibleWorkspaces, [
+    {
+      workspaceId: foreignHomeRecord.workspaceId,
+      isHomeWorkspace: false,
+      boards: [
+        {
+          boardId: 'main',
+          boardTitle: 'Casa',
+          role: 'viewer'
+        }
+      ]
+    }
+  ]);
+});
+
 test('GET /boards loads an accessible shared workspace by workspaceId and rejects inaccessible ones', async () => {
   const sharedWorkspace = createCard(createEmptyWorkspace({ workspaceId: 'workspace_shared_1' }), 'main', {
     title: 'Shared roadmap',
@@ -1962,7 +2011,7 @@ function listAccessibleWorkspaces(records, { viewerSub, viewerEmail = null, excl
     seenWorkspaceIds.add(normalizedRecord.workspaceId);
     summaries.push({
       workspaceId: normalizedRecord.workspaceId,
-      isHomeWorkspace: normalizedRecord.isHomeWorkspace === true,
+      isHomeWorkspace: normalizedRecord.workspaceId === createHomeWorkspaceId(viewerSub),
       boards
     });
   }

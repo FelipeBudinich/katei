@@ -10,6 +10,11 @@ const viewerName = process.env.KATEI_FIXTURE_VIEWER_NAME || 'Fixture Debug User'
 const debugSecret = process.env.KATEI_FIXTURE_DEBUG_SECRET || 'fixture-debug-secret';
 const baseUrl = `http://127.0.0.1:${port}`;
 
+const workspaceRecordRepository = createInMemoryWorkspaceRecordRepository({
+  viewerSub,
+  viewerEmail
+});
+
 const app = createApp({
   env: {
     NODE_ENV: 'development',
@@ -30,7 +35,7 @@ const app = createApp({
     email: viewerEmail,
     name: viewerName
   }),
-  workspaceRecordRepository: createInMemoryWorkspaceRecordRepository({ viewerSub })
+  workspaceRecordRepository
 });
 
 const server = app.listen(port, () => {
@@ -43,7 +48,14 @@ const server = app.listen(port, () => {
       email: viewerEmail,
       name: viewerName
     },
-    secretEnvPair: `KATEI_DEBUG_AUTH_SECRET=${debugSecret}`
+    secretEnvPair: `KATEI_DEBUG_AUTH_SECRET=${debugSecret}`,
+    workspaceSwitchRepro: {
+      homeWorkspaceId: workspaceRecordRepository.fixture?.homeWorkspaceId ?? null,
+      externalNotesWorkspaceId: workspaceRecordRepository.fixture?.externalNotesWorkspaceId ?? null,
+      externalMainWorkspaceId: workspaceRecordRepository.fixture?.externalMainWorkspaceId ?? null,
+      externalHomeWorkspaceId: workspaceRecordRepository.fixture?.externalHomeWorkspaceId ?? null,
+      inviteWorkspaceId: workspaceRecordRepository.fixture?.inviteWorkspaceId ?? null
+    }
   }, null, 2));
 });
 

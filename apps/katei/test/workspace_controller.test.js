@@ -5,6 +5,7 @@ import {
   createWorkspaceBoard
 } from '../public/js/domain/workspace_read_model.js';
 import WorkspaceController from '../public/js/controllers/workspace_controller.js';
+import { createHomeWorkspaceId } from '../src/workspaces/workspace_record.js';
 import {
   getBoardCollaborationState,
   hasVisibleWorkspaceAccess
@@ -341,6 +342,65 @@ test('handleBoardSwitch switches workspaces before selecting a board in another 
   assert.deepEqual(announcements, [
     'workspace.announcements.switchedBoard:Notes'
   ]);
+});
+
+test('handleBoardSwitch keeps another viewer home workspace explicit instead of routing through the current home workspace', async () => {
+  const controller = Object.create(WorkspaceController.prototype);
+  const currentWorkspace = createViewerWorkspace(
+    'workspace_home',
+    createActor('viewer_1', 'viewer@example.com', 'Viewer')
+  );
+  const foreignHomeWorkspaceId = createHomeWorkspaceId('sub_owner_casa');
+  const foreignHomeWorkspace = createViewerWorkspace(
+    foreignHomeWorkspaceId,
+    createActor('sub_owner_casa', 'owner-casa@example.com', 'Casa Owner')
+  );
+  const casaBoard = structuredClone(foreignHomeWorkspace.boards.main);
+  const selectedCasaWorkspace = structuredClone(foreignHomeWorkspace);
+  const queuedHistoryActions = [];
+
+  casaBoard.title = 'Casa';
+  casaBoard.collaboration.memberships.push({
+    actor: createActor('viewer_1', 'viewer@example.com', 'Viewer'),
+    role: 'viewer',
+    joinedAt: '2026-03-31T10:05:00.000Z'
+  });
+  foreignHomeWorkspace.boards.main = casaBoard;
+  foreignHomeWorkspace.ui.activeBoardId = 'main';
+  selectedCasaWorkspace.boards.main = structuredClone(casaBoard);
+  selectedCasaWorkspace.ui.activeBoardId = 'main';
+
+  controller.workspace = currentWorkspace;
+  controller.service = createWorkspaceNavigationServiceDouble({
+    activeWorkspaceId: 'workspace_home',
+    isHomeWorkspace: true,
+    switchWorkspaceResult: foreignHomeWorkspace,
+    setActiveBoardResult: selectedCasaWorkspace
+  });
+  controller.render = () => {};
+  controller.queueWorkspaceHistoryAction = (action) => {
+    queuedHistoryActions.push(action);
+  };
+  controller.announce = () => {};
+  controller.t = (key, values = {}) => (values.title ? `${key}:${values.title}` : key);
+
+  await WorkspaceController.prototype.handleBoardSwitch.call(controller, {
+    detail: {
+      workspaceId: foreignHomeWorkspaceId,
+      isHomeWorkspace: false,
+      boardId: 'main',
+      boardTitle: 'Casa'
+    }
+  });
+
+  assert.deepEqual(controller.service.calls, [
+    {
+      method: 'switchWorkspace',
+      args: [foreignHomeWorkspaceId]
+    }
+  ]);
+  assert.equal(controller.workspace.workspaceId, foreignHomeWorkspaceId);
+  assert.deepEqual(queuedHistoryActions, ['push']);
 });
 
 test('handlePopState reloads the workspace from the workspaceId in browser location', async () => {
@@ -701,6 +761,78 @@ test('performWorkspaceInviteDecision keeps the active workspace when accepting a
 test('performWorkspaceInviteDecision lands in the invited workspace for cross-workspace acceptance', async () => {
   const viewerActor = createActor('invitee_sub', 'invitee@example.com', 'Invitee');
   const invitedWorkspace = createViewerWorkspace('workspace_invited_casa', viewerActor);
+  const activeCasaWorkspace = structuredClone(invitedWorkspace);
+  activeCasaWorkspace.boards.casa = {
+    ...activeCasaWorkspace.boards.main,
+    id: 'casa',
+    title: 'Casa'
+  };
+  activeCasaWorkspace.boardOrder = ['main', 'casa'];
+  activeCasaWorkspace.ui.activeBoardId = 'casa';
+  const service = createCollaborationServiceDouble({
+    acceptWorkspace: {
+      ...invitedWorkspace,
+      boards: {
+        ...invitedWorkspace.boards,
+        casa: {
+          ...invitedWorkspace.boards.main,
+          id: 'casa',
+          title: 'Casa'
+        }
+      },
+      boardOrder: ['main', 'casa'],
+      ui: {
+        ...invitedWorkspace.ui,
+        activeBoardId: 'main'
+      }
+    },
+    setActiveBoardWorkspace: activeCasaWorkspace
+  });
+
+  const result = await performWorkspaceInviteDecision({
+    service,
+    decision: 'accept',
+    detail: {
+      workspaceId: 'workspace_invited_casa',
+      boardId: 'casa',
+      inviteId: 'invite_casa_1'
+    },
+    viewerActor,
+    activeWorkspaceId: 'workspace_home'
+  });
+
+  assert.deepEqual(result, {
+    workspace: activeCasaWorkspace,
+    leftWorkspace: false
+  });
+  assert.deepEqual(service.calls, [
+    {
+      method: 'setActiveWorkspace',
+      args: ['workspace_invited_casa']
+    },
+    {
+      method: 'acceptBoardInvite',
+      args: ['casa', 'invite_casa_1', 'workspace_invited_casa']
+    },
+    {
+      method: 'setActiveBoard',
+      args: ['casa']
+    }
+  ]);
+});
+
+test('performWorkspaceInviteDecision skips the extra board activation when the accepted board is already active', async () => {
+  const viewerActor = createActor('invitee_sub', 'invitee@example.com', 'Invitee');
+  const invitedWorkspace = createViewerWorkspace('workspace_invited_casa', viewerActor);
+
+  invitedWorkspace.boards.casa = {
+    ...invitedWorkspace.boards.main,
+    id: 'casa',
+    title: 'Casa'
+  };
+  invitedWorkspace.boardOrder = ['main', 'casa'];
+  invitedWorkspace.ui.activeBoardId = 'casa';
+
   const service = createCollaborationServiceDouble({
     acceptWorkspace: invitedWorkspace
   });
@@ -1235,7 +1367,8 @@ function createCollaborationServiceDouble({
   workspace = createEmptyWorkspace(),
   acceptWorkspace = workspace,
   declineWorkspace = workspace,
-  switchWorkspace = workspace
+  switchWorkspace = workspace,
+  setActiveBoardWorkspace = acceptWorkspace
 } = {}) {
   return {
     activeWorkspaceId: null,
@@ -1263,6 +1396,10 @@ function createCollaborationServiceDouble({
     async acceptBoardInvite(...args) {
       this.calls.push({ method: 'acceptBoardInvite', args });
       return structuredClone(acceptWorkspace);
+    },
+    async setActiveBoard(...args) {
+      this.calls.push({ method: 'setActiveBoard', args });
+      return structuredClone(setActiveBoardWorkspace);
     },
     async declineBoardInvite(...args) {
       this.calls.push({ method: 'declineBoardInvite', args });

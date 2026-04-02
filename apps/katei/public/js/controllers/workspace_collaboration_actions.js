@@ -81,8 +81,10 @@ export async function performWorkspaceInviteDecision({
           switchedWorkspace: true
         });
 
+        const acceptedWorkspace = await service.acceptBoardInvite(detail.boardId, detail.inviteId, decisionWorkspaceId);
+
         return {
-          workspace: await service.acceptBoardInvite(detail.boardId, detail.inviteId, decisionWorkspaceId),
+          workspace: await activateAcceptedBoardIfNeeded(service, acceptedWorkspace, detail),
           leftWorkspace: false
         };
       }
@@ -101,7 +103,11 @@ export async function performWorkspaceInviteDecision({
 
   const nextWorkspace =
     decision === 'accept'
-      ? await service.acceptBoardInvite(detail.boardId, detail.inviteId, decisionWorkspaceId)
+      ? await activateAcceptedBoardIfNeeded(
+          service,
+          await service.acceptBoardInvite(detail.boardId, detail.inviteId, decisionWorkspaceId),
+          detail
+        )
       : await service.declineBoardInvite(detail.boardId, detail.inviteId, decisionWorkspaceId);
 
   if (decision === 'decline' && previousWorkspaceId && !hasVisibleWorkspaceAccess(nextWorkspace, viewerActor)) {
@@ -133,6 +139,16 @@ export async function performWorkspaceInviteDecision({
     workspace: nextWorkspace,
     leftWorkspace: false
   };
+}
+
+async function activateAcceptedBoardIfNeeded(service, workspace, detail) {
+  const boardId = normalizeOptionalWorkspaceId(detail?.boardId);
+
+  if (!boardId || normalizeOptionalWorkspaceId(workspace?.ui?.activeBoardId) === boardId || !workspace?.boards?.[boardId]) {
+    return workspace;
+  }
+
+  return service.setActiveBoard(boardId);
 }
 
 function normalizeOptionalWorkspaceId(workspaceId) {

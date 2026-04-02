@@ -352,11 +352,21 @@ test('listPendingWorkspaceInvitesForViewer ignores malformed or non-matching inv
 });
 
 test('listAccessibleWorkspacesForViewer returns readable shared workspaces plus home, sorted and excluding the active workspace', async () => {
+  const foreignHomeRecord = createHomeWorkspaceRecordFixture({
+    viewerSub: 'sub_owner_casa',
+    boardTitle: 'Casa'
+  });
+  foreignHomeRecord.workspace.boards.main.collaboration.memberships.push({
+    actor: { type: 'human', id: 'sub_member', email: 'member@example.com' },
+    role: 'viewer',
+    joinedAt: '2026-04-01T10:05:00.000Z'
+  });
   const collection = createWorkspaceRecordCollectionDouble([
     toWorkspaceRecordDocument(createHomeWorkspaceRecordFixture({
       viewerSub: 'sub_member',
       boardTitle: 'Home board'
     })),
+    toWorkspaceRecordDocument(foreignHomeRecord),
     toWorkspaceRecordDocument(createSharedWorkspaceRecordFixture('workspace_shared_beta')),
     toWorkspaceRecordDocument(createSharedWorkspaceRecordFixture('workspace_shared_alpha'))
   ]);
@@ -377,6 +387,17 @@ test('listAccessibleWorkspacesForViewer returns readable shared workspaces plus 
           boardId: 'main',
           boardTitle: 'Home board',
           role: 'admin'
+        }
+      ]
+    },
+    {
+      workspaceId: createHomeWorkspaceId('sub_owner_casa'),
+      isHomeWorkspace: false,
+      boards: [
+        {
+          boardId: 'main',
+          boardTitle: 'Casa',
+          role: 'viewer'
         }
       ]
     },

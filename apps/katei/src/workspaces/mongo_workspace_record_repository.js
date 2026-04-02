@@ -540,11 +540,12 @@ function createPendingWorkspaceInviteSummary(
 
 function createAccessibleWorkspaceSummary(record, { viewerSub, viewerEmail = null } = {}) {
   const workspaceId = normalizeOptionalWorkspaceId(record?.workspaceId ?? record?.workspace?.workspaceId);
+  const normalizedViewerSub = normalizeViewerSub(viewerSub);
   const boards = collectWorkspaceBoardIds(record?.workspace)
     .map((boardId) =>
       createAccessibleWorkspaceBoardSummary(record?.workspace?.boards?.[boardId], {
         boardId,
-        viewerSub,
+        viewerSub: normalizedViewerSub,
         viewerEmail
       })
     )
@@ -556,7 +557,7 @@ function createAccessibleWorkspaceSummary(record, { viewerSub, viewerEmail = nul
 
   return {
     workspaceId,
-    isHomeWorkspace: record?.isHomeWorkspace === true,
+    isHomeWorkspace: Boolean(normalizedViewerSub && workspaceId === createHomeWorkspaceId(normalizedViewerSub)),
     boards
   };
 }

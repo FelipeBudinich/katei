@@ -40,6 +40,12 @@ node .agents/skills/katei-auth-debug/scripts/capture-auth-debug-artifacts.mjs
 node .agents/skills/katei-auth-debug/scripts/exercise-board-lifecycle.mjs
 ```
 
+7. Reproduce cross-workspace board switching or invite acceptance:
+
+```bash
+node .agents/skills/katei-auth-debug/scripts/repro-cross-workspace-switch.mjs
+```
+
 Auth modes:
 
 - `debug-route` is the default. It calls `POST /__debug/login` with the secret named by `auth.secretEnvVar`.
@@ -56,6 +62,7 @@ Hosted convenience commands:
 ```bash
 bash .agents/skills/katei-auth-debug/scripts/smoke-hosted.sh
 bash .agents/skills/katei-auth-debug/scripts/smoke-board-lifecycle.sh
+bash .agents/skills/katei-auth-debug/scripts/smoke-cross-workspace-switch.sh
 bash .agents/skills/katei-auth-debug/scripts/store-debug-secret-in-keychain.sh
 ```
 
@@ -66,6 +73,8 @@ Important behavior:
 - `open-authenticated-page.mjs` writes `latest-session.json` and `latest-open.png` into the artifact directory.
 - `capture-auth-debug-artifacts.mjs` writes a timestamped JSON report and PNG screenshot.
 - `exercise-board-lifecycle.mjs` creates a temporary board, edits it, then deletes it, writing per-step screenshots plus `latest-board-lifecycle.json`.
+- `repro-cross-workspace-switch.mjs` runs the local or hosted workspace-navigation repro, recording switch-button or invite-button datasets, emitted board-options event detail, `/api/workspace*` traffic, history transitions, and per-scenario screenshots into `latest-cross-workspace-switch.json`.
+- The local fixture now includes a readable foreign home workspace board titled `Casa` plus a separate invite-only `Casa` workspace so the skill can exercise both the home-workspace routing bug and the accept-first invite flow.
 - Lifecycle verification uses the initial `#workspace-bootstrap` payload for orientation and then reads live `/api/workspace` state after each mutation because the bootstrap script is not rewritten after in-page commands.
 - Do not commit `.agents/katei-auth-debug.config.json` or debug secrets.
 
@@ -74,6 +83,7 @@ Config:
 - Use `.agents/skills/katei-auth-debug/assets/katei-auth-debug.config.example.json` as the template.
 - Required top-level fields: `baseUrl`.
 - Recommended defaults are already baked into the loader for `startPath`, auth paths, Keychain service/account, Chrome path/port/profile, artifact dir, wait timeout, selector snapshots, and a default board lifecycle schema.
+- `workspaceSwitchRepro.scenarios[]` accepts an optional `action` of `switch` or `accept-invite`; omit it for the default switch flow.
 
 Validation:
 
