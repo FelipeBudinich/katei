@@ -16,7 +16,7 @@ export function createWebRouter({ config, verifyGoogleIdToken, workspaceRecordRe
   router.use(createDebugAuthRouter({ config }));
   router.use(createPublicRouter({ config }));
   router.use(createBoardsRouter({ requireSession: requireBoardSession, workspaceRecordRepository }));
-  router.use(createWorkspaceApiRouter({ requireSession: requireApiSession, workspaceRecordRepository }));
+  router.use(createWorkspaceApiRouter({ config, requireSession: requireApiSession, workspaceRecordRepository }));
   router.use(createAuthRouter({ config, verifyGoogleIdToken, requireSession: requireApiSession }));
 
   return router;

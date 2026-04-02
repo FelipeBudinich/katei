@@ -99,7 +99,8 @@ export class WorkspaceService {
     return this.#applyCommand('board.update', {
       boardId,
       title: input?.title,
-      ...buildBoardSchemaPayload(input)
+      ...buildBoardSchemaPayload(input),
+      ...buildBoardAiPayload(input)
     });
   }
 
@@ -322,6 +323,24 @@ function buildBoardSchemaPayload(input) {
 
   if (input?.templates !== undefined) {
     payload.templates = input.templates;
+  }
+
+  return payload;
+}
+
+function buildBoardAiPayload(input) {
+  const payload = {};
+
+  if (input?.aiProvider !== undefined) {
+    payload.aiProvider = input.aiProvider;
+  }
+
+  if (input?.openAiApiKey !== undefined) {
+    payload.openAiApiKey = input.openAiApiKey;
+  }
+
+  if (input?.clearOpenAiApiKey !== undefined) {
+    payload.clearOpenAiApiKey = input.clearOpenAiApiKey;
   }
 
   return payload;

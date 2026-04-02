@@ -24,12 +24,14 @@ import {
   WorkspaceRevisionConflictError
 } from '../src/workspaces/workspace_record_repository.js';
 import { canViewerAccessWorkspace, filterWorkspaceForViewer } from '../src/workspaces/workspace_access.js';
+import { encryptBoardSecret } from '../src/security/board_secret_crypto.js';
 
 test('GET /api/workspace returns normalized actor-filtered shared workspace data', async () => {
   const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_api_get', {
     memberRole: 'viewer',
     includeInvite: true
   });
+  seedBoardOpenAiKey(sharedRecord.workspace.boards.member, 'sk-member-9876');
   const homeRecord = createHomeWorkspaceRecordFixture({
     viewerSub: 'sub_member'
   });
@@ -50,6 +52,12 @@ test('GET /api/workspace returns normalized actor-filtered shared workspace data
   assert.equal(response.body.workspace.ui.activeBoardId, 'member');
   assert.equal(response.body.workspace.boards.main, undefined);
   assert.equal(firstCardTitle(response.body.workspace.boards.member), 'Member board card');
+  assert.deepEqual(response.body.workspace.boards.member.aiLocalization, {
+    provider: 'openai',
+    hasApiKey: true,
+    apiKeyLast4: '9876'
+  });
+  assert.equal(response.body.workspace.boards.member.aiLocalizationSecrets, undefined);
   assert.deepEqual(response.body.workspace.boards.invite.cards, {});
   assert.equal(response.body.workspace.boards.invite.collaboration.invites[0].email, 'member@example.com');
   assert.deepEqual(response.body.pendingWorkspaceInvites, [
@@ -190,6 +198,51 @@ test('POST /api/workspace/commands returns the filtered resulting workspace', as
   assert.deepEqual(Object.keys(response.body), ['ok', 'workspace', 'activeWorkspace', 'meta', 'pendingWorkspaceInvites', 'accessibleWorkspaces', 'result']);
 });
 
+test('POST /api/workspace/commands redacts board OpenAI secrets from mutation responses', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_api_ai_update', {
+    memberRole: 'admin',
+    includeInvite: false
+  });
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord]);
+  const app = createTestApp({ workspaceRecordRepository });
+
+  const response = await request(app)
+    .post('/api/workspace/commands')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_member', email: 'member@example.com', name: 'Member' }))
+    .send({
+      workspaceId: 'workspace_shared_api_ai_update',
+      command: {
+        clientMutationId: 'board_ai_update_1',
+        type: 'board.update',
+        payload: {
+          boardId: 'member',
+          title: sharedRecord.workspace.boards.member.title,
+          aiProvider: 'openai',
+          openAiApiKey: 'sk-board-1234',
+          clearOpenAiApiKey: false,
+          languagePolicy: sharedRecord.workspace.boards.member.languagePolicy,
+          stageDefinitions: sharedRecord.workspace.boards.member.stageOrder.map((stageId) => ({
+            id: stageId,
+            title: sharedRecord.workspace.boards.member.stages[stageId].title,
+            allowedTransitionStageIds: [...sharedRecord.workspace.boards.member.stages[stageId].allowedTransitionStageIds],
+            actionIds: [...sharedRecord.workspace.boards.member.stages[stageId].actionIds]
+          })),
+          templates: []
+        }
+      },
+      expectedRevision: 1
+    });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(response.body.workspace.boards.member.aiLocalization, {
+    provider: 'openai',
+    hasApiKey: true,
+    apiKeyLast4: '1234'
+  });
+  assert.equal(response.body.workspace.boards.member.aiLocalizationSecrets, undefined);
+  assert.equal(response.body.result.noOp, false);
+});
+
 test('PUT /api/workspace rejects shared snapshot replacement when hidden boards exist', async () => {
   const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_api_put', {
     memberRole: 'admin',
@@ -276,12 +329,26 @@ function createTestApp({ workspaceRecordRepository } = {}) {
       NODE_ENV: 'test',
       GOOGLE_CLIENT_ID: 'test-google-client-id',
       KATEI_SESSION_SECRET: 'test-session-secret',
+      KATEI_BOARD_SECRET_ENCRYPTION_KEY: 'test-board-secret-encryption-key',
       MONGODB_URI: 'mongodb://127.0.0.1:27017',
       MONGODB_DB_NAME: 'katei_test'
     },
     googleTokenVerifier: async () => ({ sub: 'sub_any' }),
     workspaceRecordRepository: workspaceRecordRepository ?? createWorkspaceRecordRepositoryDouble()
   });
+}
+
+function seedBoardOpenAiKey(board, apiKey) {
+  board.aiLocalization = {
+    provider: 'openai',
+    hasApiKey: true,
+    apiKeyLast4: apiKey.slice(-4)
+  };
+  board.aiLocalizationSecrets = {
+    openAiApiKeyEncrypted: encryptBoardSecret(apiKey, {
+      boardSecretEncryptionKey: 'test-board-secret-encryption-key'
+    })
+  };
 }
 
 function createSessionCookieHeader(viewer, { ttlSeconds = 300, now = '2099-01-01T00:00:00Z' } = {}) {

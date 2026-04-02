@@ -1,3 +1,8 @@
+import {
+  BOARD_AI_PROVIDER_OPENAI,
+  normalizeBoardAiLocalization,
+  normalizeBoardAiProvider
+} from '../domain/board_ai_localization.js';
 import { createDefaultBoardLanguagePolicy } from '../domain/board_language_policy.js';
 import { normalizeBoardSchemaInput, assertBoardSchemaCompatibleWithBoard } from '../domain/board_schema.js';
 import { createDefaultBoardStages } from '../domain/board_workflow.js';
@@ -24,6 +29,9 @@ export function createBoardEditorFormState(board = null) {
     defaultLocale: baseLanguagePolicy.defaultLocale,
     supportedLocales: baseLanguagePolicy.supportedLocales.join(', '),
     requiredLocales: baseLanguagePolicy.requiredLocales.join(', '),
+    aiProvider: normalizeBoardAiLocalization(board?.aiLocalization).provider,
+    hasOpenAiApiKey: normalizeBoardAiLocalization(board?.aiLocalization).hasApiKey,
+    openAiApiKeyLast4: normalizeBoardAiLocalization(board?.aiLocalization).apiKeyLast4,
     stageDefinitions: stageDefinitions
       .map((stage) => serializeStageDefinition(stage))
       .join('\n')
@@ -50,11 +58,18 @@ export function parseBoardEditorFormInput(input, { currentBoard = null } = {}) {
 
   assertBoardSchemaCompatibleWithBoard(currentBoard, normalizedSchema);
 
+  const aiProvider = normalizeBoardAiProvider(input?.aiProvider) ?? BOARD_AI_PROVIDER_OPENAI;
+  const openAiApiKey = normalizeOptionalSecret(input?.openAiApiKey);
+  const clearOpenAiApiKey = input?.clearOpenAiApiKey === true;
+
   return {
     title,
     languagePolicy: normalizedSchema.languagePolicy,
     stageDefinitions: normalizedSchema.stageDefinitions,
-    templates: []
+    templates: [],
+    aiProvider,
+    ...(openAiApiKey ? { openAiApiKey } : {}),
+    clearOpenAiApiKey
   };
 }
 
@@ -104,6 +119,10 @@ function splitInlineList(value) {
     .split(/[\n,]/)
     .map((entry) => entry.trim())
     .filter(Boolean);
+}
+
+function normalizeOptionalSecret(value) {
+  return typeof value === 'string' && value.trim() ? value.trim() : '';
 }
 
 function serializeStageDefinition(stage) {

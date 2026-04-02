@@ -13,6 +13,11 @@ import {
   normalizeBoardInvite,
   normalizeBoardMembership
 } from '../../public/js/domain/board_collaboration.js';
+import {
+  BOARD_AI_PROVIDER_OPENAI,
+  normalizeBoardAiLocalization,
+  normalizeBoardAiProvider
+} from '../../public/js/domain/board_ai_localization.js';
 import { canonicalizeContentLocale } from '../../public/js/domain/board_language_policy.js';
 import {
   canActorAdminBoard,
@@ -48,6 +53,7 @@ import {
   normalizeDetailsMarkdown,
   normalizePriority
 } from '../../public/js/domain/workspace_validation.js';
+import { encryptBoardSecret } from '../security/board_secret_crypto.js';
 import { createDefaultMutationContext, createMutationContext } from './mutation_context.js';
 import {
   createWorkspaceActivityEvent,
@@ -55,6 +61,8 @@ import {
   createWorkspaceRecord
 } from './workspace_record.js';
 import { WorkspaceRevisionConflictError } from './workspace_record_repository.js';
+
+const BOARD_OPENAI_SECRET_FIELD = 'openAiApiKeyEncrypted';
 
 export class WorkspaceCommandPermissionError extends Error {
   constructor(message = 'You do not have permission to perform this action.') {
@@ -230,6 +238,7 @@ function applyBoardUpdate(workspace, command, context) {
     stageDefinitions: command.payload.stageDefinitions,
     templates: command.payload.templates
   });
+  const nextBoardAiSettings = resolveNextBoardAiSettings(currentBoard, command.payload, context);
 
   assertBoardSchemaCompatibleWithBoard(currentBoard, normalizedSchema);
 
@@ -240,7 +249,8 @@ function applyBoardUpdate(workspace, command, context) {
         languagePolicy: normalizedSchema.languagePolicy,
         stageDefinitions: normalizedSchema.stageDefinitions,
         templates: normalizedSchema.templates
-      })
+      }) &&
+    boardAiSettingsEqual(currentBoard, nextBoardAiSettings)
   ) {
     return {
       workspace,
@@ -255,6 +265,7 @@ function applyBoardUpdate(workspace, command, context) {
   const board = getBoard(nextWorkspace, command.payload.boardId);
   board.title = normalizedTitle;
   applyNormalizedSchemaToBoard(board, normalizedSchema, { preserveCardIdsFrom: currentBoard });
+  applyBoardAiSettings(board, nextBoardAiSettings);
   board.updatedAt = context.now;
 
   return {
@@ -633,6 +644,8 @@ function applyBoardReset(workspace, command, context) {
     stages: createClearedStages(board),
     templates: structuredClone(board.templates),
     collaboration: structuredClone(board.collaboration ?? { memberships: [], invites: [] }),
+    aiLocalization: structuredClone(resolveBoardAiLocalization(board)),
+    ...(copyBoardAiSecrets(board) ? { aiLocalizationSecrets: copyBoardAiSecrets(board) } : {}),
     languagePolicy: structuredClone(board.languagePolicy)
   };
 
@@ -1260,6 +1273,98 @@ function hasBoardSchemaPayload(payload) {
   );
 }
 
+function resolveNextBoardAiSettings(board, payload, context) {
+  const provider = normalizeBoardAiProvider(payload?.aiProvider) ?? resolveBoardAiLocalization(board).provider;
+  const replacementApiKey = normalizeOptionalString(payload?.openAiApiKey);
+  const clearOpenAiApiKey = payload?.clearOpenAiApiKey === true;
+  const currentAiLocalization = resolveBoardAiLocalization(board);
+  const currentAiSecrets = copyBoardAiSecrets(board);
+
+  if (clearOpenAiApiKey) {
+    return {
+      aiLocalization: {
+        provider,
+        hasApiKey: false,
+        apiKeyLast4: null
+      },
+      aiLocalizationSecrets: null
+    };
+  }
+
+  if (replacementApiKey) {
+    return {
+      aiLocalization: {
+        provider,
+        hasApiKey: true,
+        apiKeyLast4: deriveApiKeyLast4(replacementApiKey)
+      },
+      aiLocalizationSecrets: {
+        [BOARD_OPENAI_SECRET_FIELD]: encryptBoardSecret(replacementApiKey, context)
+      }
+    };
+  }
+
+  return {
+    aiLocalization: {
+      provider,
+      hasApiKey: currentAiLocalization.hasApiKey,
+      apiKeyLast4: currentAiLocalization.hasApiKey ? currentAiLocalization.apiKeyLast4 : null
+    },
+    aiLocalizationSecrets: currentAiSecrets
+  };
+}
+
+function applyBoardAiSettings(board, aiSettings) {
+  board.aiLocalization = structuredClone(aiSettings.aiLocalization);
+
+  if (aiSettings.aiLocalizationSecrets) {
+    board.aiLocalizationSecrets = structuredClone(aiSettings.aiLocalizationSecrets);
+    return;
+  }
+
+  delete board.aiLocalizationSecrets;
+}
+
+function boardAiSettingsEqual(board, aiSettings) {
+  return JSON.stringify(resolveBoardAiLocalization(board)) === JSON.stringify(aiSettings.aiLocalization)
+    && JSON.stringify(copyBoardAiSecrets(board)) === JSON.stringify(aiSettings.aiLocalizationSecrets);
+}
+
+function resolveBoardAiLocalization(board) {
+  const normalizedAiLocalization = normalizeBoardAiLocalization(board?.aiLocalization);
+  const persistedEncryptedApiKey = normalizeOptionalString(board?.aiLocalizationSecrets?.[BOARD_OPENAI_SECRET_FIELD]);
+
+  if (!persistedEncryptedApiKey) {
+    return {
+      provider: normalizedAiLocalization.provider,
+      hasApiKey: normalizedAiLocalization.hasApiKey,
+      apiKeyLast4: normalizedAiLocalization.hasApiKey ? normalizedAiLocalization.apiKeyLast4 : null
+    };
+  }
+
+  return {
+    provider: normalizedAiLocalization.provider ?? BOARD_AI_PROVIDER_OPENAI,
+    hasApiKey: true,
+    apiKeyLast4: normalizedAiLocalization.apiKeyLast4
+  };
+}
+
+function copyBoardAiSecrets(board) {
+  const encryptedApiKey = normalizeOptionalString(board?.aiLocalizationSecrets?.[BOARD_OPENAI_SECRET_FIELD]);
+
+  if (!encryptedApiKey) {
+    return null;
+  }
+
+  return {
+    [BOARD_OPENAI_SECRET_FIELD]: encryptedApiKey
+  };
+}
+
+function deriveApiKeyLast4(apiKey) {
+  return normalizeOptionalString(apiKey).slice(-4) || null;
+}
+
 function createClearedStages(board) {
   return Object.fromEntries(
     board.stageOrder.map((stageId) => [
@@ -1324,6 +1429,10 @@ function shouldAllowAutomatedLocaleWrite({
   });
 }
 
+function normalizeOptionalString(value) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
 function stripActorKey(membership) {
   const normalizedMembership = {
     ...membership
@@ -1352,8 +1461,4 @@ function logInviteAcceptDebug(context, event, fields) {
 
 function isInviteDecisionType(type) {
   return type === 'board.invite.accept' || type === 'board.invite.decline';
-}
-
-function normalizeOptionalString(value) {
-  return typeof value === 'string' ? value.trim() : '';
 }

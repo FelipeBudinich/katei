@@ -1,4 +1,5 @@
 import { normalizeBoardSchemaInput } from './board_schema.js';
+import { normalizeBoardAiProvider } from './board_ai_localization.js';
 import { canonicalizeBoardRole, normalizeBoardActor } from './board_collaboration.js';
 import { canonicalizeContentLocale } from './board_language_policy.js';
 import { PRIORITY_ORDER } from './workspace_read_model.js';
@@ -133,7 +134,13 @@ function validateBoardCreatePayload(payload) {
     return titleValidation;
   }
 
-  return validateOptionalBoardSchemaPayload(payload, 'board.create');
+  const schemaValidation = validateOptionalBoardSchemaPayload(payload, 'board.create');
+
+  if (!schemaValidation.isValid) {
+    return schemaValidation;
+  }
+
+  return validateBoardAiPayload(payload, 'board.create');
 }
 
 function validateBoardUpdatePayload(payload) {
@@ -149,7 +156,13 @@ function validateBoardUpdatePayload(payload) {
     return titleValidation;
   }
 
-  return validateRequiredBoardSchemaPayload(payload, 'board.update');
+  const schemaValidation = validateRequiredBoardSchemaPayload(payload, 'board.update');
+
+  if (!schemaValidation.isValid) {
+    return schemaValidation;
+  }
+
+  return validateBoardAiPayload(payload, 'board.update');
 }
 
 function validateBoardScopedTitlePayload(type, payload) {
@@ -247,6 +260,25 @@ function validateBoardSchemaPayload(payload, type) {
   } catch (error) {
     return invalid(error?.message || `${type} payload schema is invalid.`);
   }
+}
+
+function validateBoardAiPayload(payload, type) {
+  if (Object.prototype.hasOwnProperty.call(payload, 'aiProvider') && !normalizeBoardAiProvider(payload.aiProvider)) {
+    return invalid(`${type} payload.aiProvider must be openai when provided.`);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(payload, 'openAiApiKey') && !isNonEmptyString(payload.openAiApiKey)) {
+    return invalid(`${type} payload.openAiApiKey must be a non-empty string when provided.`);
+  }
+
+  if (
+    Object.prototype.hasOwnProperty.call(payload, 'clearOpenAiApiKey')
+    && typeof payload.clearOpenAiApiKey !== 'boolean'
+  ) {
+    return invalid(`${type} payload.clearOpenAiApiKey must be a boolean when provided.`);
+  }
+
+  return valid();
 }
 
 function validateCardCreatePayload(payload) {

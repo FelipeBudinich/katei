@@ -5,6 +5,7 @@ import { createRuntimeConfig, parseSessionTtlSeconds } from '../src/config.js';
 const REQUIRED_ENV = Object.freeze({
   GOOGLE_CLIENT_ID: 'test-google-client-id',
   KATEI_SESSION_SECRET: 'test-session-secret',
+  KATEI_BOARD_SECRET_ENCRYPTION_KEY: 'test-board-secret-encryption-key',
   MONGODB_URI: 'mongodb://127.0.0.1:27017',
   MONGODB_DB_NAME: 'katei_test'
 });
@@ -149,6 +150,41 @@ test('createRuntimeConfig keeps hosted debug auth disabled by default', () => {
     secret: '',
     viewer: null
   });
+});
+
+test('createRuntimeConfig keeps an explicit board secret encryption key when provided', () => {
+  const config = createRuntimeConfig({
+    ...REQUIRED_ENV,
+    NODE_ENV: 'test',
+    KATEI_BOARD_SECRET_ENCRYPTION_KEY: ' explicit-board-key '
+  });
+
+  assert.equal(config.boardSecretEncryptionKey, 'explicit-board-key');
+});
+
+test('createRuntimeConfig falls back to a deterministic board secret encryption key in test', () => {
+  const config = createRuntimeConfig({
+    GOOGLE_CLIENT_ID: REQUIRED_ENV.GOOGLE_CLIENT_ID,
+    KATEI_SESSION_SECRET: REQUIRED_ENV.KATEI_SESSION_SECRET,
+    MONGODB_URI: REQUIRED_ENV.MONGODB_URI,
+    MONGODB_DB_NAME: REQUIRED_ENV.MONGODB_DB_NAME,
+    NODE_ENV: 'test'
+  });
+
+  assert.equal(config.boardSecretEncryptionKey, 'katei-test-board-secret-encryption-key');
+});
+
+test('createRuntimeConfig requires a board secret encryption key outside test', () => {
+  assert.throws(
+    () => createRuntimeConfig({
+      GOOGLE_CLIENT_ID: REQUIRED_ENV.GOOGLE_CLIENT_ID,
+      KATEI_SESSION_SECRET: REQUIRED_ENV.KATEI_SESSION_SECRET,
+      MONGODB_URI: REQUIRED_ENV.MONGODB_URI,
+      MONGODB_DB_NAME: REQUIRED_ENV.MONGODB_DB_NAME,
+      NODE_ENV: 'development'
+    }),
+    /KATEI_BOARD_SECRET_ENCRYPTION_KEY is required\./
+  );
 });
 
 test('createRuntimeConfig parses hosted debug auth viewer metadata when enabled', () => {

@@ -4,6 +4,10 @@ import { createEmptyWorkspace, createWorkspaceBoard } from '../public/js/domain/
 import { validateWorkspaceShape } from '../public/js/domain/workspace_validation.js';
 import { createMutationContext } from '../src/workspaces/mutation_context.js';
 import {
+  decryptBoardSecret,
+  encryptBoardSecret
+} from '../src/security/board_secret_crypto.js';
+import {
   applyWorkspaceCommand,
   WorkspaceCommandPermissionError
 } from '../src/workspaces/apply_workspace_command.js';
@@ -31,6 +35,7 @@ function createContext(overrides = {}) {
     now: '2026-03-31T10:00:00.000Z',
     createBoardId: () => 'board_srv001',
     createCardId: () => 'card_srv001',
+    boardSecretEncryptionKey: 'test-board-secret-encryption-key',
     ...overrides
   });
 }
@@ -139,6 +144,26 @@ function createWorkspaceWithCard({ memberships } = {}) {
   };
   workspace.boards.main.stages.backlog.cardIds = ['card_1'];
   return workspace;
+}
+
+function seedBoardOpenAiApiKey(board, apiKey, config = createContext()) {
+  board.aiLocalization = {
+    provider: 'openai',
+    hasApiKey: true,
+    apiKeyLast4: apiKey.slice(-4)
+  };
+  board.aiLocalizationSecrets = {
+    openAiApiKeyEncrypted: encryptBoardSecret(apiKey, config)
+  };
+}
+
+function readBoardStageDefinitions(board) {
+  return board.stageOrder.map((stageId) => ({
+    id: stageId,
+    title: board.stages[stageId].title,
+    allowedTransitionStageIds: [...board.stages[stageId].allowedTransitionStageIds],
+    actionIds: [...board.stages[stageId].actionIds]
+  }));
 }
 
 function createLocalizedVariant({
@@ -266,6 +291,112 @@ test('board.update saves valid schema edits through the command engine', () => {
     supportedLocales: ['en', 'ja'],
     requiredLocales: ['en']
   });
+});
+
+test('board.update preserves an existing encrypted OpenAI key when the submitted key is blank', () => {
+  const workspace = createWorkspaceForActor();
+  seedBoardOpenAiApiKey(workspace.boards.main, 'sk-existing-1234');
+
+  const { workspace: nextWorkspace, result } = applyWorkspaceCommand({
+    record: createRecord(workspace, 0),
+    command: {
+      clientMutationId: 'm1c',
+      type: 'board.update',
+      payload: {
+        boardId: 'main',
+        title: 'Editorial board',
+        aiProvider: 'openai',
+        clearOpenAiApiKey: false,
+        languagePolicy: workspace.boards.main.languagePolicy,
+        stageDefinitions: readBoardStageDefinitions(workspace.boards.main),
+        templates: []
+      }
+    },
+    expectedRevision: 0,
+    context: createContext()
+  });
+
+  assert.equal(result.noOp, false);
+  assert.equal(nextWorkspace.boards.main.aiLocalization.hasApiKey, true);
+  assert.equal(nextWorkspace.boards.main.aiLocalization.apiKeyLast4, '1234');
+  assert.equal(
+    decryptBoardSecret(
+      nextWorkspace.boards.main.aiLocalizationSecrets.openAiApiKeyEncrypted,
+      createContext()
+    ),
+    'sk-existing-1234'
+  );
+});
+
+test('board.update replaces the stored OpenAI key and treats AI-only changes as real updates', () => {
+  const workspace = createWorkspaceForActor();
+
+  const { workspace: nextWorkspace, result } = applyWorkspaceCommand({
+    record: createRecord(workspace, 0),
+    command: {
+      clientMutationId: 'm1d',
+      type: 'board.update',
+      payload: {
+        boardId: 'main',
+        title: workspace.boards.main.title,
+        aiProvider: 'openai',
+        openAiApiKey: 'sk-replaced-9876',
+        clearOpenAiApiKey: false,
+        languagePolicy: workspace.boards.main.languagePolicy,
+        stageDefinitions: readBoardStageDefinitions(workspace.boards.main),
+        templates: []
+      }
+    },
+    expectedRevision: 0,
+    context: createContext()
+  });
+
+  assert.equal(result.noOp, false);
+  assert.equal(nextWorkspace.boards.main.updatedAt, '2026-03-31T10:00:00.000Z');
+  assert.deepEqual(nextWorkspace.boards.main.aiLocalization, {
+    provider: 'openai',
+    hasApiKey: true,
+    apiKeyLast4: '9876'
+  });
+  assert.equal(
+    decryptBoardSecret(
+      nextWorkspace.boards.main.aiLocalizationSecrets.openAiApiKeyEncrypted,
+      createContext()
+    ),
+    'sk-replaced-9876'
+  );
+});
+
+test('board.update clears the stored OpenAI key when requested', () => {
+  const workspace = createWorkspaceForActor();
+  seedBoardOpenAiApiKey(workspace.boards.main, 'sk-clear-4321');
+
+  const { workspace: nextWorkspace, result } = applyWorkspaceCommand({
+    record: createRecord(workspace, 0),
+    command: {
+      clientMutationId: 'm1e',
+      type: 'board.update',
+      payload: {
+        boardId: 'main',
+        title: workspace.boards.main.title,
+        aiProvider: 'openai',
+        clearOpenAiApiKey: true,
+        languagePolicy: workspace.boards.main.languagePolicy,
+        stageDefinitions: readBoardStageDefinitions(workspace.boards.main),
+        templates: []
+      }
+    },
+    expectedRevision: 0,
+    context: createContext()
+  });
+
+  assert.equal(result.noOp, false);
+  assert.deepEqual(nextWorkspace.boards.main.aiLocalization, {
+    provider: 'openai',
+    hasApiKey: false,
+    apiKeyLast4: null
+  });
+  assert.equal(nextWorkspace.boards.main.aiLocalizationSecrets, undefined);
 });
 
 test('card.create mints a server-side card id and stores the card in backlog', () => {

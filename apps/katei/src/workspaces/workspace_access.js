@@ -3,8 +3,11 @@ import {
   listPendingBoardInvites,
   normalizeBoardCollaboration
 } from '../../public/js/domain/board_collaboration.js';
+import { normalizeBoardAiLocalization } from '../../public/js/domain/board_ai_localization.js';
 import { createDefaultBoardLanguagePolicy } from '../../public/js/domain/board_language_policy.js';
 import { createDefaultBoardStages, createDefaultBoardTemplates } from '../../public/js/domain/board_workflow.js';
+
+const BOARD_OPENAI_SECRET_FIELD = 'openAiApiKeyEncrypted';
 
 export function canViewerAccessWorkspace({ viewerSub, viewerEmail = null, ownerSub, workspace, debugLog = null }) {
   const normalizedViewerSub = normalizeOptionalString(viewerSub);
@@ -90,7 +93,7 @@ export function filterWorkspaceForViewer({ viewerSub, viewerEmail = null, ownerS
       });
       visibleBoards.push({
         boardId: boardEntry.boardId,
-        board: structuredClone(boardEntry.board)
+        board: createReadableBoardProjection(boardEntry.board)
       });
       continue;
     }
@@ -250,6 +253,7 @@ function createPendingInviteBoardProjection(board) {
     stages: Object.fromEntries(defaultStages.map((stage) => [stage.id, structuredClone(stage)])),
     templates: createDefaultBoardTemplates(),
     collaboration: normalizeBoardCollaboration(board),
+    aiLocalization: resolveProjectedBoardAiLocalization(board),
     languagePolicy: createDefaultBoardLanguagePolicy(),
     cards: {}
   };
@@ -259,12 +263,13 @@ function createOwnerWorkspaceProjection(workspace, { ownerSub, ownerEmail = '' }
   const ownerActor = resolveOwnerActor(workspace, ownerSub, ownerEmail);
   const nextWorkspace = structuredClone(workspace);
 
-  if (!ownerActor || !isPlainObject(nextWorkspace?.boards)) {
+  if (!isPlainObject(nextWorkspace?.boards)) {
     return nextWorkspace;
   }
 
   for (const [boardId, board] of Object.entries(nextWorkspace.boards)) {
-    nextWorkspace.boards[boardId] = ensureOwnerBoardMembership(board, ownerActor);
+    const nextBoard = ownerActor ? ensureOwnerBoardMembership(board, ownerActor) : board;
+    nextWorkspace.boards[boardId] = createReadableBoardProjection(nextBoard);
   }
 
   return nextWorkspace;
@@ -340,6 +345,27 @@ function ensureOwnerBoardMembership(board, ownerActor) {
         }
       ]
     }
+  };
+}
+
+function createReadableBoardProjection(board) {
+  const nextBoard = structuredClone(board);
+  nextBoard.aiLocalization = resolveProjectedBoardAiLocalization(nextBoard);
+
+  delete nextBoard.aiLocalizationSecrets;
+
+  return nextBoard;
+}
+
+function resolveProjectedBoardAiLocalization(board) {
+  const normalizedAiLocalization = normalizeBoardAiLocalization(board?.aiLocalization);
+  const persistedEncryptedApiKey = normalizeOptionalString(board?.aiLocalizationSecrets?.[BOARD_OPENAI_SECRET_FIELD]);
+  const hasApiKey = normalizedAiLocalization.hasApiKey || Boolean(persistedEncryptedApiKey);
+
+  return {
+    provider: normalizedAiLocalization.provider,
+    hasApiKey,
+    apiKeyLast4: hasApiKey ? normalizedAiLocalization.apiKeyLast4 : null
   };
 }
 

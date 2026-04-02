@@ -1,4 +1,5 @@
 const DEFAULT_SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
+const TEST_BOARD_SECRET_ENCRYPTION_KEY = 'katei-test-board-secret-encryption-key';
 
 export function createRuntimeConfig(env = process.env) {
   const nodeEnv = normalizeOptionalString(env.NODE_ENV) || 'development';
@@ -7,12 +8,14 @@ export function createRuntimeConfig(env = process.env) {
   const mongoDbName = requireNonEmptyEnv('MONGODB_DB_NAME', env.MONGODB_DB_NAME);
   const sessionTtlSeconds = parseSessionTtlSeconds(normalizeOptionalString(env.SESSION_TTL_SECONDS) || String(DEFAULT_SESSION_TTL_SECONDS));
   const debugAuth = createDebugAuthConfig(env);
+  const boardSecretEncryptionKey = resolveBoardSecretEncryptionKey(env.KATEI_BOARD_SECRET_ENCRYPTION_KEY, nodeEnv);
 
   return {
     nodeEnv,
     isProduction: nodeEnv === 'production',
     googleClientId: requireNonEmptyEnv('GOOGLE_CLIENT_ID', env.GOOGLE_CLIENT_ID),
     sessionSecret: requireNonEmptyEnv('KATEI_SESSION_SECRET', env.KATEI_SESSION_SECRET),
+    boardSecretEncryptionKey,
     googleAllowlistSubs: parseAllowlistSubs(normalizeOptionalString(env.GOOGLE_ALLOWLIST_SUBS) || ''),
     sessionTtlSeconds,
     appBaseUrl,
@@ -98,6 +101,20 @@ function parseBooleanEnv(rawValue) {
   }
 
   throw new Error('KATEI_DEBUG_AUTH_ENABLED must be a boolean-like value.');
+}
+
+function resolveBoardSecretEncryptionKey(rawValue, nodeEnv) {
+  const normalizedValue = normalizeOptionalString(rawValue);
+
+  if (normalizedValue) {
+    return normalizedValue;
+  }
+
+  if (nodeEnv === 'test') {
+    return TEST_BOARD_SECRET_ENCRYPTION_KEY;
+  }
+
+  throw new Error('KATEI_BOARD_SECRET_ENCRYPTION_KEY is required.');
 }
 
 function requireNonEmptyEnv(name, value) {

@@ -90,6 +90,49 @@
         </label>
       </section>
 
+      <section class="space-y-3" hidden data-board-editor-target="aiSection">
+        <div class="space-y-1">
+          <p class="field-label text-sm font-semibold">{{ t('boardEditor.aiLocalizationLabel') }}</p>
+          <p class="text-xs leading-5 text-muted">{{ t('boardEditor.aiLocalizationHelp') }}</p>
+        </div>
+
+        <label class="block space-y-2">
+          <span class="field-label text-sm font-semibold">{{ t('boardEditor.aiProviderLabel') }}</span>
+          <input
+            type="text"
+            name="aiProvider"
+            class="field-control"
+            value="OpenAI"
+            readonly
+            data-board-editor-target="aiProviderInput"
+          >
+        </label>
+
+        <label class="block space-y-2">
+          <span class="field-label text-sm font-semibold">{{ t('boardEditor.openAiApiKeyLabel') }}</span>
+          <input
+            type="password"
+            name="openAiApiKey"
+            class="field-control"
+            autocomplete="off"
+            spellcheck="false"
+            data-board-editor-target="openAiApiKeyInput"
+          >
+          <p class="text-xs leading-5 text-muted">{{ t('boardEditor.openAiApiKeyHelp') }}</p>
+          <p class="text-xs leading-5 text-muted" hidden data-board-editor-target="apiKeyStatus"></p>
+        </label>
+
+        <label class="flex items-start gap-3 text-sm leading-6 text-strong">
+          <input
+            type="checkbox"
+            name="clearOpenAiApiKey"
+            value="true"
+            data-board-editor-target="clearOpenAiApiKeyInput"
+          >
+          <span>{{ t('boardEditor.clearOpenAiApiKeyLabel') }}</span>
+        </label>
+      </section>
+
       <label class="block space-y-2">
         <span class="field-label text-sm font-semibold">{{ t('boardEditor.stagesLabel') }}</span>
         <p class="text-xs leading-5 text-muted">{{ t('boardEditor.stagesHelp') }}</p>

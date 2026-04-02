@@ -19,6 +19,7 @@ import {
 import { KATEI_UI_LOCALE_COOKIE_NAME } from '../src/i18n/request_ui_locale.js';
 import { createTranslator } from '../public/js/i18n/translate.js';
 import { buildWorkspacePageModel } from '../src/routes/boards.js';
+import { encryptBoardSecret } from '../src/security/board_secret_crypto.js';
 import {
   createHomeWorkspaceId,
   createInitialWorkspaceRecord,
@@ -48,6 +49,7 @@ function createTestApp({ env = {}, googleTokenVerifier, workspaceRecordRepositor
       NODE_ENV: 'test',
       GOOGLE_CLIENT_ID: 'test-google-client-id',
       KATEI_SESSION_SECRET: 'test-session-secret',
+      KATEI_BOARD_SECRET_ENCRYPTION_KEY: 'test-board-secret-encryption-key',
       MONGODB_URI: 'mongodb://127.0.0.1:27017',
       MONGODB_DB_NAME: 'katei_test',
       ...env
@@ -439,6 +441,11 @@ test('workspace template renders edit localization controls and a simplified loc
 
 test('workspace template renders the board editor without a templates field', () => {
   const workspace = createEmptyWorkspace();
+  workspace.boards.main.aiLocalization = {
+    provider: 'openai',
+    hasApiKey: true,
+    apiKeyLast4: '1234'
+  };
   const html = renderWorkspacePage(
     buildWorkspacePageModel(
       {
@@ -459,7 +466,12 @@ test('workspace template renders the board editor without a templates field', ()
   );
   const boardEditorDialog = extractDialogHtml(html, 'board-editor');
 
+  assert.match(boardEditorDialog, /name="aiProvider"/);
+  assert.match(boardEditorDialog, /name="openAiApiKey"/);
+  assert.match(boardEditorDialog, /name="clearOpenAiApiKey"/);
   assert.match(boardEditorDialog, /name="stageDefinitions"/);
+  assert.match(boardEditorDialog, /data-board-editor-target="aiSection"/);
+  assert.match(boardEditorDialog, /data-board-editor-target="apiKeyStatus"/);
   assert.match(boardEditorDialog, /data-board-editor-target="stageDefinitionsInput"/);
   assert.match(boardEditorDialog, /data-board-editor-target="deleteActions"/);
   assert.match(boardEditorDialog, /data-board-editor-target="deleteButton"/);
@@ -467,6 +479,50 @@ test('workspace template renders the board editor without a templates field', ()
   assert.doesNotMatch(boardEditorDialog, /name="templates"/);
   assert.doesNotMatch(boardEditorDialog, /data-board-editor-target="templatesInput"/);
   assert.doesNotMatch(boardEditorDialog, />\s*Templates\s*</);
+});
+
+test('GET /boards bootstraps only safe board AI metadata and never serialized secrets', async () => {
+  const workspace = createEmptyWorkspace();
+  workspace.boards.main.aiLocalization = {
+    provider: 'openai',
+    hasApiKey: true,
+    apiKeyLast4: '1234'
+  };
+  workspace.boards.main.aiLocalizationSecrets = {
+    openAiApiKeyEncrypted: encryptBoardSecret('sk-secret-1234', {
+      boardSecretEncryptionKey: 'test-board-secret-encryption-key'
+    })
+  };
+  const record = createUpdatedWorkspaceRecord(
+    createInitialWorkspaceRecord('sub_123', {
+      now: '2026-04-02T10:00:00.000Z'
+    }),
+    {
+      workspace,
+      actor: { id: 'sub_123' },
+      now: '2026-04-02T11:00:00.000Z'
+    }
+  );
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([record]);
+  const app = createTestApp({
+    googleTokenVerifier: async () => ({ sub: 'sub_123' }),
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .get('/boards')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_123', name: 'Tester' }));
+  const bootstrapPayload = readWorkspaceBootstrapPayload(response.text);
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(bootstrapPayload.workspace.boards.main.aiLocalization, {
+    provider: 'openai',
+    hasApiKey: true,
+    apiKeyLast4: '1234'
+  });
+  assert.equal(bootstrapPayload.workspace.boards.main.aiLocalizationSecrets, undefined);
+  assert.doesNotMatch(response.text, /openAiApiKeyEncrypted/);
+  assert.doesNotMatch(response.text, /sk-secret-1234/);
 });
 
 test('GET /boards bootstraps normalized workspace snapshots when the loaded record is legacy-shaped', async () => {

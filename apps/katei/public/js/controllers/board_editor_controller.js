@@ -15,6 +15,11 @@ export default class extends Controller {
     'defaultLocaleInput',
     'supportedLocalesInput',
     'requiredLocalesInput',
+    'aiSection',
+    'aiProviderInput',
+    'apiKeyStatus',
+    'openAiApiKeyInput',
+    'clearOpenAiApiKeyInput',
     'stageDefinitionsInput',
     'deleteActions',
     'deleteButton',
@@ -42,6 +47,11 @@ export default class extends Controller {
     this.defaultLocaleInputTarget.value = formState.defaultLocale;
     this.supportedLocalesInputTarget.value = formState.supportedLocales;
     this.requiredLocalesInputTarget.value = formState.requiredLocales;
+    this.aiSectionTarget.hidden = !isEditMode;
+    this.aiProviderInputTarget.value = formState.aiProvider === 'openai' ? 'OpenAI' : formState.aiProvider;
+    this.openAiApiKeyInputTarget.value = '';
+    this.clearOpenAiApiKeyInputTarget.checked = false;
+    this.syncApiKeyStatus(formState);
     this.stageDefinitionsInputTarget.value = formState.stageDefinitions;
     this.headingTarget.textContent = isEditMode ? this.t('boardEditor.editHeading') : this.t('boardEditor.newHeading');
     this.submitButtonTarget.textContent = isEditMode ? this.t('boardEditor.saveButton') : this.t('boardEditor.createButton');
@@ -96,6 +106,9 @@ export default class extends Controller {
           defaultLocale: formData.get('defaultLocale'),
           supportedLocales: formData.get('supportedLocales'),
           requiredLocales: formData.get('requiredLocales'),
+          aiProvider: formData.get('aiProvider'),
+          openAiApiKey: formData.get('openAiApiKey'),
+          clearOpenAiApiKey: formData.get('clearOpenAiApiKey') === 'true',
           stageDefinitions: formData.get('stageDefinitions')
         },
         {
@@ -136,6 +149,9 @@ export default class extends Controller {
   resetDialogState({ clearDeleteBoardId = true } = {}) {
     this.currentBoard = null;
     this.deleteActionsTarget.hidden = true;
+    this.aiSectionTarget.hidden = true;
+    this.apiKeyStatusTarget.hidden = true;
+    this.apiKeyStatusTarget.textContent = '';
 
     if (clearDeleteBoardId) {
       this.deleteButtonTarget.dataset.boardId = '';
@@ -158,5 +174,18 @@ export default class extends Controller {
 
     this.errorTarget.hidden = true;
     this.errorTarget.textContent = '';
+  }
+
+  syncApiKeyStatus(formState) {
+    if (!formState?.hasOpenAiApiKey) {
+      this.apiKeyStatusTarget.hidden = true;
+      this.apiKeyStatusTarget.textContent = '';
+      return;
+    }
+
+    this.apiKeyStatusTarget.hidden = false;
+    this.apiKeyStatusTarget.textContent = formState.openAiApiKeyLast4
+      ? this.t('boardEditor.openAiApiKeySavedWithLast4', { last4: formState.openAiApiKeyLast4 })
+      : this.t('boardEditor.openAiApiKeySaved');
   }
 }

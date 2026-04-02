@@ -5,6 +5,7 @@ export function createMutationContext({
   now = new Date().toISOString(),
   createBoardId = createDefaultBoardId,
   createCardId = createDefaultCardId,
+  boardSecretEncryptionKey = null,
   debugLog = null,
   acceptDebugLog = null
 } = {}) {
@@ -13,13 +14,22 @@ export function createMutationContext({
     now: normalizeIsoTimestamp(now, 'now'),
     createBoardId: normalizeFactory(createBoardId, 'createBoardId'),
     createCardId: normalizeFactory(createCardId, 'createCardId'),
+    boardSecretEncryptionKey: normalizeOptionalStringValue(
+      boardSecretEncryptionKey,
+      'Mutation context boardSecretEncryptionKey'
+    ),
     debugLog: normalizeOptionalDebugLog(debugLog),
     acceptDebugLog: normalizeOptionalDebugLog(acceptDebugLog)
   };
 }
 
-export function createDefaultMutationContext({ actor = null, debugLog = null, acceptDebugLog = null } = {}) {
-  return createMutationContext({ actor, debugLog, acceptDebugLog });
+export function createDefaultMutationContext({
+  actor = null,
+  boardSecretEncryptionKey = null,
+  debugLog = null,
+  acceptDebugLog = null
+} = {}) {
+  return createMutationContext({ actor, boardSecretEncryptionKey, debugLog, acceptDebugLog });
 }
 
 export function createDefaultBoardId() {
@@ -86,6 +96,18 @@ function normalizeRequiredString(value, errorMessage) {
 }
 
 function normalizeOptionalMetadataField(value, fieldName) {
+  if (value == null) {
+    return '';
+  }
+
+  if (typeof value !== 'string') {
+    throw new Error(`${fieldName} must be a string when provided.`);
+  }
+
+  return value.trim();
+}
+
+function normalizeOptionalStringValue(value, fieldName) {
   if (value == null) {
     return '';
   }

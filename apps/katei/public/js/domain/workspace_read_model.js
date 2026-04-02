@@ -1,4 +1,5 @@
 import { createBoardCollaboration } from './board_collaboration.js';
+import { createDefaultBoardAiLocalization } from './board_ai_localization.js';
 import { createDefaultBoardLanguagePolicy } from './board_language_policy.js';
 import { createDefaultBoardStages, createDefaultBoardTemplates } from './board_workflow.js';
 
@@ -86,6 +87,7 @@ export function createWorkspaceBoard({ id, title, createdAt, updatedAt, creator 
       creator,
       joinedAt: createdAt
     }),
+    aiLocalization: createDefaultBoardAiLocalization(),
     languagePolicy: createDefaultBoardLanguagePolicy(),
     cards: {}
   };

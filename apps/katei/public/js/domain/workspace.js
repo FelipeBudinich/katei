@@ -10,6 +10,7 @@ export * from './board_workflow.js';
 export * from './board_language_policy.js';
 export * from './board_stage_actions.js';
 export * from './board_collaboration.js';
+export * from './board_ai_localization.js';
 export * from './board_permissions.js';
 export * from './card_localization.js';
 export * from './card_localization_requests.js';

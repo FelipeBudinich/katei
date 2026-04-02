@@ -1,4 +1,5 @@
 import { normalizeBoardCollaboration } from './board_collaboration.js';
+import { normalizeBoardAiLocalization } from './board_ai_localization.js';
 import { createDefaultBoardLanguagePolicy, normalizeBoardLanguagePolicy } from './board_language_policy.js';
 import { getDefaultBoardStageActionIds, isValidBoardStageActionId } from './board_stage_actions.js';
 import { createDefaultBoardStages, createDefaultBoardTemplates } from './board_workflow.js';
@@ -104,6 +105,7 @@ export function migrateBoardToSchemaV8(board, { now = null, workspaceOwner = nul
   migratedBoard.collaboration = migrateBoardCollaboration(migratedBoard, {
     workspaceOwner
   });
+  migratedBoard.aiLocalization = normalizeBoardAiLocalization(migratedBoard.aiLocalization);
   migratedBoard.languagePolicy = migrateBoardLanguagePolicy(migratedBoard.languagePolicy);
 
   if (isPlainObject(migratedBoard.cards)) {

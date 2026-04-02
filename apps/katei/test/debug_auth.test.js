@@ -18,6 +18,7 @@ function createTestApp({ env = {} } = {}) {
       NODE_ENV: 'test',
       GOOGLE_CLIENT_ID: 'test-google-client-id',
       KATEI_SESSION_SECRET: 'test-session-secret',
+      KATEI_BOARD_SECRET_ENCRYPTION_KEY: 'test-board-secret-encryption-key',
       MONGODB_URI: 'mongodb://127.0.0.1:27017',
       MONGODB_DB_NAME: 'katei_test',
       ...env

@@ -125,6 +125,9 @@ test('WorkspaceService updateBoard calls repository.applyCommand and returns wor
           supportedLocales: ['en', 'ja'],
           requiredLocales: ['en']
         },
+        aiProvider: 'openai',
+        openAiApiKey: 'sk-board-1234',
+        clearOpenAiApiKey: false,
         stageDefinitions: [
           {
             id: 'backlog',
@@ -155,6 +158,9 @@ test('WorkspaceService updateBoard calls repository.applyCommand and returns wor
         supportedLocales: ['en', 'ja'],
         requiredLocales: ['en']
       },
+      aiProvider: 'openai',
+      openAiApiKey: 'sk-board-1234',
+      clearOpenAiApiKey: false,
       stageDefinitions: [
         {
           id: 'backlog',

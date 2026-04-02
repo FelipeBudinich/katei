@@ -4,6 +4,7 @@ import {
   createCard,
   createEmptyWorkspace
 } from '../public/js/domain/workspace.js';
+import { encryptBoardSecret } from '../src/security/board_secret_crypto.js';
 import {
   canViewerAccessWorkspace,
   canViewerReadBoard,
@@ -65,6 +66,38 @@ test('member projections keep only readable boards and correct the active board 
   assert.deepEqual(filteredWorkspace.boardOrder, ['member']);
   assert.deepEqual(Object.keys(filteredWorkspace.boards), ['member']);
   assert.equal(filteredWorkspace.ui.activeBoardId, 'member');
+});
+
+test('workspace projections expose only safe board AI metadata and redact encrypted secrets', () => {
+  const workspace = createSharedWorkspaceFixture();
+
+  seedBoardOpenAiKey(workspace.boards.main, 'sk-owner-1234');
+  seedBoardOpenAiKey(workspace.boards.member, 'sk-member-9876');
+
+  const ownerProjection = filterWorkspaceForViewer({
+    viewerSub: 'sub_owner',
+    ownerSub: 'sub_owner',
+    workspace
+  });
+  const memberProjection = filterWorkspaceForViewer({
+    viewerSub: 'sub_member',
+    viewerEmail: 'member@example.com',
+    ownerSub: 'sub_owner',
+    workspace
+  });
+
+  assert.deepEqual(ownerProjection.boards.main.aiLocalization, {
+    provider: 'openai',
+    hasApiKey: true,
+    apiKeyLast4: '1234'
+  });
+  assert.equal(ownerProjection.boards.main.aiLocalizationSecrets, undefined);
+  assert.deepEqual(memberProjection.boards.member.aiLocalization, {
+    provider: 'openai',
+    hasApiKey: true,
+    apiKeyLast4: '9876'
+  });
+  assert.equal(memberProjection.boards.member.aiLocalizationSecrets, undefined);
 });
 
 test('pending-invite viewers keep a visible redacted board shell for acceptance flows', () => {
@@ -227,4 +260,17 @@ function addBoard(workspace, boardId, title, { memberships = [], invites = [], c
 function renameBoard(board, boardId, title) {
   board.id = boardId;
   board.title = title;
+}
+
+function seedBoardOpenAiKey(board, apiKey) {
+  board.aiLocalization = {
+    provider: 'openai',
+    hasApiKey: true,
+    apiKeyLast4: apiKey.slice(-4)
+  };
+  board.aiLocalizationSecrets = {
+    openAiApiKeyEncrypted: encryptBoardSecret(apiKey, {
+      boardSecretEncryptionKey: 'test-board-secret-encryption-key'
+    })
+  };
 }

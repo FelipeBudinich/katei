@@ -36,6 +36,9 @@ test('validateWorkspaceCommand accepts valid command envelopes', () => {
       payload: {
         boardId: 'main',
         title: 'Now',
+        aiProvider: 'openai',
+        openAiApiKey: 'sk-board-1234',
+        clearOpenAiApiKey: false,
         languagePolicy: {
           sourceLocale: 'en',
           defaultLocale: 'ja',
@@ -229,6 +232,63 @@ test('validateWorkspaceCommand rejects unknown command types', () => {
         boardId: 'main',
         columnId: 'doing',
         isCollapsed: true
+      }
+    }),
+    false
+  );
+});
+
+test('validateWorkspaceCommand rejects invalid board AI localization payload fields', () => {
+  assert.equal(
+    validateWorkspaceCommand({
+      clientMutationId: 'm_board_ai_1',
+      type: 'board.update',
+      payload: {
+        boardId: 'main',
+        title: 'Now',
+        aiProvider: 'anthropic',
+        languagePolicy: {
+          sourceLocale: 'en',
+          defaultLocale: 'en',
+          supportedLocales: ['en'],
+          requiredLocales: ['en']
+        },
+        stageDefinitions: [
+          {
+            id: 'backlog',
+            title: 'Backlog',
+            allowedTransitionStageIds: []
+          }
+        ],
+        templates: []
+      }
+    }),
+    false
+  );
+
+  assert.equal(
+    validateWorkspaceCommand({
+      clientMutationId: 'm_board_ai_2',
+      type: 'board.update',
+      payload: {
+        boardId: 'main',
+        title: 'Now',
+        aiProvider: 'openai',
+        openAiApiKey: '   ',
+        languagePolicy: {
+          sourceLocale: 'en',
+          defaultLocale: 'en',
+          supportedLocales: ['en'],
+          requiredLocales: ['en']
+        },
+        stageDefinitions: [
+          {
+            id: 'backlog',
+            title: 'Backlog',
+            allowedTransitionStageIds: []
+          }
+        ],
+        templates: []
       }
     }),
     false

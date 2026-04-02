@@ -19,7 +19,7 @@ import {
 import { projectRecordForViewer } from '../workspaces/mongo_workspace_record_repository.js';
 import { canViewerReplaceWorkspaceSnapshot } from '../workspaces/workspace_access.js';
 
-export function createWorkspaceApiRouter({ requireSession, workspaceRecordRepository }) {
+export function createWorkspaceApiRouter({ config, requireSession, workspaceRecordRepository }) {
   const router = Router();
 
   router.get('/api/workspace', requireSession, async (request, response, next) => {
@@ -214,6 +214,7 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
 
       const context = createDefaultMutationContext({
         actor: createViewerMutationActor(request.viewer),
+        boardSecretEncryptionKey: config?.boardSecretEncryptionKey ?? null,
         debugLog,
         acceptDebugLog
       });

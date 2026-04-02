@@ -63,6 +63,7 @@ test('parseBoardEditorFormInput parses valid schema edits and clears templates f
     defaultLocale: 'ja',
     supportedLocales: 'en, ja',
     requiredLocales: 'en',
+    aiProvider: 'OpenAI',
     stageDefinitions: ['backlog | Backlog | review', 'review | Review | backlog'].join('\n')
   });
 
@@ -88,6 +89,9 @@ test('parseBoardEditorFormInput parses valid schema edits and clears templates f
     }
   ]);
   assert.deepEqual(parsedInput.templates, []);
+  assert.equal(parsedInput.aiProvider, 'openai');
+  assert.equal(parsedInput.clearOpenAiApiKey, false);
+  assert.equal(Object.prototype.hasOwnProperty.call(parsedInput, 'openAiApiKey'), false);
 });
 
 test('parseBoardEditorFormInput accepts 2-, 3-, and 4-segment stage lines and preserves empty transitions before actions', () => {
@@ -208,6 +212,57 @@ test('parseBoardEditorFormInput clears legacy templates when editing an existing
   assert.deepEqual(parsedInput.templates, []);
 });
 
+test('parseBoardEditorFormInput includes a replacement OpenAI key when one is provided', () => {
+  const parsedInput = parseBoardEditorFormInput({
+    title: 'Editorial board',
+    sourceLocale: 'en',
+    defaultLocale: 'en',
+    supportedLocales: 'en',
+    requiredLocales: 'en',
+    aiProvider: 'OpenAI',
+    openAiApiKey: ' sk-new-1234 ',
+    stageDefinitions: ['backlog | Backlog | review', 'review | Review | backlog'].join('\n')
+  });
+
+  assert.equal(parsedInput.aiProvider, 'openai');
+  assert.equal(parsedInput.openAiApiKey, 'sk-new-1234');
+  assert.equal(parsedInput.clearOpenAiApiKey, false);
+});
+
+test('parseBoardEditorFormInput keeps the saved OpenAI key when the input is blank', () => {
+  const parsedInput = parseBoardEditorFormInput({
+    title: 'Editorial board',
+    sourceLocale: 'en',
+    defaultLocale: 'en',
+    supportedLocales: 'en',
+    requiredLocales: 'en',
+    aiProvider: 'OpenAI',
+    openAiApiKey: '   ',
+    stageDefinitions: ['backlog | Backlog | review', 'review | Review | backlog'].join('\n')
+  });
+
+  assert.equal(parsedInput.aiProvider, 'openai');
+  assert.equal(parsedInput.clearOpenAiApiKey, false);
+  assert.equal(Object.prototype.hasOwnProperty.call(parsedInput, 'openAiApiKey'), false);
+});
+
+test('parseBoardEditorFormInput clears the saved OpenAI key when requested', () => {
+  const parsedInput = parseBoardEditorFormInput({
+    title: 'Editorial board',
+    sourceLocale: 'en',
+    defaultLocale: 'en',
+    supportedLocales: 'en',
+    requiredLocales: 'en',
+    aiProvider: 'OpenAI',
+    clearOpenAiApiKey: true,
+    stageDefinitions: ['backlog | Backlog | review', 'review | Review | backlog'].join('\n')
+  });
+
+  assert.equal(parsedInput.aiProvider, 'openai');
+  assert.equal(parsedInput.clearOpenAiApiKey, true);
+  assert.equal(Object.prototype.hasOwnProperty.call(parsedInput, 'openAiApiKey'), false);
+});
+
 test('board editor hides delete actions in create mode', async () => {
   const controller = createBoardEditorControllerDouble();
 
@@ -228,6 +283,11 @@ test('board editor hides delete actions in create mode', async () => {
 test('board editor shows delete actions for a deletable board in edit mode', async () => {
   const controller = createBoardEditorControllerDouble();
   const board = createEmptyWorkspace().boards.main;
+  board.aiLocalization = {
+    provider: 'openai',
+    hasApiKey: true,
+    apiKeyLast4: '1234'
+  };
 
   await withImmediateAnimationFrame(() => {
     BoardEditorController.prototype.openFromEvent.call(controller, {
@@ -243,6 +303,9 @@ test('board editor shows delete actions for a deletable board in edit mode', asy
   assert.equal(controller.deleteActionsTarget.hidden, false);
   assert.equal(controller.deleteButtonTarget.dataset.boardId, 'main');
   assert.equal(controller.boardIdInputTarget.value, 'main');
+  assert.equal(controller.aiSectionTarget.hidden, false);
+  assert.equal(controller.apiKeyStatusTarget.hidden, false);
+  assert.match(controller.apiKeyStatusTarget.textContent, /1234/);
 });
 
 test('board editor keeps delete actions hidden when edit mode cannot delete the board', async () => {
@@ -309,6 +372,15 @@ function createBoardEditorControllerDouble() {
   controller.defaultLocaleInputTarget = createValueTarget('');
   controller.supportedLocalesInputTarget = createValueTarget('');
   controller.requiredLocalesInputTarget = createValueTarget('');
+  controller.aiSectionTarget = {
+    hidden: true
+  };
+  controller.aiProviderInputTarget = createValueTarget('OpenAI');
+  controller.apiKeyStatusTarget = createTextTarget({ hidden: true });
+  controller.openAiApiKeyInputTarget = createValueTarget('');
+  controller.clearOpenAiApiKeyInputTarget = {
+    checked: false
+  };
   controller.stageDefinitionsInputTarget = createValueTarget('');
   controller.deleteActionsTarget = {
     hidden: true
