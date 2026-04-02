@@ -20,6 +20,7 @@ export default class extends Controller {
     'apiKeyStatus',
     'openAiApiKeyInput',
     'clearOpenAiApiKeyInput',
+    'localizationGlossaryInput',
     'stageDefinitionsInput',
     'deleteActions',
     'deleteButton',
@@ -51,6 +52,7 @@ export default class extends Controller {
     this.aiProviderInputTarget.value = formState.aiProvider === 'openai' ? 'OpenAI' : formState.aiProvider;
     this.openAiApiKeyInputTarget.value = '';
     this.clearOpenAiApiKeyInputTarget.checked = false;
+    this.localizationGlossaryInputTarget.value = formState.localizationGlossary;
     this.syncApiKeyStatus(formState);
     this.stageDefinitionsInputTarget.value = formState.stageDefinitions;
     this.headingTarget.textContent = isEditMode ? this.t('boardEditor.editHeading') : this.t('boardEditor.newHeading');
@@ -109,6 +111,7 @@ export default class extends Controller {
           aiProvider: formData.get('aiProvider'),
           openAiApiKey: formData.get('openAiApiKey'),
           clearOpenAiApiKey: formData.get('clearOpenAiApiKey') === 'true',
+          localizationGlossary: formData.get('localizationGlossary'),
           stageDefinitions: formData.get('stageDefinitions')
         },
         {

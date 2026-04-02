@@ -2,6 +2,7 @@ import { normalizeBoardSchemaInput } from './board_schema.js';
 import { normalizeBoardAiProvider } from './board_ai_localization.js';
 import { canonicalizeBoardRole, normalizeBoardActor } from './board_collaboration.js';
 import { canonicalizeContentLocale } from './board_language_policy.js';
+import { normalizeBoardLocalizationGlossary } from './board_localization_glossary.js';
 import { PRIORITY_ORDER } from './workspace_read_model.js';
 import { validateWorkspaceShape } from './workspace_validation.js';
 
@@ -140,6 +141,12 @@ function validateBoardCreatePayload(payload) {
     return schemaValidation;
   }
 
+  const glossaryValidation = validateBoardLocalizationGlossaryPayload(payload, 'board.create');
+
+  if (!glossaryValidation.isValid) {
+    return glossaryValidation;
+  }
+
   return validateBoardAiPayload(payload, 'board.create');
 }
 
@@ -160,6 +167,12 @@ function validateBoardUpdatePayload(payload) {
 
   if (!schemaValidation.isValid) {
     return schemaValidation;
+  }
+
+  const glossaryValidation = validateBoardLocalizationGlossaryPayload(payload, 'board.update');
+
+  if (!glossaryValidation.isValid) {
+    return glossaryValidation;
   }
 
   return validateBoardAiPayload(payload, 'board.update');
@@ -279,6 +292,25 @@ function validateBoardAiPayload(payload, type) {
   }
 
   return valid();
+}
+
+function validateBoardLocalizationGlossaryPayload(payload, type) {
+  if (!Object.prototype.hasOwnProperty.call(payload, 'localizationGlossary')) {
+    return valid();
+  }
+
+  if (!Object.prototype.hasOwnProperty.call(payload, 'languagePolicy')) {
+    return invalid(`${type} payload.languagePolicy is required when payload.localizationGlossary is provided.`);
+  }
+
+  try {
+    normalizeBoardLocalizationGlossary(payload.localizationGlossary, {
+      supportedLocales: payload.languagePolicy?.supportedLocales
+    });
+    return valid();
+  } catch (error) {
+    return invalid(error?.message || `${type} payload.localizationGlossary is invalid.`);
+  }
 }
 
 function validateCardCreatePayload(payload) {

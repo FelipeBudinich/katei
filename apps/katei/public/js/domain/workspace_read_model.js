@@ -1,6 +1,7 @@
 import { createBoardCollaboration } from './board_collaboration.js';
 import { createDefaultBoardAiLocalization } from './board_ai_localization.js';
 import { createDefaultBoardLanguagePolicy } from './board_language_policy.js';
+import { createDefaultBoardLocalizationGlossary } from './board_localization_glossary.js';
 import { createDefaultBoardStages, createDefaultBoardTemplates } from './board_workflow.js';
 
 export const WORKSPACE_VERSION = 6;
@@ -89,6 +90,7 @@ export function createWorkspaceBoard({ id, title, createdAt, updatedAt, creator 
     }),
     aiLocalization: createDefaultBoardAiLocalization(),
     languagePolicy: createDefaultBoardLanguagePolicy(),
+    localizationGlossary: createDefaultBoardLocalizationGlossary(),
     cards: {}
   };
 }

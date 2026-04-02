@@ -404,6 +404,52 @@ test('board.update replaces the stored OpenAI key and treats AI-only changes as 
   );
 });
 
+test('board.update saves localization glossary entries and treats glossary-only changes as real updates', () => {
+  const workspace = createWorkspaceForActor();
+  workspace.boards.main.languagePolicy = {
+    sourceLocale: 'en',
+    defaultLocale: 'en',
+    supportedLocales: ['en', 'es'],
+    requiredLocales: ['en']
+  };
+
+  const { workspace: nextWorkspace, result } = applyWorkspaceCommand({
+    record: createRecord(workspace, 0),
+    command: {
+      clientMutationId: 'm1d_glossary',
+      type: 'board.update',
+      payload: {
+        boardId: 'main',
+        title: workspace.boards.main.title,
+        languagePolicy: workspace.boards.main.languagePolicy,
+        localizationGlossary: [
+          {
+            source: 'Omen of Sorrow',
+            translations: {
+              es: 'Omen of Sorrow'
+            }
+          }
+        ],
+        stageDefinitions: readBoardStageDefinitions(workspace.boards.main),
+        templates: []
+      }
+    },
+    expectedRevision: 0,
+    context: createContext()
+  });
+
+  assert.equal(result.noOp, false);
+  assert.equal(nextWorkspace.boards.main.updatedAt, '2026-03-31T10:00:00.000Z');
+  assert.deepEqual(nextWorkspace.boards.main.localizationGlossary, [
+    {
+      source: 'Omen of Sorrow',
+      translations: {
+        es: 'Omen of Sorrow'
+      }
+    }
+  ]);
+});
+
 test('board.update clears the stored OpenAI key when requested', () => {
   const workspace = createWorkspaceForActor();
   seedBoardOpenAiApiKey(workspace.boards.main, 'sk-clear-4321');

@@ -4,6 +4,7 @@ import {
   normalizeBoardAiProvider
 } from '../domain/board_ai_localization.js';
 import { createDefaultBoardLanguagePolicy } from '../domain/board_language_policy.js';
+import { normalizeBoardLocalizationGlossary } from '../domain/board_localization_glossary.js';
 import { normalizeBoardSchemaInput, assertBoardSchemaCompatibleWithBoard } from '../domain/board_schema.js';
 import { createDefaultBoardStages } from '../domain/board_workflow.js';
 
@@ -32,6 +33,11 @@ export function createBoardEditorFormState(board = null) {
     aiProvider: normalizeBoardAiLocalization(board?.aiLocalization).provider,
     hasOpenAiApiKey: normalizeBoardAiLocalization(board?.aiLocalization).hasApiKey,
     openAiApiKeyLast4: normalizeBoardAiLocalization(board?.aiLocalization).apiKeyLast4,
+    localizationGlossary: serializeLocalizationGlossary(
+      normalizeBoardLocalizationGlossary(board?.localizationGlossary, {
+        supportedLocales: baseLanguagePolicy.supportedLocales
+      })
+    ),
     stageDefinitions: stageDefinitions
       .map((stage) => serializeStageDefinition(stage))
       .join('\n')
@@ -61,12 +67,19 @@ export function parseBoardEditorFormInput(input, { currentBoard = null } = {}) {
   const aiProvider = normalizeBoardAiProvider(input?.aiProvider) ?? BOARD_AI_PROVIDER_OPENAI;
   const openAiApiKey = normalizeOptionalSecret(input?.openAiApiKey);
   const clearOpenAiApiKey = input?.clearOpenAiApiKey === true;
+  const localizationGlossary = normalizeBoardLocalizationGlossary(
+    parseLocalizationGlossary(input?.localizationGlossary),
+    {
+      supportedLocales: normalizedSchema.languagePolicy.supportedLocales
+    }
+  );
 
   return {
     title,
     languagePolicy: normalizedSchema.languagePolicy,
     stageDefinitions: normalizedSchema.stageDefinitions,
     templates: [],
+    localizationGlossary,
     aiProvider,
     ...(openAiApiKey ? { openAiApiKey } : {}),
     clearOpenAiApiKey
@@ -123,6 +136,58 @@ function splitInlineList(value) {
 
 function normalizeOptionalSecret(value) {
   return typeof value === 'string' && value.trim() ? value.trim() : '';
+}
+
+function parseLocalizationGlossary(rawValue) {
+  const lines = splitMultilineInput(rawValue);
+
+  if (lines.length < 1) {
+    return [];
+  }
+
+  return lines.map((line) => {
+    const segments = splitStagePipeSegments(line);
+
+    if (segments.length < 2) {
+      throw new Error('Each glossary line must use "Source term | locale=value | locale=value".');
+    }
+
+    const translations = {};
+
+    for (const translationSegment of segments.slice(1)) {
+      const separatorIndex = translationSegment.indexOf('=');
+
+      if (separatorIndex <= 0 || separatorIndex === translationSegment.length - 1) {
+        throw new Error('Each glossary line must use "Source term | locale=value | locale=value".');
+      }
+
+      const locale = translationSegment.slice(0, separatorIndex).trim();
+      const translation = translationSegment.slice(separatorIndex + 1).trim();
+
+      if (!locale || !translation || Object.prototype.hasOwnProperty.call(translations, locale)) {
+        throw new Error('Each glossary line must use "Source term | locale=value | locale=value".');
+      }
+
+      translations[locale] = translation;
+    }
+
+    return {
+      source: segments[0],
+      translations
+    };
+  });
+}
+
+function serializeLocalizationGlossary(localizationGlossary) {
+  return localizationGlossary
+    .map((entry) => {
+      const translations = Object.entries(entry.translations)
+        .map(([locale, value]) => `${locale}=${value}`)
+        .join(' | ');
+
+      return `${entry.source} | ${translations}`;
+    })
+    .join('\n');
 }
 
 function serializeStageDefinition(stage) {

@@ -1,5 +1,6 @@
 import { BOARD_AI_PROVIDER_OPENAI } from '../../public/js/domain/board_ai_localization.js';
 import { canonicalizeContentLocale } from '../../public/js/domain/board_language_policy.js';
+import { normalizeBoardLocalizationGlossary } from '../../public/js/domain/board_localization_glossary.js';
 import { getStoredCardContentVariant } from '../../public/js/domain/card_localization.js';
 
 export const DEFAULT_OPENAI_LOCALIZATION_MODEL = 'gpt-5.4-mini';
@@ -182,6 +183,12 @@ function normalizeLocalizationRequest({
     priority: normalizeOptionalString(card?.priority),
     sourceLocale: normalizedSourceLocale,
     targetLocale: normalizedTargetLocale,
+    localizationGlossary: selectPromptLocalizationGlossaryEntries(board?.localizationGlossary, {
+      supportedLocales: board?.languagePolicy?.supportedLocales,
+      targetLocale: normalizedTargetLocale,
+      sourceTitle: sourceVariant.title,
+      sourceDetailsMarkdown: normalizeOptionalString(sourceVariant.detailsMarkdown)
+    }),
     sourceTitle: sourceVariant.title,
     sourceDetailsMarkdown: normalizeOptionalString(sourceVariant.detailsMarkdown)
   };
@@ -198,7 +205,7 @@ function createSystemPrompt() {
 }
 
 function createUserPrompt(request) {
-  return [
+  const prompt = [
     'Localize the following board card content.',
     '',
     `Board title: ${request.boardTitle || '(untitled board)'}`,
@@ -212,13 +219,54 @@ function createUserPrompt(request) {
     '- Preserve markdown formatting and meaning.',
     '- Keep detailsMarkdown as an empty string when the source details are empty.',
     '- Do not invent metadata or commentary.',
+  ];
+
+  if (request.localizationGlossary.length > 0) {
+    prompt.push(
+      '',
+      `Approved terminology for target locale ${request.targetLocale}:`,
+      ...request.localizationGlossary.map((entry) => `- ${entry.source} => ${entry.translation}`),
+      'Use these exact localized forms whenever the source term appears.',
+      'Do not translate these terms differently.'
+    );
+  }
+
+  prompt.push(
     '',
     'Source title:',
     request.sourceTitle,
     '',
     'Source detailsMarkdown:',
     request.sourceDetailsMarkdown || '(empty)'
-  ].join('\n');
+  );
+
+  return prompt.join('\n');
+}
+
+function selectPromptLocalizationGlossaryEntries(
+  localizationGlossary,
+  {
+    supportedLocales = null,
+    targetLocale,
+    sourceTitle = '',
+    sourceDetailsMarkdown = ''
+  } = {}
+) {
+  const normalizedGlossary = normalizeBoardLocalizationGlossary(localizationGlossary, {
+    supportedLocales
+  });
+  const sourceText = [sourceTitle, sourceDetailsMarkdown].filter(Boolean).join('\n');
+
+  if (!sourceText) {
+    return [];
+  }
+
+  return normalizedGlossary
+    .map((entry) => ({
+      source: entry.source,
+      translation: normalizeOptionalString(entry.translations?.[targetLocale])
+    }))
+    .filter((entry) => entry.translation && sourceText.includes(entry.source));
 }
 
 async function parseJsonResponse(response) {

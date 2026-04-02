@@ -19,6 +19,7 @@ import {
   normalizeBoardAiProvider
 } from '../../public/js/domain/board_ai_localization.js';
 import { canonicalizeContentLocale } from '../../public/js/domain/board_language_policy.js';
+import { normalizeBoardLocalizationGlossary } from '../../public/js/domain/board_localization_glossary.js';
 import {
   canActorAdminBoard,
   canActorEditBoard,
@@ -212,10 +213,15 @@ function applyBoardCreate(workspace, command, context) {
         templates: command.payload.templates
       })
     : null;
+  const nextLocalizationGlossary = resolveNextBoardLocalizationGlossary(board, command.payload, {
+    supportedLocales: normalizedSchema?.languagePolicy?.supportedLocales ?? board.languagePolicy?.supportedLocales
+  });
 
   if (normalizedSchema) {
     applyNormalizedSchemaToBoard(board, normalizedSchema);
   }
+
+  applyBoardLocalizationGlossary(board, nextLocalizationGlossary);
 
   nextWorkspace.boards[board.id] = board;
   nextWorkspace.boardOrder = [...nextWorkspace.boardOrder, board.id];
@@ -238,6 +244,9 @@ function applyBoardUpdate(workspace, command, context) {
     stageDefinitions: command.payload.stageDefinitions,
     templates: command.payload.templates
   });
+  const nextLocalizationGlossary = resolveNextBoardLocalizationGlossary(currentBoard, command.payload, {
+    supportedLocales: normalizedSchema.languagePolicy.supportedLocales
+  });
   const nextBoardAiSettings = resolveNextBoardAiSettings(currentBoard, command.payload, context);
 
   assertBoardSchemaCompatibleWithBoard(currentBoard, normalizedSchema);
@@ -250,6 +259,7 @@ function applyBoardUpdate(workspace, command, context) {
         stageDefinitions: normalizedSchema.stageDefinitions,
         templates: normalizedSchema.templates
       }) &&
+    boardLocalizationGlossaryEqual(currentBoard, nextLocalizationGlossary) &&
     boardAiSettingsEqual(currentBoard, nextBoardAiSettings)
   ) {
     return {
@@ -265,6 +275,7 @@ function applyBoardUpdate(workspace, command, context) {
   const board = getBoard(nextWorkspace, command.payload.boardId);
   board.title = normalizedTitle;
   applyNormalizedSchemaToBoard(board, normalizedSchema, { preserveCardIdsFrom: currentBoard });
+  applyBoardLocalizationGlossary(board, nextLocalizationGlossary);
   applyBoardAiSettings(board, nextBoardAiSettings);
   board.updatedAt = context.now;
 
@@ -1230,6 +1241,10 @@ function applyNormalizedSchemaToBoard(board, normalizedSchema, { preserveCardIds
   board.languagePolicy = structuredClone(normalizedSchema.languagePolicy);
 }
 
+function applyBoardLocalizationGlossary(board, localizationGlossary) {
+  board.localizationGlossary = structuredClone(localizationGlossary);
+}
+
 function createCommandResult(command, data = {}) {
   return {
     clientMutationId: command.clientMutationId,
@@ -1271,6 +1286,18 @@ function hasBoardSchemaPayload(payload) {
         hasOwn(payload, 'templates')
       )
   );
+}
+
+function resolveNextBoardLocalizationGlossary(board, payload, { supportedLocales = null } = {}) {
+  if (!hasOwn(payload, 'localizationGlossary')) {
+    return normalizeBoardLocalizationGlossary(board?.localizationGlossary, {
+      supportedLocales: supportedLocales ?? board?.languagePolicy?.supportedLocales
+    });
+  }
+
+  return normalizeBoardLocalizationGlossary(payload.localizationGlossary, {
+    supportedLocales
+  });
 }
 
 function resolveNextBoardAiSettings(board, payload, context) {
@@ -1328,6 +1355,14 @@ function applyBoardAiSettings(board, aiSettings) {
 function boardAiSettingsEqual(board, aiSettings) {
   return JSON.stringify(normalizeBoardAiLocalization(board?.aiLocalization)) === JSON.stringify(aiSettings.aiLocalization)
     && JSON.stringify(copyBoardAiSecrets(board)) === JSON.stringify(aiSettings.aiLocalizationSecrets);
+}
+
+function boardLocalizationGlossaryEqual(board, localizationGlossary) {
+  return JSON.stringify(
+    normalizeBoardLocalizationGlossary(board?.localizationGlossary, {
+      supportedLocales: board?.languagePolicy?.supportedLocales
+    })
+  ) === JSON.stringify(localizationGlossary);
 }
 
 function resolveBoardAiLocalization(board) {

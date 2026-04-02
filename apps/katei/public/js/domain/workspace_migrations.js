@@ -1,6 +1,7 @@
 import { normalizeBoardCollaboration } from './board_collaboration.js';
 import { normalizeBoardAiLocalization } from './board_ai_localization.js';
 import { createDefaultBoardLanguagePolicy, normalizeBoardLanguagePolicy } from './board_language_policy.js';
+import { normalizeBoardLocalizationGlossary } from './board_localization_glossary.js';
 import { getDefaultBoardStageActionIds, isValidBoardStageActionId } from './board_stage_actions.js';
 import { createDefaultBoardStages, createDefaultBoardTemplates } from './board_workflow.js';
 import { createCardContentProvenance } from './card_localization.js';
@@ -107,6 +108,12 @@ export function migrateBoardToSchemaV8(board, { now = null, workspaceOwner = nul
   });
   migratedBoard.aiLocalization = normalizeBoardAiLocalization(migratedBoard.aiLocalization);
   migratedBoard.languagePolicy = migrateBoardLanguagePolicy(migratedBoard.languagePolicy);
+  migratedBoard.localizationGlossary = normalizeBoardLocalizationGlossary(
+    migratedBoard.localizationGlossary,
+    {
+      supportedLocales: migratedBoard.languagePolicy?.supportedLocales
+    }
+  );
 
   if (isPlainObject(migratedBoard.cards)) {
     for (const [cardId, card] of Object.entries(migratedBoard.cards)) {

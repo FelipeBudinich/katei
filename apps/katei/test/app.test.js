@@ -469,9 +469,11 @@ test('workspace template renders the board editor without a templates field', ()
   assert.match(boardEditorDialog, /name="aiProvider"/);
   assert.match(boardEditorDialog, /name="openAiApiKey"/);
   assert.match(boardEditorDialog, /name="clearOpenAiApiKey"/);
+  assert.match(boardEditorDialog, /name="localizationGlossary"/);
   assert.match(boardEditorDialog, /name="stageDefinitions"/);
   assert.match(boardEditorDialog, /data-board-editor-target="aiSection"/);
   assert.match(boardEditorDialog, /data-board-editor-target="apiKeyStatus"/);
+  assert.match(boardEditorDialog, /data-board-editor-target="localizationGlossaryInput"/);
   assert.match(boardEditorDialog, /data-board-editor-target="stageDefinitionsInput"/);
   assert.match(boardEditorDialog, /data-board-editor-target="deleteActions"/);
   assert.match(boardEditorDialog, /data-board-editor-target="deleteButton"/);

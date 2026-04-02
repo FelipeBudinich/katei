@@ -128,6 +128,14 @@ test('WorkspaceService updateBoard calls repository.applyCommand and returns wor
         aiProvider: 'openai',
         openAiApiKey: 'sk-board-1234',
         clearOpenAiApiKey: false,
+        localizationGlossary: [
+          {
+            source: 'Omen of Sorrow',
+            translations: {
+              es: 'Omen of Sorrow'
+            }
+          }
+        ],
         stageDefinitions: [
           {
             id: 'backlog',
@@ -161,6 +169,14 @@ test('WorkspaceService updateBoard calls repository.applyCommand and returns wor
       aiProvider: 'openai',
       openAiApiKey: 'sk-board-1234',
       clearOpenAiApiKey: false,
+      localizationGlossary: [
+        {
+          source: 'Omen of Sorrow',
+          translations: {
+            es: 'Omen of Sorrow'
+          }
+        }
+      ],
       stageDefinitions: [
         {
           id: 'backlog',

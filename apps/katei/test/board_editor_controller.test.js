@@ -27,6 +27,28 @@ test('createBoardEditorFormState serializes the current board schema without exp
   assert.equal(Object.prototype.hasOwnProperty.call(formState, 'templates'), false);
 });
 
+test('createBoardEditorFormState serializes localization glossary terms for editing', () => {
+  const board = createEmptyWorkspace().boards.main;
+  board.languagePolicy = {
+    sourceLocale: 'en',
+    defaultLocale: 'en',
+    supportedLocales: ['en', 'es'],
+    requiredLocales: ['en']
+  };
+  board.localizationGlossary = [
+    {
+      source: 'Omen of Sorrow',
+      translations: {
+        es: 'Omen of Sorrow'
+      }
+    }
+  ];
+
+  const formState = createBoardEditorFormState(board);
+
+  assert.equal(formState.localizationGlossary, 'Omen of Sorrow | es=Omen of Sorrow');
+});
+
 test('createBoardEditorFormState serializes a fourth stage segment only when actions exist', () => {
   const board = createEmptyWorkspace().boards.main;
 
@@ -92,6 +114,36 @@ test('parseBoardEditorFormInput parses valid schema edits and clears templates f
   assert.equal(parsedInput.aiProvider, 'openai');
   assert.equal(parsedInput.clearOpenAiApiKey, false);
   assert.equal(Object.prototype.hasOwnProperty.call(parsedInput, 'openAiApiKey'), false);
+});
+
+test('parseBoardEditorFormInput parses localization glossary entries for supported locales', () => {
+  const parsedInput = parseBoardEditorFormInput({
+    title: 'Editorial board',
+    sourceLocale: 'en',
+    defaultLocale: 'es',
+    supportedLocales: 'en, es',
+    requiredLocales: 'en',
+    localizationGlossary: [
+      'Omen of Sorrow | es=Omen of Sorrow',
+      'Blood Pact | es=Pacto de Sangre'
+    ].join('\n'),
+    stageDefinitions: ['backlog | Backlog | review', 'review | Review | backlog'].join('\n')
+  });
+
+  assert.deepEqual(parsedInput.localizationGlossary, [
+    {
+      source: 'Omen of Sorrow',
+      translations: {
+        es: 'Omen of Sorrow'
+      }
+    },
+    {
+      source: 'Blood Pact',
+      translations: {
+        es: 'Pacto de Sangre'
+      }
+    }
+  ]);
 });
 
 test('parseBoardEditorFormInput accepts 2-, 3-, and 4-segment stage lines and preserves empty transitions before actions', () => {
@@ -288,6 +340,20 @@ test('board editor shows delete actions for a deletable board in edit mode', asy
     hasApiKey: true,
     apiKeyLast4: '1234'
   };
+  board.languagePolicy = {
+    sourceLocale: 'en',
+    defaultLocale: 'en',
+    supportedLocales: ['en', 'es'],
+    requiredLocales: ['en']
+  };
+  board.localizationGlossary = [
+    {
+      source: 'Omen of Sorrow',
+      translations: {
+        es: 'Omen of Sorrow'
+      }
+    }
+  ];
 
   await withImmediateAnimationFrame(() => {
     BoardEditorController.prototype.openFromEvent.call(controller, {
@@ -306,6 +372,7 @@ test('board editor shows delete actions for a deletable board in edit mode', asy
   assert.equal(controller.aiSectionTarget.hidden, false);
   assert.equal(controller.apiKeyStatusTarget.hidden, false);
   assert.match(controller.apiKeyStatusTarget.textContent, /1234/);
+  assert.equal(controller.localizationGlossaryInputTarget.value, 'Omen of Sorrow | es=Omen of Sorrow');
 });
 
 test('board editor keeps delete actions hidden when edit mode cannot delete the board', async () => {
@@ -381,6 +448,7 @@ function createBoardEditorControllerDouble() {
   controller.clearOpenAiApiKeyInputTarget = {
     checked: false
   };
+  controller.localizationGlossaryInputTarget = createValueTarget('');
   controller.stageDefinitionsInputTarget = createValueTarget('');
   controller.deleteActionsTarget = {
     hidden: true

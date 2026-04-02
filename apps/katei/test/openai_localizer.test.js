@@ -33,7 +33,21 @@ test('OpenAI localizer sends target locale and card content in the prompt and re
         defaultLocale: 'en',
         supportedLocales: ['en', 'ja'],
         requiredLocales: ['en']
-      }
+      },
+      localizationGlossary: [
+        {
+          source: 'Ship launch checklist',
+          translations: {
+            ja: 'Ship launch checklist'
+          }
+        },
+        {
+          source: 'Does not appear',
+          translations: {
+            ja: 'Irrelevant'
+          }
+        }
+      ]
     },
     card: {
       id: 'card_1',
@@ -77,6 +91,9 @@ test('OpenAI localizer sends target locale and card content in the prompt and re
   assert.match(requestBody.input[1].content, /Target locale: ja/);
   assert.match(requestBody.input[1].content, /Ship launch checklist/);
   assert.match(requestBody.input[1].content, /Notify collaborators/);
+  assert.match(requestBody.input[1].content, /Approved terminology for target locale ja:/);
+  assert.match(requestBody.input[1].content, /Ship launch checklist => Ship launch checklist/);
+  assert.doesNotMatch(requestBody.input[1].content, /Does not appear => Irrelevant/);
 });
 
 test('OpenAI localizer fails cleanly when source locale content is missing', async () => {

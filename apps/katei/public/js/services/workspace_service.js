@@ -84,7 +84,8 @@ export class WorkspaceService {
   async createBoard(input) {
     return this.#applyCommand('board.create', {
       title: input?.title,
-      ...buildBoardSchemaPayload(input)
+      ...buildBoardSchemaPayload(input),
+      ...buildBoardLocalizationPayload(input)
     });
   }
 
@@ -100,6 +101,7 @@ export class WorkspaceService {
       boardId,
       title: input?.title,
       ...buildBoardSchemaPayload(input),
+      ...buildBoardLocalizationPayload(input),
       ...buildBoardAiPayload(input)
     });
   }
@@ -357,6 +359,16 @@ function buildBoardAiPayload(input) {
 
   if (input?.clearOpenAiApiKey !== undefined) {
     payload.clearOpenAiApiKey = input.clearOpenAiApiKey;
+  }
+
+  return payload;
+}
+
+function buildBoardLocalizationPayload(input) {
+  const payload = {};
+
+  if (input?.localizationGlossary !== undefined) {
+    payload.localizationGlossary = input.localizationGlossary;
   }
 
   return payload;

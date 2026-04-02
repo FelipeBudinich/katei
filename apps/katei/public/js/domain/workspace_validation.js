@@ -1,6 +1,7 @@
 import { validateBoardInvites, validateBoardMemberships } from './board_collaboration.js';
 import { validateBoardAiLocalization } from './board_ai_localization.js';
 import { validateBoardLanguagePolicy } from './board_language_policy.js';
+import { validateBoardLocalizationGlossary } from './board_localization_glossary.js';
 import { validateBoardStages, validateBoardTemplates } from './board_workflow.js';
 import { validateCardContentByLocale } from './card_localization.js';
 import {
@@ -123,6 +124,14 @@ function isValidBoard(board, boardId) {
   }
 
   if (!validateBoardTemplates(board) || !validateBoardLanguagePolicy(board.languagePolicy)) {
+    return false;
+  }
+
+  if (
+    !validateBoardLocalizationGlossary(board.localizationGlossary, {
+      supportedLocales: board.languagePolicy?.supportedLocales
+    })
+  ) {
     return false;
   }
 

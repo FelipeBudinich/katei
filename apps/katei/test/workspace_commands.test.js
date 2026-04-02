@@ -39,6 +39,14 @@ test('validateWorkspaceCommand accepts valid command envelopes', () => {
         aiProvider: 'openai',
         openAiApiKey: 'sk-board-1234',
         clearOpenAiApiKey: false,
+        localizationGlossary: [
+          {
+            source: 'Omen of Sorrow',
+            translations: {
+              ja: 'Omen of Sorrow'
+            }
+          }
+        ],
         languagePolicy: {
           sourceLocale: 'en',
           defaultLocale: 'ja',
@@ -281,6 +289,40 @@ test('validateWorkspaceCommand rejects invalid board AI localization payload fie
           supportedLocales: ['en'],
           requiredLocales: ['en']
         },
+        stageDefinitions: [
+          {
+            id: 'backlog',
+            title: 'Backlog',
+            allowedTransitionStageIds: []
+          }
+        ],
+        templates: []
+      }
+    }),
+    false
+  );
+
+  assert.equal(
+    validateWorkspaceCommand({
+      clientMutationId: 'm_board_glossary_1',
+      type: 'board.update',
+      payload: {
+        boardId: 'main',
+        title: 'Now',
+        languagePolicy: {
+          sourceLocale: 'en',
+          defaultLocale: 'en',
+          supportedLocales: ['en'],
+          requiredLocales: ['en']
+        },
+        localizationGlossary: [
+          {
+            source: 'Omen of Sorrow',
+            translations: {
+              es: 'Omen of Sorrow'
+            }
+          }
+        ],
         stageDefinitions: [
           {
             id: 'backlog',

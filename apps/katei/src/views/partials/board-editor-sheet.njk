@@ -122,6 +122,18 @@
           <p class="text-xs leading-5 text-muted" hidden data-board-editor-target="apiKeyStatus"></p>
         </label>
 
+        <label class="block space-y-2">
+          <span class="field-label text-sm font-semibold">{{ t('boardEditor.localizationGlossaryLabel') }}</span>
+          <textarea
+            name="localizationGlossary"
+            rows="4"
+            class="field-control font-mono text-sm"
+            placeholder="Omen of Sorrow | es=Omen of Sorrow"
+            data-board-editor-target="localizationGlossaryInput"
+          ></textarea>
+          <p class="text-xs leading-5 text-muted">{{ t('boardEditor.localizationGlossaryHelp') }}</p>
+        </label>
+
         <label class="flex items-start gap-3 text-sm leading-6 text-strong">
           <input
             type="checkbox"
