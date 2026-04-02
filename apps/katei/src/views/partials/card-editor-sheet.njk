@@ -38,6 +38,7 @@
           <label class="block space-y-2">
             <span class="field-label text-sm font-semibold">{{ t('cardEditor.localeLabel') }}</span>
             <select
+              name="locale"
               class="field-control"
               data-action="change->card-editor#changeLocale"
               data-card-editor-target="localeSelect"
