@@ -685,6 +685,108 @@ test('HttpWorkspaceRepository applyCommand sends expectedRevision and updates lo
   });
 });
 
+test('HttpWorkspaceRepository generateCardLocalization sends expectedRevision and updates local meta state', async () => {
+  const localizedWorkspace = createCard(createEmptyWorkspace(), 'main', {
+    title: 'Command result',
+    detailsMarkdown: 'Applied by the server',
+    priority: 'urgent'
+  });
+  const [cardId] = Object.keys(localizedWorkspace.boards.main.cards);
+
+  localizedWorkspace.boards.main.cards[cardId].contentByLocale.ja = {
+    title: 'コマンド結果',
+    detailsMarkdown: 'サーバーが生成しました。',
+    provenance: {
+      actor: { type: 'agent', id: 'openai-localizer' },
+      timestamp: '2026-04-03T15:10:00.000Z',
+      includesHumanInput: false
+    }
+  };
+  const repository = new HttpWorkspaceRepository({
+    fetchImpl: createFetchDouble([
+      createJsonResponse(createWorkspaceApiPayload(localizedWorkspace, {
+        revision: 8,
+        updatedAt: '2026-04-03T15:10:00.000Z',
+        lastChangedBy: 'sub_123',
+        isPristine: false
+      }, {
+        clientMutationId: 'm_generate_1',
+        type: 'card.locale.generate',
+        noOp: false,
+        boardId: 'main',
+        cardId,
+        locale: 'ja',
+        sourceLocale: 'en'
+      }))
+    ]).fetch,
+    viewerSub: 'sub_123',
+    storage: null,
+    document: createDocumentDouble({
+      'workspace-bootstrap': JSON.stringify(
+        createWorkspaceApiPayload(createEmptyWorkspace(), {
+          revision: 7,
+          updatedAt: '2026-04-03T14:00:00.000Z',
+          lastChangedBy: 'sub_123',
+          isPristine: false
+        })
+      )
+    })
+  });
+
+  await repository.loadWorkspace();
+  const fetchDouble = createFetchDouble([
+    createJsonResponse(createWorkspaceApiPayload(localizedWorkspace, {
+      revision: 8,
+      updatedAt: '2026-04-03T15:10:00.000Z',
+      lastChangedBy: 'sub_123',
+      isPristine: false
+    }, {
+      clientMutationId: 'm_generate_1',
+      type: 'card.locale.generate',
+      noOp: false,
+      boardId: 'main',
+      cardId,
+      locale: 'ja',
+      sourceLocale: 'en'
+    }))
+  ]);
+  repository.fetchImpl = fetchDouble.fetch;
+
+  const payload = await repository.generateCardLocalization({
+    clientMutationId: 'm_generate_1',
+    boardId: 'main',
+    cardId,
+    targetLocale: 'ja'
+  });
+
+  assert.deepEqual(payload.result, {
+    clientMutationId: 'm_generate_1',
+    type: 'card.locale.generate',
+    noOp: false,
+    boardId: 'main',
+    cardId,
+    locale: 'ja',
+    sourceLocale: 'en'
+  });
+  assert.deepEqual(repository.meta, {
+    revision: 8,
+    updatedAt: '2026-04-03T15:10:00.000Z',
+    lastChangedBy: 'sub_123',
+    isPristine: false
+  });
+  assert.equal(repository.revision, 8);
+  assert.equal(fetchDouble.calls[0].url, '/api/workspace/localizations/generate');
+  assert.equal(fetchDouble.calls[0].options.method, 'POST');
+  assert.deepEqual(JSON.parse(fetchDouble.calls[0].options.body), {
+    clientMutationId: 'm_generate_1',
+    workspaceId: localizedWorkspace.workspaceId,
+    boardId: 'main',
+    cardId,
+    targetLocale: 'ja',
+    expectedRevision: 7
+  });
+});
+
 test('HttpWorkspaceRepository resolves a cross-workspace revision without replacing the active cached workspace state', async () => {
   const homeWorkspace = createEmptyWorkspace({
     workspaceId: 'workspace_home'

@@ -2,7 +2,22 @@ import {
   canonicalizeContentLocale,
   normalizeBoardLanguagePolicy
 } from './board_language_policy.js';
-import { listCardLocaleStatuses } from './card_localization_requests.js';
+import {
+  clearCardLocaleRequest,
+  getOpenLocalizationRequest,
+  listCardLocaleStatuses
+} from './card_localization_requests.js';
+import { isHumanAuthoredVariant } from './localized_content_guard.js';
+
+export class CardLocalizationGenerationConflictError extends Error {
+  constructor(message, { code = 'LOCALIZATION_ALREADY_PRESENT', locale = null, status = 409 } = {}) {
+    super(message);
+    this.name = 'CardLocalizationGenerationConflictError';
+    this.code = code;
+    this.locale = locale;
+    this.status = status;
+  }
+}
 
 export function createCardContentProvenance({
   actor,
@@ -123,6 +138,56 @@ export function upsertCardContentVariant(card, locale, patch, provenance) {
   };
 }
 
+export function applyGeneratedCardLocalization(card, locale, patch, { actor, timestamp } = {}) {
+  const normalizedLocale = canonicalizeContentLocale(locale);
+
+  if (!normalizedLocale) {
+    throw new Error(`Invalid content locale: ${locale}`);
+  }
+
+  const existingVariant = getStoredCardContentVariant(card, normalizedLocale);
+
+  if (hasMeaningfulVariantContent(existingVariant)) {
+    if (isHumanAuthoredVariant(existingVariant)) {
+      throw new CardLocalizationGenerationConflictError(
+        'Human-authored localized content already exists for this locale.',
+        {
+          code: 'LOCALIZATION_HUMAN_AUTHORED_CONFLICT',
+          locale: normalizedLocale
+        }
+      );
+    }
+
+    throw new CardLocalizationGenerationConflictError(
+      'Localized content already exists for this locale.',
+      {
+        code: 'LOCALIZATION_ALREADY_PRESENT',
+        locale: normalizedLocale
+      }
+    );
+  }
+
+  let nextCard = upsertCardContentVariant(
+    card,
+    normalizedLocale,
+    {
+      title: normalizeRequiredLocalizedTitle(patch?.title),
+      detailsMarkdown: normalizeOptionalLocalizedString(patch?.detailsMarkdown)
+    },
+    {
+      actor,
+      timestamp,
+      includesHumanInput: false
+    }
+  );
+
+  if (getOpenLocalizationRequest(card, normalizedLocale)) {
+    nextCard = clearCardLocaleRequest(nextCard, normalizedLocale);
+  }
+
+  return nextCard;
+}
+
 export function validateCardContentByLocale(card, board) {
   const languagePolicy = normalizeBoardLanguagePolicy(board?.languagePolicy);
 
@@ -237,8 +302,28 @@ function normalizeVariantPatch(patch) {
   return normalizedPatch;
 }
 
+function normalizeRequiredLocalizedTitle(value) {
+  const normalizedValue = normalizeOptionalLocalizedString(value);
+
+  if (!normalizedValue) {
+    throw new Error('Generated localized card title is required.');
+  }
+
+  return normalizedValue;
+}
+
+function normalizeOptionalLocalizedString(value) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
 function cloneValue(value) {
   return value == null ? value : structuredClone(value);
+}
+
+function hasMeaningfulVariantContent(variant) {
+  return Boolean(
+    normalizeOptionalLocalizedString(variant?.title) || normalizeOptionalLocalizedString(variant?.detailsMarkdown)
+  );
 }
 
 function isValidLocalizedContentVariant(variant) {

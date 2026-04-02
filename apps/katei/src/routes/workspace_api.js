@@ -1,13 +1,29 @@
 import { Router } from 'express';
 import { normalizeBoardCollaboration } from '../../public/js/domain/board_collaboration.js';
+import {
+  canonicalizeContentLocale,
+  normalizeBoardLanguagePolicy
+} from '../../public/js/domain/board_language_policy.js';
+import { canActorEditBoard } from '../../public/js/domain/board_permissions.js';
+import {
+  applyGeneratedCardLocalization,
+  CardLocalizationGenerationConflictError,
+  getStoredCardContentVariant
+} from '../../public/js/domain/card_localization.js';
+import { isHumanAuthoredVariant } from '../../public/js/domain/localized_content_guard.js';
+import { cloneWorkspace } from '../../public/js/domain/workspace_read_model.js';
 import { migrateWorkspaceSnapshot } from '../../public/js/domain/workspace_migrations.js';
 import { validateWorkspaceShape } from '../../public/js/domain/workspace_validation.js';
+import { getBoard, getCard } from '../../public/js/domain/workspace_selectors.js';
+import { createOpenAiLocalizer, OpenAiLocalizerError } from '../ai/openai_localizer.js';
 import { applyWorkspaceCommand, WorkspaceCommandPermissionError } from '../workspaces/apply_workspace_command.js';
 import { buildInviteResponseDebugFields, createInviteAcceptDebugLogger, createInviteDebugLogger } from '../lib/invite_debug.js';
+import { decryptBoardSecret } from '../security/board_secret_crypto.js';
 import { createDefaultMutationContext } from '../workspaces/mutation_context.js';
 import {
   createCommandAppliedWorkspaceRecord,
   createCommandReceipt,
+  createWorkspaceActivityEvent,
   createWorkspaceRecord,
   findCommandReceipt
 } from '../workspaces/workspace_record.js';
@@ -19,8 +35,17 @@ import {
 import { projectRecordForViewer } from '../workspaces/mongo_workspace_record_repository.js';
 import { canViewerReplaceWorkspaceSnapshot } from '../workspaces/workspace_access.js';
 
-export function createWorkspaceApiRouter({ config, requireSession, workspaceRecordRepository }) {
+const BOARD_OPENAI_SECRET_FIELD = 'openAiApiKeyEncrypted';
+const CARD_LOCALIZATION_GENERATE_COMMAND_TYPE = 'card.locale.generate';
+
+export function createWorkspaceApiRouter({
+  config,
+  requireSession,
+  workspaceRecordRepository,
+  openAiLocalizer = createOpenAiLocalizer()
+}) {
   const router = Router();
+  const resolvedOpenAiLocalizer = openAiLocalizer ?? createOpenAiLocalizer();
 
   router.get('/api/workspace', requireSession, async (request, response, next) => {
     const debugLog = createInviteDebugLogger({ request });
@@ -359,6 +384,165 @@ export function createWorkspaceApiRouter({ config, requireSession, workspaceReco
     }
   });
 
+  router.post('/api/workspace/localizations/generate', requireSession, async (request, response, next) => {
+    const debugLog = createInviteDebugLogger({ request });
+    const { expectedRevision, isValid: hasValidExpectedRevision } = parseExpectedRevision(request.body?.expectedRevision);
+    const requestedWorkspaceId = resolveRequestedWorkspaceId(request);
+    let currentRecord = null;
+
+    if (!hasValidExpectedRevision) {
+      response.status(400).json({
+        ok: false,
+        error: 'expectedRevision must be a non-negative integer.'
+      });
+      return;
+    }
+
+    let mutation = null;
+
+    try {
+      const localizationRequest = normalizeGenerateLocalizationRequest(request.body);
+
+      logViewerIdentity(debugLog, 'POST /api/workspace/localizations/generate', request, {
+        boardId: localizationRequest.boardId,
+        cardId: localizationRequest.cardId,
+        targetLocale: localizationRequest.targetLocale,
+        clientMutationId: localizationRequest.clientMutationId,
+        expectedRevision
+      });
+      currentRecord = createWorkspaceRecord(
+        await workspaceRecordRepository.loadOrCreateAuthoritativeWorkspaceRecord({
+          viewerSub: request.viewer.sub,
+          viewerEmail: request.viewer.email ?? null,
+          workspaceId: requestedWorkspaceId,
+          debugLog
+        })
+      );
+      const projectedCurrentRecord = projectRecordForViewer(
+        currentRecord,
+        createViewerProjectionContext(request.viewer, debugLog)
+      );
+      const existingReceipt = findCommandReceipt(currentRecord, localizationRequest.clientMutationId);
+
+      if (existingReceipt) {
+        const extras = await listActorFacingWorkspaceExtras(
+          workspaceRecordRepository,
+          request,
+          projectedCurrentRecord.workspaceId,
+          debugLog
+        );
+        sendWorkspaceApiResponse(response, {
+          debugLog,
+          request,
+          route: 'POST /api/workspace/localizations/generate',
+          record: projectedCurrentRecord,
+          result: existingReceipt.result,
+          ...extras
+        });
+        return;
+      }
+
+      if (currentRecord.revision !== expectedRevision) {
+        throw new WorkspaceRevisionConflictError();
+      }
+
+      mutation = await generateCardLocalizationMutation({
+        record: currentRecord,
+        requestViewer: request.viewer,
+        clientMutationId: localizationRequest.clientMutationId,
+        boardId: localizationRequest.boardId,
+        cardId: localizationRequest.cardId,
+        targetLocale: localizationRequest.targetLocale,
+        config,
+        openAiLocalizer: resolvedOpenAiLocalizer
+      });
+
+      const nextRecord = createCommandAppliedWorkspaceRecord(currentRecord, {
+        workspace: mutation.workspace,
+        actor: createViewerMutationActor(request.viewer),
+        now: mutation.now,
+        activityEvent: mutation.activityEvent,
+        commandReceipt: createCommandReceipt({
+          clientMutationId: localizationRequest.clientMutationId,
+          commandType: CARD_LOCALIZATION_GENERATE_COMMAND_TYPE,
+          actorId: request.viewer.sub,
+          revision: currentRecord.revision + 1,
+          appliedAt: mutation.now,
+          result: mutation.result
+        })
+      });
+      const persistedRecord = await workspaceRecordRepository.replaceWorkspaceRecord({
+        record: nextRecord,
+        expectedRevision
+      });
+      const extras = await listActorFacingWorkspaceExtras(
+        workspaceRecordRepository,
+        request,
+        persistedRecord.workspaceId,
+        debugLog
+      );
+
+      sendWorkspaceApiResponse(response, {
+        debugLog,
+        request,
+        route: 'POST /api/workspace/localizations/generate',
+        record: projectRecordForViewer(persistedRecord, createViewerProjectionContext(request.viewer, debugLog)),
+        result: mutation.result,
+        ...extras
+      });
+    } catch (error) {
+      if (error instanceof WorkspaceAccessDeniedError || error?.code === 'WORKSPACE_ACCESS_DENIED') {
+        response.status(404).json({
+          ok: false,
+          error: 'Workspace not found.'
+        });
+        return;
+      }
+
+      if (error instanceof WorkspaceRevisionConflictError || error?.code === 'WORKSPACE_REVISION_CONFLICT') {
+        response.status(409).json({
+          ok: false,
+          error: error.message,
+          errorCode: 'WORKSPACE_REVISION_CONFLICT'
+        });
+        return;
+      }
+
+      if (error instanceof WorkspaceCommandPermissionError || error?.code === 'WORKSPACE_COMMAND_FORBIDDEN') {
+        response.status(403).json({
+          ok: false,
+          error: error.message,
+          errorCode: error.code ?? 'WORKSPACE_COMMAND_FORBIDDEN'
+        });
+        return;
+      }
+
+      if (
+        error instanceof WorkspaceLocalizationRequestError
+        || error instanceof CardLocalizationGenerationConflictError
+        || error instanceof OpenAiLocalizerError
+      ) {
+        response.status(error.status ?? 400).json({
+          ok: false,
+          error: error.message,
+          errorCode: error.code ?? 'CARD_LOCALIZATION_GENERATION_FAILED'
+        });
+        return;
+      }
+
+      if (error?.message === 'Board not found.' || error?.message === 'Card not found.') {
+        response.status(400).json({
+          ok: false,
+          error: error.message,
+          errorCode: 'CARD_LOCALIZATION_REQUEST_INVALID'
+        });
+        return;
+      }
+
+      next(error);
+    }
+  });
+
   router.post('/api/workspace/import', requireSession, async (request, response, next) => {
     const debugLog = createInviteDebugLogger({ request });
     const workspace = migrateWorkspaceSnapshot(request.body?.workspace);
@@ -425,6 +609,204 @@ function createViewerMutationActor(viewer) {
     ...(typeof viewer?.email === 'string' && viewer.email.trim() ? { email: viewer.email.trim() } : {}),
     ...(typeof viewer?.name === 'string' && viewer.name.trim() ? { name: viewer.name.trim() } : {})
   };
+}
+
+class WorkspaceLocalizationRequestError extends Error {
+  constructor(message, { code = 'CARD_LOCALIZATION_REQUEST_INVALID', status = 400 } = {}) {
+    super(message);
+    this.name = 'WorkspaceLocalizationRequestError';
+    this.code = code;
+    this.status = status;
+  }
+}
+
+async function generateCardLocalizationMutation({
+  record,
+  requestViewer,
+  clientMutationId,
+  boardId,
+  cardId,
+  targetLocale,
+  config,
+  openAiLocalizer
+} = {}) {
+  const now = new Date().toISOString();
+  const actor = createViewerMutationActor(requestViewer);
+  const board = getBoard(record.workspace, boardId);
+
+  if (!canActorEditBoard(board, actor)) {
+    throw new WorkspaceCommandPermissionError('You do not have permission to modify this board.');
+  }
+
+  const card = getCard(board, cardId);
+  const languagePolicy = normalizeBoardLanguagePolicy(board?.languagePolicy ?? null);
+
+  if (!languagePolicy?.supportedLocales.includes(targetLocale)) {
+    throw new WorkspaceLocalizationRequestError('Card locale is not supported by this board.', {
+      code: 'TARGET_LOCALE_UNSUPPORTED',
+      status: 400
+    });
+  }
+
+  const existingTargetVariant = getStoredCardContentVariant(card, targetLocale);
+
+  if (hasMeaningfulLocalizedContent(existingTargetVariant)) {
+    if (isHumanAuthoredVariant(existingTargetVariant)) {
+      throw new CardLocalizationGenerationConflictError(
+        'Human-authored localized content already exists for this locale.',
+        {
+          code: 'LOCALIZATION_HUMAN_AUTHORED_CONFLICT',
+          locale: targetLocale
+        }
+      );
+    }
+
+    throw new CardLocalizationGenerationConflictError(
+      'Localized content already exists for this locale.',
+      {
+        code: 'LOCALIZATION_ALREADY_PRESENT',
+        locale: targetLocale
+      }
+    );
+  }
+
+  const sourceLocale = languagePolicy.sourceLocale;
+  const sourceVariant = getStoredCardContentVariant(card, sourceLocale);
+
+  if (!hasMeaningfulLocalizedContent(sourceVariant)) {
+    throw new WorkspaceLocalizationRequestError(
+      'Source locale content is required before generating a localization.',
+      {
+        code: 'SOURCE_LOCALE_MISSING',
+        status: 400
+      }
+    );
+  }
+
+  const apiKey = readBoardOpenAiApiKey(board, config);
+  const localization = await openAiLocalizer.generateLocalization({
+    apiKey,
+    board,
+    card,
+    sourceLocale,
+    targetLocale
+  });
+  const nextWorkspace = cloneWorkspace(record.workspace);
+  const nextBoard = getBoard(nextWorkspace, boardId);
+  const nextCard = getCard(nextBoard, cardId);
+
+  nextBoard.cards[nextCard.id] = applyGeneratedCardLocalization(
+    {
+      ...nextCard,
+      updatedAt: now
+    },
+    targetLocale,
+    {
+      title: localization.title,
+      detailsMarkdown: localization.detailsMarkdown
+    },
+    {
+      actor: localization.actor,
+      timestamp: now
+    }
+  );
+  nextBoard.updatedAt = now;
+
+  return {
+    workspace: nextWorkspace,
+    now,
+    result: {
+      clientMutationId,
+      type: CARD_LOCALIZATION_GENERATE_COMMAND_TYPE,
+      noOp: false,
+      boardId,
+      cardId,
+      locale: targetLocale,
+      sourceLocale
+    },
+    activityEvent: createWorkspaceActivityEvent({
+      type: 'workspace.card.localization.generated',
+      actor,
+      createdAt: now,
+      revision: record.revision + 1,
+      entity: {
+        kind: 'card',
+        boardId,
+        cardId
+      },
+      details: {
+        sourceLocale,
+        targetLocale,
+        provider: localization.provider
+      }
+    })
+  };
+}
+
+function normalizeGenerateLocalizationRequest(body) {
+  const clientMutationId = normalizeRequiredBodyString(
+    body?.clientMutationId,
+    'clientMutationId is required.'
+  );
+  const boardId = normalizeRequiredBodyString(body?.boardId, 'boardId is required.');
+  const cardId = normalizeRequiredBodyString(body?.cardId, 'cardId is required.');
+  const rawTargetLocale = normalizeRequiredBodyString(body?.targetLocale, 'targetLocale is required.');
+  const targetLocale = canonicalizeContentLocale(rawTargetLocale);
+
+  if (!targetLocale) {
+    throw new WorkspaceLocalizationRequestError('targetLocale is invalid.', {
+      code: 'CARD_LOCALIZATION_REQUEST_INVALID',
+      status: 400
+    });
+  }
+
+  return {
+    clientMutationId,
+    boardId,
+    cardId,
+    targetLocale
+  };
+}
+
+function readBoardOpenAiApiKey(board, config) {
+  const encryptedApiKey = normalizeOptionalString(board?.aiLocalizationSecrets?.[BOARD_OPENAI_SECRET_FIELD]);
+
+  if (!encryptedApiKey) {
+    throw new WorkspaceLocalizationRequestError('This board does not have an OpenAI API key configured.', {
+      code: 'BOARD_OPENAI_KEY_MISSING',
+      status: 400
+    });
+  }
+
+  try {
+    return decryptBoardSecret(encryptedApiKey, {
+      boardSecretEncryptionKey: config?.boardSecretEncryptionKey ?? null
+    });
+  } catch (error) {
+    throw new WorkspaceLocalizationRequestError('The saved OpenAI API key could not be used.', {
+      code: 'BOARD_OPENAI_KEY_UNAVAILABLE',
+      status: 500
+    });
+  }
+}
+
+function hasMeaningfulLocalizedContent(variant) {
+  return Boolean(
+    normalizeOptionalString(variant?.title) || normalizeOptionalString(variant?.detailsMarkdown)
+  );
+}
+
+function normalizeRequiredBodyString(value, errorMessage) {
+  const normalizedValue = normalizeOptionalString(value);
+
+  if (!normalizedValue) {
+    throw new WorkspaceLocalizationRequestError(errorMessage, {
+      code: 'CARD_LOCALIZATION_REQUEST_INVALID',
+      status: 400
+    });
+  }
+
+  return normalizedValue;
 }
 
 function createWorkspaceApiResponse(record, result = undefined, pendingWorkspaceInvites = [], accessibleWorkspaces = []) {

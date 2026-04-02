@@ -193,6 +193,22 @@ export class WorkspaceService {
     });
   }
 
+  async generateCardLocalization(boardId, cardId, targetLocale) {
+    const targetWorkspaceId = this.getActiveWorkspaceId();
+    const expectedRevision = await this.#resolveWorkspaceRevision(targetWorkspaceId);
+    const response = await this.repository.generateCardLocalization({
+      clientMutationId: createClientMutationId(),
+      boardId,
+      cardId,
+      targetLocale
+    }, {
+      workspaceId: targetWorkspaceId,
+      expectedRevision
+    });
+
+    return response?.workspace ?? response;
+  }
+
   async requestCardLocale(boardId, cardId, locale) {
     return this.#applyCommand('card.locale.request', {
       boardId,

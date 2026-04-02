@@ -14,7 +14,12 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const appRoot = path.resolve(__dirname, '..');
 
-export function createApp({ env = process.env, googleTokenVerifier, workspaceRecordRepository } = {}) {
+export function createApp({
+  env = process.env,
+  googleTokenVerifier,
+  workspaceRecordRepository,
+  openAiLocalizer = null
+} = {}) {
   const app = express();
   const config = createRuntimeConfig(env);
   const viewsPath = path.join(__dirname, 'views');
@@ -43,7 +48,8 @@ export function createApp({ env = process.env, googleTokenVerifier, workspaceRec
   app.use(createWebRouter({
     config,
     verifyGoogleIdToken,
-    workspaceRecordRepository: resolvedWorkspaceRecordRepository
+    workspaceRecordRepository: resolvedWorkspaceRecordRepository,
+    openAiLocalizer
   }));
   app.use(handleBodyParserError);
   app.use(handleUnexpectedError);

@@ -444,6 +444,35 @@ test('WorkspaceService upsertCardLocale calls repository.applyCommand and return
   });
 });
 
+test('WorkspaceService generateCardLocalization calls repository.generateCardLocalization and returns workspace', async () => {
+  const workspace = createEmptyWorkspace({ workspaceId: 'workspace_home' });
+  const repository = createRepositoryDouble({
+    workspace,
+    activeWorkspaceId: 'workspace_home',
+    revision: 12,
+    lastRevisionWorkspaceId: 'workspace_home'
+  });
+  const service = new WorkspaceService(repository);
+
+  const resultWorkspace = await service.generateCardLocalization('main', 'card_1', 'ja');
+
+  assert.deepEqual(resultWorkspace, workspace);
+  assert.equal(repository.generateCardLocalizationCalls.length, 1);
+  assert.match(repository.generateCardLocalizationCalls[0].clientMutationId, /^cmd_/);
+  assert.deepEqual(repository.generateCardLocalizationCalls[0], {
+    clientMutationId: repository.generateCardLocalizationCalls[0].clientMutationId,
+    boardId: 'main',
+    cardId: 'card_1',
+    targetLocale: 'ja'
+  });
+  assert.deepEqual(repository.generateCardLocalizationContexts, [
+    {
+      workspaceId: 'workspace_home',
+      expectedRevision: 12
+    }
+  ]);
+});
+
 test('WorkspaceService requestCardLocale calls repository.applyCommand and returns workspace', async () => {
   await assertServiceCommand({
     action: (service) => service.requestCardLocale('main', 'card_1', 'ja'),
@@ -533,6 +562,8 @@ function createRepositoryDouble({
     saveCalls: [],
     applyCommandCalls: [],
     applyCommandContexts: [],
+    generateCardLocalizationCalls: [],
+    generateCardLocalizationContexts: [],
     resolveWorkspaceRevisionCalls: [],
     setActiveWorkspaceCalls: [],
     events: [],
@@ -586,6 +617,24 @@ function createRepositoryDouble({
         result: {
           clientMutationId: command.clientMutationId,
           type: command.type,
+          noOp: false
+        }
+      };
+    },
+    async generateCardLocalization(request, options = {}) {
+      this.generateCardLocalizationCalls.push(structuredClone(request));
+      this.generateCardLocalizationContexts.push(structuredClone(options));
+      return {
+        workspace: structuredClone(workspace),
+        meta: {
+          revision: 1,
+          updatedAt: '2026-04-04T10:00:00.000Z',
+          lastChangedBy: 'sub_123',
+          isPristine: false
+        },
+        result: {
+          clientMutationId: request.clientMutationId,
+          type: 'card.locale.generate',
           noOp: false
         }
       };

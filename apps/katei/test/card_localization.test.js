@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  applyGeneratedCardLocalization,
+  CardLocalizationGenerationConflictError,
   createCardContentProvenance,
   getCardContentVariant,
   getMissingRequiredLocales,
@@ -235,6 +237,104 @@ test('upsertCardContentVariant adds and updates localized variants without mutat
       includesHumanInput: false
     }
   });
+});
+
+test('applyGeneratedCardLocalization stores automated provenance and clears an open locale request', () => {
+  const card = {
+    id: 'card_1',
+    localeRequests: {
+      ja: {
+        locale: 'ja',
+        status: 'open',
+        requestedBy: {
+          type: 'human',
+          id: 'viewer_123'
+        },
+        requestedAt: '2026-03-31T09:45:00.000Z'
+      }
+    },
+    contentByLocale: {
+      en: {
+        title: 'English source',
+        detailsMarkdown: 'English details',
+        provenance: createCardContentProvenance({
+          actor: { type: 'human', id: 'viewer_123' },
+          timestamp: '2026-03-31T09:30:00.000Z',
+          includesHumanInput: true
+        })
+      }
+    }
+  };
+
+  const localizedCard = applyGeneratedCardLocalization(
+    card,
+    'ja',
+    {
+      title: '日本語タイトル',
+      detailsMarkdown: '日本語本文'
+    },
+    {
+      actor: { type: 'agent', id: 'openai-localizer' },
+      timestamp: '2026-03-31T10:00:00.000Z'
+    }
+  );
+
+  assert.deepEqual(localizedCard.contentByLocale.ja, {
+    title: '日本語タイトル',
+    detailsMarkdown: '日本語本文',
+    provenance: {
+      actor: { type: 'agent', id: 'openai-localizer' },
+      timestamp: '2026-03-31T10:00:00.000Z',
+      includesHumanInput: false
+    }
+  });
+  assert.deepEqual(localizedCard.localeRequests, {});
+});
+
+test('applyGeneratedCardLocalization rejects overwriting human-authored localized content', () => {
+  const card = {
+    id: 'card_1',
+    contentByLocale: {
+      en: {
+        title: 'English source',
+        detailsMarkdown: 'English details',
+        provenance: createCardContentProvenance({
+          actor: { type: 'human', id: 'viewer_123' },
+          timestamp: '2026-03-31T09:30:00.000Z',
+          includesHumanInput: true
+        })
+      },
+      ja: {
+        title: '日本語タイトル',
+        detailsMarkdown: '日本語本文',
+        provenance: createCardContentProvenance({
+          actor: { type: 'human', id: 'viewer_999' },
+          timestamp: '2026-03-31T10:00:00.000Z',
+          includesHumanInput: true
+        })
+      }
+    }
+  };
+
+  assert.throws(
+    () => applyGeneratedCardLocalization(
+      card,
+      'ja',
+      {
+        title: '更新済みタイトル',
+        detailsMarkdown: '更新済み本文'
+      },
+      {
+        actor: { type: 'agent', id: 'openai-localizer' },
+        timestamp: '2026-03-31T10:30:00.000Z'
+      }
+    ),
+    (error) => {
+      assert.equal(error instanceof CardLocalizationGenerationConflictError, true);
+      assert.equal(error.code, 'LOCALIZATION_HUMAN_AUTHORED_CONFLICT');
+      return true;
+    }
+  );
 });
 
 test('getMissingRequiredLocales detects only the required locales still missing', () => {

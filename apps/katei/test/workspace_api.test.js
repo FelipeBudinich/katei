@@ -25,6 +25,7 @@ import {
 } from '../src/workspaces/workspace_record_repository.js';
 import { canViewerAccessWorkspace, filterWorkspaceForViewer } from '../src/workspaces/workspace_access.js';
 import { encryptBoardSecret } from '../src/security/board_secret_crypto.js';
+import { OpenAiLocalizerError } from '../src/ai/openai_localizer.js';
 
 test('GET /api/workspace returns normalized actor-filtered shared workspace data', async () => {
   const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_api_get', {
@@ -243,6 +244,293 @@ test('POST /api/workspace/commands redacts board OpenAI secrets from mutation re
   assert.equal(response.body.result.noOp, false);
 });
 
+test('POST /api/workspace/localizations/generate writes localized content, clears requests, and redacts board OpenAI secrets', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_api_localize_success', {
+    memberRole: 'editor',
+    includeInvite: false
+  });
+  const { cardId } = configureBoardForLocalization(sharedRecord.workspace.boards.member, {
+    targetLocale: 'ja',
+    includeOpenRequest: true
+  });
+  const openAiLocalizer = createOpenAiLocalizerDouble({
+    title: '会員ボードカード',
+    detailsMarkdown: '共同編集者に表示されます。'
+  });
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord]);
+  const app = createTestApp({ workspaceRecordRepository, openAiLocalizer });
+
+  const response = await request(app)
+    .post('/api/workspace/localizations/generate')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_member', email: 'member@example.com', name: 'Member' }))
+    .send({
+      workspaceId: 'workspace_shared_api_localize_success',
+      clientMutationId: 'generate_member_ja_1',
+      boardId: 'member',
+      cardId,
+      targetLocale: 'ja',
+      expectedRevision: 1
+    });
+
+  assert.equal(response.status, 200);
+  assert.equal(openAiLocalizer.calls.length, 1);
+  assert.equal(openAiLocalizer.calls[0].apiKey, 'sk-member-board-9876');
+  assert.equal(openAiLocalizer.calls[0].sourceLocale, 'en');
+  assert.equal(openAiLocalizer.calls[0].targetLocale, 'ja');
+  assert.deepEqual(response.body.workspace.boards.member.cards[cardId].contentByLocale.ja, {
+    title: '会員ボードカード',
+    detailsMarkdown: '共同編集者に表示されます。',
+    provenance: {
+      actor: {
+        type: 'agent',
+        id: 'openai-localizer'
+      },
+      timestamp: response.body.workspace.boards.member.cards[cardId].contentByLocale.ja.provenance.timestamp,
+      includesHumanInput: false
+    }
+  });
+  assert.deepEqual(response.body.workspace.boards.member.cards[cardId].localeRequests, {});
+  assert.equal(response.body.workspace.boards.member.aiLocalizationSecrets, undefined);
+  assert.deepEqual(response.body.workspace.boards.member.aiLocalization, {
+    provider: 'openai',
+    hasApiKey: true,
+    apiKeyLast4: '9876'
+  });
+  assert.deepEqual(response.body.result, {
+    clientMutationId: 'generate_member_ja_1',
+    type: 'card.locale.generate',
+    noOp: false,
+    boardId: 'member',
+    cardId,
+    locale: 'ja',
+    sourceLocale: 'en'
+  });
+});
+
+test('POST /api/workspace/localizations/generate returns 403 for unauthorized actors', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_api_localize_forbidden', {
+    memberRole: 'viewer',
+    includeInvite: false
+  });
+  const { cardId } = configureBoardForLocalization(sharedRecord.workspace.boards.member, {
+    targetLocale: 'ja',
+    includeOpenRequest: true
+  });
+  const openAiLocalizer = createOpenAiLocalizerDouble();
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord]);
+  const app = createTestApp({ workspaceRecordRepository, openAiLocalizer });
+
+  const response = await request(app)
+    .post('/api/workspace/localizations/generate')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_member', email: 'member@example.com', name: 'Member' }))
+    .send({
+      workspaceId: 'workspace_shared_api_localize_forbidden',
+      clientMutationId: 'generate_member_ja_forbidden',
+      boardId: 'member',
+      cardId,
+      targetLocale: 'ja',
+      expectedRevision: 1
+    });
+
+  assert.equal(response.status, 403);
+  assert.equal(response.body.errorCode, 'WORKSPACE_COMMAND_FORBIDDEN');
+  assert.equal(openAiLocalizer.calls.length, 0);
+});
+
+test('POST /api/workspace/localizations/generate returns 400 when the board has no OpenAI key', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_api_localize_missing_key', {
+    memberRole: 'editor',
+    includeInvite: false
+  });
+  const { cardId } = configureBoardForLocalization(sharedRecord.workspace.boards.member, {
+    targetLocale: 'ja',
+    seedApiKey: false
+  });
+  const openAiLocalizer = createOpenAiLocalizerDouble();
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord]);
+  const app = createTestApp({ workspaceRecordRepository, openAiLocalizer });
+
+  const response = await request(app)
+    .post('/api/workspace/localizations/generate')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_member', email: 'member@example.com', name: 'Member' }))
+    .send({
+      workspaceId: 'workspace_shared_api_localize_missing_key',
+      clientMutationId: 'generate_member_ja_missing_key',
+      boardId: 'member',
+      cardId,
+      targetLocale: 'ja',
+      expectedRevision: 1
+    });
+
+  assert.equal(response.status, 400);
+  assert.equal(response.body.errorCode, 'BOARD_OPENAI_KEY_MISSING');
+  assert.equal(openAiLocalizer.calls.length, 0);
+});
+
+test('POST /api/workspace/localizations/generate returns 400 for unsupported locales', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_api_localize_unsupported', {
+    memberRole: 'editor',
+    includeInvite: false
+  });
+  const { cardId } = configureBoardForLocalization(sharedRecord.workspace.boards.member, {
+    targetLocale: 'es-CL',
+    supportedLocales: ['en', 'ja']
+  });
+  const openAiLocalizer = createOpenAiLocalizerDouble();
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord]);
+  const app = createTestApp({ workspaceRecordRepository, openAiLocalizer });
+
+  const response = await request(app)
+    .post('/api/workspace/localizations/generate')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_member', email: 'member@example.com', name: 'Member' }))
+    .send({
+      workspaceId: 'workspace_shared_api_localize_unsupported',
+      clientMutationId: 'generate_member_escl_unsupported',
+      boardId: 'member',
+      cardId,
+      targetLocale: 'es-CL',
+      expectedRevision: 1
+    });
+
+  assert.equal(response.status, 400);
+  assert.equal(response.body.errorCode, 'TARGET_LOCALE_UNSUPPORTED');
+  assert.equal(openAiLocalizer.calls.length, 0);
+});
+
+test('POST /api/workspace/localizations/generate returns 400 when source locale content is missing', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_api_localize_source_missing', {
+    memberRole: 'editor',
+    includeInvite: false
+  });
+  const { cardId } = configureBoardForLocalization(sharedRecord.workspace.boards.member, {
+    targetLocale: 'ja'
+  });
+  const openAiLocalizer = createOpenAiLocalizerDouble({
+    error: new OpenAiLocalizerError('Source locale content is required before generating a localization.', {
+      code: 'SOURCE_LOCALE_MISSING',
+      status: 400
+    })
+  });
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord]);
+  const app = createTestApp({ workspaceRecordRepository, openAiLocalizer });
+
+  const response = await request(app)
+    .post('/api/workspace/localizations/generate')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_member', email: 'member@example.com', name: 'Member' }))
+    .send({
+      workspaceId: 'workspace_shared_api_localize_source_missing',
+      clientMutationId: 'generate_member_ja_source_missing',
+      boardId: 'member',
+      cardId,
+      targetLocale: 'ja',
+      expectedRevision: 1
+    });
+
+  assert.equal(response.status, 400);
+  assert.equal(response.body.errorCode, 'SOURCE_LOCALE_MISSING');
+  assert.equal(openAiLocalizer.calls.length, 1);
+});
+
+test('POST /api/workspace/localizations/generate returns 409 for revision conflicts', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_api_localize_conflict', {
+    memberRole: 'editor',
+    includeInvite: false
+  });
+  const { cardId } = configureBoardForLocalization(sharedRecord.workspace.boards.member, {
+    targetLocale: 'ja'
+  });
+  const openAiLocalizer = createOpenAiLocalizerDouble();
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord]);
+  const app = createTestApp({ workspaceRecordRepository, openAiLocalizer });
+
+  const response = await request(app)
+    .post('/api/workspace/localizations/generate')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_member', email: 'member@example.com', name: 'Member' }))
+    .send({
+      workspaceId: 'workspace_shared_api_localize_conflict',
+      clientMutationId: 'generate_member_ja_conflict',
+      boardId: 'member',
+      cardId,
+      targetLocale: 'ja',
+      expectedRevision: 0
+    });
+
+  assert.equal(response.status, 409);
+  assert.equal(response.body.errorCode, 'WORKSPACE_REVISION_CONFLICT');
+  assert.equal(openAiLocalizer.calls.length, 0);
+});
+
+test('POST /api/workspace/localizations/generate returns 409 when human-authored localized content already exists', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_api_localize_human_conflict', {
+    memberRole: 'editor',
+    includeInvite: false
+  });
+  const { cardId } = configureBoardForLocalization(sharedRecord.workspace.boards.member, {
+    targetLocale: 'ja',
+    existingTargetVariant: {
+      title: '既存タイトル',
+      detailsMarkdown: '既存本文',
+      provenance: {
+        actor: { type: 'human', id: 'sub_member' },
+        timestamp: '2026-04-04T10:35:00.000Z',
+        includesHumanInput: true
+      }
+    }
+  });
+  const openAiLocalizer = createOpenAiLocalizerDouble();
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord]);
+  const app = createTestApp({ workspaceRecordRepository, openAiLocalizer });
+
+  const response = await request(app)
+    .post('/api/workspace/localizations/generate')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_member', email: 'member@example.com', name: 'Member' }))
+    .send({
+      workspaceId: 'workspace_shared_api_localize_human_conflict',
+      clientMutationId: 'generate_member_ja_human_conflict',
+      boardId: 'member',
+      cardId,
+      targetLocale: 'ja',
+      expectedRevision: 1
+    });
+
+  assert.equal(response.status, 409);
+  assert.equal(response.body.errorCode, 'LOCALIZATION_HUMAN_AUTHORED_CONFLICT');
+  assert.equal(openAiLocalizer.calls.length, 0);
+});
+
+test('POST /api/workspace/localizations/generate returns 502 when OpenAI generation fails upstream', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_api_localize_upstream', {
+    memberRole: 'editor',
+    includeInvite: false
+  });
+  const { cardId } = configureBoardForLocalization(sharedRecord.workspace.boards.member, {
+    targetLocale: 'ja'
+  });
+  const openAiLocalizer = createOpenAiLocalizerDouble({
+    error: new OpenAiLocalizerError('OpenAI could not generate the localization.', {
+      code: 'OPENAI_UPSTREAM_ERROR',
+      status: 502
+    })
+  });
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord]);
+  const app = createTestApp({ workspaceRecordRepository, openAiLocalizer });
+
+  const response = await request(app)
+    .post('/api/workspace/localizations/generate')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_member', email: 'member@example.com', name: 'Member' }))
+    .send({
+      workspaceId: 'workspace_shared_api_localize_upstream',
+      clientMutationId: 'generate_member_ja_upstream',
+      boardId: 'member',
+      cardId,
+      targetLocale: 'ja',
+      expectedRevision: 1
+    });
+
+  assert.equal(response.status, 502);
+  assert.equal(response.body.errorCode, 'OPENAI_UPSTREAM_ERROR');
+});
+
 test('PUT /api/workspace rejects shared snapshot replacement when hidden boards exist', async () => {
   const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_api_put', {
     memberRole: 'admin',
@@ -323,7 +611,7 @@ test('PUT /api/workspace responses include pendingWorkspaceInvites without chang
   assert.deepEqual(Object.keys(response.body), ['ok', 'workspace', 'activeWorkspace', 'meta', 'pendingWorkspaceInvites', 'accessibleWorkspaces']);
 });
 
-function createTestApp({ workspaceRecordRepository } = {}) {
+function createTestApp({ workspaceRecordRepository, openAiLocalizer = null } = {}) {
   return createApp({
     env: {
       NODE_ENV: 'test',
@@ -334,8 +622,98 @@ function createTestApp({ workspaceRecordRepository } = {}) {
       MONGODB_DB_NAME: 'katei_test'
     },
     googleTokenVerifier: async () => ({ sub: 'sub_any' }),
-    workspaceRecordRepository: workspaceRecordRepository ?? createWorkspaceRecordRepositoryDouble()
+    workspaceRecordRepository: workspaceRecordRepository ?? createWorkspaceRecordRepositoryDouble(),
+    openAiLocalizer
   });
+}
+
+function createOpenAiLocalizerDouble({
+  title = 'Localized title',
+  detailsMarkdown = 'Localized details',
+  error = null
+} = {}) {
+  return {
+    calls: [],
+    async generateLocalization(input) {
+      this.calls.push(structuredClone(input));
+
+      if (error) {
+        throw error;
+      }
+
+      return {
+        provider: 'openai',
+        actor: {
+          type: 'agent',
+          id: 'openai-localizer'
+        },
+        sourceLocale: input.sourceLocale,
+        targetLocale: input.targetLocale,
+        title,
+        detailsMarkdown,
+        model: 'gpt-5.4-mini'
+      };
+    }
+  };
+}
+
+function configureBoardForLocalization(board, {
+  targetLocale = 'ja',
+  supportedLocales = ['en', targetLocale],
+  requiredLocales = ['en'],
+  seedApiKey = true,
+  includeOpenRequest = false,
+  removeSourceContent = false,
+  existingTargetVariant = null
+} = {}) {
+  board.languagePolicy = {
+    sourceLocale: 'en',
+    defaultLocale: 'en',
+    supportedLocales,
+    requiredLocales
+  };
+
+  if (seedApiKey) {
+    seedBoardOpenAiKey(board, 'sk-member-board-9876');
+  } else {
+    board.aiLocalization = {
+      provider: 'openai',
+      hasApiKey: false,
+      apiKeyLast4: null
+    };
+    delete board.aiLocalizationSecrets;
+  }
+
+  const [cardId] = Object.keys(board.cards);
+  const card = board.cards[cardId];
+
+  if (removeSourceContent) {
+    delete card.contentByLocale.en;
+  }
+
+  if (includeOpenRequest) {
+    card.localeRequests = {
+      [targetLocale]: {
+        locale: targetLocale,
+        status: 'open',
+        requestedBy: {
+          type: 'human',
+          id: 'sub_member'
+        },
+        requestedAt: '2026-04-04T10:35:00.000Z'
+      }
+    };
+  } else {
+    card.localeRequests = {};
+  }
+
+  if (existingTargetVariant) {
+    card.contentByLocale[targetLocale] = structuredClone(existingTargetVariant);
+  } else {
+    delete card.contentByLocale[targetLocale];
+  }
+
+  return { cardId };
 }
 
 function seedBoardOpenAiKey(board, apiKey) {

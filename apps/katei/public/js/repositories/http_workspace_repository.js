@@ -171,6 +171,38 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
     );
   }
 
+  async generateCardLocalization(
+    {
+      clientMutationId,
+      boardId,
+      cardId,
+      targetLocale
+    },
+    {
+      workspaceId = null,
+      expectedRevision = null
+    } = {}
+  ) {
+    const targetWorkspaceId = normalizeOptionalWorkspaceId(workspaceId) ?? this.activeWorkspaceId;
+    const mutationExpectedRevision = Number.isInteger(expectedRevision) ? expectedRevision : (this.revision ?? 0);
+
+    return this.#requestWorkspace(
+      '/api/workspace/localizations/generate',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          clientMutationId,
+          workspaceId: targetWorkspaceId,
+          boardId,
+          cardId,
+          targetLocale,
+          expectedRevision: mutationExpectedRevision
+        })
+      },
+      'Unable to generate card localization.'
+    );
+  }
+
   async #requestWorkspace(url, options, fallbackMessage, { updateState = true } = {}) {
     const parsedRequestBody = parseRequestBody(options?.body);
     const inviteDecisionDebugFields = buildInviteAcceptRequestDebugFields({
