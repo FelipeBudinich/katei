@@ -599,29 +599,6 @@ def build_snapshot_diff(previous_snapshot: dict | None, current_snapshot: dict) 
     }
 
 
-def render_node_rows(nodes: list[dict], depth: int = 0) -> str:
-    rows: list[str] = []
-    for node in nodes:
-        indent = "&nbsp;" * (depth * 4)
-        kind = "Directory" if node["kind"] == "directory" else "File"
-        child_summary = ""
-        if node["kind"] == "directory":
-            children = node.get("children", [])
-            suffix = " + more" if node.get("truncated") else ""
-            child_summary = f"{len(children)} shown{suffix}"
-        rows.append(
-            "<tr>"
-            f'<td class="text-sm leading-6 text-strong">{indent}<code class="env-inventory-inline-code">{html.escape(node["name"])}</code></td>'
-            f'<td class="text-sm leading-6 text-muted">{html.escape(kind)}</td>'
-            f'<td class="text-sm leading-6 text-muted"><code class="env-inventory-inline-code">{html.escape(node["relativePath"])}</code></td>'
-            f'<td class="text-sm leading-6 text-muted">{html.escape(child_summary)}</td>'
-            "</tr>"
-        )
-        if node["kind"] == "directory":
-            rows.append(render_node_rows(node.get("children", []), depth + 1))
-    return "".join(rows)
-
-
 def format_snapshot_timestamp(generated_at: str | None) -> str:
     if not generated_at:
         return "Timestamp unavailable"
@@ -796,8 +773,6 @@ def render_snapshot_section(report: dict) -> str:
 
 def render_app_html(report: dict) -> str:
     app_name = report["app"]["name"]
-    current_snapshot = report["currentSnapshot"]
-    app_root = current_snapshot["rootPath"]
     json_blob = json.dumps(report, separators=(",", ":")).replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
     return f"""<!doctype html>
 <html lang="en">
@@ -846,28 +821,6 @@ def render_app_html(report: dict) -> str:
 
       <div class="env-inventory-section-grid">
         {render_snapshot_section(report)}
-
-        <section class="paper-panel env-inventory-panel">
-          <div class="env-inventory-section-header">
-            <h2 class="font-serif text-2xl text-strong">Structured entries</h2>
-            <p class="text-sm leading-6 text-muted">Directory and file nodes from the current snapshot in the same JSON source used to build this page.</p>
-          </div>
-          <div class="overflow-auto">
-            <table class="min-w-full text-left">
-              <thead>
-                <tr>
-                  <th class="field-label text-sm font-semibold">Name</th>
-                  <th class="field-label text-sm font-semibold">Kind</th>
-                  <th class="field-label text-sm font-semibold">Relative path</th>
-                  <th class="field-label text-sm font-semibold">Children</th>
-                </tr>
-              </thead>
-              <tbody id="filetree-node-table" class="text-sm leading-6">
-                {render_node_rows(current_snapshot["tree"]["nodes"])}
-              </tbody>
-            </table>
-          </div>
-        </section>
       </div>
 
       <script id="filetree-report-data" type="application/json">{json_blob}</script>
