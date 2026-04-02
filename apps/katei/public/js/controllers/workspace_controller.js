@@ -60,6 +60,12 @@ export default class extends Controller {
   connect() {
     this.t = getBrowserTranslator();
     this.dateTimeFormatter = createBrowserDateTimeFormatter();
+    this.browserWindow = typeof window !== 'undefined' ? window : globalThis;
+    this.browserLocation = this.browserWindow?.location ?? null;
+    this.browserHistory = this.browserWindow?.history ?? null;
+    this.handlePopState = this.handlePopState.bind(this);
+    this.nextWorkspaceHistoryAction = 'replace';
+    this.hasSyncedWorkspaceHistory = false;
 
     if (!this.hasViewerSubValue || !this.viewerSubValue.trim()) {
       console.error('Workspace viewer sub is missing.');
@@ -69,9 +75,10 @@ export default class extends Controller {
 
     this.service = new WorkspaceService(
       new HttpWorkspaceRepository({
-        fetchImpl: window.fetch.bind(window),
+        fetchImpl: this.browserWindow.fetch.bind(this.browserWindow),
         viewerSub: this.viewerSubValue,
-        storage: window.localStorage
+        workspaceId: resolveWorkspaceIdFromLocation(this.browserLocation),
+        storage: this.browserWindow.localStorage
       })
     );
     this.templates = {
@@ -88,7 +95,18 @@ export default class extends Controller {
     this.viewDialogState = null;
     this.confirmTriggerElement = null;
     this.isConfirming = false;
+
+    if (typeof this.browserWindow?.addEventListener === 'function') {
+      this.browserWindow.addEventListener('popstate', this.handlePopState);
+    }
+
     this.loadWorkspace();
+  }
+
+  disconnect() {
+    if (typeof this.browserWindow?.removeEventListener === 'function') {
+      this.browserWindow.removeEventListener('popstate', this.handlePopState);
+    }
   }
 
   get activeBoard() {
@@ -171,7 +189,7 @@ export default class extends Controller {
     });
   }
 
-  openRenameBoard() {
+  openEditBoard() {
     if (!this.activeBoard || !this.canAdminActiveBoard) {
       if (this.activeBoard) {
         this.announce(this.t('errors.boardAdminPermissionDenied'));
@@ -180,7 +198,7 @@ export default class extends Controller {
     }
 
     this.dispatchWorkspaceEvent('open-board-editor', {
-      mode: 'rename',
+      mode: 'edit',
       board: this.activeBoard,
       canDeleteBoard: Array.isArray(this.workspace?.boardOrder) && this.workspace.boardOrder.length > 1
     });
@@ -203,19 +221,67 @@ export default class extends Controller {
   }
 
   async handleBoardSwitch(event) {
-    const { boardId } = event.detail;
-    const boardTitle = this.workspace?.boards?.[boardId]?.title ?? this.t('workspace.fallbackBoardTitle');
+    const detail = event?.detail ?? {};
+    const boardId = normalizeOptionalWorkspaceId(detail.boardId);
+    const targetWorkspaceId = normalizeOptionalWorkspaceId(detail.workspaceId)
+      ?? normalizeOptionalWorkspaceId(this.workspace?.workspaceId);
+    const currentWorkspaceId = normalizeOptionalWorkspaceId(this.service?.getActiveWorkspaceId?.() ?? this.workspace?.workspaceId);
+    const boardTitle = normalizeOptionalString(detail.boardTitle)
+      || this.workspace?.boards?.[boardId]?.title
+      || this.t('workspace.fallbackBoardTitle');
 
-    await this.runAction(
-      () => this.service.setActiveBoard(boardId),
-      this.t('workspace.announcements.switchedBoard', { title: boardTitle })
-    );
+    if (!boardId) {
+      return;
+    }
+
+    if (targetWorkspaceId === currentWorkspaceId) {
+      if (boardId === this.workspace?.ui?.activeBoardId) {
+        return;
+      }
+
+      await this.runAction(
+        () => this.service.setActiveBoard(boardId),
+        this.t('workspace.announcements.switchedBoard', { title: boardTitle })
+      );
+      return;
+    }
+
+    const previousHistoryAction = this.nextWorkspaceHistoryAction;
+    let switchedWorkspace = null;
+
+    try {
+      switchedWorkspace = await this.service.switchWorkspace(detail.isHomeWorkspace === true ? null : targetWorkspaceId);
+      let nextWorkspace = switchedWorkspace;
+
+      if (
+        switchedWorkspace?.boards?.[boardId]
+        && normalizeOptionalWorkspaceId(switchedWorkspace?.ui?.activeBoardId) !== boardId
+      ) {
+        nextWorkspace = await this.service.setActiveBoard(boardId);
+      }
+
+      this.workspace = nextWorkspace;
+      this.queueWorkspaceHistoryAction('push');
+      this.render();
+      this.announce(this.t('workspace.announcements.switchedBoard', { title: boardTitle }));
+    } catch (error) {
+      if (switchedWorkspace) {
+        this.workspace = switchedWorkspace;
+        this.queueWorkspaceHistoryAction('push');
+        this.render();
+      } else {
+        this.nextWorkspaceHistoryAction = previousHistoryAction ?? null;
+      }
+
+      console.error(error);
+      this.announce(localizeErrorMessage(error, this.t));
+    }
   }
 
   async handleBoardEditorSave(event) {
     const { mode, boardId, input } = event.detail;
 
-    if (mode === 'rename') {
+    if (mode === 'edit') {
       await this.runAction(() => this.service.updateBoard(boardId, input), this.t('workspace.announcements.boardUpdated'));
       return;
     }
@@ -632,6 +698,9 @@ export default class extends Controller {
       });
 
       this.workspace = result.workspace;
+      if (normalizeOptionalWorkspaceId(this.service?.getActiveWorkspaceId?.() ?? result.workspace?.workspaceId) !== normalizeOptionalWorkspaceId(activeWorkspaceId)) {
+        this.queueWorkspaceHistoryAction('push');
+      }
       this.render();
       this.announce(
         result.leftWorkspace
@@ -681,6 +750,7 @@ export default class extends Controller {
         viewerActor: this.viewerActor,
         boardId: null
       });
+      this.syncWorkspaceHistory();
       return;
     }
 
@@ -717,6 +787,7 @@ export default class extends Controller {
       viewerActor: this.viewerActor,
       boardId: this.activeBoard.id
     });
+    this.syncWorkspaceHistory();
   }
 
   announce(message) {
@@ -871,13 +942,27 @@ export default class extends Controller {
     window.dispatchEvent(new CustomEvent(`workspace:${name}`, { detail }));
   }
 
+  async handlePopState() {
+    const previousHistoryAction = this.nextWorkspaceHistoryAction;
+
+    this.service.setActiveWorkspace(resolveWorkspaceIdFromLocation(this.browserLocation));
+    this.queueWorkspaceHistoryAction('skip');
+    const success = await this.runAction(() => this.service.load());
+
+    if (!success) {
+      this.nextWorkspaceHistoryAction = previousHistoryAction ?? null;
+    }
+  }
+
   createBoardOptionsEventDetail({ triggerElement = null } = {}) {
     const detail = {
       workspace: this.workspace,
       viewerActor: this.viewerActor,
       triggerElement,
       activeWorkspaceId: this.service?.getActiveWorkspaceId?.() ?? null,
-      pendingWorkspaceInvites: this.service?.getPendingWorkspaceInvites?.() ?? []
+      activeWorkspaceIsHome: this.service?.getIsHomeWorkspace?.() ?? false,
+      pendingWorkspaceInvites: this.service?.getPendingWorkspaceInvites?.() ?? [],
+      accessibleWorkspaces: this.service?.getAccessibleWorkspaces?.() ?? []
     };
 
     logInviteDebug('client.invite.state', {
@@ -893,6 +978,45 @@ export default class extends Controller {
     });
 
     return detail;
+  }
+
+  queueWorkspaceHistoryAction(action) {
+    this.nextWorkspaceHistoryAction = action;
+  }
+
+  syncWorkspaceHistory() {
+    const requestedAction = this.nextWorkspaceHistoryAction ?? (this.hasSyncedWorkspaceHistory ? null : 'replace');
+
+    this.nextWorkspaceHistoryAction = null;
+
+    if (!requestedAction) {
+      return;
+    }
+
+    this.hasSyncedWorkspaceHistory = true;
+
+    if (
+      requestedAction === 'skip'
+      || !this.browserHistory
+      || typeof this.browserHistory.replaceState !== 'function'
+    ) {
+      return;
+    }
+
+    const href = buildWorkspaceBoardsHref(this.browserLocation, {
+      workspaceId: this.service?.getActiveWorkspaceId?.() ?? this.workspace?.workspaceId ?? null,
+      isHomeWorkspace: this.service?.getIsHomeWorkspace?.() ?? false
+    });
+    const state = {
+      workspaceId: this.service?.getActiveWorkspaceId?.() ?? null
+    };
+
+    if (requestedAction === 'push' && typeof this.browserHistory.pushState === 'function') {
+      this.browserHistory.pushState(state, '', href);
+      return;
+    }
+
+    this.browserHistory.replaceState(state, '', href);
   }
 
   getCollapsedColumnsForBoard(board) {
@@ -1038,6 +1162,46 @@ function describeRevisionOrigin(debugContext, targetWorkspaceId, activeWorkspace
   return 'prior-api-state';
 }
 
+function resolveWorkspaceIdFromLocation(location) {
+  const url = parseLocationUrl(location);
+  return normalizeOptionalWorkspaceId(url?.searchParams.get('workspaceId'));
+}
+
+function buildWorkspaceBoardsHref(location, { workspaceId = null, isHomeWorkspace = false } = {}) {
+  const url = parseLocationUrl(location);
+  const normalizedWorkspaceId = normalizeOptionalWorkspaceId(workspaceId);
+
+  if (!url) {
+    return normalizedWorkspaceId && !isHomeWorkspace
+      ? `/boards?workspaceId=${encodeURIComponent(normalizedWorkspaceId)}`
+      : '/boards';
+  }
+
+  if (!normalizedWorkspaceId || isHomeWorkspace) {
+    url.searchParams.delete('workspaceId');
+  } else {
+    url.searchParams.set('workspaceId', normalizedWorkspaceId);
+  }
+
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
+function parseLocationUrl(location) {
+  const href = typeof location?.href === 'string' && location.href.trim()
+    ? location.href
+    : `http://localhost${location?.pathname ?? '/boards'}${location?.search ?? ''}${location?.hash ?? ''}`;
+
+  try {
+    return new URL(href, 'http://localhost');
+  } catch (error) {
+    return null;
+  }
+}
+
 function normalizeOptionalWorkspaceId(value) {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function normalizeOptionalString(value) {
+  return typeof value === 'string' ? value.trim() : '';
 }

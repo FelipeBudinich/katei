@@ -30,24 +30,24 @@ export default class extends Controller {
 
   openFromEvent(event) {
     const { mode, board, canDeleteBoard = false } = event.detail;
-    const isRenameMode = mode === 'rename';
+    const isEditMode = mode === 'edit';
     const formState = createBoardEditorFormState(board);
 
     this.formTarget.reset();
     this.currentBoard = board ?? null;
     this.modeInputTarget.value = mode;
     this.boardIdInputTarget.value = board?.id ?? '';
-    this.titleInputTarget.value = isRenameMode ? formState.title : '';
+    this.titleInputTarget.value = isEditMode ? formState.title : '';
     this.sourceLocaleInputTarget.value = formState.sourceLocale;
     this.defaultLocaleInputTarget.value = formState.defaultLocale;
     this.supportedLocalesInputTarget.value = formState.supportedLocales;
     this.requiredLocalesInputTarget.value = formState.requiredLocales;
     this.stageDefinitionsInputTarget.value = formState.stageDefinitions;
-    this.headingTarget.textContent = isRenameMode ? this.t('boardEditor.renameHeading') : this.t('boardEditor.newHeading');
-    this.submitButtonTarget.textContent = isRenameMode ? this.t('boardEditor.saveButton') : this.t('boardEditor.createButton');
+    this.headingTarget.textContent = isEditMode ? this.t('boardEditor.editHeading') : this.t('boardEditor.newHeading');
+    this.submitButtonTarget.textContent = isEditMode ? this.t('boardEditor.saveButton') : this.t('boardEditor.createButton');
     this.syncDeleteAction({
       boardId: board?.id ?? '',
-      isRenameMode,
+      isEditMode,
       canDeleteBoard
     });
     this.hideError();
@@ -126,8 +126,8 @@ export default class extends Controller {
     this.resetDialogState({ clearDeleteBoardId });
   }
 
-  syncDeleteAction({ boardId = '', isRenameMode = false, canDeleteBoard = false } = {}) {
-    const shouldShowDeleteAction = Boolean(isRenameMode && canDeleteBoard && boardId);
+  syncDeleteAction({ boardId = '', isEditMode = false, canDeleteBoard = false } = {}) {
+    const shouldShowDeleteAction = Boolean(isEditMode && canDeleteBoard && boardId);
 
     this.deleteActionsTarget.hidden = !shouldShowDeleteAction;
     this.deleteButtonTarget.dataset.boardId = shouldShowDeleteAction ? boardId : '';

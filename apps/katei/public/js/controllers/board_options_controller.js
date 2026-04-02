@@ -15,6 +15,7 @@ export default class extends Controller {
     'roleSummary',
     'pendingSummary',
     'boardList',
+    'workspaceSectionTemplate',
     'boardItemTemplate',
     'inviteSection',
     'inviteList',
@@ -28,6 +29,8 @@ export default class extends Controller {
     this.optionsState = null;
     this.pendingWorkspaceInvites = [];
     this.activeWorkspaceId = null;
+    this.activeWorkspaceIsHome = false;
+    this.accessibleWorkspaces = [];
     this.restoreFocusElement = null;
   }
 
@@ -35,7 +38,9 @@ export default class extends Controller {
     this.restoreFocusElement = event.detail?.triggerElement ?? null;
     this.syncWorkspace(event.detail?.workspace, event.detail?.viewerActor, {
       pendingWorkspaceInvites: event.detail?.pendingWorkspaceInvites,
-      activeWorkspaceId: event.detail?.activeWorkspaceId
+      activeWorkspaceId: event.detail?.activeWorkspaceId,
+      activeWorkspaceIsHome: event.detail?.activeWorkspaceIsHome,
+      accessibleWorkspaces: event.detail?.accessibleWorkspaces
     });
 
     if (!this.dialogTarget.open) {
@@ -50,7 +55,9 @@ export default class extends Controller {
   syncFromEvent(event) {
     this.syncWorkspace(event.detail?.workspace, event.detail?.viewerActor, {
       pendingWorkspaceInvites: event.detail?.pendingWorkspaceInvites,
-      activeWorkspaceId: event.detail?.activeWorkspaceId
+      activeWorkspaceId: event.detail?.activeWorkspaceId,
+      activeWorkspaceIsHome: event.detail?.activeWorkspaceIsHome,
+      accessibleWorkspaces: event.detail?.accessibleWorkspaces
     });
   }
 
@@ -73,13 +80,13 @@ export default class extends Controller {
     this.dispatch('create-board');
   }
 
-  renameBoard() {
+  editBoard() {
     if (!this.activeBoard) {
       return;
     }
 
     this.closeDialog({ restoreFocus: false });
-    this.dispatch('rename-board', {
+    this.dispatch('edit-board', {
       detail: {
         boardId: this.activeBoard.id
       }
@@ -114,15 +121,26 @@ export default class extends Controller {
 
   switchBoard(event) {
     const boardId = event.currentTarget.dataset.boardId;
+    const workspaceId = normalizeOptionalWorkspaceId(event.currentTarget.dataset.workspaceId)
+      ?? normalizeOptionalWorkspaceId(this.workspace?.workspaceId);
+    const isHomeWorkspace = event.currentTarget.dataset.isHomeWorkspace === 'true';
+    const boardTitle = normalizeOptionalString(event.currentTarget.dataset.boardTitle);
 
-    if (!boardId || boardId === this.workspace?.ui?.activeBoardId) {
+    if (!boardId) {
+      return;
+    }
+
+    if (workspaceId === this.activeWorkspaceId && boardId === this.workspace?.ui?.activeBoardId) {
       return;
     }
 
     this.closeDialog({ restoreFocus: false });
     this.dispatch('switch-board', {
       detail: {
-        boardId
+        workspaceId,
+        isHomeWorkspace,
+        boardId,
+        boardTitle
       }
     });
   }
@@ -144,7 +162,9 @@ export default class extends Controller {
     viewerActor = this.viewerActor,
     {
       pendingWorkspaceInvites = this.pendingWorkspaceInvites,
-      activeWorkspaceId = this.activeWorkspaceId
+      activeWorkspaceId = this.activeWorkspaceId,
+      activeWorkspaceIsHome = this.activeWorkspaceIsHome,
+      accessibleWorkspaces = this.accessibleWorkspaces
     } = {}
   ) {
     if (!workspace) {
@@ -155,9 +175,13 @@ export default class extends Controller {
     this.viewerActor = viewerActor ?? this.viewerActor;
     this.pendingWorkspaceInvites = Array.isArray(pendingWorkspaceInvites) ? pendingWorkspaceInvites : [];
     this.activeWorkspaceId = normalizeOptionalWorkspaceId(activeWorkspaceId);
+    this.activeWorkspaceIsHome = activeWorkspaceIsHome === true;
+    this.accessibleWorkspaces = Array.isArray(accessibleWorkspaces) ? accessibleWorkspaces : [];
     this.optionsState = createBoardOptionsState(this.workspace, this.viewerActor, {
       pendingWorkspaceInvites: this.pendingWorkspaceInvites,
-      activeWorkspaceId: this.activeWorkspaceId
+      activeWorkspaceId: this.activeWorkspaceId,
+      activeWorkspaceIsHome: this.activeWorkspaceIsHome,
+      accessibleWorkspaces: this.accessibleWorkspaces
     });
     this.render();
   }
@@ -174,7 +198,7 @@ export default class extends Controller {
       this.roleSummaryTarget.textContent = '';
       this.pendingSummaryTarget.hidden = true;
       this.pendingSummaryTarget.textContent = '';
-      this.boardListTarget.replaceChildren(...(this.optionsState?.boardStates ?? []).map((boardState) => this.createBoardListItem(boardState)));
+      this.boardListTarget.replaceChildren(...this.createWorkspaceSectionItems());
       this.renderPendingWorkspaceInvites();
       return;
     }
@@ -188,9 +212,23 @@ export default class extends Controller {
       count: activeBoardState.pendingInviteCount
     });
 
-    const items = this.optionsState.boardStates.map((boardState) => this.createBoardListItem(boardState));
-    this.boardListTarget.replaceChildren(...items);
+    this.boardListTarget.replaceChildren(...this.createWorkspaceSectionItems());
     this.renderPendingWorkspaceInvites();
+  }
+
+  createWorkspaceSectionItems() {
+    return (this.optionsState?.workspaceSections ?? []).map((section) => this.createWorkspaceSectionItem(section));
+  }
+
+  createWorkspaceSectionItem(section) {
+    const item = this.workspaceSectionTemplateTarget.content.firstElementChild.cloneNode(true);
+    const titleElement = item.querySelector('[data-board-options-field="workspaceTitle"]');
+    const boardsElement = item.querySelector('[data-board-options-field="workspaceBoards"]');
+
+    titleElement.textContent = getWorkspaceLabel(section, this.t);
+    boardsElement.replaceChildren(...section.boardStates.map((boardState) => this.createBoardListItem(boardState)));
+
+    return item;
   }
 
   createBoardListItem(boardState) {
@@ -198,7 +236,7 @@ export default class extends Controller {
     const titleElement = item.querySelector('[data-board-options-field="title"]');
     const stateElement = item.querySelector('[data-board-options-field="state"]');
     const switchButton = item.querySelector('[data-board-options-field="switchButton"]');
-    const renameButton = item.querySelector('[data-board-options-field="renameButton"]');
+    const editButton = item.querySelector('[data-board-options-field="editButton"]');
     const collaboratorsButton = item.querySelector('[data-board-options-field="collaboratorsButton"]');
     const collaboratorBadge = item.querySelector('[data-board-options-field="collaboratorBadge"]');
     const inviteAcceptButton = item.querySelector('[data-board-options-field="inviteAcceptButton"]');
@@ -210,11 +248,14 @@ export default class extends Controller {
       ? this.t('boardOptionsDialog.stateActive')
       : this.t(getBoardRoleTranslationKey(boardState.currentRoleStatus));
     switchButton.dataset.boardId = boardState.boardId;
+    switchButton.dataset.workspaceId = boardState.workspaceId ?? '';
+    switchButton.dataset.boardTitle = boardState.title ?? '';
+    switchButton.dataset.isHomeWorkspace = String(boardState.isHomeWorkspace === true);
     switchButton.hidden = actionState.switchHidden;
     collaboratorsButton.hidden = actionState.collaboratorsHidden;
     collaboratorBadge.hidden = actionState.collaboratorsHidden || boardState.pendingInviteCount === 0;
     collaboratorBadge.textContent = String(boardState.pendingInviteCount);
-    renameButton.hidden = actionState.renameHidden;
+    editButton.hidden = actionState.editHidden;
 
     for (const button of [inviteAcceptButton, inviteDeclineButton]) {
       button.dataset.boardId = boardState.boardId;
@@ -323,6 +364,12 @@ function getInviterLabel(invitedBy) {
   return normalizeOptionalString(invitedBy?.displayName)
     || normalizeOptionalString(invitedBy?.email)
     || normalizeOptionalString(invitedBy?.id);
+}
+
+function getWorkspaceLabel(section, t) {
+  return section?.isHomeWorkspace === true
+    ? t('boardOptionsDialog.homeWorkspaceLabel')
+    : normalizeOptionalString(section?.workspaceId);
 }
 
 function normalizeOptionalWorkspaceId(workspaceId) {

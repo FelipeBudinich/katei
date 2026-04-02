@@ -1,5 +1,10 @@
 import { getMongoDb } from '../data/mongo_client.js';
-import { normalizeBoardActor, normalizeBoardInvite } from '../../public/js/domain/board_collaboration.js';
+import {
+  canonicalizeBoardRole,
+  normalizeBoardActor,
+  normalizeBoardCollaboration,
+  normalizeBoardInvite
+} from '../../public/js/domain/board_collaboration.js';
 import {
   WorkspaceAccessDeniedError,
   WorkspaceImportConflictError,
@@ -20,7 +25,7 @@ import {
   toWorkspaceRecordDocument,
   validateWorkspaceSnapshot
 } from './workspace_record.js';
-import { canViewerAccessWorkspace, filterWorkspaceForViewer } from './workspace_access.js';
+import { canViewerAccessWorkspace, canViewerReadBoard, filterWorkspaceForViewer } from './workspace_access.js';
 
 export function createMongoWorkspaceRecordRepository(options = {}) {
   return new MongoWorkspaceRecordRepository(options);
@@ -131,6 +136,56 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
     }
 
     return summaries;
+  }
+
+  async listAccessibleWorkspacesForViewer({
+    viewerSub,
+    viewerEmail = null,
+    excludeWorkspaceId = null,
+    debugLog = null
+  } = {}) {
+    const collection = this.#getCollection();
+    const normalizedViewerSub = normalizeViewerSub(viewerSub);
+    const normalizedViewerEmail = normalizeOptionalEmail(viewerEmail);
+    const normalizedExcludeWorkspaceId = normalizeOptionalWorkspaceId(excludeWorkspaceId);
+
+    await this.#loadOrCreateWorkspaceRecord({
+      viewerSub: normalizedViewerSub,
+      viewerEmail: normalizedViewerEmail,
+      debugLog,
+      projectForViewer: true
+    });
+
+    const documents = await collection.find({}).toArray();
+    const summaries = [];
+    const seenWorkspaceIds = new Set();
+
+    for (const document of documents) {
+      const record = fromWorkspaceRecordDocument(document);
+
+      if (!record) {
+        continue;
+      }
+
+      const projectedRecord = projectRecordForViewer(record, {
+        viewerSub: normalizedViewerSub,
+        viewerEmail: normalizedViewerEmail,
+        debugLog
+      });
+      const summary = createAccessibleWorkspaceSummary(projectedRecord, {
+        viewerSub: normalizedViewerSub,
+        viewerEmail: normalizedViewerEmail
+      });
+
+      if (!summary || summary.workspaceId === normalizedExcludeWorkspaceId || seenWorkspaceIds.has(summary.workspaceId)) {
+        continue;
+      }
+
+      seenWorkspaceIds.add(summary.workspaceId);
+      summaries.push(summary);
+    }
+
+    return summaries.sort(compareAccessibleWorkspaceSummaries);
   }
 
   async replaceWorkspaceSnapshot({ viewerSub, workspaceId = null, viewerEmail = null, workspace, actor, expectedRevision } = {}) {
@@ -481,6 +536,93 @@ function createPendingWorkspaceInviteSummary(
       displayName: invitedBy.displayName ?? null
     }
   };
+}
+
+function createAccessibleWorkspaceSummary(record, { viewerSub, viewerEmail = null } = {}) {
+  const workspaceId = normalizeOptionalWorkspaceId(record?.workspaceId ?? record?.workspace?.workspaceId);
+  const boards = collectWorkspaceBoardIds(record?.workspace)
+    .map((boardId) =>
+      createAccessibleWorkspaceBoardSummary(record?.workspace?.boards?.[boardId], {
+        boardId,
+        viewerSub,
+        viewerEmail
+      })
+    )
+    .filter(Boolean);
+
+  if (!workspaceId || boards.length === 0) {
+    return null;
+  }
+
+  return {
+    workspaceId,
+    isHomeWorkspace: record?.isHomeWorkspace === true,
+    boards
+  };
+}
+
+function createAccessibleWorkspaceBoardSummary(board, { boardId, viewerSub, viewerEmail = null } = {}) {
+  const normalizedBoardId = normalizeOptionalWorkspaceId(boardId ?? board?.id);
+  const boardTitle = normalizeOptionalString(board?.title);
+
+  if (!normalizedBoardId || !boardTitle || !canViewerReadBoard({ viewerSub, viewerEmail, board })) {
+    return null;
+  }
+
+  const collaboration = normalizeBoardCollaboration(board);
+  const membership = collaboration.memberships.find((entry) => {
+    const actorType = normalizeOptionalString(entry?.actor?.type).toLowerCase();
+    const actorId = normalizeOptionalString(entry?.actor?.id);
+    return actorType === 'human' && actorId === viewerSub;
+  });
+  const role = canonicalizeBoardRole(membership?.role);
+
+  if (!role) {
+    return null;
+  }
+
+  return {
+    boardId: normalizedBoardId,
+    boardTitle,
+    role
+  };
+}
+
+function compareAccessibleWorkspaceSummaries(left, right) {
+  if (left?.isHomeWorkspace === true && right?.isHomeWorkspace !== true) {
+    return -1;
+  }
+
+  if (left?.isHomeWorkspace !== true && right?.isHomeWorkspace === true) {
+    return 1;
+  }
+
+  return normalizeOptionalString(left?.workspaceId).localeCompare(normalizeOptionalString(right?.workspaceId));
+}
+
+function collectWorkspaceBoardIds(workspace) {
+  const boardIds = [];
+  const seenBoardIds = new Set();
+
+  for (const boardId of Array.isArray(workspace?.boardOrder) ? workspace.boardOrder : []) {
+    if (typeof boardId !== 'string' || seenBoardIds.has(boardId) || !workspace?.boards?.[boardId]) {
+      continue;
+    }
+
+    seenBoardIds.add(boardId);
+    boardIds.push(boardId);
+  }
+
+  for (const boardId of Object.keys(workspace?.boards ?? {})) {
+    if (seenBoardIds.has(boardId) || !workspace.boards[boardId]) {
+      continue;
+    }
+
+    seenBoardIds.add(boardId);
+    boardIds.push(boardId);
+  }
+
+  return boardIds;
 }
 
 function inviteMatchesViewer(invite, { viewerSub, viewerEmail = null } = {}) {

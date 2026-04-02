@@ -28,13 +28,16 @@ export function createBoardOptionsState(
   actor,
   {
     pendingWorkspaceInvites = [],
-    activeWorkspaceId = null
+    activeWorkspaceId = null,
+    activeWorkspaceIsHome = false,
+    accessibleWorkspaces = []
   } = {}
 ) {
   const normalizedActor = normalizeBoardActor(actor);
   const activeBoardId = normalizeOptionalString(workspace?.ui?.activeBoardId);
   const normalizedActiveWorkspaceId = normalizeOptionalString(activeWorkspaceId)
     || normalizeOptionalString(workspace?.workspaceId);
+  const normalizedActiveWorkspaceIsHome = activeWorkspaceIsHome === true;
   const activeBoard = activeBoardId ? workspace?.boards?.[activeBoardId] ?? null : null;
   const boardStates = Array.isArray(workspace?.boardOrder)
     ? workspace.boardOrder
@@ -51,6 +54,9 @@ export function createBoardOptionsState(
             ...collaborationState,
             boardId,
             title: board.title,
+            workspaceId: normalizedActiveWorkspaceId,
+            isHomeWorkspace: normalizedActiveWorkspaceIsHome,
+            isCurrentWorkspace: true,
             isActive: boardId === activeBoardId,
             canSwitch: boardId !== activeBoardId && collaborationState.canRead
           };
@@ -62,6 +68,10 @@ export function createBoardOptionsState(
     activeBoard,
     activeBoardState: activeBoard ? getBoardCollaborationState(activeBoard, normalizedActor) : null,
     boardStates,
+    workspaceSections: createWorkspaceSections(boardStates, accessibleWorkspaces, {
+      activeWorkspaceId: normalizedActiveWorkspaceId,
+      activeWorkspaceIsHome: normalizedActiveWorkspaceIsHome
+    }),
     incomingInvites: createIncomingInviteViewModels(pendingWorkspaceInvites, {
       activeWorkspaceId: normalizedActiveWorkspaceId
     })
@@ -69,18 +79,32 @@ export function createBoardOptionsState(
 }
 
 export function createBoardListActionState(boardState) {
+  if (boardState?.isCurrentWorkspace === false) {
+    return {
+      canRespondToInvite: false,
+      canOpenCollaborators: false,
+      canEditBoard: false,
+      inviteId: '',
+      collaboratorsHidden: true,
+      editHidden: true,
+      switchHidden: !boardState?.canSwitch,
+      inviteAcceptHidden: true,
+      inviteDeclineHidden: true
+    };
+  }
+
   const inviteId = normalizeOptionalString(boardState?.pendingInvite?.id);
   const canRespondToInvite = Boolean(inviteId && boardState?.pendingInvite && !boardState?.canSwitch);
   const canOpenCollaborators = Boolean(boardState?.isActive);
-  const canRename = Boolean(boardState?.isActive && boardState?.canAdmin);
+  const canEditBoard = Boolean(boardState?.isActive && boardState?.canAdmin);
 
   return {
     canRespondToInvite,
     canOpenCollaborators,
-    canRename,
+    canEditBoard,
     inviteId,
     collaboratorsHidden: !canOpenCollaborators,
-    renameHidden: !canRename,
+    editHidden: !canEditBoard,
     switchHidden: !boardState?.canSwitch,
     inviteAcceptHidden: !canRespondToInvite,
     inviteDeclineHidden: !canRespondToInvite
@@ -204,6 +228,96 @@ export function createActorDisplay(actor) {
   return {
     primaryLabel,
     secondaryLabel
+  };
+}
+
+function createWorkspaceSections(boardStates, accessibleWorkspaces, {
+  activeWorkspaceId = '',
+  activeWorkspaceIsHome = false
+} = {}) {
+  const sections = [];
+  const normalizedActiveWorkspaceId = normalizeOptionalString(activeWorkspaceId);
+
+  if (Array.isArray(boardStates) && boardStates.length > 0) {
+    sections.push({
+      workspaceId: normalizedActiveWorkspaceId,
+      isHomeWorkspace: activeWorkspaceIsHome === true,
+      isCurrentWorkspace: true,
+      boardStates
+    });
+  }
+
+  if (!Array.isArray(accessibleWorkspaces)) {
+    return sections;
+  }
+
+  return sections.concat(
+    accessibleWorkspaces
+      .map((summary) => createAccessibleWorkspaceSection(summary))
+      .filter((section) => section && section.workspaceId !== normalizedActiveWorkspaceId)
+  );
+}
+
+function createAccessibleWorkspaceSection(summary) {
+  if (!summary || typeof summary !== 'object' || Array.isArray(summary)) {
+    return null;
+  }
+
+  const workspaceId = normalizeOptionalString(summary.workspaceId);
+  const boardStates = Array.isArray(summary.boards)
+    ? summary.boards
+        .map((board) => createAccessibleWorkspaceBoardState(board, {
+          workspaceId,
+          isHomeWorkspace: summary.isHomeWorkspace === true
+        }))
+        .filter(Boolean)
+    : [];
+
+  if (!workspaceId || boardStates.length === 0) {
+    return null;
+  }
+
+  return {
+    workspaceId,
+    isHomeWorkspace: summary.isHomeWorkspace === true,
+    isCurrentWorkspace: false,
+    boardStates
+  };
+}
+
+function createAccessibleWorkspaceBoardState(board, { workspaceId, isHomeWorkspace = false } = {}) {
+  if (!board || typeof board !== 'object' || Array.isArray(board)) {
+    return null;
+  }
+
+  const boardId = normalizeOptionalString(board.boardId);
+  const title = normalizeOptionalString(board.boardTitle);
+  const role = canonicalizeBoardRole(board.role);
+
+  if (!workspaceId || !boardId || !title || !role) {
+    return null;
+  }
+
+  return {
+    boardId,
+    boardTitle: title,
+    title,
+    membership: null,
+    pendingInvite: null,
+    canRead: true,
+    canEdit: false,
+    canAdmin: false,
+    accessible: true,
+    currentRole: role,
+    currentRoleStatus: role,
+    members: [],
+    pendingInvites: [],
+    pendingInviteCount: 0,
+    workspaceId,
+    isHomeWorkspace,
+    isCurrentWorkspace: false,
+    isActive: false,
+    canSwitch: true
   };
 }
 

@@ -373,6 +373,35 @@ test('HttpWorkspaceRepository bootstraps pendingWorkspaceInvites from the server
   assert.deepEqual(repository.getPendingWorkspaceInvites(), [createPendingWorkspaceInviteSummary()]);
 });
 
+test('HttpWorkspaceRepository bootstraps accessibleWorkspaces from the server-rendered payload', async () => {
+  const accessibleWorkspaces = [
+    createAccessibleWorkspaceSummary({
+      workspaceId: 'workspace_shared',
+      boards: [
+        {
+          boardId: 'notes',
+          boardTitle: 'Notes',
+          role: 'editor'
+        }
+      ]
+    })
+  ];
+  const repository = new HttpWorkspaceRepository({
+    fetchImpl: createFetchDouble([]).fetch,
+    viewerSub: 'sub_123',
+    storage: null,
+    document: createDocumentDouble({
+      'workspace-bootstrap': JSON.stringify(
+        createWorkspaceApiPayload(createEmptyWorkspace(), {}, undefined, [], accessibleWorkspaces)
+      )
+    })
+  });
+
+  await repository.loadWorkspace();
+
+  assert.deepEqual(repository.getAccessibleWorkspaces(), accessibleWorkspaces);
+});
+
 test('HttpWorkspaceRepository updates pendingWorkspaceInvites from API responses', async () => {
   const pendingWorkspaceInvites = [createPendingWorkspaceInvitePayload()];
   const fetchDouble = createFetchDouble([
@@ -387,6 +416,73 @@ test('HttpWorkspaceRepository updates pendingWorkspaceInvites from API responses
   await repository.loadWorkspace();
 
   assert.deepEqual(repository.getPendingWorkspaceInvites(), [createPendingWorkspaceInviteSummary()]);
+});
+
+test('HttpWorkspaceRepository updates accessibleWorkspaces from API responses and drops malformed summaries', async () => {
+  const fetchDouble = createFetchDouble([
+    createJsonResponse(
+      createWorkspaceApiPayload(
+        createEmptyWorkspace(),
+        {},
+        undefined,
+        [],
+        [
+          createAccessibleWorkspaceSummary({
+            workspaceId: 'workspace_shared',
+            boards: [
+              {
+                boardId: 'notes',
+                boardTitle: 'Notes',
+                role: 'editor'
+              }
+            ]
+          }),
+          createAccessibleWorkspaceSummary({
+            workspaceId: 'main',
+            boards: [
+              {
+                boardId: 'main',
+                boardTitle: 'Current workspace duplicate',
+                role: 'admin'
+              }
+            ]
+          }),
+          null,
+          { workspaceId: 'workspace_missing_boards' },
+          {
+            workspaceId: 'workspace_bad_role',
+            boards: [
+              {
+                boardId: 'broken',
+                boardTitle: 'Broken',
+                role: 'not-a-role'
+              }
+            ]
+          }
+        ]
+      )
+    )
+  ]);
+  const repository = new HttpWorkspaceRepository({
+    fetchImpl: fetchDouble.fetch,
+    viewerSub: 'sub_123',
+    storage: null
+  });
+
+  await repository.loadWorkspace();
+
+  assert.deepEqual(repository.getAccessibleWorkspaces(), [
+    createAccessibleWorkspaceSummary({
+      workspaceId: 'workspace_shared',
+      boards: [
+        {
+          boardId: 'notes',
+          boardTitle: 'Notes',
+          role: 'editor'
+        }
+      ]
+    })
+  ]);
 });
 
 test('HttpWorkspaceRepository drops malformed pendingWorkspaceInvites without crashing', async () => {
@@ -959,7 +1055,13 @@ test('HttpWorkspaceRepository rejects invalid applyCommand responses', async () 
   );
 });
 
-function createWorkspaceApiPayload(workspace, meta = {}, result = undefined, pendingWorkspaceInvites = []) {
+function createWorkspaceApiPayload(
+  workspace,
+  meta = {},
+  result = undefined,
+  pendingWorkspaceInvites = [],
+  accessibleWorkspaces = []
+) {
   const payload = {
     ok: true,
     workspace,
@@ -973,7 +1075,8 @@ function createWorkspaceApiPayload(workspace, meta = {}, result = undefined, pen
       lastChangedBy: meta.lastChangedBy ?? null,
       isPristine: meta.isPristine ?? true
     },
-    pendingWorkspaceInvites
+    pendingWorkspaceInvites,
+    accessibleWorkspaces
   };
 
   if (result !== undefined) {
@@ -1001,6 +1104,24 @@ function createPendingWorkspaceInviteSummary() {
 
 function createPendingWorkspaceInvitePayload() {
   return createPendingWorkspaceInviteSummary();
+}
+
+function createAccessibleWorkspaceSummary({
+  workspaceId = 'workspace_shared',
+  isHomeWorkspace = false,
+  boards = [
+    {
+      boardId: 'notes',
+      boardTitle: 'Notes',
+      role: 'viewer'
+    }
+  ]
+} = {}) {
+  return {
+    workspaceId,
+    isHomeWorkspace,
+    boards: boards.map((board) => ({ ...board }))
+  };
 }
 
 function createLegacyV4Workspace({

@@ -107,6 +107,18 @@ test('performWorkspaceCollaboratorAction routes collaborator UI actions through 
 
 test('workspace controller includes pendingWorkspaceInvites and activeWorkspaceId when opening board options', () => {
   const workspace = createViewerWorkspace('workspace_home', createActor('viewer_1', 'viewer@example.com', 'Viewer'));
+  const accessibleWorkspaces = [
+    createAccessibleWorkspaceSummary({
+      workspaceId: 'workspace_shared',
+      boards: [
+        {
+          boardId: 'notes',
+          boardTitle: 'Notes',
+          role: 'editor'
+        }
+      ]
+    })
+  ];
   const pendingWorkspaceInvites = [
     {
       workspaceId: 'workspace_invited_casa',
@@ -132,8 +144,14 @@ test('workspace controller includes pendingWorkspaceInvites and activeWorkspaceI
     getActiveWorkspaceId() {
       return 'workspace_home';
     },
+    getIsHomeWorkspace() {
+      return true;
+    },
     getPendingWorkspaceInvites() {
       return pendingWorkspaceInvites;
+    },
+    getAccessibleWorkspaces() {
+      return accessibleWorkspaces;
     }
   };
   controller.dispatchWorkspaceEvent = (name, detail) => {
@@ -152,7 +170,9 @@ test('workspace controller includes pendingWorkspaceInvites and activeWorkspaceI
         viewerActor: controller.viewerActor,
         triggerElement,
         activeWorkspaceId: 'workspace_home',
-        pendingWorkspaceInvites
+        activeWorkspaceIsHome: true,
+        pendingWorkspaceInvites,
+        accessibleWorkspaces
       }
     }
   ]);
@@ -161,6 +181,18 @@ test('workspace controller includes pendingWorkspaceInvites and activeWorkspaceI
 test('workspace controller sync-board-options payload includes pendingWorkspaceInvites and activeWorkspaceId during render', () => {
   const controller = Object.create(WorkspaceController.prototype);
   const dispatchedEvents = [];
+  const accessibleWorkspaces = [
+    createAccessibleWorkspaceSummary({
+      workspaceId: 'workspace_shared',
+      boards: [
+        {
+          boardId: 'notes',
+          boardTitle: 'Notes',
+          role: 'viewer'
+        }
+      ]
+    })
+  ];
 
   controller.workspace = createEmptyWorkspace();
   controller.workspace.boardOrder = [];
@@ -170,6 +202,9 @@ test('workspace controller sync-board-options payload includes pendingWorkspaceI
   controller.service = {
     getActiveWorkspaceId() {
       return 'workspace_home';
+    },
+    getIsHomeWorkspace() {
+      return true;
     },
     getPendingWorkspaceInvites() {
       return [
@@ -187,6 +222,9 @@ test('workspace controller sync-board-options payload includes pendingWorkspaceI
           }
         }
       ];
+    },
+    getAccessibleWorkspaces() {
+      return accessibleWorkspaces;
     }
   };
   controller.t = (key) => key;
@@ -223,9 +261,127 @@ test('workspace controller sync-board-options payload includes pendingWorkspaceI
       viewerActor: controller.viewerActor,
       triggerElement: null,
       activeWorkspaceId: 'workspace_home',
-      pendingWorkspaceInvites: controller.service.getPendingWorkspaceInvites()
+      activeWorkspaceIsHome: true,
+      pendingWorkspaceInvites: controller.service.getPendingWorkspaceInvites(),
+      accessibleWorkspaces
     }
   });
+});
+
+test('handleBoardSwitch switches workspaces before selecting a board in another workspace', async () => {
+  const viewerActor = createActor('viewer_1', 'viewer@example.com', 'Viewer');
+  const currentWorkspace = createViewerWorkspace('workspace_home', viewerActor);
+  const sharedWorkspace = createViewerWorkspace('workspace_shared', viewerActor);
+  const selectedBoardWorkspace = structuredClone(sharedWorkspace);
+  const notesBoard = createWorkspaceBoard({
+    id: 'notes',
+    title: 'Notes',
+    createdAt: '2026-03-31T10:00:00.000Z',
+    updatedAt: '2026-03-31T10:00:00.000Z',
+    creator: createActor('owner_1', 'owner@example.com', 'Owner')
+  });
+  const controller = Object.create(WorkspaceController.prototype);
+  const announcements = [];
+  const queuedHistoryActions = [];
+  let renderCalls = 0;
+
+  notesBoard.collaboration.memberships.push({
+    actor: viewerActor,
+    role: 'editor',
+    joinedAt: '2026-03-31T10:05:00.000Z'
+  });
+  sharedWorkspace.boards.notes = notesBoard;
+  sharedWorkspace.boardOrder = ['main', 'notes'];
+  sharedWorkspace.ui.activeBoardId = 'main';
+  selectedBoardWorkspace.boards.notes = structuredClone(notesBoard);
+  selectedBoardWorkspace.boardOrder = ['main', 'notes'];
+  selectedBoardWorkspace.ui.activeBoardId = 'notes';
+
+  controller.workspace = currentWorkspace;
+  controller.service = createWorkspaceNavigationServiceDouble({
+    activeWorkspaceId: 'workspace_home',
+    isHomeWorkspace: true,
+    switchWorkspaceResult: sharedWorkspace,
+    setActiveBoardResult: selectedBoardWorkspace
+  });
+  controller.render = () => {
+    renderCalls += 1;
+  };
+  controller.queueWorkspaceHistoryAction = (action) => {
+    queuedHistoryActions.push(action);
+  };
+  controller.announce = (message) => {
+    announcements.push(message);
+  };
+  controller.t = (key, values = {}) => (values.title ? `${key}:${values.title}` : key);
+
+  await WorkspaceController.prototype.handleBoardSwitch.call(controller, {
+    detail: {
+      workspaceId: 'workspace_shared',
+      isHomeWorkspace: false,
+      boardId: 'notes',
+      boardTitle: 'Notes'
+    }
+  });
+
+  assert.deepEqual(controller.service.calls, [
+    {
+      method: 'switchWorkspace',
+      args: ['workspace_shared']
+    },
+    {
+      method: 'setActiveBoard',
+      args: ['notes']
+    }
+  ]);
+  assert.equal(controller.workspace.workspaceId, 'workspace_shared');
+  assert.equal(controller.workspace.ui.activeBoardId, 'notes');
+  assert.deepEqual(queuedHistoryActions, ['push']);
+  assert.equal(renderCalls, 1);
+  assert.deepEqual(announcements, [
+    'workspace.announcements.switchedBoard:Notes'
+  ]);
+});
+
+test('handlePopState reloads the workspace from the workspaceId in browser location', async () => {
+  const controller = Object.create(WorkspaceController.prototype);
+  const sharedWorkspace = createViewerWorkspace(
+    'workspace_shared',
+    createActor('viewer_1', 'viewer@example.com', 'Viewer')
+  );
+  const queuedHistoryActions = [];
+
+  controller.browserLocation = {
+    href: 'http://localhost/boards?workspaceId=workspace_shared'
+  };
+  controller.service = createWorkspaceNavigationServiceDouble({
+    activeWorkspaceId: 'workspace_home',
+    isHomeWorkspace: true,
+    loadResult: sharedWorkspace
+  });
+  controller.runAction = async (action) => {
+    controller.workspace = await action();
+    return true;
+  };
+  controller.queueWorkspaceHistoryAction = (action) => {
+    queuedHistoryActions.push(action);
+  };
+  controller.nextWorkspaceHistoryAction = 'push';
+
+  await WorkspaceController.prototype.handlePopState.call(controller);
+
+  assert.deepEqual(controller.service.calls, [
+    {
+      method: 'setActiveWorkspace',
+      args: ['workspace_shared']
+    },
+    {
+      method: 'load',
+      args: []
+    }
+  ]);
+  assert.equal(controller.workspace.workspaceId, 'workspace_shared');
+  assert.deepEqual(queuedHistoryActions, ['skip']);
 });
 
 test('openCreateBoard opens the board editor without delete access', () => {
@@ -249,7 +405,7 @@ test('openCreateBoard opens the board editor without delete access', () => {
   ]);
 });
 
-test('openRenameBoard opens the board editor with delete access when another board exists', () => {
+test('openEditBoard opens the board editor with delete access when another board exists', () => {
   const adminActor = createActor('admin_1', 'admin@example.com', 'Admin');
   const workspace = createEmptyWorkspace({
     workspaceId: 'workspace_admin',
@@ -281,13 +437,13 @@ test('openRenameBoard opens the board editor with delete access when another boa
     dispatchedEvents.push({ name, detail });
   };
 
-  WorkspaceController.prototype.openRenameBoard.call(controller);
+  WorkspaceController.prototype.openEditBoard.call(controller);
 
   assert.deepEqual(dispatchedEvents, [
     {
       name: 'open-board-editor',
       detail: {
-        mode: 'rename',
+        mode: 'edit',
         board: workspace.boards.main,
         canDeleteBoard: true
       }
@@ -1063,6 +1219,18 @@ function createViewerWorkspace(workspaceId, actor) {
   return workspace;
 }
 
+function createAccessibleWorkspaceSummary({
+  workspaceId,
+  isHomeWorkspace = false,
+  boards = []
+} = {}) {
+  return {
+    workspaceId,
+    isHomeWorkspace,
+    boards: boards.map((board) => ({ ...board }))
+  };
+}
+
 function createCollaborationServiceDouble({
   workspace = createEmptyWorkspace(),
   acceptWorkspace = workspace,
@@ -1103,6 +1271,45 @@ function createCollaborationServiceDouble({
     async switchWorkspace(...args) {
       this.calls.push({ method: 'switchWorkspace', args });
       return structuredClone(switchWorkspace);
+    }
+  };
+}
+
+function createWorkspaceNavigationServiceDouble({
+  activeWorkspaceId = null,
+  isHomeWorkspace = false,
+  switchWorkspaceResult = createEmptyWorkspace(),
+  setActiveBoardResult = switchWorkspaceResult,
+  loadResult = switchWorkspaceResult
+} = {}) {
+  return {
+    activeWorkspaceId,
+    isHomeWorkspace,
+    calls: [],
+    getActiveWorkspaceId() {
+      return this.activeWorkspaceId;
+    },
+    getIsHomeWorkspace() {
+      return this.isHomeWorkspace;
+    },
+    async switchWorkspace(...args) {
+      this.calls.push({ method: 'switchWorkspace', args });
+      this.activeWorkspaceId = args[0] ?? null;
+      this.isHomeWorkspace = args[0] == null;
+      return structuredClone(switchWorkspaceResult);
+    },
+    async setActiveBoard(...args) {
+      this.calls.push({ method: 'setActiveBoard', args });
+      return structuredClone(setActiveBoardResult);
+    },
+    setActiveWorkspace(...args) {
+      this.calls.push({ method: 'setActiveWorkspace', args });
+      this.activeWorkspaceId = args[0] ?? null;
+      this.isHomeWorkspace = args[0] == null;
+    },
+    async load(...args) {
+      this.calls.push({ method: 'load', args });
+      return structuredClone(loadResult);
     }
   };
 }

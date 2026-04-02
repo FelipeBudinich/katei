@@ -39,13 +39,20 @@ export function createBoardsRouter({ requireSession, workspaceRecordRepository }
           debugLog
         })
       ]);
+      const accessibleWorkspaces = await workspaceRecordRepository.listAccessibleWorkspacesForViewer({
+        viewerSub: request.viewer.sub,
+        viewerEmail: request.viewer.email ?? null,
+        excludeWorkspaceId: record.workspaceId,
+        debugLog
+      });
 
       const pageModel = buildWorkspacePageModel(
         request.viewer,
         response.locals.t,
         record.workspace,
         createWorkspaceBootstrapMeta(record),
-        pendingWorkspaceInvites
+        pendingWorkspaceInvites,
+        accessibleWorkspaces
       );
 
       debugLog('invite.response.summary', buildInviteResponseDebugFields({
@@ -78,7 +85,8 @@ export function buildWorkspacePageModel(
   t,
   workspace = createEmptyWorkspace(),
   workspaceMeta = null,
-  pendingWorkspaceInvites = []
+  pendingWorkspaceInvites = [],
+  accessibleWorkspaces = []
 ) {
   const normalizedWorkspace = migrateWorkspaceSnapshot(workspace);
   const activeBoard = getProjectedActiveBoard(normalizedWorkspace);
@@ -106,7 +114,8 @@ export function buildWorkspacePageModel(
           workspace: normalizedWorkspace,
           activeWorkspace: createActiveWorkspaceDescriptor(normalizedWorkspace, workspaceMeta),
           meta: workspaceMeta,
-          pendingWorkspaceInvites: Array.isArray(pendingWorkspaceInvites) ? pendingWorkspaceInvites : []
+          pendingWorkspaceInvites: Array.isArray(pendingWorkspaceInvites) ? pendingWorkspaceInvites : [],
+          accessibleWorkspaces: Array.isArray(accessibleWorkspaces) ? accessibleWorkspaces : []
         })
       : null
   };

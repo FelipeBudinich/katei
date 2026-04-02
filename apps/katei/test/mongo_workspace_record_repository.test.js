@@ -351,6 +351,64 @@ test('listPendingWorkspaceInvitesForViewer ignores malformed or non-matching inv
   );
 });
 
+test('listAccessibleWorkspacesForViewer returns readable shared workspaces plus home, sorted and excluding the active workspace', async () => {
+  const collection = createWorkspaceRecordCollectionDouble([
+    toWorkspaceRecordDocument(createHomeWorkspaceRecordFixture({
+      viewerSub: 'sub_member',
+      boardTitle: 'Home board'
+    })),
+    toWorkspaceRecordDocument(createSharedWorkspaceRecordFixture('workspace_shared_beta')),
+    toWorkspaceRecordDocument(createSharedWorkspaceRecordFixture('workspace_shared_alpha'))
+  ]);
+  const repository = new MongoWorkspaceRecordRepository({ collection });
+
+  const accessibleWorkspaces = await repository.listAccessibleWorkspacesForViewer({
+    viewerSub: 'sub_member',
+    viewerEmail: 'member@example.com',
+    excludeWorkspaceId: 'workspace_shared_beta'
+  });
+
+  assert.deepEqual(accessibleWorkspaces, [
+    {
+      workspaceId: createHomeWorkspaceId('sub_member'),
+      isHomeWorkspace: true,
+      boards: [
+        {
+          boardId: 'main',
+          boardTitle: 'Home board',
+          role: 'admin'
+        }
+      ]
+    },
+    {
+      workspaceId: 'workspace_shared_alpha',
+      isHomeWorkspace: false,
+      boards: [
+        {
+          boardId: 'member',
+          boardTitle: 'Member board',
+          role: 'editor'
+        }
+      ]
+    }
+  ]);
+});
+
+test('listAccessibleWorkspacesForViewer excludes invite-only workspaces from the picker summaries', async () => {
+  const collection = createWorkspaceRecordCollectionDouble([
+    toWorkspaceRecordDocument(createInviteWorkspaceRecordFixture('workspace_invited_casa'))
+  ]);
+  const repository = new MongoWorkspaceRecordRepository({ collection });
+
+  const accessibleWorkspaces = await repository.listAccessibleWorkspacesForViewer({
+    viewerSub: 'sub_invited',
+    viewerEmail: 'invitee@example.com',
+    excludeWorkspaceId: createHomeWorkspaceId('sub_invited')
+  });
+
+  assert.deepEqual(accessibleWorkspaces, []);
+});
+
 test('replaceWorkspaceSnapshot stores a validated full-workspace snapshot with metadata', async () => {
   const collection = createWorkspaceRecordCollectionDouble();
   const nowValues = ['2026-04-01T10:00:00.000Z', '2026-04-01T11:15:00.000Z'];
@@ -808,6 +866,28 @@ function createLegacyWorkspaceSnapshot({
 function firstCardTitle(board) {
   const firstCard = Object.values(board.cards)[0];
   return firstCard?.contentByLocale?.en?.title ?? null;
+}
+
+function createHomeWorkspaceRecordFixture({
+  viewerSub = 'sub_member',
+  boardTitle = 'Home board'
+} = {}) {
+  const initialRecord = createInitialWorkspaceRecord(viewerSub, {
+    workspaceId: createHomeWorkspaceId(viewerSub),
+    now: '2026-04-01T09:30:00.000Z'
+  });
+  const workspace = structuredClone(initialRecord.workspace);
+
+  workspace.boards.main.title = boardTitle;
+
+  return createUpdatedWorkspaceRecord(initialRecord, {
+    workspace,
+    actor: {
+      type: 'human',
+      id: viewerSub
+    },
+    now: '2026-04-01T09:45:00.000Z'
+  });
 }
 
 function createSharedWorkspaceRecordFixture(workspaceId) {

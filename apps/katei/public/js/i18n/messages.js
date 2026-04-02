@@ -125,7 +125,7 @@ const EN_MESSAGES = freezeCatalog({
     declineInviteButton: 'Decline invite',
     newBoard: 'New Board',
     collaboratorsButton: 'Collaborators',
-    renameBoard: 'Edit Board',
+    editBoard: 'Edit Board',
     resetBoard: 'Reset Board',
     deleteBoard: 'Delete Board',
     summaryActive: 'Active board: {title}',
@@ -133,7 +133,8 @@ const EN_MESSAGES = freezeCatalog({
     pendingInvitesSummary: '{count} pending invites',
     noVisibleBoards: 'No visible boards in this workspace.',
     stateActive: 'Active board',
-    stateAvailable: 'Available'
+    stateAvailable: 'Available',
+    homeWorkspaceLabel: 'Home workspace'
   },
   profileOptionsDialog: {
     sectionLabel: 'Profile',
@@ -229,7 +230,7 @@ const EN_MESSAGES = freezeCatalog({
   },
   boardEditor: {
     newHeading: 'New board',
-    renameHeading: 'Edit board',
+    editHeading: 'Edit board',
     titleLabel: 'Board title',
     titlePlaceholder: 'What board is this for?',
     languagePolicyLabel: 'Language policy',
@@ -415,7 +416,7 @@ const ES_CL_MESSAGES = freezeCatalog({
     declineInviteButton: 'Rechazar invitación',
     newBoard: 'Nuevo tablero',
     collaboratorsButton: 'Colaboradores',
-    renameBoard: 'Editar tablero',
+    editBoard: 'Editar tablero',
     resetBoard: 'Reiniciar tablero',
     deleteBoard: 'Eliminar tablero',
     summaryActive: 'Tablero activo: {title}',
@@ -423,7 +424,8 @@ const ES_CL_MESSAGES = freezeCatalog({
     pendingInvitesSummary: '{count} invitaciones pendientes',
     noVisibleBoards: 'No hay tableros visibles en este espacio de trabajo.',
     stateActive: 'Tablero activo',
-    stateAvailable: 'Disponible'
+    stateAvailable: 'Disponible',
+    homeWorkspaceLabel: 'Espacio personal'
   },
   profileOptionsDialog: {
     sectionLabel: 'Perfil',
@@ -519,7 +521,7 @@ const ES_CL_MESSAGES = freezeCatalog({
   },
   boardEditor: {
     newHeading: 'Nuevo tablero',
-    renameHeading: 'Editar tablero',
+    editHeading: 'Editar tablero',
     titleLabel: 'Título del tablero',
     titlePlaceholder: '¿Para qué es este tablero?',
     languagePolicyLabel: 'Política de idioma',
@@ -705,7 +707,7 @@ const JA_MESSAGES = freezeCatalog({
     declineInviteButton: '招待を辞退',
     newBoard: '新しいボード',
     collaboratorsButton: '共同編集',
-    renameBoard: 'ボードを編集',
+    editBoard: 'ボードを編集',
     resetBoard: 'ボードをリセット',
     deleteBoard: 'ボードを削除',
     summaryActive: '現在のボード: {title}',
@@ -713,7 +715,8 @@ const JA_MESSAGES = freezeCatalog({
     pendingInvitesSummary: '保留中の招待 {count} 件',
     noVisibleBoards: 'このワークスペースで表示できるボードはありません。',
     stateActive: '現在のボード',
-    stateAvailable: '利用可能'
+    stateAvailable: '利用可能',
+    homeWorkspaceLabel: 'ホームワークスペース'
   },
   profileOptionsDialog: {
     sectionLabel: 'プロフィール',
@@ -809,7 +812,7 @@ const JA_MESSAGES = freezeCatalog({
   },
   boardEditor: {
     newHeading: '新しいボード',
-    renameHeading: 'ボードを編集',
+    editHeading: 'ボードを編集',
     titleLabel: 'ボード名',
     titlePlaceholder: 'どのためのボードですか？',
     languagePolicyLabel: '言語ポリシー',

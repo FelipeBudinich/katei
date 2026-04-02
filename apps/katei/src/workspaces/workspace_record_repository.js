@@ -31,6 +31,10 @@ export class WorkspaceRecordRepository {
     throw new Error('Not implemented');
   }
 
+  async listAccessibleWorkspacesForViewer({ viewerSub, viewerEmail = null, excludeWorkspaceId = null } = {}) {
+    throw new Error('Not implemented');
+  }
+
   async loadOrCreateAuthoritativeWorkspaceRecord({ viewerSub, workspaceId, viewerEmail } = {}) {
     throw new Error('Not implemented');
   }

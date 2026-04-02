@@ -27,21 +27,24 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
 
     try {
       logViewerIdentity(debugLog, 'GET /api/workspace', request);
-      const [record, pendingWorkspaceInvites] = await Promise.all([
-        workspaceRecordRepository.loadOrCreateWorkspaceRecord({
-          viewerSub: request.viewer.sub,
-          viewerEmail: request.viewer.email ?? null,
-          workspaceId: resolveRequestedWorkspaceId(request),
-          debugLog
-        }),
-        listPendingWorkspaceInvitesForRequest(workspaceRecordRepository, request, debugLog)
-      ]);
+      const record = await workspaceRecordRepository.loadOrCreateWorkspaceRecord({
+        viewerSub: request.viewer.sub,
+        viewerEmail: request.viewer.email ?? null,
+        workspaceId: resolveRequestedWorkspaceId(request),
+        debugLog
+      });
+      const extras = await listActorFacingWorkspaceExtras(
+        workspaceRecordRepository,
+        request,
+        record.workspaceId,
+        debugLog
+      );
       sendWorkspaceApiResponse(response, {
         debugLog,
         request,
         route: 'GET /api/workspace',
         record,
-        pendingWorkspaceInvites
+        ...extras
       });
     } catch (error) {
       if (error instanceof WorkspaceAccessDeniedError || error?.code === 'WORKSPACE_ACCESS_DENIED') {
@@ -113,14 +116,19 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
           id: request.viewer.sub
         }
       });
-      const pendingWorkspaceInvites = await listPendingWorkspaceInvitesForRequest(workspaceRecordRepository, request, debugLog);
+      const extras = await listActorFacingWorkspaceExtras(
+        workspaceRecordRepository,
+        request,
+        fullRecord.workspaceId,
+        debugLog
+      );
 
       sendWorkspaceApiResponse(response, {
         debugLog,
         request,
         route: 'PUT /api/workspace',
         record: projectRecordForViewer(fullRecord, createViewerProjectionContext(request.viewer, debugLog)),
-        pendingWorkspaceInvites
+        ...extras
       });
     } catch (error) {
       if (error instanceof WorkspaceAccessDeniedError || error?.code === 'WORKSPACE_ACCESS_DENIED') {
@@ -187,14 +195,19 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
           : null;
 
       if (existingReceipt) {
-        const pendingWorkspaceInvites = await listPendingWorkspaceInvitesForRequest(workspaceRecordRepository, request, debugLog);
+        const extras = await listActorFacingWorkspaceExtras(
+          workspaceRecordRepository,
+          request,
+          projectedCurrentRecord.workspaceId,
+          debugLog
+        );
         sendWorkspaceApiResponse(response, {
           debugLog,
           request,
           route: 'POST /api/workspace/commands',
           record: projectedCurrentRecord,
           result: existingReceipt.result,
-          pendingWorkspaceInvites
+          ...extras
         });
         return;
       }
@@ -219,14 +232,19 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
       });
 
       if (application.result.noOp) {
-        const pendingWorkspaceInvites = await listPendingWorkspaceInvitesForRequest(workspaceRecordRepository, request, debugLog);
+        const extras = await listActorFacingWorkspaceExtras(
+          workspaceRecordRepository,
+          request,
+          projectedCurrentRecord.workspaceId,
+          debugLog
+        );
         sendWorkspaceApiResponse(response, {
           debugLog,
           request,
           route: 'POST /api/workspace/commands',
           record: projectedCurrentRecord,
           result: application.result,
-          pendingWorkspaceInvites
+          ...extras
         });
         return;
       }
@@ -258,7 +276,12 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
         rejectionStage: 'persisted'
       });
       logPersistedInvite(debugLog, persistedRecord, application.result);
-      const pendingWorkspaceInvites = await listPendingWorkspaceInvitesForRequest(workspaceRecordRepository, request, debugLog);
+      const extras = await listActorFacingWorkspaceExtras(
+        workspaceRecordRepository,
+        request,
+        persistedRecord.workspaceId,
+        debugLog
+      );
 
       sendWorkspaceApiResponse(response, {
         debugLog,
@@ -266,7 +289,7 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
         route: 'POST /api/workspace/commands',
         record: projectRecordForViewer(persistedRecord, createViewerProjectionContext(request.viewer, debugLog)),
         result: application.result,
-        pendingWorkspaceInvites
+        ...extras
       });
     } catch (error) {
       if (error instanceof WorkspaceRevisionConflictError || error?.code === 'WORKSPACE_REVISION_CONFLICT') {
@@ -356,14 +379,19 @@ export function createWorkspaceApiRouter({ requireSession, workspaceRecordReposi
           id: request.viewer.sub
         }
       });
-      const pendingWorkspaceInvites = await listPendingWorkspaceInvitesForRequest(workspaceRecordRepository, request, debugLog);
+      const extras = await listActorFacingWorkspaceExtras(
+        workspaceRecordRepository,
+        request,
+        fullRecord.workspaceId,
+        debugLog
+      );
 
       sendWorkspaceApiResponse(response, {
         debugLog,
         request,
         route: 'POST /api/workspace/import',
         record: projectRecordForViewer(fullRecord, createViewerProjectionContext(request.viewer, debugLog)),
-        pendingWorkspaceInvites
+        ...extras
       });
     } catch (error) {
       if (error instanceof WorkspaceAccessDeniedError || error?.code === 'WORKSPACE_ACCESS_DENIED') {
@@ -398,7 +426,7 @@ function createViewerMutationActor(viewer) {
   };
 }
 
-function createWorkspaceApiResponse(record, result = undefined, pendingWorkspaceInvites = []) {
+function createWorkspaceApiResponse(record, result = undefined, pendingWorkspaceInvites = [], accessibleWorkspaces = []) {
   const workspace = record?.workspace;
   const payload = {
     ok: true,
@@ -413,7 +441,8 @@ function createWorkspaceApiResponse(record, result = undefined, pendingWorkspace
       lastChangedBy: normalizeOptionalString(record?.lastChangedBy) || null,
       isPristine: normalizeRevision(record?.revision) === 0
     },
-    pendingWorkspaceInvites: Array.isArray(pendingWorkspaceInvites) ? pendingWorkspaceInvites : []
+    pendingWorkspaceInvites: Array.isArray(pendingWorkspaceInvites) ? pendingWorkspaceInvites : [],
+    accessibleWorkspaces: Array.isArray(accessibleWorkspaces) ? accessibleWorkspaces : []
   };
 
   if (result !== undefined) {
@@ -429,9 +458,10 @@ function sendWorkspaceApiResponse(response, {
   route = null,
   record,
   result = undefined,
-  pendingWorkspaceInvites = []
+  pendingWorkspaceInvites = [],
+  accessibleWorkspaces = []
 } = {}) {
-  const payload = createWorkspaceApiResponse(record, result, pendingWorkspaceInvites);
+  const payload = createWorkspaceApiResponse(record, result, pendingWorkspaceInvites, accessibleWorkspaces);
 
   if (typeof debugLog === 'function') {
     debugLog('invite.response.summary', buildInviteResponseDebugFields({
@@ -498,6 +528,37 @@ async function listPendingWorkspaceInvitesForRequest(workspaceRecordRepository, 
     viewerEmail: request.viewer.email ?? null,
     debugLog
   });
+}
+
+async function listAccessibleWorkspacesForRequest(
+  workspaceRecordRepository,
+  request,
+  excludeWorkspaceId = null,
+  debugLog = null
+) {
+  return workspaceRecordRepository.listAccessibleWorkspacesForViewer({
+    viewerSub: request.viewer.sub,
+    viewerEmail: request.viewer.email ?? null,
+    excludeWorkspaceId,
+    debugLog
+  });
+}
+
+async function listActorFacingWorkspaceExtras(
+  workspaceRecordRepository,
+  request,
+  excludeWorkspaceId = null,
+  debugLog = null
+) {
+  const [pendingWorkspaceInvites, accessibleWorkspaces] = await Promise.all([
+    listPendingWorkspaceInvitesForRequest(workspaceRecordRepository, request, debugLog),
+    listAccessibleWorkspacesForRequest(workspaceRecordRepository, request, excludeWorkspaceId, debugLog)
+  ]);
+
+  return {
+    pendingWorkspaceInvites,
+    accessibleWorkspaces
+  };
 }
 
 function createViewerProjectionContext(viewer, debugLog = null) {

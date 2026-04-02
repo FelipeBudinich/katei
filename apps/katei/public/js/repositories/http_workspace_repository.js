@@ -24,6 +24,7 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
     this.document = document ?? null;
     this.meta = null;
     this.pendingWorkspaceInvites = [];
+    this.accessibleWorkspaces = [];
     this.revision = null;
     this.lastStateSource = null;
     this.lastRevisionWorkspaceId = null;
@@ -71,6 +72,14 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
 
   getPendingWorkspaceInvites() {
     return this.pendingWorkspaceInvites;
+  }
+
+  getAccessibleWorkspaces() {
+    return this.accessibleWorkspaces;
+  }
+
+  getIsHomeWorkspace() {
+    return this.isHomeWorkspace === true;
   }
 
   getMeta() {
@@ -268,9 +277,12 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
 
   #setState(payload, { source = 'unknown' } = {}) {
     this.#setMeta(payload?.meta ?? null);
-    this.pendingWorkspaceInvites = normalizePendingWorkspaceInvites(payload?.pendingWorkspaceInvites);
-    const activeWorkspace = normalizeActiveWorkspace(payload?.activeWorkspace, payload?.workspace);
     const workspace = isPlainObject(payload?.workspace) ? payload.workspace : null;
+    const activeWorkspace = normalizeActiveWorkspace(payload?.activeWorkspace, payload?.workspace);
+    this.pendingWorkspaceInvites = normalizePendingWorkspaceInvites(payload?.pendingWorkspaceInvites);
+    this.accessibleWorkspaces = normalizeAccessibleWorkspaces(payload?.accessibleWorkspaces, {
+      activeWorkspaceId: activeWorkspace?.workspaceId ?? workspace?.workspaceId ?? null
+    });
     const rawPendingWorkspaceInvites = Array.isArray(payload?.pendingWorkspaceInvites) ? payload.pendingWorkspaceInvites : [];
     const rawPendingWorkspaceInviteIds = rawPendingWorkspaceInvites
       .map((invite) => normalizeOptionalWorkspaceId(invite?.inviteId))
@@ -302,6 +314,7 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
       isHomeWorkspace: this.isHomeWorkspace,
       pendingWorkspaceInvitesCount: this.pendingWorkspaceInvites.length,
       pendingWorkspaceInviteIds: this.pendingWorkspaceInvites.map((invite) => invite.inviteId),
+      accessibleWorkspaceIds: this.accessibleWorkspaces.map((summary) => summary.workspaceId),
       metaRevision: Number.isInteger(this.meta?.revision) ? this.meta.revision : null
     });
   }
@@ -457,6 +470,84 @@ function normalizePendingWorkspaceInvitedBy(invitedBy) {
     id,
     email: normalizeOptionalEmail(invitedBy.email),
     displayName: normalizeOptionalString(invitedBy.displayName ?? invitedBy.name) || null
+  };
+}
+
+function normalizeAccessibleWorkspaces(accessibleWorkspaces, { activeWorkspaceId = null } = {}) {
+  if (!Array.isArray(accessibleWorkspaces)) {
+    return [];
+  }
+
+  const normalizedActiveWorkspaceId = normalizeOptionalWorkspaceId(activeWorkspaceId);
+  const seenWorkspaceIds = new Set();
+
+  return accessibleWorkspaces
+    .map((summary) => normalizeAccessibleWorkspace(summary))
+    .filter((summary) => {
+      if (!summary || summary.workspaceId === normalizedActiveWorkspaceId || seenWorkspaceIds.has(summary.workspaceId)) {
+        return false;
+      }
+
+      seenWorkspaceIds.add(summary.workspaceId);
+      return true;
+    });
+}
+
+function normalizeAccessibleWorkspace(summary) {
+  if (!isPlainObject(summary)) {
+    return null;
+  }
+
+  const workspaceId = normalizeOptionalWorkspaceId(summary.workspaceId);
+  const boards = normalizeAccessibleWorkspaceBoards(summary.boards);
+
+  if (!workspaceId || boards.length === 0) {
+    return null;
+  }
+
+  return {
+    workspaceId,
+    isHomeWorkspace: summary.isHomeWorkspace === true,
+    boards
+  };
+}
+
+function normalizeAccessibleWorkspaceBoards(boards) {
+  if (!Array.isArray(boards)) {
+    return [];
+  }
+
+  const seenBoardIds = new Set();
+
+  return boards
+    .map((board) => normalizeAccessibleWorkspaceBoard(board))
+    .filter((board) => {
+      if (!board || seenBoardIds.has(board.boardId)) {
+        return false;
+      }
+
+      seenBoardIds.add(board.boardId);
+      return true;
+    });
+}
+
+function normalizeAccessibleWorkspaceBoard(board) {
+  if (!isPlainObject(board)) {
+    return null;
+  }
+
+  const boardId = normalizeOptionalWorkspaceId(board.boardId);
+  const boardTitle = normalizeOptionalString(board.boardTitle);
+  const role = canonicalizeBoardRole(board.role);
+
+  if (!boardId || !boardTitle || !role) {
+    return null;
+  }
+
+  return {
+    boardId,
+    boardTitle,
+    role
   };
 }
 

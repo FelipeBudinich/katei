@@ -225,14 +225,14 @@ test('board editor hides delete actions in create mode', async () => {
   assert.equal(controller.deleteButtonTarget.dataset.boardId, '');
 });
 
-test('board editor shows delete actions for a deletable board in rename mode', async () => {
+test('board editor shows delete actions for a deletable board in edit mode', async () => {
   const controller = createBoardEditorControllerDouble();
   const board = createEmptyWorkspace().boards.main;
 
   await withImmediateAnimationFrame(() => {
     BoardEditorController.prototype.openFromEvent.call(controller, {
       detail: {
-        mode: 'rename',
+        mode: 'edit',
         board,
         canDeleteBoard: true
       }
@@ -245,14 +245,14 @@ test('board editor shows delete actions for a deletable board in rename mode', a
   assert.equal(controller.boardIdInputTarget.value, 'main');
 });
 
-test('board editor keeps delete actions hidden when rename mode cannot delete the board', async () => {
+test('board editor keeps delete actions hidden when edit mode cannot delete the board', async () => {
   const controller = createBoardEditorControllerDouble();
   const board = createEmptyWorkspace().boards.main;
 
   await withImmediateAnimationFrame(() => {
     BoardEditorController.prototype.openFromEvent.call(controller, {
       detail: {
-        mode: 'rename',
+        mode: 'edit',
         board,
         canDeleteBoard: false
       }
@@ -270,7 +270,7 @@ test('board editor closeForAction closes first and clears the delete board id af
   await withImmediateAnimationFrame(() => {
     BoardEditorController.prototype.openFromEvent.call(controller, {
       detail: {
-        mode: 'rename',
+        mode: 'edit',
         board,
         canDeleteBoard: true
       }

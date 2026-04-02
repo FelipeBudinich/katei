@@ -25,6 +25,22 @@ export class WorkspaceService {
     return Array.isArray(this.repository.pendingWorkspaceInvites) ? this.repository.pendingWorkspaceInvites : [];
   }
 
+  getAccessibleWorkspaces() {
+    if (typeof this.repository.getAccessibleWorkspaces === 'function') {
+      return this.repository.getAccessibleWorkspaces();
+    }
+
+    return Array.isArray(this.repository.accessibleWorkspaces) ? this.repository.accessibleWorkspaces : [];
+  }
+
+  getIsHomeWorkspace() {
+    if (typeof this.repository.getIsHomeWorkspace === 'function') {
+      return this.repository.getIsHomeWorkspace();
+    }
+
+    return this.repository.isHomeWorkspace === true;
+  }
+
   getDebugContext() {
     const meta =
       typeof this.repository.getMeta === 'function'

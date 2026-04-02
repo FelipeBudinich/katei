@@ -46,6 +46,27 @@ test('WorkspaceService exposes the repository pending workspace invites', () => 
   assert.deepEqual(service.getPendingWorkspaceInvites(), pendingWorkspaceInvites);
 });
 
+test('WorkspaceService exposes the repository accessible workspaces', () => {
+  const workspace = createEmptyWorkspace();
+  const accessibleWorkspaces = [
+    {
+      workspaceId: 'workspace_shared',
+      isHomeWorkspace: false,
+      boards: [
+        {
+          boardId: 'casa',
+          boardTitle: 'Casa',
+          role: 'viewer'
+        }
+      ]
+    }
+  ];
+  const repository = createRepositoryDouble({ workspace, accessibleWorkspaces });
+  const service = new WorkspaceService(repository);
+
+  assert.deepEqual(service.getAccessibleWorkspaces(), accessibleWorkspaces);
+});
+
 test('WorkspaceService setActiveWorkspace delegates to the repository switch helper', () => {
   const workspace = createEmptyWorkspace();
   const repository = createRepositoryDouble({ workspace });
@@ -485,6 +506,8 @@ function createRepositoryDouble({
   workspace,
   activeWorkspaceId = null,
   pendingWorkspaceInvites = [],
+  accessibleWorkspaces = [],
+  isHomeWorkspace = false,
   revision = null,
   lastRevisionWorkspaceId = null,
   lastStateSource = 'api',
@@ -495,6 +518,8 @@ function createRepositoryDouble({
   return {
     activeWorkspaceId,
     pendingWorkspaceInvites,
+    accessibleWorkspaces,
+    isHomeWorkspace,
     revision,
     lastRevisionWorkspaceId,
     lastStateSource,
@@ -510,6 +535,12 @@ function createRepositoryDouble({
     },
     getPendingWorkspaceInvites() {
       return this.pendingWorkspaceInvites;
+    },
+    getAccessibleWorkspaces() {
+      return this.accessibleWorkspaces;
+    },
+    getIsHomeWorkspace() {
+      return this.isHomeWorkspace === true;
     },
     getRevision() {
       return this.revision;

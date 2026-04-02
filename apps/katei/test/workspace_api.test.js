@@ -30,7 +30,11 @@ test('GET /api/workspace returns normalized actor-filtered shared workspace data
     memberRole: 'viewer',
     includeInvite: true
   });
+  const homeRecord = createHomeWorkspaceRecordFixture({
+    viewerSub: 'sub_member'
+  });
   const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([
+    homeRecord,
     sharedRecord,
     createCrossWorkspaceInviteRecordFixture('workspace_invited_casa')
   ]);
@@ -76,7 +80,20 @@ test('GET /api/workspace returns normalized actor-filtered shared workspace data
       }
     }
   ]);
-  assert.deepEqual(Object.keys(response.body), ['ok', 'workspace', 'activeWorkspace', 'meta', 'pendingWorkspaceInvites']);
+  assert.deepEqual(response.body.accessibleWorkspaces, [
+    {
+      workspaceId: homeRecord.workspaceId,
+      isHomeWorkspace: true,
+      boards: [
+        {
+          boardId: 'main',
+          boardTitle: homeRecord.workspace.boards.main.title,
+          role: 'admin'
+        }
+      ]
+    }
+  ]);
+  assert.deepEqual(Object.keys(response.body), ['ok', 'workspace', 'activeWorkspace', 'meta', 'pendingWorkspaceInvites', 'accessibleWorkspaces']);
 });
 
 test('POST /api/workspace/commands returns the filtered resulting workspace', async () => {
@@ -84,7 +101,11 @@ test('POST /api/workspace/commands returns the filtered resulting workspace', as
     memberRole: 'admin',
     includeInvite: false
   });
+  const homeRecord = createHomeWorkspaceRecordFixture({
+    viewerSub: 'sub_member'
+  });
   const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([
+    homeRecord,
     sharedRecord,
     createCrossWorkspaceInviteRecordFixture('workspace_command_invite')
   ]);
@@ -112,7 +133,20 @@ test('POST /api/workspace/commands returns the filtered resulting workspace', as
   assert.equal(response.body.workspace.boards.member.title, 'Member board renamed');
   assert.equal(response.body.pendingWorkspaceInvites.length, 1);
   assert.equal(response.body.pendingWorkspaceInvites[0].workspaceId, 'workspace_command_invite');
-  assert.deepEqual(Object.keys(response.body), ['ok', 'workspace', 'activeWorkspace', 'meta', 'pendingWorkspaceInvites', 'result']);
+  assert.deepEqual(response.body.accessibleWorkspaces, [
+    {
+      workspaceId: homeRecord.workspaceId,
+      isHomeWorkspace: true,
+      boards: [
+        {
+          boardId: 'main',
+          boardTitle: homeRecord.workspace.boards.main.title,
+          role: 'admin'
+        }
+      ]
+    }
+  ]);
+  assert.deepEqual(Object.keys(response.body), ['ok', 'workspace', 'activeWorkspace', 'meta', 'pendingWorkspaceInvites', 'accessibleWorkspaces', 'result']);
 });
 
 test('PUT /api/workspace rejects shared snapshot replacement when hidden boards exist', async () => {
@@ -168,7 +202,8 @@ test('POST /api/workspace/import still accepts older snapshots and returns the n
   assert.equal(response.body.workspace.boards.main.cards.card_legacy_1.contentByLocale.en.title, 'Legacy import card');
   assert.equal(response.body.pendingWorkspaceInvites.length, 1);
   assert.equal(response.body.pendingWorkspaceInvites[0].workspaceId, 'workspace_import_invite');
-  assert.deepEqual(Object.keys(response.body), ['ok', 'workspace', 'activeWorkspace', 'meta', 'pendingWorkspaceInvites']);
+  assert.deepEqual(response.body.accessibleWorkspaces, []);
+  assert.deepEqual(Object.keys(response.body), ['ok', 'workspace', 'activeWorkspace', 'meta', 'pendingWorkspaceInvites', 'accessibleWorkspaces']);
 });
 
 test('PUT /api/workspace responses include pendingWorkspaceInvites without changing the actor-facing payload shape', async () => {
@@ -190,7 +225,8 @@ test('PUT /api/workspace responses include pendingWorkspaceInvites without chang
   assert.equal(response.status, 200);
   assert.equal(response.body.pendingWorkspaceInvites.length, 1);
   assert.equal(response.body.pendingWorkspaceInvites[0].workspaceId, 'workspace_put_invite');
-  assert.deepEqual(Object.keys(response.body), ['ok', 'workspace', 'activeWorkspace', 'meta', 'pendingWorkspaceInvites']);
+  assert.deepEqual(response.body.accessibleWorkspaces, []);
+  assert.deepEqual(Object.keys(response.body), ['ok', 'workspace', 'activeWorkspace', 'meta', 'pendingWorkspaceInvites', 'accessibleWorkspaces']);
 });
 
 function createTestApp({ workspaceRecordRepository } = {}) {
@@ -290,6 +326,11 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = []) {
       return listPendingWorkspaceInvites(records.values(), { viewerSub, viewerEmail });
     },
 
+    async listAccessibleWorkspacesForViewer({ viewerSub, viewerEmail = null, excludeWorkspaceId = null } = {}) {
+      await loadFullRecord({ viewerSub, viewerEmail });
+      return listAccessibleWorkspaces(records.values(), { viewerSub, viewerEmail, excludeWorkspaceId });
+    },
+
     async replaceWorkspaceSnapshot({ viewerSub, viewerEmail = null, workspaceId = null, workspace, actor, expectedRevision }) {
       this.replaceCalls.push({
         viewerSub,
@@ -350,6 +391,28 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = []) {
       return createWorkspaceRecord(record);
     }
   };
+}
+
+function createHomeWorkspaceRecordFixture({
+  viewerSub = 'sub_member',
+  boardTitle = 'Home board'
+} = {}) {
+  const initialRecord = createInitialWorkspaceRecord(viewerSub, {
+    workspaceId: createHomeWorkspaceId(viewerSub),
+    now: '2026-04-04T09:30:00.000Z'
+  });
+  const workspace = structuredClone(initialRecord.workspace);
+
+  workspace.boards.main.title = boardTitle;
+
+  return createUpdatedWorkspaceRecord(initialRecord, {
+    workspace,
+    actor: {
+      type: 'human',
+      id: viewerSub
+    },
+    now: '2026-04-04T09:45:00.000Z'
+  });
 }
 
 function createSharedWorkspaceRecordFixture(workspaceId, { memberRole = 'viewer', includeInvite = true } = {}) {
@@ -540,6 +603,65 @@ function listPendingWorkspaceInvites(records, { viewerSub, viewerEmail = null } 
   }
 
   return inviteSummaries;
+}
+
+function listAccessibleWorkspaces(records, { viewerSub, viewerEmail = null, excludeWorkspaceId = null } = {}) {
+  const summaries = [];
+  const seenWorkspaceIds = new Set();
+
+  for (const record of records) {
+    const projectedRecord = createWorkspaceRecord(record);
+    const projectedWorkspace = filterWorkspaceForViewer({
+      viewerSub,
+      viewerEmail,
+      ownerSub: projectedRecord.viewerSub,
+      workspace: projectedRecord.workspace
+    });
+    const boards = [];
+
+    for (const boardId of projectedWorkspace.boardOrder ?? []) {
+      const board = projectedWorkspace.boards?.[boardId];
+      const membership = board?.collaboration?.memberships?.find((entry) => entry?.actor?.id === viewerSub);
+
+      if (!board?.title || !membership?.role) {
+        continue;
+      }
+
+      boards.push({
+        boardId,
+        boardTitle: board.title,
+        role: membership.role
+      });
+    }
+
+    if (
+      !projectedRecord.workspaceId
+      || projectedRecord.workspaceId === excludeWorkspaceId
+      || boards.length === 0
+      || seenWorkspaceIds.has(projectedRecord.workspaceId)
+    ) {
+      continue;
+    }
+
+    seenWorkspaceIds.add(projectedRecord.workspaceId);
+    summaries.push({
+      workspaceId: projectedRecord.workspaceId,
+      isHomeWorkspace: projectedRecord.isHomeWorkspace === true,
+      boards
+    });
+  }
+
+  return summaries.sort((left, right) => {
+    if (left.isHomeWorkspace && !right.isHomeWorkspace) {
+      return -1;
+    }
+
+    if (!left.isHomeWorkspace && right.isHomeWorkspace) {
+      return 1;
+    }
+
+    return left.workspaceId.localeCompare(right.workspaceId);
+  });
 }
 
 function normalizeOptionalEmail(value) {

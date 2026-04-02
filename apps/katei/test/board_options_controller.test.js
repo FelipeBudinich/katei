@@ -5,6 +5,7 @@ import {
   createEmptyWorkspace,
   createWorkspaceBoard
 } from '../public/js/domain/workspace_read_model.js';
+import { createHomeWorkspaceId } from '../src/workspaces/workspace_record.js';
 import BoardOptionsController from '../public/js/controllers/board_options_controller.js';
 import {
   createBoardListActionState,
@@ -91,6 +92,61 @@ test('board options state keeps same-workspace invite rows separate from cross-w
   assert.equal(optionsState.boardStates[2].pendingInvite?.id, 'invite_2');
 });
 
+test('board options state groups accessible boards from other workspaces separately', () => {
+  const { workspace, viewerActor } = createSharedBoardOptionsFixture();
+  const optionsState = createBoardOptionsState(workspace, viewerActor, {
+    activeWorkspaceId: workspace.workspaceId,
+    accessibleWorkspaces: [
+      createAccessibleWorkspaceSummary({
+        workspaceId: createHomeWorkspaceId('sub_home'),
+        isHomeWorkspace: true,
+        boards: [
+          {
+            boardId: 'main',
+            boardTitle: 'Home board',
+            role: 'admin'
+          }
+        ]
+      }),
+      createAccessibleWorkspaceSummary({
+        workspaceId: 'workspace_other',
+        boards: [
+          {
+            boardId: 'roadmap',
+            boardTitle: 'Roadmap',
+            role: 'viewer'
+          }
+        ]
+      })
+    ]
+  });
+
+  assert.deepEqual(
+    optionsState.workspaceSections.map((section) => ({
+      workspaceId: section.workspaceId,
+      isHomeWorkspace: section.isHomeWorkspace,
+      boardIds: section.boardStates.map((boardState) => boardState.boardId)
+    })),
+    [
+      {
+        workspaceId: 'workspace_shared',
+        isHomeWorkspace: false,
+        boardIds: ['main', 'shared', 'invite']
+      },
+      {
+        workspaceId: createHomeWorkspaceId('sub_home'),
+        isHomeWorkspace: true,
+        boardIds: ['main']
+      },
+      {
+        workspaceId: 'workspace_other',
+        isHomeWorkspace: false,
+        boardIds: ['roadmap']
+      }
+    ]
+  );
+});
+
 test('board list action state keeps switch and invite responses mutually exclusive', () => {
   const { optionsState } = createSharedBoardOptionsFixture();
   const activeBoardActions = createBoardListActionState(optionsState.boardStates[0]);
@@ -100,10 +156,10 @@ test('board list action state keeps switch and invite responses mutually exclusi
   assert.deepEqual(activeBoardActions, {
     canRespondToInvite: false,
     canOpenCollaborators: true,
-    canRename: false,
+    canEditBoard: false,
     inviteId: '',
     collaboratorsHidden: false,
-    renameHidden: true,
+    editHidden: true,
     switchHidden: true,
     inviteAcceptHidden: true,
     inviteDeclineHidden: true
@@ -111,10 +167,10 @@ test('board list action state keeps switch and invite responses mutually exclusi
   assert.deepEqual(switchableBoardActions, {
     canRespondToInvite: false,
     canOpenCollaborators: false,
-    canRename: false,
+    canEditBoard: false,
     inviteId: '',
     collaboratorsHidden: true,
-    renameHidden: true,
+    editHidden: true,
     switchHidden: false,
     inviteAcceptHidden: true,
     inviteDeclineHidden: true
@@ -122,39 +178,39 @@ test('board list action state keeps switch and invite responses mutually exclusi
   assert.deepEqual(invitedBoardActions, {
     canRespondToInvite: true,
     canOpenCollaborators: false,
-    canRename: false,
+    canEditBoard: false,
     inviteId: 'invite_2',
     collaboratorsHidden: true,
-    renameHidden: true,
+    editHidden: true,
     switchHidden: true,
     inviteAcceptHidden: false,
     inviteDeclineHidden: false
   });
 });
 
-test('board list action state shows collaborators and rename only for the active admin board', () => {
+test('board list action state shows collaborators and edit only for the active admin board', () => {
   const { optionsState } = createAdminBoardOptionsFixture();
   const activeBoardActions = createBoardListActionState(optionsState.boardStates[0]);
   const inactiveBoardActions = createBoardListActionState(optionsState.boardStates[1]);
 
   assert.equal(activeBoardActions.canOpenCollaborators, true);
-  assert.equal(activeBoardActions.canRename, true);
+  assert.equal(activeBoardActions.canEditBoard, true);
   assert.equal(activeBoardActions.collaboratorsHidden, false);
-  assert.equal(activeBoardActions.renameHidden, false);
+  assert.equal(activeBoardActions.editHidden, false);
   assert.equal(inactiveBoardActions.canOpenCollaborators, false);
-  assert.equal(inactiveBoardActions.canRename, false);
+  assert.equal(inactiveBoardActions.canEditBoard, false);
   assert.equal(inactiveBoardActions.collaboratorsHidden, true);
-  assert.equal(inactiveBoardActions.renameHidden, true);
+  assert.equal(inactiveBoardActions.editHidden, true);
 });
 
-test('board list action state still shows collaborators and rename for the last remaining admin board', () => {
+test('board list action state still shows collaborators and edit for the last remaining admin board', () => {
   const { optionsState } = createSingleBoardAdminBoardOptionsFixture();
   const activeBoardActions = createBoardListActionState(optionsState.boardStates[0]);
 
   assert.equal(activeBoardActions.canOpenCollaborators, true);
   assert.equal(activeBoardActions.collaboratorsHidden, false);
-  assert.equal(activeBoardActions.canRename, true);
-  assert.equal(activeBoardActions.renameHidden, false);
+  assert.equal(activeBoardActions.canEditBoard, true);
+  assert.equal(activeBoardActions.editHidden, false);
 });
 
 test('board role translation keys stay stable for member and invite states', () => {
@@ -239,6 +295,8 @@ test('board options controller renders incoming invite rows from multiple worksp
 
   assert.equal(controller.inviteSectionTarget.hidden, false);
   assert.equal(controller.inviteListTarget.children.length, 2);
+  assert.equal(controller.boardListTarget.children.length, 1);
+  assert.equal(controller.boardListTarget.children[0].fields.workspaceTitle.textContent, 'workspace_shared');
   assert.equal(controller.inviteListTarget.children[0].fields.inviteTitle.textContent, 'Casa');
   assert.equal(
     controller.inviteListTarget.children[0].fields.inviteMeta.textContent,
@@ -252,12 +310,12 @@ test('board options controller renders incoming invite rows from multiple worksp
   );
   assert.equal(controller.inviteListTarget.children[1].fields.inviteRole.textContent, 'Role: Viewer');
   assert.deepEqual(
-    controller.boardListTarget.children.map((item) => item.fields.title.textContent),
+    flattenRenderedBoardRows(controller.boardListTarget).map((item) => item.fields.title.textContent),
     optionsState.boardStates.map((boardState) => boardState.title)
   );
-  assert.equal(controller.boardListTarget.children[1].fields.switchButton.hidden, false);
-  assert.equal(controller.boardListTarget.children[0].fields.renameButton.hidden, true);
-  assert.equal(controller.boardListTarget.children[2].fields.inviteAcceptButton.hidden, false);
+  assert.equal(flattenRenderedBoardRows(controller.boardListTarget)[1].fields.switchButton.hidden, false);
+  assert.equal(flattenRenderedBoardRows(controller.boardListTarget)[0].fields.editButton.hidden, true);
+  assert.equal(flattenRenderedBoardRows(controller.boardListTarget)[2].fields.inviteAcceptButton.hidden, false);
 });
 
 test('board options controller shows Collaborators and Edit Board only on the active admin row', () => {
@@ -267,18 +325,18 @@ test('board options controller shows Collaborators and Edit Board only on the ac
   BoardOptionsController.prototype.syncWorkspace.call(controller, workspace, viewerActor);
 
   assert.deepEqual(
-    controller.boardListTarget.children.map((item) => item.fields.title.textContent),
+    flattenRenderedBoardRows(controller.boardListTarget).map((item) => item.fields.title.textContent),
     optionsState.boardStates.map((boardState) => boardState.title)
   );
-  assert.equal(controller.boardListTarget.children[0].fields.collaboratorsButton.hidden, false);
-  assert.equal(controller.boardListTarget.children[0].fields.collaboratorBadge.hidden, true);
-  assert.equal(controller.boardListTarget.children[0].fields.collaboratorBadge.textContent, '0');
-  assert.equal(controller.boardListTarget.children[0].fields.renameButton.hidden, false);
-  assert.equal(controller.boardListTarget.children[0].fields.switchButton.hidden, true);
-  assert.equal(controller.boardListTarget.children[1].fields.collaboratorsButton.hidden, true);
-  assert.equal(controller.boardListTarget.children[1].fields.collaboratorBadge.hidden, true);
-  assert.equal(controller.boardListTarget.children[1].fields.renameButton.hidden, true);
-  assert.equal(controller.boardListTarget.children[1].fields.switchButton.hidden, false);
+  assert.equal(flattenRenderedBoardRows(controller.boardListTarget)[0].fields.collaboratorsButton.hidden, false);
+  assert.equal(flattenRenderedBoardRows(controller.boardListTarget)[0].fields.collaboratorBadge.hidden, true);
+  assert.equal(flattenRenderedBoardRows(controller.boardListTarget)[0].fields.collaboratorBadge.textContent, '0');
+  assert.equal(flattenRenderedBoardRows(controller.boardListTarget)[0].fields.editButton.hidden, false);
+  assert.equal(flattenRenderedBoardRows(controller.boardListTarget)[0].fields.switchButton.hidden, true);
+  assert.equal(flattenRenderedBoardRows(controller.boardListTarget)[1].fields.collaboratorsButton.hidden, true);
+  assert.equal(flattenRenderedBoardRows(controller.boardListTarget)[1].fields.collaboratorBadge.hidden, true);
+  assert.equal(flattenRenderedBoardRows(controller.boardListTarget)[1].fields.editButton.hidden, true);
+  assert.equal(flattenRenderedBoardRows(controller.boardListTarget)[1].fields.switchButton.hidden, false);
 });
 
 test('board options controller shows the collaborator badge count on the active row', () => {
@@ -289,9 +347,9 @@ test('board options controller shows the collaborator badge count on the active 
 
   BoardOptionsController.prototype.syncWorkspace.call(controller, workspace, viewerActor);
 
-  assert.equal(controller.boardListTarget.children[0].fields.collaboratorsButton.hidden, false);
-  assert.equal(controller.boardListTarget.children[0].fields.collaboratorBadge.hidden, false);
-  assert.equal(controller.boardListTarget.children[0].fields.collaboratorBadge.textContent, '1');
+  assert.equal(flattenRenderedBoardRows(controller.boardListTarget)[0].fields.collaboratorsButton.hidden, false);
+  assert.equal(flattenRenderedBoardRows(controller.boardListTarget)[0].fields.collaboratorBadge.hidden, false);
+  assert.equal(flattenRenderedBoardRows(controller.boardListTarget)[0].fields.collaboratorBadge.textContent, '1');
 });
 
 test('board options controller still shows Collaborators and Edit Board when only one board remains', () => {
@@ -300,19 +358,19 @@ test('board options controller still shows Collaborators and Edit Board when onl
 
   BoardOptionsController.prototype.syncWorkspace.call(controller, workspace, viewerActor);
 
-  assert.equal(controller.boardListTarget.children.length, 1);
-  assert.equal(controller.boardListTarget.children[0].fields.collaboratorsButton.hidden, false);
-  assert.equal(controller.boardListTarget.children[0].fields.renameButton.hidden, false);
+  assert.equal(flattenRenderedBoardRows(controller.boardListTarget).length, 1);
+  assert.equal(flattenRenderedBoardRows(controller.boardListTarget)[0].fields.collaboratorsButton.hidden, false);
+  assert.equal(flattenRenderedBoardRows(controller.boardListTarget)[0].fields.editButton.hidden, false);
 });
 
-test('board options controller renameBoard dispatches the active board id from a row action', () => {
+test('board options controller editBoard dispatches the active board id from a row action', () => {
   const { workspace, viewerActor } = createAdminBoardOptionsFixture();
   const controller = createBoardOptionsControllerDouble();
   const dispatched = [];
 
   controller.dispatch = (name, options) => dispatched.push({ name, detail: options?.detail ?? null });
   BoardOptionsController.prototype.syncWorkspace.call(controller, workspace, viewerActor);
-  BoardOptionsController.prototype.renameBoard.call(controller, {
+  BoardOptionsController.prototype.editBoard.call(controller, {
     currentTarget: {
       dataset: {
         boardId: 'shared'
@@ -322,7 +380,7 @@ test('board options controller renameBoard dispatches the active board id from a
 
   assert.deepEqual(dispatched, [
     {
-      name: 'rename-board',
+      name: 'edit-board',
       detail: {
         boardId: 'main'
       }
@@ -409,6 +467,38 @@ test('board options controller declineInvite dispatches workspaceId, boardId, an
         workspaceId: 'workspace_invited_casa',
         boardId: 'casa',
         inviteId: 'invite_casa_1'
+      }
+    }
+  ]);
+  assert.deepEqual(controller.closeDialogCalls, [{ restoreFocus: false }]);
+});
+
+test('board options controller switchBoard dispatches workspace-aware detail for another workspace', () => {
+  const controller = createBoardOptionsControllerDouble();
+  const dispatched = [];
+
+  controller.dispatch = (name, options) => dispatched.push({ name, detail: options?.detail ?? null });
+  controller.activeWorkspaceId = 'workspace_shared';
+
+  BoardOptionsController.prototype.switchBoard.call(controller, {
+    currentTarget: {
+      dataset: {
+        workspaceId: createHomeWorkspaceId('sub_home'),
+        isHomeWorkspace: 'true',
+        boardId: 'main',
+        boardTitle: 'Home board'
+      }
+    }
+  });
+
+  assert.deepEqual(dispatched, [
+    {
+      name: 'switch-board',
+      detail: {
+        workspaceId: createHomeWorkspaceId('sub_home'),
+        isHomeWorkspace: true,
+        boardId: 'main',
+        boardTitle: 'Home board'
       }
     }
   ]);
@@ -561,6 +651,24 @@ function createPendingWorkspaceInvite({
   };
 }
 
+function createAccessibleWorkspaceSummary({
+  workspaceId = 'workspace_shared_other',
+  isHomeWorkspace = false,
+  boards = [
+    {
+      boardId: 'main',
+      boardTitle: 'Shared board',
+      role: 'viewer'
+    }
+  ]
+} = {}) {
+  return {
+    workspaceId,
+    isHomeWorkspace,
+    boards
+  };
+}
+
 function createBoardOptionsControllerDouble() {
   const controller = Object.create(BoardOptionsController.prototype);
 
@@ -570,6 +678,8 @@ function createBoardOptionsControllerDouble() {
   controller.optionsState = null;
   controller.pendingWorkspaceInvites = [];
   controller.activeWorkspaceId = null;
+  controller.activeWorkspaceIsHome = false;
+  controller.accessibleWorkspaces = [];
   controller.restoreFocusElement = null;
   controller.closeDialogCalls = [];
   controller.dispatch = () => {};
@@ -580,13 +690,17 @@ function createBoardOptionsControllerDouble() {
   controller.roleSummaryTarget = createTextTarget();
   controller.pendingSummaryTarget = createTextTarget({ hidden: true });
   controller.boardListTarget = createListTarget();
+  controller.workspaceSectionTemplateTarget = createTemplateDouble([
+    'workspaceTitle',
+    'workspaceBoards'
+  ]);
   controller.boardItemTemplateTarget = createTemplateDouble([
     'title',
     'state',
     'switchButton',
     'collaboratorsButton',
     'collaboratorBadge',
-    'renameButton',
+    'editButton',
     'inviteAcceptButton',
     'inviteDeclineButton'
   ]);
@@ -656,8 +770,16 @@ function createTemplateNode(fieldNames) {
 
 function createFieldTarget() {
   return {
+    children: [],
     textContent: '',
     hidden: false,
-    dataset: {}
+    dataset: {},
+    replaceChildren(...nodes) {
+      this.children = nodes;
+    }
   };
+}
+
+function flattenRenderedBoardRows(boardListTarget) {
+  return boardListTarget.children.flatMap((section) => section.fields.workspaceBoards.children);
 }
