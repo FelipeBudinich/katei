@@ -168,11 +168,235 @@ export async function waitForSelector(client, selector, timeoutMs = 15000) {
   throw new Error(`Timed out waiting for selector ${selector}.`);
 }
 
+export async function waitForText(client, selector, text, timeoutMs = 15000, { exact = false } = {}) {
+  const deadline = Date.now() + timeoutMs;
+
+  while (Date.now() < deadline) {
+    const result = await evaluateFunction(client, ({ selector: targetSelector, text: expectedText, exact: expectExact }) => {
+      const elements = Array.from(document.querySelectorAll(targetSelector));
+      const visibleElement = elements.find((element) => {
+        const rect = element.getBoundingClientRect();
+        const style = window.getComputedStyle(element);
+
+        return (
+          !element.hidden &&
+          style.display !== 'none' &&
+          style.visibility !== 'hidden' &&
+          Number(rect.width) > 0 &&
+          Number(rect.height) > 0
+        );
+      }) ?? elements[0] ?? null;
+
+      const actualText = (visibleElement?.textContent ?? '').trim();
+
+      return {
+        matched: expectExact ? actualText === expectedText : actualText.includes(expectedText),
+        actualText
+      };
+    }, {
+      selector,
+      text,
+      exact
+    });
+
+    if (result?.matched) {
+      return result;
+    }
+
+    await sleep(200);
+  }
+
+  throw new Error(`Timed out waiting for text "${text}" in selector ${selector}.`);
+}
+
+export async function clickSelector(client, selector, { requireVisible = true } = {}) {
+  const result = await evaluateFunction(client, ({ selector: targetSelector, requireVisible: requireVisibleSelection }) => {
+    const elements = Array.from(document.querySelectorAll(targetSelector));
+
+    function isVisible(element) {
+      const rect = element.getBoundingClientRect();
+      const style = window.getComputedStyle(element);
+
+      return (
+        !element.hidden &&
+        !element.disabled &&
+        style.display !== 'none' &&
+        style.visibility !== 'hidden' &&
+        Number(rect.width) > 0 &&
+        Number(rect.height) > 0
+      );
+    }
+
+    const element = elements.find((candidate) => !requireVisibleSelection || isVisible(candidate)) ?? null;
+
+    if (!element) {
+      return {
+        clicked: false,
+        matches: elements.length
+      };
+    }
+
+    element.scrollIntoView({
+      block: 'center',
+      inline: 'center'
+    });
+    element.click();
+
+    return {
+      clicked: true,
+      matches: elements.length,
+      tagName: element.tagName.toLowerCase()
+    };
+  }, {
+    selector,
+    requireVisible
+  });
+
+  if (!result?.clicked) {
+    throw new Error(`Unable to click selector ${selector}.`);
+  }
+
+  return result;
+}
+
+export async function setFormValue(client, selector, value) {
+  const result = await evaluateFunction(client, ({ selector: targetSelector, value: nextValue }) => {
+    const element = document.querySelector(targetSelector);
+
+    if (!element) {
+      return {
+        ok: false,
+        reason: 'not-found'
+      };
+    }
+
+    if (!('value' in element)) {
+      return {
+        ok: false,
+        reason: 'missing-value-property'
+      };
+    }
+
+    element.focus();
+    element.value = nextValue;
+    element.dispatchEvent(new Event('input', { bubbles: true }));
+    element.dispatchEvent(new Event('change', { bubbles: true }));
+
+    return {
+      ok: true,
+      tagName: element.tagName.toLowerCase(),
+      value: element.value
+    };
+  }, {
+    selector,
+    value
+  });
+
+  if (!result?.ok) {
+    throw new Error(`Unable to set value for selector ${selector}.`);
+  }
+
+  return result;
+}
+
+export async function submitSelector(client, selector) {
+  const result = await evaluateFunction(client, ({ selector: targetSelector }) => {
+    const element = document.querySelector(targetSelector);
+
+    if (!element) {
+      return {
+        submitted: false,
+        reason: 'not-found'
+      };
+    }
+
+    if (typeof element.requestSubmit === 'function') {
+      element.requestSubmit();
+      return {
+        submitted: true,
+        mode: 'requestSubmit',
+        tagName: element.tagName.toLowerCase()
+      };
+    }
+
+    if (typeof element.submit === 'function') {
+      element.submit();
+      return {
+        submitted: true,
+        mode: 'submit',
+        tagName: element.tagName.toLowerCase()
+      };
+    }
+
+    if (typeof element.click === 'function') {
+      element.click();
+      return {
+        submitted: true,
+        mode: 'click',
+        tagName: element.tagName.toLowerCase()
+      };
+    }
+
+    return {
+      submitted: false,
+      reason: 'unsupported-element',
+      tagName: element.tagName.toLowerCase()
+    };
+  }, {
+    selector
+  });
+
+  if (!result?.submitted) {
+    throw new Error(`Unable to submit selector ${selector}.`);
+  }
+
+  return result;
+}
+
 export async function inspectSelectors(client, inspectSelectors) {
   return evaluate(client, buildSelectorInspectionExpression({
     waitForSelector: null,
     inspectSelectors
   }));
+}
+
+export async function readWorkspaceBootstrap(client) {
+  return evaluateFunction(client, () => {
+    const bootstrapElement = document.getElementById('workspace-bootstrap');
+
+    if (!bootstrapElement?.textContent) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(bootstrapElement.textContent);
+    } catch (error) {
+      return {
+        __parseError: String(error?.message ?? error)
+      };
+    }
+  });
+}
+
+export async function readWorkspaceSnapshot(client, workspaceApiPath = '/api/workspace') {
+  return evaluateFunction(client, async ({ workspaceApiPath: targetPath }) => {
+    const response = await fetch(targetPath, {
+      credentials: 'same-origin',
+      headers: {
+        Accept: 'application/json'
+      }
+    });
+
+    const body = await response.json().catch(() => null);
+
+    return {
+      ok: response.ok,
+      status: response.status,
+      body
+    };
+  }, {
+    workspaceApiPath
+  });
 }
 
 export async function getPageSummary(client) {
@@ -193,6 +417,15 @@ export async function captureScreenshot(client) {
   }
 
   return Buffer.from(data, 'base64');
+}
+
+export async function evaluateFunction(client, pageFunction, argument = undefined) {
+  const functionSource = typeof pageFunction === 'function' ? pageFunction.toString() : String(pageFunction);
+  const expression = argument === undefined
+    ? `(${functionSource})()`
+    : `(${functionSource})(${JSON.stringify(argument)})`;
+
+  return evaluate(client, expression);
 }
 
 function buildSelectorInspectionExpression({ waitForSelector, inspectSelectors }) {

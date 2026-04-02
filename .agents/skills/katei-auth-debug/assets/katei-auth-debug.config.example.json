@@ -24,5 +24,19 @@
       "boardTitle": "[data-workspace-target=\"boardTitle\"]",
       "workspaceBootstrap": "#workspace-bootstrap"
     }
+  },
+  "boardLifecycle": {
+    "titlePrefix": "Codex Board Smoke",
+    "editedTitleSuffix": "Edited",
+    "sourceLocale": "en",
+    "defaultLocale": "en",
+    "supportedLocales": ["en"],
+    "requiredLocales": ["en"],
+    "stageDefinitions": [
+      "backlog | Backlog | doing, done",
+      "doing | Doing | backlog, done",
+      "done | Done | backlog, doing, archived",
+      "archived | Archived | backlog, doing, done | card.delete"
+    ]
   }
 }

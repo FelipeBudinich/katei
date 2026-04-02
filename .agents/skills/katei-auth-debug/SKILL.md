@@ -34,6 +34,12 @@ node .agents/skills/katei-auth-debug/scripts/open-authenticated-page.mjs
 node .agents/skills/katei-auth-debug/scripts/capture-auth-debug-artifacts.mjs
 ```
 
+6. Exercise create -> edit -> delete board flows:
+
+```bash
+node .agents/skills/katei-auth-debug/scripts/exercise-board-lifecycle.mjs
+```
+
 Auth modes:
 
 - `debug-route` is the default. It calls `POST /__debug/login` with the secret named by `auth.secretEnvVar`.
@@ -49,6 +55,7 @@ Hosted convenience commands:
 
 ```bash
 bash .agents/skills/katei-auth-debug/scripts/smoke-hosted.sh
+bash .agents/skills/katei-auth-debug/scripts/smoke-board-lifecycle.sh
 bash .agents/skills/katei-auth-debug/scripts/store-debug-secret-in-keychain.sh
 ```
 
@@ -58,13 +65,15 @@ Important behavior:
 - The browser profile is isolated under `/tmp/katei-auth-debug-profile`.
 - `open-authenticated-page.mjs` writes `latest-session.json` and `latest-open.png` into the artifact directory.
 - `capture-auth-debug-artifacts.mjs` writes a timestamped JSON report and PNG screenshot.
+- `exercise-board-lifecycle.mjs` creates a temporary board, edits it, then deletes it, writing per-step screenshots plus `latest-board-lifecycle.json`.
+- Lifecycle verification uses the initial `#workspace-bootstrap` payload for orientation and then reads live `/api/workspace` state after each mutation because the bootstrap script is not rewritten after in-page commands.
 - Do not commit `.agents/katei-auth-debug.config.json` or debug secrets.
 
 Config:
 
 - Use `.agents/skills/katei-auth-debug/assets/katei-auth-debug.config.example.json` as the template.
 - Required top-level fields: `baseUrl`.
-- Recommended defaults are already baked into the loader for `startPath`, auth paths, Keychain service/account, Chrome path/port/profile, artifact dir, wait timeout, and selector snapshots.
+- Recommended defaults are already baked into the loader for `startPath`, auth paths, Keychain service/account, Chrome path/port/profile, artifact dir, wait timeout, selector snapshots, and a default board lifecycle schema.
 
 Validation:
 

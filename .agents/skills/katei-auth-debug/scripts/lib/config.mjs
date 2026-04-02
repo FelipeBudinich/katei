@@ -9,6 +9,18 @@ export const DEFAULT_ARTIFACT_DIR = '/tmp/katei-auth-debug';
 export const DEFAULT_WAIT_TIMEOUT_MS = 15000;
 export const DEFAULT_START_PATH = '/boards';
 export const DEFAULT_WAIT_SELECTOR = '[data-controller="workspace"]';
+export const DEFAULT_BOARD_LIFECYCLE_TITLE_PREFIX = 'Codex Board Smoke';
+export const DEFAULT_BOARD_LIFECYCLE_EDITED_TITLE_SUFFIX = 'Edited';
+export const DEFAULT_BOARD_LIFECYCLE_SOURCE_LOCALE = 'en';
+export const DEFAULT_BOARD_LIFECYCLE_DEFAULT_LOCALE = 'en';
+export const DEFAULT_BOARD_LIFECYCLE_SUPPORTED_LOCALES = Object.freeze(['en']);
+export const DEFAULT_BOARD_LIFECYCLE_REQUIRED_LOCALES = Object.freeze(['en']);
+export const DEFAULT_BOARD_LIFECYCLE_STAGE_DEFINITIONS = Object.freeze([
+  'backlog | Backlog | doing, done',
+  'doing | Doing | backlog, done',
+  'done | Done | backlog, doing, archived',
+  'archived | Archived | backlog, doing, done | card.delete'
+]);
 export const DEFAULT_INSPECT_SELECTORS = Object.freeze({
   workspaceRoot: '[data-controller="workspace"]',
   boardTitle: '[data-workspace-target="boardTitle"]',
@@ -57,6 +69,7 @@ export function normalizeKateiAuthDebugConfig(rawConfig, { configPath = DEFAULT_
   const auth = normalizeAuthConfig(rawConfig.auth, { baseUrl });
   const chrome = normalizeChromeConfig(rawConfig.chrome);
   const page = normalizePageConfig(rawConfig.page);
+  const boardLifecycle = normalizeBoardLifecycleConfig(rawConfig.boardLifecycle);
 
   return {
     configPath,
@@ -65,7 +78,8 @@ export function normalizeKateiAuthDebugConfig(rawConfig, { configPath = DEFAULT_
     targetUrl: new URL(startPath, baseUrl).toString(),
     auth,
     chrome,
-    page
+    page,
+    boardLifecycle
   };
 }
 
@@ -110,6 +124,33 @@ function normalizePageConfig(rawPage = {}) {
     waitTimeoutMs: normalizePositiveInteger(rawPage?.waitTimeoutMs ?? DEFAULT_WAIT_TIMEOUT_MS, 'page.waitTimeoutMs'),
     artifactDir: normalizeFsPath(rawPage?.artifactDir ?? DEFAULT_ARTIFACT_DIR),
     inspectSelectors: normalizeInspectSelectors(rawPage?.inspectSelectors ?? DEFAULT_INSPECT_SELECTORS)
+  };
+}
+
+function normalizeBoardLifecycleConfig(rawBoardLifecycle = {}) {
+  if (rawBoardLifecycle != null && (typeof rawBoardLifecycle !== 'object' || Array.isArray(rawBoardLifecycle))) {
+    throw new Error('boardLifecycle config must be an object when provided.');
+  }
+
+  return {
+    titlePrefix: normalizeNonEmptyString(rawBoardLifecycle?.titlePrefix) || DEFAULT_BOARD_LIFECYCLE_TITLE_PREFIX,
+    editedTitleSuffix:
+      normalizeNonEmptyString(rawBoardLifecycle?.editedTitleSuffix) || DEFAULT_BOARD_LIFECYCLE_EDITED_TITLE_SUFFIX,
+    sourceLocale: normalizeLocale(rawBoardLifecycle?.sourceLocale ?? DEFAULT_BOARD_LIFECYCLE_SOURCE_LOCALE, 'boardLifecycle.sourceLocale'),
+    defaultLocale:
+      normalizeLocale(rawBoardLifecycle?.defaultLocale ?? DEFAULT_BOARD_LIFECYCLE_DEFAULT_LOCALE, 'boardLifecycle.defaultLocale'),
+    supportedLocales: normalizeLocaleList(
+      rawBoardLifecycle?.supportedLocales ?? DEFAULT_BOARD_LIFECYCLE_SUPPORTED_LOCALES,
+      'boardLifecycle.supportedLocales'
+    ),
+    requiredLocales: normalizeLocaleList(
+      rawBoardLifecycle?.requiredLocales ?? DEFAULT_BOARD_LIFECYCLE_REQUIRED_LOCALES,
+      'boardLifecycle.requiredLocales'
+    ),
+    stageDefinitions: normalizeStringList(
+      rawBoardLifecycle?.stageDefinitions ?? DEFAULT_BOARD_LIFECYCLE_STAGE_DEFINITIONS,
+      'boardLifecycle.stageDefinitions'
+    )
   };
 }
 
@@ -205,6 +246,16 @@ function normalizePort(value) {
   return normalizePositiveInteger(value, 'chrome.remoteDebuggingPort');
 }
 
+function normalizeLocale(value, fieldName) {
+  const normalizedValue = normalizeNonEmptyString(value);
+
+  if (!normalizedValue) {
+    throw new Error(`${fieldName} must not be blank.`);
+  }
+
+  return normalizedValue.replaceAll('_', '-');
+}
+
 function normalizePositiveInteger(value, fieldName) {
   const normalizedValue = Number.parseInt(String(value), 10);
 
@@ -245,6 +296,32 @@ function normalizeFsPath(value) {
   return path.isAbsolute(normalizedValue)
     ? normalizedValue
     : path.resolve(process.cwd(), normalizedValue);
+}
+
+function normalizeLocaleList(value, fieldName) {
+  const normalizedEntries = normalizeStringList(value, fieldName).map((entry) => entry.replaceAll('_', '-'));
+
+  if (normalizedEntries.length === 0) {
+    throw new Error(`${fieldName} must define at least one locale.`);
+  }
+
+  return normalizedEntries;
+}
+
+function normalizeStringList(value, fieldName) {
+  if (!Array.isArray(value)) {
+    throw new Error(`${fieldName} must be an array.`);
+  }
+
+  const normalizedEntries = value
+    .map((entry) => normalizeNonEmptyString(entry))
+    .filter(Boolean);
+
+  if (normalizedEntries.length === 0) {
+    throw new Error(`${fieldName} must define at least one entry.`);
+  }
+
+  return normalizedEntries;
 }
 
 function normalizeNonEmptyString(value) {
