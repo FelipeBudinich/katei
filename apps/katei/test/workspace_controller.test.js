@@ -228,6 +228,49 @@ test('workspace controller sync-board-options payload includes pendingWorkspaceI
   });
 });
 
+test('confirmDeleteBoard opens the delete confirmation for the requested board', () => {
+  const adminActor = createActor('admin_1', 'admin@example.com', 'Admin');
+  const workspace = createEmptyWorkspace({
+    workspaceId: 'workspace_admin',
+    creator: adminActor
+  });
+  const controller = Object.create(WorkspaceController.prototype);
+  const confirmations = [];
+  const announcements = [];
+  const triggerElement = { id: 'delete-board-row-action' };
+
+  controller.workspace = workspace;
+  controller.viewerActor = adminActor;
+  controller.t = (key, values = {}) => (values.title ? `${key}:${values.title}` : key);
+  controller.openConfirmDialog = (options) => {
+    confirmations.push(options);
+  };
+  controller.announce = (message) => {
+    announcements.push(message);
+  };
+
+  WorkspaceController.prototype.confirmDeleteBoard.call(controller, {
+    detail: {
+      boardId: 'main'
+    },
+    target: triggerElement
+  });
+
+  assert.deepEqual(confirmations, [
+    {
+      triggerElement,
+      confirmation: {
+        type: 'delete-board',
+        boardId: 'main',
+        title: 'workspace.confirmations.deleteBoardTitle',
+        message: `workspace.confirmations.deleteBoardMessage:${workspace.boards.main.title}`,
+        confirmLabel: 'workspace.confirmations.deleteBoardConfirm'
+      }
+    }
+  ]);
+  assert.deepEqual(announcements, []);
+});
+
 test('toggleColumn keeps collapse state client-local and updates the DOM without mutating workspace state', () => {
   const viewerActor = createActor('viewer_1', 'viewer@example.com', 'Viewer');
   const workspace = createViewerWorkspace('workspace_local_columns', viewerActor);

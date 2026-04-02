@@ -71,6 +71,15 @@
             </button>
             <button
               type="button"
+              class="touch-button-danger"
+              hidden
+              data-board-options-field="deleteButton"
+              data-action="board-options#deleteBoard"
+            >
+              {{ t('boardOptionsDialog.deleteBoard') }}
+            </button>
+            <button
+              type="button"
               class="touch-button-secondary"
               hidden
               data-board-options-field="inviteAcceptButton"
@@ -135,15 +144,6 @@
       >
         {{ t('boardOptionsDialog.collaboratorsButton') }}
         <span class="count-chip ml-2 px-2 py-0.5 text-xs" hidden data-board-options-target="collaboratorBadge">0</span>
-      </button>
-      <button
-        type="button"
-        class="touch-button-danger"
-        hidden
-        data-board-options-target="deleteButton"
-        data-action="board-options#deleteBoard"
-      >
-        {{ t('boardOptionsDialog.deleteBoard') }}
       </button>
     </div>
   </div>
