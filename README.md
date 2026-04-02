@@ -203,3 +203,4 @@ Committed generated navigation and inventory docs currently present in the repo 
 - `apps/katei/docs/env-inventory.json`
 - `apps/katei/docs/filetree.html`
 - `apps/katei/docs/filetree.json`
+:-)
