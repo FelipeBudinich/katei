@@ -53,7 +53,7 @@ test('getBoardRenderStages follows board.stageOrder instead of fixed column orde
   );
 });
 
-test('getCardRenderState resolves localized title and preview text from the board locale policy', () => {
+test('getCardRenderState chooses UI-locale content when present', () => {
   const board = createWorkspaceBoard({
     id: 'board_localized',
     title: 'Localized board',
@@ -79,12 +79,12 @@ test('getCardRenderState resolves localized title and preview text from the boar
 
   board.languagePolicy = {
     sourceLocale: 'en',
-    defaultLocale: 'ja',
+    defaultLocale: 'en',
     supportedLocales: ['en', 'ja'],
     requiredLocales: ['en']
   };
 
-  const renderState = withMarkdownEnvironment(() => getCardRenderState(board, card));
+  const renderState = withMarkdownEnvironment(() => getCardRenderState(board, card, 'ja'));
 
   assert.deepEqual(renderState, {
     title: '日本語タイトル',

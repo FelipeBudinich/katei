@@ -366,6 +366,7 @@ test('workspace template renders the no-board header with both Options and Profi
         name: 'No Boards Viewer'
       },
       createTranslator('en'),
+      'en',
       workspace,
       {
         revision: 1,
@@ -402,6 +403,7 @@ test('workspace template renders edit localization controls and a simplified loc
         name: 'Locale Editor'
       },
       createTranslator('en'),
+      'en',
       workspace,
       {
         revision: 1,
@@ -453,6 +455,7 @@ test('workspace template renders the board editor without a templates field', ()
         name: 'Board Editor Viewer'
       },
       createTranslator('en'),
+      'en',
       workspace,
       {
         revision: 1,
@@ -1446,6 +1449,7 @@ test('buildWorkspacePageModel localizes fixed labels without rewriting user-auth
   const viewModel = buildWorkspacePageModel(
     { sub: 'sub_123', name: 'Tester' },
     createTranslator('ja'),
+    'ja',
     workspace
   );
 
@@ -1457,6 +1461,102 @@ test('buildWorkspacePageModel localizes fixed labels without rewriting user-auth
   assert.equal(viewModel.workspace.boards[board.id].cards[cardId].contentByLocale.en.detailsMarkdown, 'Owner: Mina');
   assert.equal(viewModel.columnDefinitions.find((column) => column.id === 'backlog')?.title, 'バックログ');
   assert.equal(viewModel.priorityDefinitions.find((priority) => priority.id === 'urgent')?.label, '緊急');
+});
+
+test('buildWorkspacePageModel uses the ui locale for server-rendered card content', () => {
+  const workspace = createEmptyWorkspace();
+  const board = workspace.boards[workspace.ui.activeBoardId];
+  const cardId = 'card_localized_1';
+
+  board.cards[cardId] = {
+    id: cardId,
+    priority: 'important',
+    createdAt: '2026-03-30T10:00:00.000Z',
+    updatedAt: '2026-03-30T11:00:00.000Z',
+    contentByLocale: {
+      en: {
+        title: 'English source',
+        detailsMarkdown: 'English details'
+      },
+      ja: {
+        title: '日本語タイトル',
+        detailsMarkdown: '日本語本文'
+      }
+    },
+    localeRequests: {}
+  };
+  board.languagePolicy = {
+    sourceLocale: 'en',
+    defaultLocale: 'en',
+    supportedLocales: ['en', 'ja'],
+    requiredLocales: ['en']
+  };
+  board.stages.backlog.cardIds = [cardId];
+
+  const viewModel = buildWorkspacePageModel(
+    { sub: 'sub_ja', name: 'Tester' },
+    createTranslator('ja'),
+    'ja',
+    workspace
+  );
+
+  assert.equal(viewModel.board.cards[cardId].title, '日本語タイトル');
+  assert.equal(viewModel.board.cards[cardId].detailsMarkdown, '日本語本文');
+});
+
+test('workspace page first paint uses the active ui locale for rendered board cards', () => {
+  const workspace = createEmptyWorkspace();
+  const board = workspace.boards[workspace.ui.activeBoardId];
+  const cardId = 'card_localized_render';
+
+  board.cards[cardId] = {
+    id: cardId,
+    priority: 'important',
+    createdAt: '2026-03-30T10:00:00.000Z',
+    updatedAt: '2026-03-30T11:00:00.000Z',
+    contentByLocale: {
+      en: {
+        title: 'English source',
+        detailsMarkdown: 'English details'
+      },
+      ja: {
+        title: '日本語タイトル',
+        detailsMarkdown: '日本語本文'
+      }
+    },
+    localeRequests: {}
+  };
+  board.languagePolicy = {
+    sourceLocale: 'en',
+    defaultLocale: 'en',
+    supportedLocales: ['en', 'ja'],
+    requiredLocales: ['en']
+  };
+  board.stages.backlog.cardIds = [cardId];
+
+  const html = renderWorkspacePage(
+    buildWorkspacePageModel(
+      {
+        sub: 'sub_locale_render',
+        name: 'Locale Render Viewer'
+      },
+      createTranslator('ja'),
+      'ja',
+      workspace,
+      {
+        revision: 1,
+        updatedAt: '2026-04-02T11:00:00.000Z',
+        lastChangedBy: 'sub_locale_render',
+        isPristine: false,
+        workspaceId: 'workspace_locale_render',
+        isHomeWorkspace: true
+      }
+    ),
+    { uiLocale: 'ja' }
+  );
+
+  assert.match(html, /<h3 class="card-item-title text-base text-strong" data-card-field="title">日本語タイトル<\/h3>/);
+  assert.match(html, /<p\s+class="text-sm leading-6 text-muted"[\s\S]*>\s*日本語本文\s*<\/p>/);
 });
 
 test('POST /auth/google returns 400 when the request body is invalid', async () => {
@@ -1701,33 +1801,37 @@ function extractDialogByTarget(html, targetName) {
   return match[0];
 }
 
-function renderWorkspacePage(viewModel) {
+function renderWorkspacePage(viewModel, { uiLocale = 'en' } = {}) {
   const environment = new nunjucks.Environment(new nunjucks.FileSystemLoader(WORKSPACE_VIEWS_PATH), {
     autoescape: true
   });
-  const uiLocale = 'en';
+  const uiLocaleLabels = {
+    en: 'English',
+    'es-CL': 'Español (Chile)',
+    ja: '日本語'
+  };
 
   return environment.render('pages/workspace.njk', {
     uiLocale,
     uiLocaleCurrent: {
       value: uiLocale,
-      label: 'English'
+      label: uiLocaleLabels[uiLocale] ?? uiLocale
     },
     uiLocaleOptions: [
       {
         value: 'en',
         label: 'English',
-        selected: true
+        selected: uiLocale === 'en'
       },
       {
         value: 'es-CL',
         label: 'Español (Chile)',
-        selected: false
+        selected: uiLocale === 'es-CL'
       },
       {
         value: 'ja',
         label: '日本語',
-        selected: false
+        selected: uiLocale === 'ja'
       }
     ],
     uiLocalePickerAction: '/boards',

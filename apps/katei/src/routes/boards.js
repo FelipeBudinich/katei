@@ -49,6 +49,7 @@ export function createBoardsRouter({ requireSession, workspaceRecordRepository }
       const pageModel = buildWorkspacePageModel(
         request.viewer,
         response.locals.t,
+        request.uiLocale ?? null,
         record.workspace,
         createWorkspaceBootstrapMeta(record),
         pendingWorkspaceInvites,
@@ -83,6 +84,7 @@ export function createBoardsRouter({ requireSession, workspaceRecordRepository }
 export function buildWorkspacePageModel(
   viewer,
   t,
+  uiLocale = null,
   workspace = createEmptyWorkspace(),
   workspaceMeta = null,
   pendingWorkspaceInvites = [],
@@ -102,7 +104,7 @@ export function buildWorkspacePageModel(
 
   return {
     workspace: normalizedWorkspace,
-    board: buildServerRenderedBoard(activeBoard),
+    board: buildServerRenderedBoard(activeBoard, uiLocale),
     columnDefinitions,
     columnDisplayTitles,
     priorityDefinitions,
@@ -121,7 +123,7 @@ export function buildWorkspacePageModel(
   };
 }
 
-function buildServerRenderedBoard(board) {
+function buildServerRenderedBoard(board, uiLocale = null) {
   if (!board || typeof board !== 'object') {
     return board;
   }
@@ -133,7 +135,7 @@ function buildServerRenderedBoard(board) {
   }
 
   for (const [cardId, card] of Object.entries(nextBoard.cards)) {
-    const content = getBoardCardContentVariant(card, board);
+    const content = getBoardCardContentVariant(card, board, { uiLocale });
 
     nextBoard.cards[cardId] = {
       ...card,

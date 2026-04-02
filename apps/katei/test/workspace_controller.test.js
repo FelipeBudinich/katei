@@ -1074,11 +1074,87 @@ test('openEdit and openView card dialog state preserves raw localized card data 
   });
 });
 
+test('createRuntimeCardDialogState defaults to the ui locale when no explicit locale is requested', () => {
+  const board = createBoardWithCustomStages();
+  const card = {
+    id: 'card_localized',
+    priority: 'important',
+    createdAt: '2026-03-31T09:00:00.000Z',
+    updatedAt: '2026-03-31T11:00:00.000Z',
+    contentByLocale: {
+      en: {
+        title: 'English source',
+        detailsMarkdown: 'English details',
+        provenance: null
+      },
+      ja: {
+        title: '日本語タイトル',
+        detailsMarkdown: '日本語本文',
+        provenance: null
+      }
+    },
+    localeRequests: {}
+  };
+
+  board.languagePolicy = {
+    sourceLocale: 'en',
+    defaultLocale: 'en',
+    supportedLocales: ['en', 'ja'],
+    requiredLocales: ['en']
+  };
+
+  const editState = createRuntimeCardDialogState(card, board, {
+    uiLocale: 'ja',
+    currentActorRole: 'editor',
+    canEditLocalizedContent: true
+  });
+  const viewState = createRuntimeCardDialogState(card, board, {
+    uiLocale: 'ja',
+    currentActorRole: 'viewer',
+    canEditLocalizedContent: false
+  });
+
+  assert.equal(editState.requestedLocale, null);
+  assert.equal(editState.displayVariant?.locale, 'ja');
+  assert.equal(editState.displayVariant?.title, '日本語タイトル');
+  assert.equal(viewState.requestedLocale, null);
+  assert.equal(viewState.displayVariant?.locale, 'ja');
+  assert.equal(viewState.displayVariant?.title, '日本語タイトル');
+});
+
 test('openView uses the dedicated view dialog and limits locales to present localized variants', () => {
   const restoreDom = installViewDialogDomStubs();
 
   try {
-    const { controller, card } = createViewDialogController();
+    const { controller, card } = createViewDialogController({ uiLocale: 'ja' });
+    const trigger = createViewTriggerDouble(card.id, 'review');
+
+    WorkspaceController.prototype.openView.call(controller, {
+      currentTarget: trigger
+    });
+
+    assert.equal(controller.viewDialogTarget.open, true);
+    assert.equal(controller.viewTriggerElement, trigger);
+    assert.deepEqual(
+      controller.viewLocaleSelectTarget.options.map((option) => option.value),
+      ['en', 'es-CL']
+    );
+    assert.equal(controller.viewLocaleSelectTarget.value, 'en');
+    assert.equal(controller.viewDialogState.selectedLocale, 'en');
+    assert.equal(controller.viewCardTitleTarget.textContent, 'English source');
+    assert.equal(controller.viewCardBodyTarget.innerHTML, '<p>English details</p>');
+    assert.equal(controller.viewCardPrioritySectionTarget.hidden, false);
+    assert.equal(controller.viewCardUpdatedTarget.textContent, 'Apr 1, 2026, 8:00 AM');
+  } finally {
+    restoreDom();
+  }
+});
+
+test('openView preserves an explicit requested locale from the trigger', () => {
+  const restoreDom = installViewDialogDomStubs();
+
+  try {
+    const { controller, card } = createViewDialogController({ uiLocale: 'ja' });
     const trigger = createViewTriggerDouble(card.id, 'review', { requestedLocale: 'ja' });
 
     WorkspaceController.prototype.openView.call(controller, {
@@ -1682,6 +1758,7 @@ function createColumnPanelDouble({ stageId, columnId, cardCount = 0 } = {}) {
 }
 
 function createViewDialogController({
+  uiLocale = 'en',
   contentByLocale = {
     en: {
       title: 'English source',
@@ -1730,7 +1807,10 @@ function createViewDialogController({
 
   const controller = Object.create(WorkspaceController.prototype);
   controller.workspace = workspace;
-  controller.t = (key) => (key === 'workspace.view.noDetails' ? 'No details added.' : key);
+  controller.t = Object.assign(
+    (key) => (key === 'workspace.view.noDetails' ? 'No details added.' : key),
+    { locale: uiLocale }
+  );
   controller.dateTimeFormatter = {
     format() {
       return 'Apr 1, 2026, 8:00 AM';

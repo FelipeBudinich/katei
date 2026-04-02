@@ -39,6 +39,43 @@ test('locale dropdown falls back to board defaults when the ui locale is unavail
   assert.equal(state.renderedLocale, 'es-CL');
 });
 
+test('edit dialog state chooses ui-locale content by default when that locale exists', () => {
+  const board = createBoardWithOpenAiKey();
+  const card = createCardWithHumanJapaneseLocalization();
+
+  const state = createLocalizedCardEditorUiState({
+    board,
+    card,
+    uiLocale: 'ja',
+    mode: 'edit',
+    canEditLocalizedContent: true,
+    currentActorRole: 'editor'
+  });
+
+  assert.equal(state.selectedLocale, 'ja');
+  assert.equal(state.renderedLocale, 'ja');
+  assert.equal(state.variant?.title, '手動の日本語タイトル');
+});
+
+test('edit dialog keeps an explicit requested locale sticky over the ui locale', () => {
+  const board = createBoardWithOpenAiKey();
+  const card = createCardWithHumanJapaneseLocalization();
+
+  const state = createLocalizedCardEditorUiState({
+    board,
+    card,
+    selectedLocale: 'en',
+    uiLocale: 'ja',
+    mode: 'edit',
+    canEditLocalizedContent: true,
+    currentActorRole: 'editor'
+  });
+
+  assert.equal(state.selectedLocale, 'en');
+  assert.equal(state.renderedLocale, 'en');
+  assert.equal(state.variant?.title, 'English source');
+});
+
 test('switching locale changes the displayed card variant', () => {
   const board = createBoard();
   const card = createCard();
