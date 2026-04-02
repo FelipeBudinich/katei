@@ -99,25 +99,42 @@ test('board list action state keeps switch and invite responses mutually exclusi
 
   assert.deepEqual(activeBoardActions, {
     canRespondToInvite: false,
+    canRename: false,
     inviteId: '',
+    renameHidden: true,
     switchHidden: true,
     inviteAcceptHidden: true,
     inviteDeclineHidden: true
   });
   assert.deepEqual(switchableBoardActions, {
     canRespondToInvite: false,
+    canRename: false,
     inviteId: '',
+    renameHidden: true,
     switchHidden: false,
     inviteAcceptHidden: true,
     inviteDeclineHidden: true
   });
   assert.deepEqual(invitedBoardActions, {
     canRespondToInvite: true,
+    canRename: false,
     inviteId: 'invite_2',
+    renameHidden: true,
     switchHidden: true,
     inviteAcceptHidden: false,
     inviteDeclineHidden: false
   });
+});
+
+test('board list action state shows rename only for the active admin board', () => {
+  const { optionsState } = createAdminBoardOptionsFixture();
+  const activeBoardActions = createBoardListActionState(optionsState.boardStates[0]);
+  const inactiveBoardActions = createBoardListActionState(optionsState.boardStates[1]);
+
+  assert.equal(activeBoardActions.canRename, true);
+  assert.equal(activeBoardActions.renameHidden, false);
+  assert.equal(inactiveBoardActions.canRename, false);
+  assert.equal(inactiveBoardActions.renameHidden, true);
 });
 
 test('board role translation keys stay stable for member and invite states', () => {
@@ -219,7 +236,50 @@ test('board options controller renders incoming invite rows from multiple worksp
     optionsState.boardStates.map((boardState) => boardState.title)
   );
   assert.equal(controller.boardListTarget.children[1].fields.switchButton.hidden, false);
+  assert.equal(controller.boardListTarget.children[0].fields.renameButton.hidden, true);
   assert.equal(controller.boardListTarget.children[2].fields.inviteAcceptButton.hidden, false);
+});
+
+test('board options controller shows Edit Board only on the active admin row', () => {
+  const { workspace, viewerActor, optionsState } = createAdminBoardOptionsFixture();
+  const controller = createBoardOptionsControllerDouble();
+
+  BoardOptionsController.prototype.syncWorkspace.call(controller, workspace, viewerActor);
+
+  assert.deepEqual(
+    controller.boardListTarget.children.map((item) => item.fields.title.textContent),
+    optionsState.boardStates.map((boardState) => boardState.title)
+  );
+  assert.equal(controller.boardListTarget.children[0].fields.renameButton.hidden, false);
+  assert.equal(controller.boardListTarget.children[0].fields.switchButton.hidden, true);
+  assert.equal(controller.boardListTarget.children[1].fields.renameButton.hidden, true);
+  assert.equal(controller.boardListTarget.children[1].fields.switchButton.hidden, false);
+});
+
+test('board options controller renameBoard dispatches the active board id from a row action', () => {
+  const { workspace, viewerActor } = createAdminBoardOptionsFixture();
+  const controller = createBoardOptionsControllerDouble();
+  const dispatched = [];
+
+  controller.dispatch = (name, options) => dispatched.push({ name, detail: options?.detail ?? null });
+  BoardOptionsController.prototype.syncWorkspace.call(controller, workspace, viewerActor);
+  BoardOptionsController.prototype.renameBoard.call(controller, {
+    currentTarget: {
+      dataset: {
+        boardId: 'shared'
+      }
+    }
+  });
+
+  assert.deepEqual(dispatched, [
+    {
+      name: 'rename-board',
+      detail: {
+        boardId: 'main'
+      }
+    }
+  ]);
+  assert.deepEqual(controller.closeDialogCalls, [{ restoreFocus: false }]);
 });
 
 test('board options controller acceptInvite dispatches workspaceId, boardId, and inviteId', () => {
@@ -352,6 +412,31 @@ function createSharedBoardOptionsFixture() {
   };
 }
 
+function createAdminBoardOptionsFixture() {
+  const adminActor = createActor('admin_1', 'admin@example.com', 'Admin');
+  const workspace = createEmptyWorkspace({
+    workspaceId: 'workspace_admin',
+    creator: adminActor
+  });
+
+  const sharedBoard = createBoard({
+    id: 'shared',
+    title: 'Shared board',
+    creator: adminActor
+  });
+  addMembership(sharedBoard, adminActor, 'admin');
+
+  workspace.boardOrder = ['main', 'shared'];
+  workspace.boards.shared = sharedBoard;
+  workspace.ui.activeBoardId = 'main';
+
+  return {
+    viewerActor: adminActor,
+    workspace,
+    optionsState: createBoardOptionsState(workspace, adminActor)
+  };
+}
+
 function createActor(id, email, displayName) {
   return {
     type: 'human',
@@ -407,6 +492,7 @@ function createBoardOptionsControllerDouble() {
     'title',
     'state',
     'switchButton',
+    'renameButton',
     'inviteAcceptButton',
     'inviteDeclineButton'
   ]);
@@ -419,7 +505,6 @@ function createBoardOptionsControllerDouble() {
     'inviteAcceptButton',
     'inviteDeclineButton'
   ]);
-  controller.renameButtonTarget = createToggleTarget();
   controller.deleteButtonTarget = createToggleTarget();
   controller.collaboratorsButtonTarget = createToggleTarget();
   controller.collaboratorBadgeTarget = createTextTarget({ hidden: true });

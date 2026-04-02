@@ -64,6 +64,15 @@
               type="button"
               class="touch-button-secondary"
               hidden
+              data-board-options-field="renameButton"
+              data-action="board-options#renameBoard"
+            >
+              {{ t('boardOptionsDialog.renameBoard') }}
+            </button>
+            <button
+              type="button"
+              class="touch-button-secondary"
+              hidden
               data-board-options-field="inviteAcceptButton"
               data-action="board-options#acceptInvite"
             >
@@ -126,14 +135,6 @@
       >
         {{ t('boardOptionsDialog.collaboratorsButton') }}
         <span class="count-chip ml-2 px-2 py-0.5 text-xs" hidden data-board-options-target="collaboratorBadge">0</span>
-      </button>
-      <button
-        type="button"
-        class="touch-button-secondary"
-        data-board-options-target="renameButton"
-        data-action="board-options#renameBoard"
-      >
-        {{ t('boardOptionsDialog.renameBoard') }}
       </button>
       <button
         type="button"

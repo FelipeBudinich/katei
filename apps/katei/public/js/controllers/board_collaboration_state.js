@@ -71,10 +71,13 @@ export function createBoardOptionsState(
 export function createBoardListActionState(boardState) {
   const inviteId = normalizeOptionalString(boardState?.pendingInvite?.id);
   const canRespondToInvite = Boolean(inviteId && boardState?.pendingInvite && !boardState?.canSwitch);
+  const canRename = Boolean(boardState?.isActive && boardState?.canAdmin);
 
   return {
     canRespondToInvite,
+    canRename,
     inviteId,
+    renameHidden: !canRename,
     switchHidden: !boardState?.canSwitch,
     inviteAcceptHidden: !canRespondToInvite,
     inviteDeclineHidden: !canRespondToInvite

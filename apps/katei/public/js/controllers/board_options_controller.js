@@ -19,7 +19,6 @@ export default class extends Controller {
     'inviteSection',
     'inviteList',
     'inviteItemTemplate',
-    'renameButton',
     'deleteButton',
     'collaboratorsButton',
     'collaboratorBadge'
@@ -191,7 +190,6 @@ export default class extends Controller {
       this.roleSummaryTarget.textContent = '';
       this.pendingSummaryTarget.hidden = true;
       this.pendingSummaryTarget.textContent = '';
-      this.renameButtonTarget.hidden = true;
       this.deleteButtonTarget.hidden = true;
       this.collaboratorsButtonTarget.hidden = true;
       this.collaboratorBadgeTarget.hidden = true;
@@ -209,7 +207,6 @@ export default class extends Controller {
     this.pendingSummaryTarget.textContent = this.t('boardOptionsDialog.pendingInvitesSummary', {
       count: activeBoardState.pendingInviteCount
     });
-    this.renameButtonTarget.hidden = !activeBoardState.canAdmin;
     this.deleteButtonTarget.hidden = !activeBoardState.canAdmin || this.workspace.boardOrder.length === 1;
     this.collaboratorsButtonTarget.hidden = !this.activeBoard;
     this.collaboratorBadgeTarget.hidden = activeBoardState.pendingInviteCount === 0;
@@ -225,6 +222,7 @@ export default class extends Controller {
     const titleElement = item.querySelector('[data-board-options-field="title"]');
     const stateElement = item.querySelector('[data-board-options-field="state"]');
     const switchButton = item.querySelector('[data-board-options-field="switchButton"]');
+    const renameButton = item.querySelector('[data-board-options-field="renameButton"]');
     const inviteAcceptButton = item.querySelector('[data-board-options-field="inviteAcceptButton"]');
     const inviteDeclineButton = item.querySelector('[data-board-options-field="inviteDeclineButton"]');
     const actionState = createBoardListActionState(boardState);
@@ -235,6 +233,7 @@ export default class extends Controller {
       : this.t(getBoardRoleTranslationKey(boardState.currentRoleStatus));
     switchButton.dataset.boardId = boardState.boardId;
     switchButton.hidden = actionState.switchHidden;
+    renameButton.hidden = actionState.renameHidden;
 
     for (const button of [inviteAcceptButton, inviteDeclineButton]) {
       button.dataset.boardId = boardState.boardId;

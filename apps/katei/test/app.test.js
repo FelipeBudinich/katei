@@ -289,7 +289,12 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
   assert.match(boardOptionsDialog, /class="dialog-actions board-options-actions mt-6"/);
   assert.match(boardOptionsDialog, /board-options#createBoard/);
   assert.match(boardOptionsDialog, /board-options#openCollaborators/);
-  assert.match(boardOptionsDialog, /board-options#renameBoard/);
+  assert.match(boardOptionsDialog, /data-board-options-field="renameButton"/);
+  assert.match(boardOptionsDialog, /data-board-options-field="renameButton"[\s\S]*?board-options#renameBoard/);
+  assert.doesNotMatch(
+    boardOptionsDialog,
+    /class="dialog-actions board-options-actions mt-6"[\s\S]*?data-board-options-target="renameButton"/
+  );
   assert.doesNotMatch(boardOptionsDialog, /board-options#resetBoard/);
   assert.doesNotMatch(boardOptionsDialog, /data-board-options-target="resetButton"/);
   assert.match(boardOptionsDialog, /board-options#deleteBoard/);
