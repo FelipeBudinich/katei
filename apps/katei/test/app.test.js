@@ -289,6 +289,9 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
   assert.match(boardOptionsDialog, /class="dialog-actions board-options-actions mt-6"/);
   assert.match(boardOptionsDialog, /board-options#createBoard/);
   assert.match(boardOptionsDialog, /board-options#openCollaborators/);
+  assert.match(boardOptionsDialog, /data-board-options-field="collaboratorsButton"/);
+  assert.match(boardOptionsDialog, /data-board-options-field="collaboratorsButton"[\s\S]*?board-options#openCollaborators/);
+  assert.match(boardOptionsDialog, /data-board-options-field="collaboratorBadge"/);
   assert.match(boardOptionsDialog, /data-board-options-field="renameButton"/);
   assert.match(boardOptionsDialog, /data-board-options-field="renameButton"[\s\S]*?board-options#renameBoard/);
   assert.match(boardOptionsDialog, /data-board-options-field="deleteButton"/);
@@ -299,7 +302,13 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
   );
   assert.doesNotMatch(boardOptionsDialog, /board-options#resetBoard/);
   assert.doesNotMatch(boardOptionsDialog, /data-board-options-target="resetButton"/);
+  assert.doesNotMatch(boardOptionsDialog, /data-board-options-target="collaboratorsButton"/);
+  assert.doesNotMatch(boardOptionsDialog, /data-board-options-target="collaboratorBadge"/);
   assert.doesNotMatch(boardOptionsDialog, /data-board-options-target="deleteButton"/);
+  assert.doesNotMatch(
+    boardOptionsDialog,
+    /class="dialog-actions board-options-actions mt-6"[\s\S]*?board-options#openCollaborators/
+  );
   assert.doesNotMatch(
     boardOptionsDialog,
     /class="dialog-actions board-options-actions mt-6"[\s\S]*?board-options#deleteBoard/

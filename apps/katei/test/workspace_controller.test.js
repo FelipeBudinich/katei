@@ -271,6 +271,39 @@ test('confirmDeleteBoard opens the delete confirmation for the requested board',
   assert.deepEqual(announcements, []);
 });
 
+test('openBoardCollaborators dispatches the collaborators sheet event for the requested board', () => {
+  const viewerActor = createActor('viewer_1', 'viewer@example.com', 'Viewer');
+  const workspace = createViewerWorkspace('workspace_home', viewerActor);
+  const controller = Object.create(WorkspaceController.prototype);
+  const dispatchedEvents = [];
+  const triggerElement = { id: 'open-collaborators-row-action' };
+
+  controller.workspace = workspace;
+  controller.viewerActor = viewerActor;
+  controller.dispatchWorkspaceEvent = (name, detail) => {
+    dispatchedEvents.push({ name, detail });
+  };
+
+  WorkspaceController.prototype.openBoardCollaborators.call(controller, {
+    detail: {
+      boardId: 'main'
+    },
+    target: triggerElement
+  });
+
+  assert.deepEqual(dispatchedEvents, [
+    {
+      name: 'open-board-collaborators',
+      detail: {
+        workspace,
+        viewerActor,
+        boardId: 'main',
+        triggerElement
+      }
+    }
+  ]);
+});
+
 test('toggleColumn keeps collapse state client-local and updates the DOM without mutating workspace state', () => {
   const viewerActor = createActor('viewer_1', 'viewer@example.com', 'Viewer');
   const workspace = createViewerWorkspace('workspace_local_columns', viewerActor);

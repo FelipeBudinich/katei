@@ -71,6 +71,16 @@
             </button>
             <button
               type="button"
+              class="touch-button-secondary"
+              hidden
+              data-board-options-field="collaboratorsButton"
+              data-action="board-options#openCollaborators"
+            >
+              {{ t('boardOptionsDialog.collaboratorsButton') }}
+              <span class="count-chip ml-2 px-2 py-0.5 text-xs" hidden data-board-options-field="collaboratorBadge">0</span>
+            </button>
+            <button
+              type="button"
               class="touch-button-danger"
               hidden
               data-board-options-field="deleteButton"
@@ -135,15 +145,6 @@
     <div class="dialog-actions board-options-actions mt-6">
       <button type="button" class="touch-button-primary" data-action="board-options#createBoard">
         {{ t('boardOptionsDialog.newBoard') }}
-      </button>
-      <button
-        type="button"
-        class="touch-button-secondary"
-        data-board-options-target="collaboratorsButton"
-        data-action="board-options#openCollaborators"
-      >
-        {{ t('boardOptionsDialog.collaboratorsButton') }}
-        <span class="count-chip ml-2 px-2 py-0.5 text-xs" hidden data-board-options-target="collaboratorBadge">0</span>
       </button>
     </div>
   </div>

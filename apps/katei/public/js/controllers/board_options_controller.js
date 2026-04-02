@@ -18,9 +18,7 @@ export default class extends Controller {
     'boardItemTemplate',
     'inviteSection',
     'inviteList',
-    'inviteItemTemplate',
-    'collaboratorsButton',
-    'collaboratorBadge'
+    'inviteItemTemplate'
   ];
 
   connect() {
@@ -193,9 +191,6 @@ export default class extends Controller {
       this.roleSummaryTarget.textContent = '';
       this.pendingSummaryTarget.hidden = true;
       this.pendingSummaryTarget.textContent = '';
-      this.collaboratorsButtonTarget.hidden = true;
-      this.collaboratorBadgeTarget.hidden = true;
-      this.collaboratorBadgeTarget.textContent = '';
       this.boardListTarget.replaceChildren(...(this.optionsState?.boardStates ?? []).map((boardState) => this.createBoardListItem(boardState)));
       this.renderPendingWorkspaceInvites();
       return;
@@ -209,9 +204,6 @@ export default class extends Controller {
     this.pendingSummaryTarget.textContent = this.t('boardOptionsDialog.pendingInvitesSummary', {
       count: activeBoardState.pendingInviteCount
     });
-    this.collaboratorsButtonTarget.hidden = !this.activeBoard;
-    this.collaboratorBadgeTarget.hidden = activeBoardState.pendingInviteCount === 0;
-    this.collaboratorBadgeTarget.textContent = String(activeBoardState.pendingInviteCount);
 
     const items = this.optionsState.boardStates.map((boardState) => this.createBoardListItem(boardState));
     this.boardListTarget.replaceChildren(...items);
@@ -224,6 +216,8 @@ export default class extends Controller {
     const stateElement = item.querySelector('[data-board-options-field="state"]');
     const switchButton = item.querySelector('[data-board-options-field="switchButton"]');
     const renameButton = item.querySelector('[data-board-options-field="renameButton"]');
+    const collaboratorsButton = item.querySelector('[data-board-options-field="collaboratorsButton"]');
+    const collaboratorBadge = item.querySelector('[data-board-options-field="collaboratorBadge"]');
     const deleteButton = item.querySelector('[data-board-options-field="deleteButton"]');
     const inviteAcceptButton = item.querySelector('[data-board-options-field="inviteAcceptButton"]');
     const inviteDeclineButton = item.querySelector('[data-board-options-field="inviteDeclineButton"]');
@@ -237,6 +231,9 @@ export default class extends Controller {
       : this.t(getBoardRoleTranslationKey(boardState.currentRoleStatus));
     switchButton.dataset.boardId = boardState.boardId;
     switchButton.hidden = actionState.switchHidden;
+    collaboratorsButton.hidden = actionState.collaboratorsHidden;
+    collaboratorBadge.hidden = actionState.collaboratorsHidden || boardState.pendingInviteCount === 0;
+    collaboratorBadge.textContent = String(boardState.pendingInviteCount);
     renameButton.hidden = actionState.renameHidden;
     deleteButton.hidden = actionState.deleteHidden;
 
