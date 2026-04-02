@@ -54,7 +54,7 @@ export function normalizeKateiAuthDebugConfig(rawConfig, { configPath = DEFAULT_
 
   const baseUrl = normalizeBaseUrl(rawConfig.baseUrl);
   const startPath = normalizeStartPath(rawConfig.startPath ?? DEFAULT_START_PATH);
-  const auth = normalizeAuthConfig(rawConfig.auth);
+  const auth = normalizeAuthConfig(rawConfig.auth, { baseUrl });
   const chrome = normalizeChromeConfig(rawConfig.chrome);
   const page = normalizePageConfig(rawConfig.page);
 
@@ -69,17 +69,20 @@ export function normalizeKateiAuthDebugConfig(rawConfig, { configPath = DEFAULT_
   };
 }
 
-function normalizeAuthConfig(rawAuth = {}) {
+function normalizeAuthConfig(rawAuth = {}, { baseUrl }) {
   if (rawAuth != null && (typeof rawAuth !== 'object' || Array.isArray(rawAuth))) {
     throw new Error('auth config must be an object when provided.');
   }
 
   const mode = normalizeAuthMode(rawAuth?.mode ?? 'debug-route');
+  const defaultSecretKeychainAccount = new URL(baseUrl).hostname;
 
   return {
     mode,
     debugLoginPath: normalizeStartPath(rawAuth?.debugLoginPath ?? '/__debug/login'),
     secretEnvVar: normalizeEnvVarName(rawAuth?.secretEnvVar ?? 'KATEI_DEBUG_AUTH_SECRET'),
+    secretKeychainService: normalizeNonEmptyString(rawAuth?.secretKeychainService) || 'katei-auth-debug',
+    secretKeychainAccount: normalizeNonEmptyString(rawAuth?.secretKeychainAccount) || defaultSecretKeychainAccount,
     cookieName: normalizeCookieName(rawAuth?.cookieName ?? 'katei_session'),
     cookieEnvVar: normalizeEnvVarName(rawAuth?.cookieEnvVar ?? 'KATEI_DEBUG_SESSION_COOKIE')
   };

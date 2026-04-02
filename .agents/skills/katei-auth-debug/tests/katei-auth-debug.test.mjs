@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { normalizeCapturedArtifacts } from '../scripts/lib/artifacts.mjs';
-import { extractCookieValueFromSetCookieHeaders } from '../scripts/lib/auth.mjs';
+import { extractCookieValueFromSetCookieHeaders, resolveDebugAuthSecret } from '../scripts/lib/auth.mjs';
 import { loadKateiAuthDebugConfig } from '../scripts/lib/config.mjs';
 
 test('loadKateiAuthDebugConfig applies defaults for debug-route auth', async () => {
@@ -24,6 +24,8 @@ test('loadKateiAuthDebugConfig applies defaults for debug-route auth', async () 
   assert.equal(config.startPath, '/boards');
   assert.equal(config.auth.mode, 'debug-route');
   assert.equal(config.auth.debugLoginPath, '/__debug/login');
+  assert.equal(config.auth.secretKeychainService, 'katei-auth-debug');
+  assert.equal(config.auth.secretKeychainAccount, 'katei.example.com');
   assert.equal(config.auth.cookieName, 'katei_session');
   assert.equal(config.page.inspectSelectors.workspaceRoot.selector, '[data-controller="workspace"]');
 });
@@ -48,6 +50,67 @@ test('loadKateiAuthDebugConfig preserves explicit cookie auth mode', async () =>
   assert.equal(config.auth.mode, 'cookie');
   assert.equal(config.auth.cookieEnvVar, 'CUSTOM_SESSION_COOKIE');
   assert.equal(config.page.waitForSelector, '#app');
+});
+
+test('resolveDebugAuthSecret prefers the environment variable when present', async () => {
+  const secret = await resolveDebugAuthSecret({
+    config: {
+      auth: {
+        secretEnvVar: 'KATEI_DEBUG_AUTH_SECRET',
+        secretKeychainService: 'katei-auth-debug',
+        secretKeychainAccount: 'katei.example.com'
+      }
+    },
+    env: {
+      KATEI_DEBUG_AUTH_SECRET: 'env-secret'
+    },
+    execFileImpl: async () => {
+      throw new Error('keychain should not be queried when env is present');
+    }
+  });
+
+  assert.equal(secret, 'env-secret');
+});
+
+test('resolveDebugAuthSecret falls back to macOS Keychain when env is missing', async () => {
+  const originalPlatformDescriptor = Object.getOwnPropertyDescriptor(process, 'platform');
+
+  Object.defineProperty(process, 'platform', {
+    configurable: true,
+    value: 'darwin'
+  });
+
+  try {
+    const secret = await resolveDebugAuthSecret({
+      config: {
+        auth: {
+          secretEnvVar: 'KATEI_DEBUG_AUTH_SECRET',
+          secretKeychainService: 'katei-auth-debug',
+          secretKeychainAccount: 'katei.example.com'
+        }
+      },
+      env: {},
+      execFileImpl: async (command, args) => {
+        assert.equal(command, 'security');
+        assert.deepEqual(args, [
+          'find-generic-password',
+          '-w',
+          '-s',
+          'katei-auth-debug',
+          '-a',
+          'katei.example.com'
+        ]);
+
+        return {
+          stdout: 'keychain-secret\n'
+        };
+      }
+    });
+
+    assert.equal(secret, 'keychain-secret');
+  } finally {
+    Object.defineProperty(process, 'platform', originalPlatformDescriptor);
+  }
 });
 
 test('extractCookieValueFromSetCookieHeaders finds a katei_session value', () => {

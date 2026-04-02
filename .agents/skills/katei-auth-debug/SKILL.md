@@ -39,6 +39,19 @@ Auth modes:
 - `debug-route` is the default. It calls `POST /__debug/login` with the secret named by `auth.secretEnvVar`.
 - `cookie` is the fallback. It reads a pre-obtained `katei_session` cookie from the env var named by `auth.cookieEnvVar`.
 
+Secret sourcing:
+
+- The debug secret is resolved from `auth.secretEnvVar` first.
+- If the env var is missing on macOS, the skill falls back to a Keychain item using `auth.secretKeychainService` and `auth.secretKeychainAccount`.
+- The default Keychain target is service `katei-auth-debug` and account equal to the configured `baseUrl` hostname.
+
+Hosted convenience commands:
+
+```bash
+bash .agents/skills/katei-auth-debug/scripts/smoke-hosted.sh
+bash .agents/skills/katei-auth-debug/scripts/store-debug-secret-in-keychain.sh
+```
+
 Important behavior:
 
 - Artifacts write outside the repo by default under `/tmp/katei-auth-debug`.
@@ -51,7 +64,7 @@ Config:
 
 - Use `.agents/skills/katei-auth-debug/assets/katei-auth-debug.config.example.json` as the template.
 - Required top-level fields: `baseUrl`.
-- Recommended defaults are already baked into the loader for `startPath`, auth paths, Chrome path/port/profile, artifact dir, wait timeout, and selector snapshots.
+- Recommended defaults are already baked into the loader for `startPath`, auth paths, Keychain service/account, Chrome path/port/profile, artifact dir, wait timeout, and selector snapshots.
 
 Validation:
 
