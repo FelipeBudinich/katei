@@ -1,0 +1,26 @@
+{
+  "baseUrl": "https://katei-19729f8d3d9b.herokuapp.com",
+  "startPath": "/boards",
+  "auth": {
+    "mode": "debug-route",
+    "debugLoginPath": "/__debug/login",
+    "secretEnvVar": "KATEI_DEBUG_AUTH_SECRET",
+    "cookieName": "katei_session",
+    "cookieEnvVar": "KATEI_DEBUG_SESSION_COOKIE"
+  },
+  "chrome": {
+    "binaryPath": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    "remoteDebuggingPort": 9222,
+    "userDataDir": "/tmp/katei-auth-debug-profile"
+  },
+  "page": {
+    "waitForSelector": "[data-controller=\"workspace\"]",
+    "waitTimeoutMs": 15000,
+    "artifactDir": "/tmp/katei-auth-debug",
+    "inspectSelectors": {
+      "workspaceRoot": "[data-controller=\"workspace\"]",
+      "boardTitle": "[data-workspace-target=\"boardTitle\"]",
+      "workspaceBootstrap": "#workspace-bootstrap"
+    }
+  }
+}

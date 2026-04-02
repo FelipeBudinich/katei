@@ -48,13 +48,26 @@ hanmoto-board/
 │   │   │   ├── tests/
 │   │   │   │   └── …
 │   │   │   └── SKILL.md
+│   │   ├── katei-auth-debug/
+│   │   │   ├── agents/
+│   │   │   │   └── …
+│   │   │   ├── assets/
+│   │   │   │   └── …
+│   │   │   ├── references/
+│   │   │   │   └── …
+│   │   │   ├── scripts/
+│   │   │   │   └── …
+│   │   │   ├── tests/
+│   │   │   │   └── …
+│   │   │   └── SKILL.md
 │   │   └── monorepo-filetree/
 │   │       ├── agents/
 │   │       │   └── …
 │   │       ├── scripts/
 │   │       │   └── …
 │   │       └── SKILL.md
-│   └── env-inventory.config.json
+│   ├── env-inventory.config.json
+│   └── katei-auth-debug.config.json
 ├── .github/
 │   └── workflows/
 │       └── deploy-katei-heroku.yml
@@ -116,6 +129,7 @@ hanmoto-board/
 │       │   ├── card_localization_requests.test.js
 │       │   ├── card_localization_runtime.test.js
 │       │   ├── config.test.js
+│       │   ├── debug_auth.test.js
 │       │   ├── google_identity.test.js
 │       │   ├── http_workspace_repository.test.js
 │       │   ├── i18n.test.js

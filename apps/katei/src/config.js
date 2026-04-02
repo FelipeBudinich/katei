@@ -6,6 +6,7 @@ export function createRuntimeConfig(env = process.env) {
   const mongoUri = requireNonEmptyEnv('MONGODB_URI', env.MONGODB_URI);
   const mongoDbName = requireNonEmptyEnv('MONGODB_DB_NAME', env.MONGODB_DB_NAME);
   const sessionTtlSeconds = parseSessionTtlSeconds(normalizeOptionalString(env.SESSION_TTL_SECONDS) || String(DEFAULT_SESSION_TTL_SECONDS));
+  const debugAuth = createDebugAuthConfig(env);
 
   return {
     nodeEnv,
@@ -17,7 +18,8 @@ export function createRuntimeConfig(env = process.env) {
     appBaseUrl,
     appOrigin: appBaseUrl ? new URL(appBaseUrl).origin : null,
     mongoUri,
-    mongoDbName
+    mongoDbName,
+    debugAuth
   };
 }
 
@@ -52,6 +54,52 @@ export function parseSessionTtlSeconds(rawValue) {
   return parsedValue;
 }
 
+function createDebugAuthConfig(env = process.env) {
+  const enabled = parseBooleanEnv(env.KATEI_DEBUG_AUTH_ENABLED);
+  const secret = normalizeOptionalString(env.KATEI_DEBUG_AUTH_SECRET);
+  const viewerSub = normalizeOptionalString(env.KATEI_DEBUG_AUTH_VIEWER_SUB);
+  const viewerEmail = normalizeOptionalEmail(env.KATEI_DEBUG_AUTH_VIEWER_EMAIL);
+  const viewerName = normalizeOptionalString(env.KATEI_DEBUG_AUTH_VIEWER_NAME);
+
+  if (enabled && !secret) {
+    throw new Error('KATEI_DEBUG_AUTH_SECRET is required when KATEI_DEBUG_AUTH_ENABLED is true.');
+  }
+
+  if (enabled && !viewerSub) {
+    throw new Error('KATEI_DEBUG_AUTH_VIEWER_SUB is required when KATEI_DEBUG_AUTH_ENABLED is true.');
+  }
+
+  return {
+    enabled,
+    secret,
+    viewer: viewerSub
+      ? {
+          sub: viewerSub,
+          ...(viewerEmail ? { email: viewerEmail } : {}),
+          ...(viewerName ? { name: viewerName } : {})
+        }
+      : null
+  };
+}
+
+function parseBooleanEnv(rawValue) {
+  const normalizedValue = normalizeOptionalString(rawValue).toLowerCase();
+
+  if (!normalizedValue) {
+    return false;
+  }
+
+  if (normalizedValue === 'true' || normalizedValue === '1' || normalizedValue === 'yes' || normalizedValue === 'on') {
+    return true;
+  }
+
+  if (normalizedValue === 'false' || normalizedValue === '0' || normalizedValue === 'no' || normalizedValue === 'off') {
+    return false;
+  }
+
+  throw new Error('KATEI_DEBUG_AUTH_ENABLED must be a boolean-like value.');
+}
+
 function requireNonEmptyEnv(name, value) {
   const normalizedValue = normalizeOptionalString(value);
 
@@ -68,4 +116,9 @@ function normalizeOptionalString(value) {
   }
 
   return value.trim();
+}
+
+function normalizeOptionalEmail(value) {
+  const normalizedValue = normalizeOptionalString(value);
+  return normalizedValue.includes('@') ? normalizedValue : '';
 }

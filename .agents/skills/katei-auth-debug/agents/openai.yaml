@@ -1,0 +1,7 @@
+interface:
+  display_name: "Katei Auth Debug"
+  short_description: "Open an authenticated Katei page and capture debug artifacts"
+  default_prompt: "Use $katei-auth-debug to load .agents/katei-auth-debug.config.json, authenticate against a configurable Katei deployment, open the configured authenticated page in isolated Chrome, and capture screenshots, selector snapshots, console errors, page errors, and failed requests."
+
+policy:
+  allow_implicit_invocation: false

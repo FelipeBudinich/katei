@@ -79,6 +79,10 @@ Optional runtime variables:
 - `SESSION_TTL_SECONDS` defaults to `604800`.
 - `APP_BASE_URL` defaults to `http://localhost:<PORT>` in development and is otherwise unset unless provided.
 - `GOOGLE_ALLOWLIST_SUBS` may contain a comma-separated allowlist of Google `sub` identifiers.
+- `KATEI_DEBUG_AUTH_ENABLED` defaults to `false`; when set to `true`, `POST /__debug/login` is enabled for hosted debugging.
+- `KATEI_DEBUG_AUTH_SECRET` is required when hosted debug auth is enabled and must match the `x-katei-debug-auth` request header.
+- `KATEI_DEBUG_AUTH_VIEWER_SUB` is required when hosted debug auth is enabled and selects the single debug viewer session identity.
+- `KATEI_DEBUG_AUTH_VIEWER_EMAIL` and `KATEI_DEBUG_AUTH_VIEWER_NAME` are optional metadata included in the debug viewer session.
 
 Deployment workflow variables:
 
@@ -128,9 +132,10 @@ No Dockerfile or second automated deployment target is committed in this reposit
 
 ## Optional Repo-Local Agent Tooling
 
-This repository includes repo-local Codex guidance in `AGENTS.md` and two repo-local skills under `.agents/skills/`:
+This repository includes repo-local Codex guidance in `AGENTS.md` and three repo-local skills under `.agents/skills/`:
 
 - `env-inventory` at `.agents/skills/env-inventory/SKILL.md`
+- `katei-auth-debug` at `.agents/skills/katei-auth-debug/SKILL.md`
 - `monorepo-filetree` at `.agents/skills/monorepo-filetree/SKILL.md`
 
 Generated navigation and inventory docs currently present in the repo include:

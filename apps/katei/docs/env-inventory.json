@@ -41,10 +41,10 @@
     ]
   },
   "summary": {
-    "totalVariables": 11,
-    "totalDefinitions": 11,
-    "totalUsages": 21,
-    "secretLikeCount": 2,
+    "totalVariables": 16,
+    "totalDefinitions": 16,
+    "totalUsages": 26,
+    "secretLikeCount": 3,
     "publicLikeCount": 0,
     "dynamicAccessCount": 0
   },
@@ -91,7 +91,7 @@
         {
           "kind": "default",
           "file": "apps/katei/src/config.js",
-          "line": 15,
+          "line": 16,
           "scope": "app",
           "snippet": "googleAllowlistSubs: parseAllowlistSubs(normalizeOptionalString(env.GOOGLE_ALLOWLIST_SUBS) || ''),"
         }
@@ -115,7 +115,7 @@
         {
           "kind": "requiredHelper",
           "file": "apps/katei/src/config.js",
-          "line": 13,
+          "line": 14,
           "scope": "app",
           "snippet": "googleClientId: requireNonEmptyEnv('GOOGLE_CLIENT_ID', env.GOOGLE_CLIENT_ID),"
         }
@@ -129,7 +129,7 @@
         {
           "kind": "envFile",
           "file": "apps/katei/.env.example",
-          "line": 32,
+          "line": 47,
           "scope": "app",
           "snippet": "HEROKU_API_KEY=YOUR_HEROKU_API_KEY",
           "comment": "# Replace YOUR_HEROKU_API_KEY with a real Heroku API key as a Github Repository secret"
@@ -181,7 +181,7 @@
         {
           "kind": "envFile",
           "file": "apps/katei/.env.example",
-          "line": 29,
+          "line": 44,
           "scope": "app",
           "snippet": "HEROKU_APP_NAME=HEROKU_KATEI_APP_PROD",
           "comment": "# set HEROKU_KATEI_APP_PROD as a GitHub repository secret, it should be the name of the app you created in Heroku"
@@ -233,6 +233,126 @@
       ]
     },
     {
+      "name": "KATEI_DEBUG_AUTH_ENABLED",
+      "secretLike": false,
+      "publicLike": false,
+      "definitions": [
+        {
+          "kind": "envFile",
+          "file": "apps/katei/.env.example",
+          "line": 23,
+          "scope": "app",
+          "snippet": "KATEI_DEBUG_AUTH_ENABLED=false",
+          "comment": "# Optional guarded hosted debug login toggle. When true, POST /__debug/login can mint a Katei session for the configured debug viewer."
+        }
+      ],
+      "usages": [
+        {
+          "kind": "read",
+          "file": "apps/katei/src/config.js",
+          "line": 58,
+          "scope": "app",
+          "snippet": "const enabled = parseBooleanEnv(env.KATEI_DEBUG_AUTH_ENABLED);"
+        }
+      ]
+    },
+    {
+      "name": "KATEI_DEBUG_AUTH_SECRET",
+      "secretLike": true,
+      "publicLike": false,
+      "definitions": [
+        {
+          "kind": "envFile",
+          "file": "apps/katei/.env.example",
+          "line": 26,
+          "scope": "app",
+          "snippet": "KATEI_DEBUG_AUTH_SECRET=",
+          "comment": "# Shared secret required in the x-katei-debug-auth request header when debug auth is enabled."
+        }
+      ],
+      "usages": [
+        {
+          "kind": "read",
+          "file": "apps/katei/src/config.js",
+          "line": 59,
+          "scope": "app",
+          "snippet": "const secret = normalizeOptionalString(env.KATEI_DEBUG_AUTH_SECRET);"
+        }
+      ]
+    },
+    {
+      "name": "KATEI_DEBUG_AUTH_VIEWER_EMAIL",
+      "secretLike": false,
+      "publicLike": false,
+      "definitions": [
+        {
+          "kind": "envFile",
+          "file": "apps/katei/.env.example",
+          "line": 32,
+          "scope": "app",
+          "snippet": "KATEI_DEBUG_AUTH_VIEWER_EMAIL=",
+          "comment": "# Optional email for the debug viewer session."
+        }
+      ],
+      "usages": [
+        {
+          "kind": "read",
+          "file": "apps/katei/src/config.js",
+          "line": 61,
+          "scope": "app",
+          "snippet": "const viewerEmail = normalizeOptionalEmail(env.KATEI_DEBUG_AUTH_VIEWER_EMAIL);"
+        }
+      ]
+    },
+    {
+      "name": "KATEI_DEBUG_AUTH_VIEWER_NAME",
+      "secretLike": false,
+      "publicLike": false,
+      "definitions": [
+        {
+          "kind": "envFile",
+          "file": "apps/katei/.env.example",
+          "line": 35,
+          "scope": "app",
+          "snippet": "KATEI_DEBUG_AUTH_VIEWER_NAME=",
+          "comment": "# Optional display name for the debug viewer session."
+        }
+      ],
+      "usages": [
+        {
+          "kind": "read",
+          "file": "apps/katei/src/config.js",
+          "line": 62,
+          "scope": "app",
+          "snippet": "const viewerName = normalizeOptionalString(env.KATEI_DEBUG_AUTH_VIEWER_NAME);"
+        }
+      ]
+    },
+    {
+      "name": "KATEI_DEBUG_AUTH_VIEWER_SUB",
+      "secretLike": false,
+      "publicLike": false,
+      "definitions": [
+        {
+          "kind": "envFile",
+          "file": "apps/katei/.env.example",
+          "line": 29,
+          "scope": "app",
+          "snippet": "KATEI_DEBUG_AUTH_VIEWER_SUB=",
+          "comment": "# Required Google sub for the debug viewer when hosted debug auth is enabled."
+        }
+      ],
+      "usages": [
+        {
+          "kind": "read",
+          "file": "apps/katei/src/config.js",
+          "line": 60,
+          "scope": "app",
+          "snippet": "const viewerSub = normalizeOptionalString(env.KATEI_DEBUG_AUTH_VIEWER_SUB);"
+        }
+      ]
+    },
+    {
       "name": "KATEI_SESSION_SECRET",
       "secretLike": true,
       "publicLike": false,
@@ -250,7 +370,7 @@
         {
           "kind": "requiredHelper",
           "file": "apps/katei/src/config.js",
-          "line": 14,
+          "line": 15,
           "scope": "app",
           "snippet": "sessionSecret: requireNonEmptyEnv('KATEI_SESSION_SECRET', env.KATEI_SESSION_SECRET),"
         }
@@ -264,7 +384,7 @@
         {
           "kind": "envFile",
           "file": "apps/katei/.env.example",
-          "line": 26,
+          "line": 41,
           "scope": "app",
           "snippet": "MONGODB_DB_NAME=",
           "comment": "# Optional MongoDB database name used for server-owned workspace persistence."
@@ -288,7 +408,7 @@
         {
           "kind": "envFile",
           "file": "apps/katei/.env.example",
-          "line": 23,
+          "line": 38,
           "scope": "app",
           "snippet": "MONGODB_URI=",
           "comment": "# Optional MongoDB connection string used for server-owned workspace persistence."

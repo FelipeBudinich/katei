@@ -16,6 +16,10 @@
   Path: `.agents/skills/env-inventory/SKILL.md`
   Purpose: inventory per-app environment variable definitions and usages, regenerate `apps/*/docs/env-inventory.json` and `apps/*/docs/env-inventory.html`, and verify apps expose `/docs/env-inventory.html`.
 
+- `katei-auth-debug`
+  Path: `.agents/skills/katei-auth-debug/SKILL.md`
+  Purpose: launch an isolated Chrome session, authenticate to a configurable Katei deployment with the hosted debug login or a fallback session cookie, and capture authenticated debugging artifacts.
+
 - `monorepo-filetree`
   Path: `.agents/skills/monorepo-filetree/SKILL.md`
   Purpose: refresh generated monorepo and app file tree documentation, and keep root file tree guidance aligned when repository structure changes materially.

@@ -11,5 +11,8 @@
     "build:katei:css": "npm run build:css -w apps/katei",
     "prepare:subtree:katei": "npm run build:katei:css",
     "build": "npm run build:katei:css"
+  },
+  "devDependencies": {
+    "ws": "^8.20.0"
   }
 }

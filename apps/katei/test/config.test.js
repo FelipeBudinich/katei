@@ -138,6 +138,65 @@ test('createRuntimeConfig parses positive SESSION_TTL_SECONDS overrides', () => 
   assert.equal(config.sessionTtlSeconds, 900);
 });
 
+test('createRuntimeConfig keeps hosted debug auth disabled by default', () => {
+  const config = createRuntimeConfig({
+    ...REQUIRED_ENV,
+    NODE_ENV: 'test'
+  });
+
+  assert.deepEqual(config.debugAuth, {
+    enabled: false,
+    secret: '',
+    viewer: null
+  });
+});
+
+test('createRuntimeConfig parses hosted debug auth viewer metadata when enabled', () => {
+  const config = createRuntimeConfig({
+    ...REQUIRED_ENV,
+    NODE_ENV: 'test',
+    KATEI_DEBUG_AUTH_ENABLED: 'true',
+    KATEI_DEBUG_AUTH_SECRET: 'debug-secret',
+    KATEI_DEBUG_AUTH_VIEWER_SUB: ' debug_sub ',
+    KATEI_DEBUG_AUTH_VIEWER_EMAIL: ' debug@example.com ',
+    KATEI_DEBUG_AUTH_VIEWER_NAME: ' Debug User '
+  });
+
+  assert.deepEqual(config.debugAuth, {
+    enabled: true,
+    secret: 'debug-secret',
+    viewer: {
+      sub: 'debug_sub',
+      email: 'debug@example.com',
+      name: 'Debug User'
+    }
+  });
+});
+
+test('createRuntimeConfig rejects missing hosted debug auth secrets when enabled', () => {
+  assert.throws(
+    () => createRuntimeConfig({
+      ...REQUIRED_ENV,
+      NODE_ENV: 'test',
+      KATEI_DEBUG_AUTH_ENABLED: 'true',
+      KATEI_DEBUG_AUTH_VIEWER_SUB: 'debug_sub'
+    }),
+    /KATEI_DEBUG_AUTH_SECRET is required when KATEI_DEBUG_AUTH_ENABLED is true\./
+  );
+});
+
+test('createRuntimeConfig rejects missing hosted debug auth viewer subs when enabled', () => {
+  assert.throws(
+    () => createRuntimeConfig({
+      ...REQUIRED_ENV,
+      NODE_ENV: 'test',
+      KATEI_DEBUG_AUTH_ENABLED: 'true',
+      KATEI_DEBUG_AUTH_SECRET: 'debug-secret'
+    }),
+    /KATEI_DEBUG_AUTH_VIEWER_SUB is required when KATEI_DEBUG_AUTH_ENABLED is true\./
+  );
+});
+
 test('parseSessionTtlSeconds keeps a defensive fallback for blank input', () => {
   assert.equal(parseSessionTtlSeconds('   '), 604800);
 });
