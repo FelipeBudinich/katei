@@ -17,6 +17,7 @@
         "apps/katei/src/auth",
         "apps/katei/src/data",
         "apps/katei/src/i18n",
+        "apps/katei/src/lib",
         "apps/katei/src/middleware",
         "apps/katei/src/routes",
         "apps/katei/src/workspaces"

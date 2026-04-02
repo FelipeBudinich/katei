@@ -81,6 +81,8 @@ hanmoto-board/
 │       │   │   └── …
 │       │   ├── i18n/
 │       │   │   └── …
+│       │   ├── lib/
+│       │   │   └── …
 │       │   ├── middleware/
 │       │   │   └── …
 │       │   ├── routes/
@@ -99,6 +101,7 @@ hanmoto-board/
 │       │   ├── app.test.js
 │       │   ├── apply_workspace_command.test.js
 │       │   ├── attach_session.test.js
+│       │   ├── attach_ui_locale.test.js
 │       │   ├── board_collaboration.test.js
 │       │   ├── board_collaborators_controller.test.js
 │       │   ├── board_editor_controller.test.js
@@ -116,6 +119,7 @@ hanmoto-board/
 │       │   ├── google_identity.test.js
 │       │   ├── http_workspace_repository.test.js
 │       │   ├── i18n.test.js
+│       │   ├── invite_debug.test.js
 │       │   ├── landing_controller_connection.test.js
 │       │   ├── local_workspace_repository.test.js
 │       │   ├── localized_content_guard.test.js
@@ -151,7 +155,8 @@ hanmoto-board/
 ├── monorepo-filetree.md
 ├── package-lock.json
 ├── package.json
-└── README.md
+├── README.md
+└── ui_agent.md
 ```
 
 ## Apps
