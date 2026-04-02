@@ -13,6 +13,8 @@ import {
 } from './card_editor_locale_view.js';
 import { canonicalizeContentLocale } from '../domain/board_language_policy.js';
 
+const CARD_EDITOR_CODEMIRROR_INPUT_ID = 'card-editor-details-markdown-codemirror-input';
+
 export default class extends Controller {
   static targets = [
     'dialog',
@@ -90,8 +92,20 @@ export default class extends Controller {
       nativeSpellcheck: false,
       toolbar: createMarkdownToolbar(window.EasyMDE, this.t)
     });
+    this.ensureEditorInputId(this.editor);
 
     return this.editor;
+  }
+
+  ensureEditorInputId(editor) {
+    const inputField = editor?.codemirror?.getInputField?.();
+
+    if (!inputField || inputField.nodeName !== 'TEXTAREA' || inputField.id) {
+      return;
+    }
+
+    // Give EasyMDE's hidden textarea a stable id for browser autofill audits.
+    inputField.id = CARD_EDITOR_CODEMIRROR_INPUT_ID;
   }
 
   openFromEvent(event) {

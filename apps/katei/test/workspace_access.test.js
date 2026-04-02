@@ -100,6 +100,30 @@ test('workspace projections expose only safe board AI metadata and redact encryp
   assert.equal(memberProjection.boards.member.aiLocalizationSecrets, undefined);
 });
 
+test('workspace projections hide stale board AI metadata when no encrypted key remains', () => {
+  const workspace = createSharedWorkspaceFixture();
+  workspace.boards.member.aiLocalization = {
+    provider: 'openai',
+    hasApiKey: true,
+    apiKeyLast4: '9876'
+  };
+  delete workspace.boards.member.aiLocalizationSecrets;
+
+  const memberProjection = filterWorkspaceForViewer({
+    viewerSub: 'sub_member',
+    viewerEmail: 'member@example.com',
+    ownerSub: 'sub_owner',
+    workspace
+  });
+
+  assert.deepEqual(memberProjection.boards.member.aiLocalization, {
+    provider: 'openai',
+    hasApiKey: false,
+    apiKeyLast4: null
+  });
+  assert.equal(memberProjection.boards.member.aiLocalizationSecrets, undefined);
+});
+
 test('pending-invite viewers keep a visible redacted board shell for acceptance flows', () => {
   const workspace = createSharedWorkspaceFixture();
 

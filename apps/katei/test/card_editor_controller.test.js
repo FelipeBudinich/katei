@@ -368,6 +368,42 @@ test('card editor EasyMDE config uses compact toolbar text with full accessible 
   }
 });
 
+test('card editor assigns an id to the EasyMDE hidden textarea without adding a name', () => {
+  const originalWindow = globalThis.window;
+  const inputField = { nodeName: 'TEXTAREA', id: '' };
+
+  class EasyMDEStub {
+    constructor(options) {
+      this.options = options;
+      this.codemirror = {
+        getInputField() {
+          return inputField;
+        }
+      };
+    }
+  }
+
+  globalThis.window = { EasyMDE: EasyMDEStub };
+
+  try {
+    const controller = Object.create(CardEditorController.prototype);
+    controller.editor = null;
+    controller.markdownInputTarget = { value: '' };
+    controller.t = createTranslator('en');
+
+    CardEditorController.prototype.ensureEditor.call(controller);
+
+    assert.equal(inputField.id, 'card-editor-details-markdown-codemirror-input');
+    assert.equal(inputField.name, undefined);
+  } finally {
+    if (typeof originalWindow === 'undefined') {
+      delete globalThis.window;
+    } else {
+      globalThis.window = originalWindow;
+    }
+  }
+});
+
 test('card editor toolbar copy keeps compact text while localizing accessible labels', () => {
   const spanish = createTranslator('es-CL');
   const japanese = createTranslator('ja');

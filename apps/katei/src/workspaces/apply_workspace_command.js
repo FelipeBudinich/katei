@@ -1326,7 +1326,7 @@ function applyBoardAiSettings(board, aiSettings) {
 }
 
 function boardAiSettingsEqual(board, aiSettings) {
-  return JSON.stringify(resolveBoardAiLocalization(board)) === JSON.stringify(aiSettings.aiLocalization)
+  return JSON.stringify(normalizeBoardAiLocalization(board?.aiLocalization)) === JSON.stringify(aiSettings.aiLocalization)
     && JSON.stringify(copyBoardAiSecrets(board)) === JSON.stringify(aiSettings.aiLocalizationSecrets);
 }
 
@@ -1337,8 +1337,8 @@ function resolveBoardAiLocalization(board) {
   if (!persistedEncryptedApiKey) {
     return {
       provider: normalizedAiLocalization.provider,
-      hasApiKey: normalizedAiLocalization.hasApiKey,
-      apiKeyLast4: normalizedAiLocalization.hasApiKey ? normalizedAiLocalization.apiKeyLast4 : null
+      hasApiKey: false,
+      apiKeyLast4: null
     };
   }
 

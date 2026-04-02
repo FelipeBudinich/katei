@@ -19,6 +19,11 @@ import {
   DEFAULT_WORKSPACE_SWITCH_REPRO_SCENARIOS,
   selectScenarioButton
 } from '../scripts/lib/workspace_switch_repro.mjs';
+import {
+  findBoardInWorkspace,
+  selectLocalizationCandidate,
+  summarizeBoardLocalizationState
+} from '../scripts/lib/localization_flow.mjs';
 
 test('loadKateiAuthDebugConfig applies defaults for debug-route auth', async () => {
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'katei-auth-debug-config-'));
@@ -263,6 +268,138 @@ test('createBoardLifecycleTitles returns deterministic create and edited titles'
 
   assert.equal(titles.createdTitle, 'Hosted smoke 20260402192100');
   assert.equal(titles.editedTitle, 'Hosted smoke 20260402192100 Updated');
+});
+
+test('findBoardInWorkspace resolves a board by exact title', () => {
+  const workspace = {
+    boardOrder: ['main', 'roadmap'],
+    boards: {
+      main: { id: 'main', title: 'Home' },
+      roadmap: { id: 'roadmap', title: '過程 - Roadmap' }
+    }
+  };
+
+  assert.deepEqual(findBoardInWorkspace(workspace, '過程 - Roadmap'), {
+    boardId: 'roadmap',
+    board: workspace.boards.roadmap
+  });
+});
+
+test('summarizeBoardLocalizationState returns the supported locale and AI key summary', () => {
+  const board = {
+    id: 'roadmap',
+    title: '過程 - Roadmap',
+    languagePolicy: {
+      sourceLocale: 'en',
+      defaultLocale: 'en',
+      supportedLocales: ['en', 'ja'],
+      requiredLocales: ['en']
+    },
+    aiLocalization: {
+      provider: 'openai',
+      hasApiKey: true,
+      apiKeyLast4: '9876'
+    },
+    cards: {
+      card_1: {
+        id: 'card_1'
+      }
+    },
+    stageOrder: []
+  };
+
+  assert.deepEqual(summarizeBoardLocalizationState(board), {
+    boardId: 'roadmap',
+    title: '過程 - Roadmap',
+    sourceLocale: 'en',
+    defaultLocale: 'en',
+    supportedLocales: ['en', 'ja'],
+    requiredLocales: ['en'],
+    hasApiKey: true,
+    apiKeyLast4: '9876',
+    cardCount: 1
+  });
+});
+
+test('selectLocalizationCandidate chooses the first missing non-source locale with source content', () => {
+  const board = {
+    languagePolicy: {
+      sourceLocale: 'en',
+      defaultLocale: 'en',
+      supportedLocales: ['en', 'ja'],
+      requiredLocales: ['en']
+    },
+    stageOrder: ['backlog'],
+    stages: {
+      backlog: {
+        cardIds: ['card_1']
+      }
+    },
+    cards: {
+      card_1: {
+        id: 'card_1',
+        contentByLocale: {
+          en: {
+            title: 'Ship localization',
+            detailsMarkdown: 'Translate me'
+          }
+        }
+      }
+    }
+  };
+
+  assert.deepEqual(selectLocalizationCandidate(board), {
+    candidate: {
+      cardId: 'card_1',
+      cardTitle: 'Ship localization',
+      sourceLocale: 'en',
+      targetLocale: 'ja',
+      sourceVariant: {
+        title: 'Ship localization',
+        detailsMarkdown: 'Translate me',
+        provenance: null
+      },
+      targetVariant: null
+    },
+    reason: null
+  });
+});
+
+test('selectLocalizationCandidate reports when the requested locale already exists', () => {
+  const board = {
+    languagePolicy: {
+      sourceLocale: 'en',
+      defaultLocale: 'en',
+      supportedLocales: ['en', 'ja'],
+      requiredLocales: ['en']
+    },
+    stageOrder: ['backlog'],
+    stages: {
+      backlog: {
+        cardIds: ['card_1']
+      }
+    },
+    cards: {
+      card_1: {
+        id: 'card_1',
+        contentByLocale: {
+          en: {
+            title: 'Ship localization',
+            detailsMarkdown: 'Translate me'
+          },
+          ja: {
+            title: 'ローカライズを出荷する',
+            detailsMarkdown: '翻訳済み'
+          }
+        }
+      }
+    }
+  };
+
+  assert.deepEqual(selectLocalizationCandidate(board, { targetLocale: 'ja' }), {
+    candidate: null,
+    reason: 'target-locale-already-present'
+  });
 });
 
 test('buildEditedStageDefinitions updates only the first stage title', () => {

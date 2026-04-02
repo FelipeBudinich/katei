@@ -360,7 +360,7 @@ function createReadableBoardProjection(board) {
 function resolveProjectedBoardAiLocalization(board) {
   const normalizedAiLocalization = normalizeBoardAiLocalization(board?.aiLocalization);
   const persistedEncryptedApiKey = normalizeOptionalString(board?.aiLocalizationSecrets?.[BOARD_OPENAI_SECRET_FIELD]);
-  const hasApiKey = normalizedAiLocalization.hasApiKey || Boolean(persistedEncryptedApiKey);
+  const hasApiKey = Boolean(persistedEncryptedApiKey);
 
   return {
     provider: normalizedAiLocalization.provider,

@@ -328,6 +328,43 @@ test('board.update preserves an existing encrypted OpenAI key when the submitted
   );
 });
 
+test('board.update clears stale OpenAI key metadata when no encrypted secret exists', () => {
+  const workspace = createWorkspaceForActor();
+  workspace.boards.main.aiLocalization = {
+    provider: 'openai',
+    hasApiKey: true,
+    apiKeyLast4: '1234'
+  };
+  delete workspace.boards.main.aiLocalizationSecrets;
+
+  const { workspace: nextWorkspace, result } = applyWorkspaceCommand({
+    record: createRecord(workspace, 0),
+    command: {
+      clientMutationId: 'm1c_stale',
+      type: 'board.update',
+      payload: {
+        boardId: 'main',
+        title: workspace.boards.main.title,
+        aiProvider: 'openai',
+        clearOpenAiApiKey: false,
+        languagePolicy: workspace.boards.main.languagePolicy,
+        stageDefinitions: readBoardStageDefinitions(workspace.boards.main),
+        templates: []
+      }
+    },
+    expectedRevision: 0,
+    context: createContext()
+  });
+
+  assert.equal(result.noOp, false);
+  assert.deepEqual(nextWorkspace.boards.main.aiLocalization, {
+    provider: 'openai',
+    hasApiKey: false,
+    apiKeyLast4: null
+  });
+  assert.equal(nextWorkspace.boards.main.aiLocalizationSecrets, undefined);
+});
+
 test('board.update replaces the stored OpenAI key and treats AI-only changes as real updates', () => {
   const workspace = createWorkspaceForActor();
 

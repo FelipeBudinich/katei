@@ -34,13 +34,19 @@ node .agents/skills/katei-auth-debug/scripts/open-authenticated-page.mjs
 node .agents/skills/katei-auth-debug/scripts/capture-auth-debug-artifacts.mjs
 ```
 
-6. Exercise create -> edit -> delete board flows:
+6. Exercise localization generation with the configured hosted session:
+
+```bash
+node .agents/skills/katei-auth-debug/scripts/exercise-localization-flow.mjs --board-title "過程 - Roadmap"
+```
+
+7. Exercise create -> edit -> delete board flows:
 
 ```bash
 node .agents/skills/katei-auth-debug/scripts/exercise-board-lifecycle.mjs
 ```
 
-7. Reproduce cross-workspace board switching or invite acceptance:
+8. Reproduce cross-workspace board switching or invite acceptance:
 
 ```bash
 node .agents/skills/katei-auth-debug/scripts/repro-cross-workspace-switch.mjs
@@ -72,6 +78,7 @@ Important behavior:
 - The browser profile is isolated under `/tmp/katei-auth-debug-profile`.
 - `open-authenticated-page.mjs` writes `latest-session.json` and `latest-open.png` into the artifact directory.
 - `capture-auth-debug-artifacts.mjs` writes a timestamped JSON report and PNG screenshot.
+- `exercise-localization-flow.mjs` writes a timestamped JSON report plus `latest-localization-flow.json`, resolving the target workspace/board/card/locale over an authenticated session and recording the localization generation response.
 - `exercise-board-lifecycle.mjs` creates a temporary board, edits it, then deletes it, writing per-step screenshots plus `latest-board-lifecycle.json`.
 - `repro-cross-workspace-switch.mjs` runs the local or hosted workspace-navigation repro, recording switch-button or invite-button datasets, emitted board-options event detail, `/api/workspace*` traffic, history transitions, and per-scenario screenshots into `latest-cross-workspace-switch.json`.
 - The local fixture now includes a readable foreign home workspace board titled `Casa` plus a separate invite-only `Casa` workspace so the skill can exercise both the home-workspace routing bug and the accept-first invite flow.
