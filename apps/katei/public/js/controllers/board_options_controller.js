@@ -76,8 +76,8 @@ export default class extends Controller {
   }
 
   createBoard() {
-    this.closeDialog({ restoreFocus: false });
     this.dispatch('create-board');
+    this.closeDialog({ restoreFocus: false });
   }
 
   editBoard() {
@@ -85,12 +85,12 @@ export default class extends Controller {
       return;
     }
 
-    this.closeDialog({ restoreFocus: false });
     this.dispatch('edit-board', {
       detail: {
         boardId: this.activeBoard.id
       }
     });
+    this.closeDialog({ restoreFocus: false });
   }
 
   resetBoard() {
@@ -98,12 +98,12 @@ export default class extends Controller {
       return;
     }
 
-    this.closeDialog({ restoreFocus: false });
     this.dispatch('reset-board', {
       detail: {
         boardId: this.activeBoard.id
       }
     });
+    this.closeDialog({ restoreFocus: false });
   }
 
   openCollaborators() {
@@ -111,12 +111,12 @@ export default class extends Controller {
       return;
     }
 
-    this.closeDialog({ restoreFocus: false });
     this.dispatch('open-collaborators', {
       detail: {
         boardId: this.activeBoard.id
       }
     });
+    this.closeDialog({ restoreFocus: false });
   }
 
   switchBoard(event) {
@@ -134,7 +134,6 @@ export default class extends Controller {
       return;
     }
 
-    this.closeDialog({ restoreFocus: false });
     this.dispatch('switch-board', {
       detail: {
         workspaceId,
@@ -143,6 +142,7 @@ export default class extends Controller {
         boardTitle
       }
     });
+    this.closeDialog({ restoreFocus: false });
   }
 
   acceptInvite(event) {
@@ -343,8 +343,8 @@ export default class extends Controller {
       inviteId: dataset.inviteId
     });
 
-    this.closeDialog({ restoreFocus: false });
     this.dispatch(actionName, { detail });
+    this.closeDialog({ restoreFocus: false });
   }
 
   closeDialog({ restoreFocus = true } = {}) {

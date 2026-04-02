@@ -283,6 +283,7 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
   assert.match(response.text, /board-options:decline-invite->workspace#handleDeclineInvite/);
 
   const boardOptionsDialog = extractDialogHtml(response.text, 'board-options');
+  const boardCollaboratorsDialog = extractDialogHtml(response.text, 'board-collaborators');
   const profileOptionsDialog = extractDialogHtml(response.text, 'profile-options');
 
   assert.doesNotMatch(boardOptionsDialog, /ui-locale-control-row/);
@@ -315,6 +316,7 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
     /class="dialog-actions board-options-actions mt-6"[\s\S]*?board-options#deleteBoard/
   );
   assert.doesNotMatch(response.text, /board-options:delete-board->workspace#confirmDeleteBoard/);
+  assert.match(boardCollaboratorsDialog, /type="email"[\s\S]*?name="email"[\s\S]*?autocomplete="email"/);
 
   assert.match(profileOptionsDialog, /viewer-chip/);
   assert.match(profileOptionsDialog, /ui-locale-control-row/);

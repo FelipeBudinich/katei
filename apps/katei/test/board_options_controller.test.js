@@ -505,6 +505,49 @@ test('board options controller switchBoard dispatches workspace-aware detail for
   assert.deepEqual(controller.closeDialogCalls, [{ restoreFocus: false }]);
 });
 
+test('board options controller dispatches switchBoard before closing the dialog', () => {
+  const controller = createBoardOptionsControllerDouble();
+  const events = [];
+
+  controller.dispatch = (name, options) => {
+    events.push({ type: 'dispatch', name, detail: options?.detail ?? null });
+  };
+  controller.closeDialog = (options = {}) => {
+    events.push({ type: 'close', options });
+  };
+  controller.activeWorkspaceId = 'workspace_shared';
+
+  BoardOptionsController.prototype.switchBoard.call(controller, {
+    currentTarget: {
+      dataset: {
+        workspaceId: 'workspace_other',
+        isHomeWorkspace: 'false',
+        boardId: 'notes',
+        boardTitle: 'Notes'
+      }
+    }
+  });
+
+  assert.deepEqual(events, [
+    {
+      type: 'dispatch',
+      name: 'switch-board',
+      detail: {
+        workspaceId: 'workspace_other',
+        isHomeWorkspace: false,
+        boardId: 'notes',
+        boardTitle: 'Notes'
+      }
+    },
+    {
+      type: 'close',
+      options: {
+        restoreFocus: false
+      }
+    }
+  ]);
+});
+
 function createBoard({ id, title, creator }) {
   return createWorkspaceBoard({
     id,
