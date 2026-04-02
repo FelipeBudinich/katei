@@ -427,7 +427,7 @@ test('workspace template renders edit localization controls and a simplified loc
 
   assert.match(
     cardViewDialog,
-    /data-workspace-target="viewCardTitle"[\s\S]*data-workspace-target="viewLocaleSection"[\s\S]*data-workspace-target="viewLocaleSelect"[\s\S]*data-workspace-target="viewCardBody"/
+    /data-workspace-target="viewCardTitle"[\s\S]*data-workspace-target="viewLocaleSection"[\s\S]*<select[\s\S]*id="card-view-locale-select"[\s\S]*data-workspace-target="viewLocaleSelect"[\s\S]*data-workspace-target="viewCardBody"/
   );
   assert.doesNotMatch(cardViewDialog, /data-card-editor-target="titleInput"/);
   assert.doesNotMatch(cardViewDialog, /data-card-editor-target="markdownInput"/);
