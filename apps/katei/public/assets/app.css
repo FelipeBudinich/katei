@@ -762,8 +762,8 @@
   }
   .card-item-toolbar {
     display: grid;
-    grid-template-columns: minmax(0,1fr) auto;
     align-items: center;
+    justify-items: center;
     gap: calc(var(--spacing) * 3);
     padding-top: calc(var(--spacing) * 4);
     padding-bottom: calc(var(--spacing) * 3);
@@ -781,6 +781,7 @@
   }
   .card-item-title {
     min-width: 0;
+    width: 100%;
     text-align: center;
   }
   .card-item-body {
