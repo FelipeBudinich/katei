@@ -3,7 +3,6 @@ import { getBoardCardContentVariant } from '../domain/card_localization.js';
 import { sortCardIdsForColumn } from '../domain/workspace_selectors.js';
 import { createBrowserDateTimeFormatter, getBrowserTranslator } from '../i18n/browser.js';
 import { formatCardCount } from '../i18n/workspace_labels.js';
-import { shouldShowPromptRunForStage } from '../controllers/stage_ui.js';
 
 export function getBoardRenderStages(board) {
   if (!Array.isArray(board?.stageOrder) || !board?.stages || typeof board.stages !== 'object') {
@@ -179,14 +178,6 @@ function createCardElement({ board, card, stageId, canEditBoard, templates, uiLo
   const editButton = cardNode.querySelector('[data-card-field="editButton"]');
   if (editButton) {
     editButton.hidden = !canEditBoard;
-  }
-
-  const promptRunButton = cardNode.querySelector('[data-card-field="promptRunButton"]');
-  if (promptRunButton) {
-    const shouldShowPromptRun = canEditBoard && shouldShowPromptRunForStage(board, stageId);
-    promptRunButton.hidden = !shouldShowPromptRun;
-    promptRunButton.disabled = !shouldShowPromptRun;
-    promptRunButton.setAttribute('aria-disabled', String(!shouldShowPromptRun));
   }
 
   for (const button of cardNode.querySelectorAll('[data-card-id]')) {

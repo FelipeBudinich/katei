@@ -243,6 +243,85 @@ test('renderBoardState shows stage-local create buttons only for create-enabled 
   assert.equal(regions.desktopColumns.children[0].createButton.disabled, true);
 });
 
+test('renderBoardState does not query a board-card prompt-run button', () => {
+  const board = createWorkspaceBoard({
+    id: 'board_modal_prompt',
+    title: 'Modal prompt board',
+    createdAt: '2026-03-31T10:00:00.000Z',
+    updatedAt: '2026-03-31T10:00:00.000Z'
+  });
+  const card = {
+    id: 'card_1',
+    priority: 'important',
+    createdAt: '2026-03-31T10:00:00.000Z',
+    updatedAt: '2026-03-31T10:30:00.000Z',
+    contentByLocale: {
+      en: {
+        title: 'English title',
+        detailsMarkdown: 'English details'
+      }
+    }
+  };
+  const regions = {
+    boardTitle: { textContent: '' },
+    desktopColumns: createRegionDouble()
+  };
+  const t = Object.assign(
+    (key, values = {}) => (key === 'workspace.cardCount' ? String(values.count ?? 0) : key),
+    { locale: 'en' }
+  );
+
+  board.stageOrder = ['review'];
+  board.stages = {
+    review: {
+      id: 'review',
+      title: 'Ready for Review',
+      cardIds: [card.id],
+      allowedTransitionStageIds: [],
+      templateIds: [],
+      actionIds: ['card.prompt.run'],
+      promptAction: {
+        enabled: true,
+        prompt: 'Turn this card into a new implementation task.',
+        targetStageId: 'review'
+      }
+    }
+  };
+  board.cards = {
+    [card.id]: card
+  };
+  board.languagePolicy = {
+    sourceLocale: 'en',
+    defaultLocale: 'en',
+    supportedLocales: ['en'],
+    requiredLocales: ['en']
+  };
+
+  withMarkdownEnvironment(() => {
+    renderBoardState({
+      board,
+      canReadBoard: true,
+      canEditBoard: true,
+      regions,
+      templates: {
+        columnTemplate: createColumnTemplateDouble(),
+        cardTemplate: createInspectableCardTemplateDouble()
+      },
+      t,
+      dateTimeFormatter: {
+        format() {
+          return 'Apr 1, 2026, 8:00 AM';
+        }
+      }
+    });
+  });
+
+  const renderedCard = regions.desktopColumns.children[0].cardsContainer.children[0];
+
+  assert.ok(renderedCard);
+  assert.equal(renderedCard.queriedSelectors.includes('[data-card-field="promptRunButton"]'), false);
+});
+
 function withMarkdownEnvironment(action) {
   const previousWindow = globalThis.window;
   const previousDocument = globalThis.document;
@@ -318,6 +397,66 @@ function createCardTemplateDouble() {
   };
 }
 
+function createInspectableCardTemplateDouble() {
+  return {
+    content: {
+      firstElementChild: {
+        cloneNode() {
+          return createInspectableCardNodeDouble();
+        }
+      }
+    }
+  };
+}
+
+function createInspectableCardNodeDouble() {
+  const queriedSelectors = [];
+  const titleElement = { textContent: '' };
+  const previewElement = {
+    textContent: '',
+    classList: {
+      toggle() {}
+    }
+  };
+  const metaElement = { textContent: '' };
+  const editButton = { hidden: false, dataset: {} };
+  const viewButton = { dataset: {} };
+
+  return {
+    dataset: {},
+    queriedSelectors,
+    querySelector(selector) {
+      queriedSelectors.push(selector);
+
+      switch (selector) {
+        case '[data-card-field="title"]':
+          return titleElement;
+        case '[data-card-field="preview"]':
+          return previewElement;
+        case '[data-card-field="meta"]':
+          return metaElement;
+        case '[data-card-field="editButton"]':
+          return editButton;
+        case '[data-card-field="promptRunButton"]':
+          return null;
+        default:
+          return null;
+      }
+    },
+    querySelectorAll(selector) {
+      if (selector === '[data-card-id]') {
+        return [editButton, viewButton];
+      }
+
+      if (selector === '[data-column-id], [data-stage-id]') {
+        return [editButton, viewButton];
+      }
+
+      return [];
+    }
+  };
+}
+
 function createColumnPanelDouble() {
   const titleElement = { textContent: '' };
   const countElement = { textContent: '' };
@@ -350,12 +489,16 @@ function createColumnPanelDouble() {
   };
   const cardsContainer = {
     innerHTML: '',
-    appendChild() {}
+    children: [],
+    appendChild(node) {
+      this.children.push(node);
+    }
   };
 
   return {
     dataset: {},
     createButton,
+    cardsContainer,
     querySelector(selector) {
       switch (selector) {
         case '[data-column-field="title"]':

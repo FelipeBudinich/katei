@@ -27,9 +27,10 @@ import {
 import { createLocalizedCardViewState } from './card_editor_locale_view.js';
 import {
   getBoardStageTitle,
-    resolveBoardStageId,
-    shouldShowCreateForStage,
-    shouldShowPriorityForStage
+  resolveBoardStageId,
+  shouldShowCreateForStage,
+  shouldShowPriorityForStage,
+  shouldShowPromptRunForStage
 } from './stage_ui.js';
 
 export default class extends Controller {
@@ -48,6 +49,8 @@ export default class extends Controller {
     'viewLocaleSelect',
     'viewReviewState',
     'viewRequestVerificationButton',
+    'viewActionRegion',
+    'viewPromptRunButton',
     'viewCardTitle',
     'viewCardBody',
     'viewCardPrioritySection',
@@ -484,7 +487,8 @@ export default class extends Controller {
       card,
       stageId,
       selectedLocale: button.dataset.requestedLocale ?? button.dataset.locale ?? null,
-      canRequestHumanVerification: boardState?.canRead ?? false
+      canRequestHumanVerification: boardState?.canRead ?? false,
+      canEditBoard: boardState?.canEdit ?? false
     };
     this.syncViewDialog();
 
@@ -715,30 +719,36 @@ export default class extends Controller {
     const cardId =
       normalizeOptionalWorkspaceId(event?.detail?.cardId)
       ?? normalizeOptionalWorkspaceId(event?.currentTarget?.dataset?.cardId);
-    const requestKey = createStagePromptRunRequestKey({ boardId, cardId });
+    return this.runStagePromptForCard({ boardId, cardId });
+  }
 
-    if (!requestKey) {
-      return;
+  async handleRunStagePromptFromView(event) {
+    event.preventDefault();
+
+    const board = this.viewDialogState?.board ?? null;
+    const card = this.viewDialogState?.card ?? null;
+    const boardId = normalizeOptionalWorkspaceId(board?.id);
+    const cardId = normalizeOptionalWorkspaceId(card?.id);
+    const stageId = board
+      ? resolveBoardStageId(board, {
+          stageId: this.viewDialogState?.stageId,
+          cardId
+        })
+      : null;
+    const selectedLocale = this.viewDialogState?.selectedLocale ?? null;
+    const canEditBoard = this.viewDialogState?.canEditBoard === true;
+
+    if (!boardId || !cardId || !stageId || !canEditBoard || !shouldShowPromptRunForStage(board, stageId)) {
+      return false;
     }
 
-    if (!(this.pendingStagePromptRunKeys instanceof Set)) {
-      this.pendingStagePromptRunKeys = new Set();
+    const success = await this.runStagePromptForCard({ boardId, cardId });
+
+    if (success && this.isViewDialogOpenFor({ boardId, cardId })) {
+      this.refreshViewDialog({ boardId, cardId, locale: selectedLocale });
     }
 
-    if (this.pendingStagePromptRunKeys.has(requestKey)) {
-      return;
-    }
-
-    this.pendingStagePromptRunKeys.add(requestKey);
-
-    try {
-      await this.runAction(
-        () => this.service.runStagePrompt(boardId, cardId),
-        this.t('workspace.announcements.stagePromptRunSucceeded')
-      );
-    } finally {
-      this.pendingStagePromptRunKeys.delete(requestKey);
-    }
+    return success;
   }
 
   deleteCard(event) {
@@ -1006,7 +1016,8 @@ export default class extends Controller {
       card,
       stageId,
       selectedLocale,
-      canRequestHumanVerification = false
+      canRequestHumanVerification = false,
+      canEditBoard = false
     } = this.viewDialogState ?? {};
     const localizedView = createLocalizedCardViewState({
       board,
@@ -1015,9 +1026,32 @@ export default class extends Controller {
       uiLocale: this.t.locale,
       localeSelection: 'available'
     });
-    const shouldShowPriority = shouldShowPriorityForStage(stageId);
+    const resolvedStageId = board && card
+      ? resolveBoardStageId(board, {
+          stageId,
+          cardId: card.id
+        })
+      : null;
+    const shouldShowPriority = shouldShowPriorityForStage(resolvedStageId);
     const content = localizedView.variant;
     const localeOptions = localizedView.availableLocales.map((locale) => createLocaleOption(locale));
+    const promptRunRequestKey = createStagePromptRunRequestKey({
+      boardId: board?.id,
+      cardId: card?.id
+    });
+    const shouldShowPromptRunButton = Boolean(
+      canEditBoard
+      && board
+      && card
+      && resolvedStageId
+      && shouldShowPromptRunForStage(board, resolvedStageId)
+    );
+    const isPromptRunPending = Boolean(
+      shouldShowPromptRunButton
+      && promptRunRequestKey
+      && this.pendingStagePromptRunKeys instanceof Set
+      && this.pendingStagePromptRunKeys.has(promptRunRequestKey)
+    );
 
     if (this.hasViewLocaleSectionTarget && this.hasViewLocaleSelectTarget) {
       const shouldShowLocaleSection = localeOptions.length > 0;
@@ -1048,13 +1082,43 @@ export default class extends Controller {
       );
     }
 
+    if (this.hasViewActionRegionTarget) {
+      this.viewActionRegionTarget.hidden = !shouldShowPromptRunButton;
+    }
+
+    if (this.hasViewPromptRunButtonTarget) {
+      this.viewPromptRunButtonTarget.hidden = !shouldShowPromptRunButton;
+      this.viewPromptRunButtonTarget.disabled = !shouldShowPromptRunButton || isPromptRunPending;
+      this.viewPromptRunButtonTarget.setAttribute(
+        'aria-disabled',
+        String(!shouldShowPromptRunButton || isPromptRunPending)
+      );
+
+      setOptionalDatasetValue(
+        this.viewPromptRunButtonTarget,
+        'boardId',
+        shouldShowPromptRunButton ? board.id : null
+      );
+      setOptionalDatasetValue(
+        this.viewPromptRunButtonTarget,
+        'cardId',
+        shouldShowPromptRunButton ? card.id : null
+      );
+      setOptionalDatasetValue(
+        this.viewPromptRunButtonTarget,
+        'stageId',
+        shouldShowPromptRunButton ? resolvedStageId : null
+      );
+    }
+
     this.viewDialogState = card
       ? {
           board,
           card,
-          stageId,
+          stageId: resolvedStageId,
           selectedLocale: localizedView.selectedLocale,
-          canRequestHumanVerification
+          canRequestHumanVerification,
+          canEditBoard
         }
       : null;
 
@@ -1299,7 +1363,8 @@ export default class extends Controller {
       card,
       stageId,
       selectedLocale: locale,
-      canRequestHumanVerification: boardState?.canRead ?? false
+      canRequestHumanVerification: boardState?.canRead ?? false,
+      canEditBoard: boardState?.canEdit ?? false
     };
     this.syncViewDialog();
   }
@@ -1323,6 +1388,41 @@ export default class extends Controller {
       this.viewDialogState?.board?.id === boardId &&
       this.viewDialogState?.card?.id === cardId
     );
+  }
+
+  async runStagePromptForCard({ boardId, cardId } = {}) {
+    const requestKey = createStagePromptRunRequestKey({ boardId, cardId });
+
+    if (!requestKey) {
+      return false;
+    }
+
+    if (!(this.pendingStagePromptRunKeys instanceof Set)) {
+      this.pendingStagePromptRunKeys = new Set();
+    }
+
+    if (this.pendingStagePromptRunKeys.has(requestKey)) {
+      return false;
+    }
+
+    this.pendingStagePromptRunKeys.add(requestKey);
+
+    if (this.isViewDialogOpenFor({ boardId, cardId })) {
+      this.syncViewDialog();
+    }
+
+    try {
+      return await this.runAction(
+        () => this.service.runStagePrompt(boardId, cardId),
+        this.t('workspace.announcements.stagePromptRunSucceeded')
+      );
+    } finally {
+      this.pendingStagePromptRunKeys.delete(requestKey);
+
+      if (this.isViewDialogOpenFor({ boardId, cardId })) {
+        this.syncViewDialog();
+      }
+    }
   }
 }
 
@@ -1360,6 +1460,19 @@ function createStagePromptRunRequestKey({ boardId, cardId } = {}) {
   }
 
   return `${normalizedBoardId}::${normalizedCardId}`;
+}
+
+function setOptionalDatasetValue(element, name, value) {
+  if (!element?.dataset) {
+    return;
+  }
+
+  if (typeof value === 'string' && value.trim()) {
+    element.dataset[name] = value;
+    return;
+  }
+
+  delete element.dataset[name];
 }
 
 function scheduleBrowserFrame(callback) {

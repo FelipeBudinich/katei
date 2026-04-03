@@ -1411,6 +1411,35 @@ test('openView uses the dedicated view dialog and limits locales to present loca
     assert.equal(controller.viewCardBodyTarget.innerHTML, '<p>Detalles por defecto</p>');
     assert.equal(controller.viewCardPrioritySectionTarget.hidden, false);
     assert.equal(controller.viewCardUpdatedTarget.textContent, 'Apr 1, 2026, 8:00 AM');
+    assert.equal(controller.viewActionRegionTarget.hidden, true);
+    assert.equal(controller.viewPromptRunButtonTarget.hidden, true);
+  } finally {
+    restoreDom();
+  }
+});
+
+test('openView shows the prompt-run button in the modal for editable prompt-enabled cards', () => {
+  const restoreDom = installViewDialogDomStubs();
+
+  try {
+    const { controller, board, card } = createViewDialogController({ viewerRole: 'editor' });
+
+    enableStagePromptRun(board, 'review');
+
+    WorkspaceController.prototype.openView.call(controller, {
+      currentTarget: createViewTriggerDouble(card.id, 'review', { requestedLocale: 'es-CL' })
+    });
+
+    assert.equal(controller.viewDialogState.canEditBoard, true);
+    assert.equal(controller.viewActionRegionTarget.hidden, false);
+    assert.equal(controller.viewPromptRunButtonTarget.hidden, false);
+    assert.equal(controller.viewPromptRunButtonTarget.disabled, false);
+    assert.equal(controller.viewPromptRunButtonTarget.attributes['aria-disabled'], 'false');
+    assert.deepEqual(controller.viewPromptRunButtonTarget.dataset, {
+      boardId: board.id,
+      cardId: card.id,
+      stageId: 'review'
+    });
   } finally {
     restoreDom();
   }
@@ -1429,6 +1458,8 @@ test('openView shows the AI review state and a human verification request button
     assert.equal(controller.viewReviewStateTarget.hidden, false);
     assert.equal(controller.viewReviewStateTarget.textContent, 'cardViewDialog.reviewState.ai');
     assert.equal(controller.viewRequestVerificationButtonTarget.hidden, false);
+    assert.equal(controller.viewActionRegionTarget.hidden, true);
+    assert.equal(controller.viewPromptRunButtonTarget.hidden, true);
   } finally {
     restoreDom();
   }
@@ -1561,6 +1592,40 @@ test('syncViewDialog uses the empty-details fallback when the selected locale ha
     );
     assert.equal(controller.viewCardTitleTarget.textContent, 'English source');
     assert.equal(controller.viewCardBodyTarget.textContent, 'No details added.');
+  } finally {
+    restoreDom();
+  }
+});
+
+test('syncViewDialog hides the prompt-run button and clears datasets for ineligible view state', () => {
+  const restoreDom = installViewDialogDomStubs();
+
+  try {
+    const { controller, board, card } = createViewDialogController({ viewerRole: 'editor' });
+
+    enableStagePromptRun(board, 'review');
+
+    WorkspaceController.prototype.openView.call(controller, {
+      currentTarget: createViewTriggerDouble(card.id, 'review', { requestedLocale: 'es-CL' })
+    });
+
+    board.stages.review.promptAction = {
+      enabled: true,
+      prompt: '',
+      targetStageId: 'qa'
+    };
+    controller.viewDialogState = {
+      ...controller.viewDialogState,
+      canEditBoard: true
+    };
+
+    WorkspaceController.prototype.syncViewDialog.call(controller);
+
+    assert.equal(controller.viewActionRegionTarget.hidden, true);
+    assert.equal(controller.viewPromptRunButtonTarget.hidden, true);
+    assert.equal(controller.viewPromptRunButtonTarget.disabled, true);
+    assert.equal(controller.viewPromptRunButtonTarget.attributes['aria-disabled'], 'true');
+    assert.deepEqual(controller.viewPromptRunButtonTarget.dataset, {});
   } finally {
     restoreDom();
   }
@@ -1948,6 +2013,155 @@ test('handleRunStagePrompt calls the service, applies workspace state, and annou
   assert.deepEqual(announcements, ['Prompt run completed.']);
 });
 
+test('handleRunStagePromptFromView reuses the shared prompt-run path and refreshes the modal state', async () => {
+  const restoreDom = installViewDialogDomStubs();
+
+  try {
+    const { controller, board, card } = createViewDialogController({ viewerRole: 'editor' });
+    const runCalls = [];
+    const refreshCalls = [];
+    let prevented = false;
+
+    enableStagePromptRun(board, 'review');
+
+    WorkspaceController.prototype.openView.call(controller, {
+      currentTarget: createViewTriggerDouble(card.id, 'review', { requestedLocale: 'es-CL' })
+    });
+    const selectedLocale = controller.viewDialogState.selectedLocale;
+
+    controller.runStagePromptForCard = async (detail) => {
+      runCalls.push(detail);
+      return true;
+    };
+    controller.refreshViewDialog = (detail) => {
+      refreshCalls.push(detail);
+    };
+
+    await WorkspaceController.prototype.handleRunStagePromptFromView.call(controller, {
+      preventDefault() {
+        prevented = true;
+      }
+    });
+
+    assert.equal(prevented, true);
+    assert.deepEqual(runCalls, [
+      {
+        boardId: board.id,
+        cardId: card.id
+      }
+    ]);
+    assert.deepEqual(refreshCalls, [
+      {
+        boardId: board.id,
+        cardId: card.id,
+        locale: selectedLocale
+      }
+    ]);
+  } finally {
+    restoreDom();
+  }
+});
+
+test('handleRunStagePromptFromView ignores repeated clicks while the same prompt run is pending', async () => {
+  const restoreDom = installViewDialogDomStubs();
+
+  try {
+    const { controller, board, card, workspace } = createViewDialogController({ viewerRole: 'editor' });
+    const serviceCalls = [];
+    let resolveWorkspace;
+
+    enableStagePromptRun(board, 'review');
+
+    controller.service = {
+      async runStagePrompt(...args) {
+        serviceCalls.push(args);
+        return new Promise((resolve) => {
+          resolveWorkspace = () => resolve(structuredClone(workspace));
+        });
+      }
+    };
+    controller.render = () => {};
+    controller.announce = () => {};
+
+    WorkspaceController.prototype.openView.call(controller, {
+      currentTarget: createViewTriggerDouble(card.id, 'review')
+    });
+
+    const firstCall = WorkspaceController.prototype.handleRunStagePromptFromView.call(controller, {
+      preventDefault() {}
+    });
+
+    assert.equal(controller.viewPromptRunButtonTarget.disabled, true);
+    assert.equal(controller.viewPromptRunButtonTarget.attributes['aria-disabled'], 'true');
+
+    const secondCall = WorkspaceController.prototype.handleRunStagePromptFromView.call(controller, {
+      preventDefault() {}
+    });
+
+    resolveWorkspace();
+    await Promise.all([firstCall, secondCall]);
+
+    assert.deepEqual(serviceCalls, [[board.id, card.id]]);
+    assert.equal(controller.viewPromptRunButtonTarget.disabled, false);
+    assert.equal(controller.viewPromptRunButtonTarget.attributes['aria-disabled'], 'false');
+  } finally {
+    restoreDom();
+  }
+});
+
+test('handleRunStagePromptFromView keeps the modal open, refreshes state, and announces success', async () => {
+  const restoreDom = installViewDialogDomStubs();
+
+  try {
+    const { controller, board, card, workspace } = createViewDialogController({ viewerRole: 'editor' });
+    const updatedWorkspace = structuredClone(workspace);
+    const announcements = [];
+    const serviceCalls = [];
+    let renderCalls = 0;
+
+    enableStagePromptRun(board, 'review');
+
+    updatedWorkspace.boards[board.id].cards[card.id].updatedAt = '2026-04-01T13:00:00.000Z';
+    controller.t = createTranslator('en');
+    controller.dateTimeFormatter = {
+      format(value) {
+        return value.toISOString();
+      }
+    };
+    controller.service = {
+      async runStagePrompt(...args) {
+        serviceCalls.push(args);
+        return updatedWorkspace;
+      }
+    };
+    controller.render = () => {
+      renderCalls += 1;
+    };
+    controller.announce = (message) => {
+      announcements.push(message);
+    };
+
+    WorkspaceController.prototype.openView.call(controller, {
+      currentTarget: createViewTriggerDouble(card.id, 'review')
+    });
+
+    await WorkspaceController.prototype.handleRunStagePromptFromView.call(controller, {
+      preventDefault() {}
+    });
+
+    assert.deepEqual(serviceCalls, [[board.id, card.id]]);
+    assert.equal(controller.workspace, updatedWorkspace);
+    assert.equal(renderCalls, 1);
+    assert.deepEqual(announcements, ['Prompt run completed.']);
+    assert.equal(controller.viewDialogTarget.open, true);
+    assert.equal(controller.viewDialogState.board, updatedWorkspace.boards[board.id]);
+    assert.equal(controller.viewDialogState.card, updatedWorkspace.boards[board.id].cards[card.id]);
+    assert.equal(controller.viewCardUpdatedTarget.textContent, '2026-04-01T13:00:00.000Z');
+  } finally {
+    restoreDom();
+  }
+});
+
 test('handleRunStagePrompt ignores repeated clicks while the same prompt run is already pending', async () => {
   const controller = Object.create(WorkspaceController.prototype);
   const serviceCalls = [];
@@ -2130,6 +2344,16 @@ function createBoardWithCustomStages() {
   };
 
   return board;
+}
+
+function enableStagePromptRun(board, stageId, promptActionOverrides = {}) {
+  board.stages[stageId].actionIds = ['card.prompt.run'];
+  board.stages[stageId].promptAction = {
+    enabled: true,
+    prompt: 'Turn this card into a new implementation task.',
+    targetStageId: 'qa',
+    ...promptActionOverrides
+  };
 }
 
 function createViewerWorkspace(workspaceId, actor) {
@@ -2395,6 +2619,10 @@ function createViewDialogController({
   controller.viewReviewStateTarget = { hidden: true, textContent: '' };
   controller.hasViewRequestVerificationButtonTarget = true;
   controller.viewRequestVerificationButtonTarget = createButtonDouble();
+  controller.hasViewActionRegionTarget = true;
+  controller.viewActionRegionTarget = { hidden: true };
+  controller.hasViewPromptRunButtonTarget = true;
+  controller.viewPromptRunButtonTarget = createButtonDouble();
   controller.viewCardTitleTarget = { textContent: '' };
   controller.viewCardBodyTarget = createContentRegionDouble();
   controller.viewCardPrioritySectionTarget = { hidden: true };
@@ -2465,6 +2693,7 @@ function createButtonDouble() {
   return {
     hidden: true,
     disabled: false,
+    dataset: {},
     attributes: {},
     setAttribute(name, value) {
       this.attributes[name] = String(value);

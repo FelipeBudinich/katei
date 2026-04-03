@@ -39,24 +39,11 @@
       <p class="text-sm leading-6 text-muted hidden" data-card-field="preview"></p>
     </div>
 
-    <footer class="card-item-footer flex items-center justify-between gap-3">
+    <footer class="card-item-footer">
       <p class="card-item-meta text-xs uppercase tracking-[0.24em] text-subtle">
         <span class="card-item-meta-icon" aria-hidden="true"></span>
         <span data-card-field="meta"></span>
       </p>
-
-      <button
-        type="button"
-        class="card-item-action px-3 text-xs"
-        data-card-field="promptRunButton"
-        data-action="workspace#handleRunStagePrompt"
-        data-card-id="__CARD_ID__"
-        data-stage-id="__COLUMN_ID__"
-        data-column-id="__COLUMN_ID__"
-        hidden
-      >
-        {{ t('workspace.cardPromptRunButton') }}
-      </button>
     </footer>
   </article>
 </template>
