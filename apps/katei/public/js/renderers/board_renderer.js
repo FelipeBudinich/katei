@@ -133,7 +133,6 @@ function createStagePanel({ board, stageId, stage, collapsedColumns, canReadBoar
             board,
             card: board.cards[cardId],
             stageId,
-            canEditBoard,
             templates,
             uiLocale,
             dateTimeFormatter
@@ -146,7 +145,7 @@ function createStagePanel({ board, stageId, stage, collapsedColumns, canReadBoar
   return columnNode;
 }
 
-function createCardElement({ board, card, stageId, canEditBoard, templates, uiLocale, dateTimeFormatter }) {
+function createCardElement({ board, card, stageId, templates, uiLocale, dateTimeFormatter }) {
   const cardNode = cloneTemplate(templates.cardTemplate);
   const renderState = getCardRenderState(board, card, uiLocale);
   cardNode.dataset.cardId = card.id;
@@ -173,11 +172,6 @@ function createCardElement({ board, card, stageId, canEditBoard, templates, uiLo
   const metaElement = cardNode.querySelector('[data-card-field="meta"]');
   if (metaElement) {
     metaElement.textContent = dateTimeFormatter.format(new Date(card.updatedAt));
-  }
-
-  const editButton = cardNode.querySelector('[data-card-field="editButton"]');
-  if (editButton) {
-    editButton.hidden = !canEditBoard;
   }
 
   for (const button of cardNode.querySelectorAll('[data-card-id]')) {

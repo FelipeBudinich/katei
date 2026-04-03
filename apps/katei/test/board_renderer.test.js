@@ -322,6 +322,85 @@ test('renderBoardState does not query a board-card prompt-run button', () => {
   assert.equal(renderedCard.queriedSelectors.includes('[data-card-field="promptRunButton"]'), false);
 });
 
+test('renderBoardState does not query a board-card edit button and still wires the view button datasets', () => {
+  const board = createWorkspaceBoard({
+    id: 'board_modal_edit',
+    title: 'Modal edit board',
+    createdAt: '2026-03-31T10:00:00.000Z',
+    updatedAt: '2026-03-31T10:00:00.000Z'
+  });
+  const card = {
+    id: 'card_1',
+    priority: 'important',
+    createdAt: '2026-03-31T10:00:00.000Z',
+    updatedAt: '2026-03-31T10:30:00.000Z',
+    contentByLocale: {
+      en: {
+        title: 'English title',
+        detailsMarkdown: 'English details'
+      }
+    }
+  };
+  const regions = {
+    boardTitle: { textContent: '' },
+    desktopColumns: createRegionDouble()
+  };
+  const t = Object.assign(
+    (key, values = {}) => (key === 'workspace.cardCount' ? String(values.count ?? 0) : key),
+    { locale: 'en' }
+  );
+
+  board.stageOrder = ['review'];
+  board.stages = {
+    review: {
+      id: 'review',
+      title: 'Ready for Review',
+      cardIds: [card.id],
+      allowedTransitionStageIds: [],
+      templateIds: [],
+      actionIds: []
+    }
+  };
+  board.cards = {
+    [card.id]: card
+  };
+  board.languagePolicy = {
+    sourceLocale: 'en',
+    defaultLocale: 'en',
+    supportedLocales: ['en'],
+    requiredLocales: ['en']
+  };
+
+  withMarkdownEnvironment(() => {
+    renderBoardState({
+      board,
+      canReadBoard: true,
+      canEditBoard: true,
+      regions,
+      templates: {
+        columnTemplate: createColumnTemplateDouble(),
+        cardTemplate: createInspectableCardTemplateDouble()
+      },
+      t,
+      dateTimeFormatter: {
+        format() {
+          return 'Apr 1, 2026, 8:00 AM';
+        }
+      }
+    });
+  });
+
+  const renderedCard = regions.desktopColumns.children[0].cardsContainer.children[0];
+
+  assert.ok(renderedCard);
+  assert.equal(renderedCard.queriedSelectors.includes('[data-card-field="editButton"]'), false);
+  assert.deepEqual(renderedCard.viewButton.dataset, {
+    cardId: card.id,
+    stageId: 'review',
+    columnId: 'review'
+  });
+});
+
 function withMarkdownEnvironment(action) {
   const previousWindow = globalThis.window;
   const previousDocument = globalThis.document;
@@ -419,11 +498,11 @@ function createInspectableCardNodeDouble() {
     }
   };
   const metaElement = { textContent: '' };
-  const editButton = { hidden: false, dataset: {} };
   const viewButton = { dataset: {} };
 
   return {
     dataset: {},
+    viewButton,
     queriedSelectors,
     querySelector(selector) {
       queriedSelectors.push(selector);
@@ -435,8 +514,6 @@ function createInspectableCardNodeDouble() {
           return previewElement;
         case '[data-card-field="meta"]':
           return metaElement;
-        case '[data-card-field="editButton"]':
-          return editButton;
         case '[data-card-field="promptRunButton"]':
           return null;
         default:
@@ -445,11 +522,11 @@ function createInspectableCardNodeDouble() {
     },
     querySelectorAll(selector) {
       if (selector === '[data-card-id]') {
-        return [editButton, viewButton];
+        return [viewButton];
       }
 
       if (selector === '[data-column-id], [data-stage-id]') {
-        return [editButton, viewButton];
+        return [viewButton];
       }
 
       return [];

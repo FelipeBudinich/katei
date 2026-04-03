@@ -1412,6 +1412,10 @@ test('openView uses the dedicated view dialog and limits locales to present loca
     assert.equal(controller.viewCardPrioritySectionTarget.hidden, false);
     assert.equal(controller.viewCardUpdatedTarget.textContent, 'Apr 1, 2026, 8:00 AM');
     assert.equal(controller.viewActionRegionTarget.hidden, true);
+    assert.equal(controller.viewEditButtonTarget.hidden, true);
+    assert.equal(controller.viewEditButtonTarget.disabled, true);
+    assert.equal(controller.viewEditButtonTarget.attributes['aria-disabled'], 'true');
+    assert.deepEqual(controller.viewEditButtonTarget.dataset, {});
     assert.equal(controller.viewPromptRunButtonTarget.hidden, true);
   } finally {
     restoreDom();
@@ -1432,6 +1436,14 @@ test('openView shows the prompt-run button in the modal for editable prompt-enab
 
     assert.equal(controller.viewDialogState.canEditBoard, true);
     assert.equal(controller.viewActionRegionTarget.hidden, false);
+    assert.equal(controller.viewEditButtonTarget.hidden, false);
+    assert.equal(controller.viewEditButtonTarget.disabled, false);
+    assert.equal(controller.viewEditButtonTarget.attributes['aria-disabled'], 'false');
+    assert.deepEqual(controller.viewEditButtonTarget.dataset, {
+      boardId: board.id,
+      cardId: card.id,
+      stageId: 'review'
+    });
     assert.equal(controller.viewPromptRunButtonTarget.hidden, false);
     assert.equal(controller.viewPromptRunButtonTarget.disabled, false);
     assert.equal(controller.viewPromptRunButtonTarget.attributes['aria-disabled'], 'false');
@@ -1440,6 +1452,32 @@ test('openView shows the prompt-run button in the modal for editable prompt-enab
       cardId: card.id,
       stageId: 'review'
     });
+  } finally {
+    restoreDom();
+  }
+});
+
+test('syncViewDialog hides the modal edit button and clears datasets for read-only view state', () => {
+  const restoreDom = installViewDialogDomStubs();
+
+  try {
+    const { controller, card } = createViewDialogController({ viewerRole: 'editor' });
+
+    WorkspaceController.prototype.openView.call(controller, {
+      currentTarget: createViewTriggerDouble(card.id, 'review', { requestedLocale: 'es-CL' })
+    });
+
+    controller.viewDialogState = {
+      ...controller.viewDialogState,
+      canEditBoard: false
+    };
+
+    WorkspaceController.prototype.syncViewDialog.call(controller);
+
+    assert.equal(controller.viewEditButtonTarget.hidden, true);
+    assert.equal(controller.viewEditButtonTarget.disabled, true);
+    assert.equal(controller.viewEditButtonTarget.attributes['aria-disabled'], 'true');
+    assert.deepEqual(controller.viewEditButtonTarget.dataset, {});
   } finally {
     restoreDom();
   }
@@ -1626,6 +1664,103 @@ test('syncViewDialog hides the prompt-run button and clears datasets for ineligi
     assert.equal(controller.viewPromptRunButtonTarget.disabled, true);
     assert.equal(controller.viewPromptRunButtonTarget.attributes['aria-disabled'], 'true');
     assert.deepEqual(controller.viewPromptRunButtonTarget.dataset, {});
+  } finally {
+    restoreDom();
+  }
+});
+
+test('openEdit dispatches the card editor event for an editable board card', () => {
+  const restoreDom = installViewDialogDomStubs();
+
+  try {
+    const { controller, board, card } = createViewDialogController({ viewerRole: 'editor' });
+    const dispatchedEvents = [];
+    const trigger = createViewTriggerDouble(card.id, 'review', { requestedLocale: 'es-CL' });
+
+    controller.dispatchWorkspaceEvent = (name, detail) => {
+      dispatchedEvents.push({ name, detail });
+    };
+
+    WorkspaceController.prototype.openEdit.call(controller, {
+      currentTarget: trigger
+    });
+
+    assert.equal(dispatchedEvents.length, 1);
+    assert.equal(dispatchedEvents[0].name, 'open-card-editor');
+    assert.equal(dispatchedEvents[0].detail.mode, 'edit');
+    assert.equal(dispatchedEvents[0].detail.boardId, board.id);
+    assert.equal(dispatchedEvents[0].detail.stageId, 'review');
+    assert.equal(dispatchedEvents[0].detail.triggerElement, trigger);
+    assert.equal(dispatchedEvents[0].detail.requestedLocale, 'es-CL');
+    assert.equal(dispatchedEvents[0].detail.canEditLocalizedContent, true);
+  } finally {
+    restoreDom();
+  }
+});
+
+test('openEditFromView closes the view dialog and reuses the edit payload shape', () => {
+  const restoreDom = installViewDialogDomStubs();
+
+  try {
+    const baseline = createViewDialogController({ viewerRole: 'editor' });
+    const modal = createViewDialogController({ viewerRole: 'editor' });
+    const trigger = createViewTriggerDouble(modal.card.id, 'review', { requestedLocale: 'es-CL' });
+    const baselineEvents = [];
+    const modalEvents = [];
+    let prevented = false;
+
+    baseline.controller.dispatchWorkspaceEvent = (name, detail) => {
+      baselineEvents.push({ name, detail });
+    };
+    modal.controller.dispatchWorkspaceEvent = (name, detail) => {
+      modalEvents.push({ name, detail });
+    };
+
+    WorkspaceController.prototype.openEdit.call(baseline.controller, {
+      currentTarget: trigger
+    });
+
+    WorkspaceController.prototype.openView.call(modal.controller, {
+      currentTarget: trigger
+    });
+
+    WorkspaceController.prototype.openEditFromView.call(modal.controller, {
+      preventDefault() {
+        prevented = true;
+      }
+    });
+
+    assert.equal(prevented, true);
+    assert.equal(modal.controller.viewDialogTarget.open, false);
+    assert.equal(modal.controller.viewDialogTarget.closeCalls, 1);
+    assert.equal(modal.controller.viewDialogState, null);
+    assert.equal(modal.controller.viewTriggerElement, null);
+    assert.notEqual(trigger.focused, true);
+    assert.deepEqual(modalEvents, baselineEvents);
+  } finally {
+    restoreDom();
+  }
+});
+
+test('closeViewDialog restores focus to the original view trigger', () => {
+  const restoreDom = installViewDialogDomStubs();
+
+  try {
+    const { controller, card } = createViewDialogController();
+    const trigger = createViewTriggerDouble(card.id, 'review');
+
+    WorkspaceController.prototype.openView.call(controller, {
+      currentTarget: trigger
+    });
+
+    WorkspaceController.prototype.closeViewDialog.call(controller, {
+      preventDefault() {}
+    });
+
+    assert.equal(controller.viewDialogTarget.open, false);
+    assert.equal(controller.viewDialogState, null);
+    assert.equal(controller.viewTriggerElement, null);
+    assert.equal(trigger.focused, true);
   } finally {
     restoreDom();
   }
@@ -2605,6 +2740,8 @@ function createViewDialogController({
     (key) => (key === 'workspace.view.noDetails' ? 'No details added.' : key),
     { locale: uiLocale }
   );
+  controller.announce = () => {};
+  controller.dispatchWorkspaceEvent = () => {};
   controller.dateTimeFormatter = {
     format() {
       return 'Apr 1, 2026, 8:00 AM';
@@ -2621,6 +2758,8 @@ function createViewDialogController({
   controller.viewRequestVerificationButtonTarget = createButtonDouble();
   controller.hasViewActionRegionTarget = true;
   controller.viewActionRegionTarget = { hidden: true };
+  controller.hasViewEditButtonTarget = true;
+  controller.viewEditButtonTarget = createButtonDouble();
   controller.hasViewPromptRunButtonTarget = true;
   controller.viewPromptRunButtonTarget = createButtonDouble();
   controller.viewCardTitleTarget = { textContent: '' };
@@ -2657,10 +2796,14 @@ function createViewTriggerDouble(cardId, stageId, { requestedLocale = null } = {
 function createDialogDouble() {
   return {
     open: false,
+    showModalCalls: 0,
+    closeCalls: 0,
     showModal() {
+      this.showModalCalls += 1;
       this.open = true;
     },
     close() {
+      this.closeCalls += 1;
       this.open = false;
     },
     querySelector() {

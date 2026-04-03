@@ -250,6 +250,7 @@ const EN_MESSAGES = freezeCatalog({
   },
   cardViewDialog: {
     titlePlaceholder: 'Card title',
+    editButton: 'Edit',
     detailsLabel: 'Details',
     updatedLabel: 'Updated',
     requestHumanVerificationButton: 'Request human verification',
@@ -632,6 +633,7 @@ const ES_CL_MESSAGES = freezeCatalog({
   },
   cardViewDialog: {
     titlePlaceholder: 'Título de la tarjeta',
+    editButton: 'Editar',
     detailsLabel: 'Detalles',
     updatedLabel: 'Actualizado',
     requestHumanVerificationButton: 'Solicitar verificación humana',
@@ -1015,6 +1017,7 @@ const JA_MESSAGES = freezeCatalog({
   },
   cardViewDialog: {
     titlePlaceholder: 'カード名',
+    editButton: '編集',
     detailsLabel: '詳細',
     updatedLabel: '更新日時',
     requestHumanVerificationButton: '人による確認を依頼',

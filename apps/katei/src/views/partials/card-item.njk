@@ -1,18 +1,5 @@
 <article class="card-item" data-card-id="{{ card.id }}" data-stage-id="{{ columnId }}" data-column-id="{{ columnId }}" data-priority="{{ card.priority }}">
   <header class="card-item-toolbar">
-    <button
-      type="button"
-      class="card-item-action px-3"
-      aria-label="{{ t('cardItem.editAriaLabel') }}"
-      data-card-field="editButton"
-      data-action="workspace#openEdit"
-      data-card-id="{{ card.id }}"
-      data-stage-id="{{ columnId }}"
-      data-column-id="{{ columnId }}"
-    >
-      <span class="card-item-action-icon" aria-hidden="true"></span>
-    </button>
-
     <h3 class="card-item-title text-base text-strong" data-card-field="title">{{ card.title }}</h3>
 
     <button

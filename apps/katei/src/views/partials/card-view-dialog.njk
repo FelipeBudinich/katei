@@ -16,14 +16,28 @@
         </h2>
       </div>
 
-      <button
-        type="button"
-        class="touch-button-secondary"
-        data-view-dialog-initial-focus
-        data-action="workspace#closeViewDialog"
-      >
-        {{ t('common.close') }}
-      </button>
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          class="touch-button-secondary"
+          hidden
+          disabled
+          aria-disabled="true"
+          data-workspace-target="viewEditButton"
+          data-action="workspace#openEditFromView"
+        >
+          {{ t('cardViewDialog.editButton') }}
+        </button>
+
+        <button
+          type="button"
+          class="touch-button-secondary"
+          data-view-dialog-initial-focus
+          data-action="workspace#closeViewDialog"
+        >
+          {{ t('common.close') }}
+        </button>
+      </div>
     </div>
 
     <div class="mt-6 space-y-4">

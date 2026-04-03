@@ -50,6 +50,7 @@ export default class extends Controller {
     'viewReviewState',
     'viewRequestVerificationButton',
     'viewActionRegion',
+    'viewEditButton',
     'viewPromptRunButton',
     'viewCardTitle',
     'viewCardBody',
@@ -422,26 +423,75 @@ export default class extends Controller {
   }
 
   openEdit(event) {
+    const button = event.currentTarget;
     const board = this.activeBoard;
+    const cardId = button.dataset.cardId;
+    const card = board?.cards?.[cardId] ?? null;
+    const stageId = board
+      ? resolveBoardStageId(board, {
+          stageId: button.dataset.stageId,
+          columnId: button.dataset.columnId,
+          cardId
+        })
+      : null;
 
-    if (!board || !this.canEditActiveBoard) {
-      if (board) {
-        this.announce(this.t('errors.boardEditPermissionDenied'));
-      }
+    this.openEditForCard({
+      board,
+      stageId,
+      card,
+      requestedLocale: button.dataset.requestedLocale ?? button.dataset.locale ?? null,
+      triggerElement: button
+    });
+  }
+
+  openEditFromView(event) {
+    event.preventDefault();
+
+    const board = this.viewDialogState?.board ?? null;
+    const card = this.viewDialogState?.card ?? null;
+    const stageId = this.viewDialogState?.stageId ?? null;
+    const requestedLocale = this.viewDialogState?.selectedLocale ?? null;
+    const triggerElement = this.viewTriggerElement ?? null;
+    const boardState = board ? getBoardCollaborationState(board, this.viewerActor) : null;
+
+    if (!board || !card || !stageId || !boardState?.canEdit) {
       return;
     }
 
-    const button = event.currentTarget;
-    const cardId = button.dataset.cardId;
-    const stageId = resolveBoardStageId(board, {
-      stageId: button.dataset.stageId,
-      columnId: button.dataset.columnId,
-      cardId
-    });
-    const card = board.cards[cardId];
+    this.dismissViewDialog({ restoreFocus: false });
 
-    if (!card || !stageId) {
-      return;
+    this.openEditForCard({
+      board,
+      card,
+      stageId,
+      requestedLocale,
+      triggerElement
+    });
+  }
+
+  openEditForCard({
+    board,
+    card,
+    stageId,
+    requestedLocale = null,
+    triggerElement = null
+  } = {}) {
+    const boardState = board ? getBoardCollaborationState(board, this.viewerActor) : null;
+
+    if (!board || !boardState?.canEdit) {
+      if (board) {
+        this.announce(this.t('errors.boardEditPermissionDenied'));
+      }
+      return false;
+    }
+
+    const resolvedStageId = resolveBoardStageId(board, {
+      stageId,
+      cardId: card?.id
+    });
+
+    if (!card || !resolvedStageId) {
+      return false;
     }
 
     this.dispatchWorkspaceEvent('open-card-editor', {
@@ -449,14 +499,16 @@ export default class extends Controller {
       boardId: board.id,
       board,
       ...createRuntimeCardDialogState(card, board, {
-        requestedLocale: button.dataset.requestedLocale ?? button.dataset.locale ?? null,
+        requestedLocale,
         uiLocale: this.t.locale,
-        currentActorRole: this.activeBoardCollaborationState?.currentRole ?? null,
-        canEditLocalizedContent: this.canEditActiveBoard
+        currentActorRole: boardState?.currentRole ?? null,
+        canEditLocalizedContent: boardState?.canEdit ?? false
       }),
-      stageId,
-      triggerElement: button
+      stageId: resolvedStageId,
+      triggerElement
     });
+
+    return true;
   }
 
   openView(event) {
@@ -958,11 +1010,15 @@ export default class extends Controller {
       event.preventDefault();
     }
 
+    this.dismissViewDialog({ restoreFocus: true });
+  }
+
+  dismissViewDialog({ restoreFocus = true } = {}) {
     if (this.viewDialogTarget.open) {
       this.viewDialogTarget.close();
     }
 
-    if (this.viewTriggerElement?.isConnected) {
+    if (restoreFocus && this.viewTriggerElement?.isConnected) {
       this.viewTriggerElement.focus();
     }
 
@@ -1046,6 +1102,12 @@ export default class extends Controller {
       && resolvedStageId
       && shouldShowPromptRunForStage(board, resolvedStageId)
     );
+    const shouldShowEditButton = Boolean(
+      canEditBoard
+      && board
+      && card
+      && resolvedStageId
+    );
     const isPromptRunPending = Boolean(
       shouldShowPromptRunButton
       && promptRunRequestKey
@@ -1084,6 +1146,31 @@ export default class extends Controller {
 
     if (this.hasViewActionRegionTarget) {
       this.viewActionRegionTarget.hidden = !shouldShowPromptRunButton;
+    }
+
+    if (this.hasViewEditButtonTarget) {
+      this.viewEditButtonTarget.hidden = !shouldShowEditButton;
+      this.viewEditButtonTarget.disabled = !shouldShowEditButton;
+      this.viewEditButtonTarget.setAttribute(
+        'aria-disabled',
+        String(!shouldShowEditButton)
+      );
+
+      setOptionalDatasetValue(
+        this.viewEditButtonTarget,
+        'boardId',
+        shouldShowEditButton ? board.id : null
+      );
+      setOptionalDatasetValue(
+        this.viewEditButtonTarget,
+        'cardId',
+        shouldShowEditButton ? card.id : null
+      );
+      setOptionalDatasetValue(
+        this.viewEditButtonTarget,
+        'stageId',
+        shouldShowEditButton ? resolvedStageId : null
+      );
     }
 
     if (this.hasViewPromptRunButtonTarget) {
