@@ -17,7 +17,7 @@ This document provides a structural overview of the monorepo.
 ## Top-level structure
 
 ```text
-hanmoto-board/
+katei/
 ├── .agents/
 │   ├── env-inventory/
 │   │   ├── agents/
@@ -88,6 +88,8 @@ hanmoto-board/
 │       │   ├── background.webp
 │       │   └── favicon.svg
 │       ├── src/
+│       │   ├── ai/
+│       │   │   └── …
 │       │   ├── auth/
 │       │   │   └── …
 │       │   ├── data/
@@ -99,6 +101,8 @@ hanmoto-board/
 │       │   ├── middleware/
 │       │   │   └── …
 │       │   ├── routes/
+│       │   │   └── …
+│       │   ├── security/
 │       │   │   └── …
 │       │   ├── views/
 │       │   │   └── …
@@ -119,6 +123,7 @@ hanmoto-board/
 │       │   ├── board_collaborators_controller.test.js
 │       │   ├── board_editor_controller.test.js
 │       │   ├── board_language_policy.test.js
+│       │   ├── board_localization_glossary.test.js
 │       │   ├── board_options_controller.test.js
 │       │   ├── board_permissions.test.js
 │       │   ├── board_renderer.test.js
@@ -141,6 +146,7 @@ hanmoto-board/
 │       │   ├── mongo_client.test.js
 │       │   ├── mongo_workspace_record_repository.test.js
 │       │   ├── mutation_context.test.js
+│       │   ├── openai_localizer.test.js
 │       │   ├── session_cookie.test.js
 │       │   ├── stage_ui.test.js
 │       │   ├── verify_google_id_token.test.js
@@ -165,12 +171,10 @@ hanmoto-board/
 │       └── package.json
 ├── .gitignore
 ├── AGENTS.md
-├── hanmoto-codex-spec.md
 ├── monorepo-filetree.md
 ├── package-lock.json
 ├── package.json
-├── README.md
-└── ui_agent.md
+└── README.md
 ```
 
 ## Apps
