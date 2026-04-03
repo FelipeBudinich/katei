@@ -27,6 +27,16 @@ import { canViewerAccessWorkspace, filterWorkspaceForViewer } from '../src/works
 import { encryptBoardSecret } from '../src/security/board_secret_crypto.js';
 import { OpenAiLocalizerError } from '../src/ai/openai_localizer.js';
 
+function createReview(origin) {
+  return {
+    origin,
+    verificationRequestedBy: null,
+    verificationRequestedAt: null,
+    verifiedBy: null,
+    verifiedAt: null
+  };
+}
+
 test('GET /api/workspace returns normalized actor-filtered shared workspace data', async () => {
   const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_api_get', {
     memberRole: 'viewer',
@@ -287,7 +297,8 @@ test('POST /api/workspace/localizations/generate writes localized content, clear
       },
       timestamp: response.body.workspace.boards.member.cards[cardId].contentByLocale.ja.provenance.timestamp,
       includesHumanInput: false
-    }
+    },
+    review: createReview('ai')
   });
   assert.deepEqual(response.body.workspace.boards.member.cards[cardId].localeRequests, {});
   assert.equal(response.body.workspace.boards.member.aiLocalizationSecrets, undefined);

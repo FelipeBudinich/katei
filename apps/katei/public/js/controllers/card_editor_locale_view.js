@@ -255,6 +255,7 @@ function resolveEditableVariant(localizedView, { isReadOnly }) {
     title: '',
     detailsMarkdown: '',
     provenance: null,
+    review: null,
     isFallback: false,
     source: 'localized'
   };

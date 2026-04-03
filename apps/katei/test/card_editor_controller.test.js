@@ -233,6 +233,7 @@ test('editor can manually add a missing locale without an AI key configured', ()
     title: '',
     detailsMarkdown: '',
     provenance: null,
+    review: null,
     isFallback: false,
     source: 'localized'
   });

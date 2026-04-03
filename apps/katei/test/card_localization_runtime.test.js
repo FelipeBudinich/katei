@@ -10,6 +10,16 @@ import {
 } from '../public/js/domain/workspace_mutations.js';
 import { createEmptyWorkspace } from '../public/js/domain/workspace_read_model.js';
 
+function createReview(origin) {
+  return {
+    origin,
+    verificationRequestedBy: null,
+    verificationRequestedAt: null,
+    verifiedBy: null,
+    verifiedAt: null
+  };
+}
+
 test('createCard writes source-locale content for new cards', () => {
   const workspace = createWorkspaceWithLanguagePolicy({
     sourceLocale: 'ja',
@@ -38,7 +48,8 @@ test('createCard writes source-locale content for new cards', () => {
       },
       timestamp: card.updatedAt,
       includesHumanInput: true
-    }
+    },
+    review: createReview('human')
   });
 });
 
@@ -352,6 +363,7 @@ test('getBoardCardContentVariant returns localized provenance from the effective
       timestamp: '2026-03-31T12:00:00.000Z',
       includesHumanInput: false
     },
+    review: createReview('ai'),
     isFallback: true,
     source: 'localized'
   });

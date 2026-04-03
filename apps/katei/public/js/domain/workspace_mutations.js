@@ -1,6 +1,7 @@
 import { createBoardId, createCardId } from '../utils/id.js';
 import {
   createCardContentProvenance,
+  createCardContentReview,
   getStoredCardContentVariant,
   upsertCardContentVariant
 } from './card_localization.js';
@@ -132,6 +133,9 @@ export function createCard(workspace, boardId, input) {
           },
           timestamp,
           includesHumanInput: true
+        }),
+        review: createCardContentReview({
+          origin: 'human'
         })
       }
     }

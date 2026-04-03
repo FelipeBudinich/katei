@@ -29,6 +29,7 @@ import {
 } from '../../public/js/domain/board_permissions.js';
 import {
   createCardContentProvenance,
+  createCardContentReview,
   discardCardContentVariant,
   getStoredCardContentVariant,
   upsertCardContentVariant
@@ -697,6 +698,9 @@ function applyCardCreate(workspace, command, context) {
           },
           timestamp: context.now,
           includesHumanInput: true
+        }),
+        review: createCardContentReview({
+          origin: 'human'
         })
       }
     }
@@ -839,6 +843,11 @@ function applyCardLocaleUpsert(workspace, command, context) {
     timestamp: context.now,
     includesHumanInput
   });
+  const review = currentStoredVariant
+    ? undefined
+    : createCardContentReview({
+      origin: includesHumanInput ? 'human' : 'ai'
+    });
   let nextCard = upsertCardContentVariant(
     {
       ...card,
@@ -849,7 +858,8 @@ function applyCardLocaleUpsert(workspace, command, context) {
       title: nextTitle,
       detailsMarkdown: nextDetailsMarkdown
     },
-    provenance
+    provenance,
+    { review }
   );
 
   nextCard = clearCardLocaleRequest(nextCard, locale);

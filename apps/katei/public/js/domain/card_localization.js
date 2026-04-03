@@ -10,6 +10,9 @@ import {
 } from './card_localization_requests.js';
 import { isHumanAuthoredVariant } from './localized_content_guard.js';
 
+const CARD_CONTENT_REVIEW_ORIGIN_AI = 'ai';
+const CARD_CONTENT_REVIEW_ORIGIN_HUMAN = 'human';
+
 export class CardLocalizationGenerationConflictError extends Error {
   constructor(message, { code = 'LOCALIZATION_ALREADY_PRESENT', locale = null, status = 409 } = {}) {
     super(message);
@@ -30,6 +33,64 @@ export function createCardContentProvenance({
     timestamp: normalizeIsoTimestamp(timestamp, 'Card content provenance timestamp is required.'),
     includesHumanInput: Boolean(includesHumanInput)
   };
+}
+
+export function createCardContentReview({
+  origin,
+  verificationRequestedBy = null,
+  verificationRequestedAt = null,
+  verifiedBy = null,
+  verifiedAt = null
+} = {}) {
+  const requestedVerification = normalizeOptionalReviewEvent({
+    actor: verificationRequestedBy,
+    timestamp: verificationRequestedAt
+  });
+  const completedVerification = normalizeOptionalReviewEvent({
+    actor: verifiedBy,
+    timestamp: verifiedAt
+  });
+
+  return {
+    origin: normalizeRequiredReviewOrigin(origin),
+    verificationRequestedBy: requestedVerification?.actor ?? null,
+    verificationRequestedAt: requestedVerification?.timestamp ?? null,
+    verifiedBy: completedVerification?.actor ?? null,
+    verifiedAt: completedVerification?.timestamp ?? null
+  };
+}
+
+export function normalizeCardContentReview(review, { provenance = null, fallbackOrigin = null } = {}) {
+  const normalizedOrigin =
+    normalizeOptionalReviewOrigin(review?.origin)
+    ?? deriveCardContentReviewOriginFromProvenance(provenance, { fallbackOrigin });
+
+  if (!normalizedOrigin) {
+    return null;
+  }
+
+  return createCardContentReview({
+    origin: normalizedOrigin,
+    verificationRequestedBy: review?.verificationRequestedBy ?? null,
+    verificationRequestedAt: review?.verificationRequestedAt ?? null,
+    verifiedBy: review?.verifiedBy ?? null,
+    verifiedAt: review?.verifiedAt ?? null
+  });
+}
+
+export function deriveCardContentReviewOriginFromProvenance(
+  provenance,
+  { fallbackOrigin = CARD_CONTENT_REVIEW_ORIGIN_HUMAN } = {}
+) {
+  if (!isPlainObject(provenance)) {
+    return fallbackOrigin;
+  }
+
+  if (provenance.includesHumanInput === false) {
+    return CARD_CONTENT_REVIEW_ORIGIN_AI;
+  }
+
+  return CARD_CONTENT_REVIEW_ORIGIN_HUMAN;
 }
 
 export function resolveDefaultCardLocale({
@@ -162,7 +223,7 @@ export function getMissingRequiredLocales(board, card) {
   return languagePolicy.requiredLocales.filter((locale) => !localeStatuses.get(locale)?.hasContent);
 }
 
-export function upsertCardContentVariant(card, locale, patch, provenance) {
+export function upsertCardContentVariant(card, locale, patch, provenance, { review = undefined } = {}) {
   const normalizedLocale = canonicalizeContentLocale(locale);
 
   if (!normalizedLocale) {
@@ -172,6 +233,21 @@ export function upsertCardContentVariant(card, locale, patch, provenance) {
   const nextPatch = normalizeVariantPatch(patch);
   const currentContentByLocale = getContentByLocaleRecord(card);
   const currentVariant = normalizeStoredVariant(currentContentByLocale[normalizedLocale]);
+  const nextProvenance =
+    provenance === undefined
+      ? currentVariant.provenance ?? null
+      : createCardContentProvenance(provenance);
+  const nextReview =
+    review === undefined
+      ? currentVariant.review
+        ?? normalizeCardContentReview(null, {
+          provenance: nextProvenance,
+          fallbackOrigin: null
+        })
+      : normalizeCardContentReview(review, {
+        provenance: nextProvenance,
+        fallbackOrigin: null
+      });
 
   return {
     ...(isPlainObject(card) ? card : {}),
@@ -180,10 +256,8 @@ export function upsertCardContentVariant(card, locale, patch, provenance) {
       [normalizedLocale]: {
         ...currentVariant,
         ...nextPatch,
-        provenance:
-          provenance === undefined
-            ? currentVariant.provenance ?? null
-            : createCardContentProvenance(provenance)
+        provenance: nextProvenance,
+        review: nextReview
       }
     }
   };
@@ -259,6 +333,11 @@ export function applyGeneratedCardLocalization(card, locale, patch, { actor, tim
       actor,
       timestamp,
       includesHumanInput: false
+    },
+    {
+      review: createCardContentReview({
+        origin: CARD_CONTENT_REVIEW_ORIGIN_AI
+      })
     }
   );
 
@@ -369,21 +448,30 @@ function materializeVariant(variant, locale, { isFallback, source }) {
     title: variant.title,
     detailsMarkdown: variant.detailsMarkdown,
     provenance: cloneValue(variant.provenance),
+    review: cloneValue(variant.review),
     isFallback,
     source
   };
 }
 
 function normalizeStoredVariant(variant) {
-  const normalizedVariant = isPlainObject(variant) ? variant : {};
+  const hasStoredVariant = isPlainObject(variant);
+  const normalizedVariant = hasStoredVariant ? variant : {};
+  const normalizedProvenance = Object.prototype.hasOwnProperty.call(normalizedVariant, 'provenance')
+    ? normalizeStoredProvenance(normalizedVariant.provenance)
+    : null;
 
   return {
     ...normalizedVariant,
     title: typeof normalizedVariant.title === 'string' ? normalizedVariant.title : '',
     detailsMarkdown:
       typeof normalizedVariant.detailsMarkdown === 'string' ? normalizedVariant.detailsMarkdown : '',
-    provenance: Object.prototype.hasOwnProperty.call(normalizedVariant, 'provenance')
-      ? normalizeStoredProvenance(normalizedVariant.provenance)
+    provenance: normalizedProvenance,
+    review: hasStoredVariant
+      ? normalizeCardContentReview(normalizedVariant.review, {
+        provenance: normalizedProvenance,
+        fallbackOrigin: CARD_CONTENT_REVIEW_ORIGIN_HUMAN
+      })
       : null
   };
 }
@@ -432,7 +520,8 @@ function isValidLocalizedContentVariant(variant) {
       typeof variant.title === 'string' &&
       variant.title.trim() &&
       typeof variant.detailsMarkdown === 'string' &&
-      isValidProvenance(variant.provenance)
+      isValidProvenance(variant.provenance) &&
+      isValidReview(variant.review)
   );
 }
 
@@ -453,6 +542,27 @@ function isValidProvenanceActor(actor) {
       ['human', 'agent', 'system'].includes(actor.type) &&
       typeof actor.id === 'string' &&
       actor.id.trim()
+  );
+}
+
+function isValidReview(review) {
+  return review == null || (
+    isPlainObject(review) &&
+      isValidReviewOrigin(review.origin) &&
+      isValidOptionalReviewEvent(review.verificationRequestedBy, review.verificationRequestedAt) &&
+      isValidOptionalReviewEvent(review.verifiedBy, review.verifiedAt)
+  );
+}
+
+function isValidOptionalReviewEvent(actor, timestamp) {
+  if (actor == null && timestamp == null) {
+    return true;
+  }
+
+  return Boolean(
+    isValidProvenanceActor(actor) &&
+      typeof timestamp === 'string' &&
+      !Number.isNaN(new Date(timestamp).getTime())
   );
 }
 
@@ -483,12 +593,37 @@ function normalizeProvenanceActor(actor) {
   return { type, id };
 }
 
+function normalizeOptionalActor(actor) {
+  if (!isPlainObject(actor)) {
+    return null;
+  }
+
+  try {
+    return normalizeProvenanceActor(actor);
+  } catch (error) {
+    return null;
+  }
+}
+
 function normalizeIsoTimestamp(value, errorMessage) {
-  const normalizedValue = normalizeRequiredString(value, errorMessage);
-  const timestamp = new Date(normalizedValue);
+  const normalizedTimestamp = normalizeOptionalIsoTimestamp(value);
+
+  if (!normalizedTimestamp) {
+    throw new Error(errorMessage);
+  }
+
+  return normalizedTimestamp;
+}
+
+function normalizeOptionalIsoTimestamp(value) {
+  if (typeof value !== 'string' || !value.trim()) {
+    return null;
+  }
+
+  const timestamp = new Date(value);
 
   if (Number.isNaN(timestamp.getTime())) {
-    throw new Error('Card content provenance timestamp must be an ISO timestamp.');
+    return null;
   }
 
   return timestamp.toISOString();
@@ -502,6 +637,40 @@ function normalizeRequiredString(value, errorMessage) {
   }
 
   return normalizedValue;
+}
+
+function normalizeRequiredReviewOrigin(value) {
+  const normalizedOrigin = normalizeOptionalReviewOrigin(value);
+
+  if (!normalizedOrigin) {
+    throw new Error('Card content review origin is required.');
+  }
+
+  return normalizedOrigin;
+}
+
+function normalizeOptionalReviewOrigin(value) {
+  const normalizedOrigin = normalizeOptionalLocalizedString(value).toLowerCase();
+
+  return isValidReviewOrigin(normalizedOrigin) ? normalizedOrigin : null;
+}
+
+function normalizeOptionalReviewEvent({ actor = null, timestamp = null } = {}) {
+  const normalizedActor = normalizeOptionalActor(actor);
+  const normalizedTimestamp = normalizeOptionalIsoTimestamp(timestamp);
+
+  if (!normalizedActor || !normalizedTimestamp) {
+    return null;
+  }
+
+  return {
+    actor: normalizedActor,
+    timestamp: normalizedTimestamp
+  };
+}
+
+function isValidReviewOrigin(value) {
+  return value === CARD_CONTENT_REVIEW_ORIGIN_AI || value === CARD_CONTENT_REVIEW_ORIGIN_HUMAN;
 }
 
 function isPlainObject(value) {

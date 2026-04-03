@@ -49,6 +49,16 @@ function createActor({ type = 'human', id = 'viewer_123', email = null, name = n
   };
 }
 
+function createReview(origin) {
+  return {
+    origin,
+    verificationRequestedBy: null,
+    verificationRequestedAt: null,
+    verifiedBy: null,
+    verifiedAt: null
+  };
+}
+
 function createMembership({ type = 'human', id, role, email = null } = {}) {
   return {
     actor: {
@@ -128,18 +138,13 @@ function createWorkspaceWithCard({ memberships } = {}) {
     updatedAt: '2026-03-31T09:30:00.000Z',
     localeRequests: {},
     contentByLocale: {
-      en: {
+      en: createLocalizedVariant({
         title: 'Existing card',
         detailsMarkdown: 'Existing details',
-        provenance: {
-          actor: {
-            type: 'human',
-            id: 'viewer_admin'
-          },
-          timestamp: '2026-03-31T09:30:00.000Z',
-          includesHumanInput: true
-        }
-      }
+        actor: createActor({ id: 'viewer_admin' }),
+        timestamp: '2026-03-31T09:30:00.000Z',
+        includesHumanInput: true
+      })
     }
   };
   workspace.boards.main.stages.backlog.cardIds = ['card_1'];
@@ -171,7 +176,8 @@ function createLocalizedVariant({
   detailsMarkdown,
   actor = createActor({ id: 'viewer_admin' }),
   timestamp = '2026-03-31T09:30:00.000Z',
-  includesHumanInput = actor.type === 'human'
+  includesHumanInput = actor.type === 'human',
+  reviewOrigin = includesHumanInput ? 'human' : 'ai'
 } = {}) {
   return {
     title,
@@ -180,7 +186,8 @@ function createLocalizedVariant({
       actor,
       timestamp,
       includesHumanInput
-    }
+    },
+    review: createReview(reviewOrigin)
   };
 }
 
@@ -514,7 +521,8 @@ test('card.create mints a server-side card id and stores the card in backlog', (
       },
       timestamp: '2026-03-31T10:00:00.000Z',
       includesHumanInput: true
-    }
+    },
+    review: createReview('human')
   });
 });
 
@@ -645,7 +653,8 @@ test('admin and editor can upsert a selected locale without changing other local
         },
         timestamp: '2026-03-31T09:30:00.000Z',
         includesHumanInput: true
-      }
+      },
+      review: createReview('human')
     });
     assert.deepEqual(nextWorkspace.boards.main.cards.card_1.contentByLocale.ja, {
       title: '日本語タイトル',
@@ -657,7 +666,8 @@ test('admin and editor can upsert a selected locale without changing other local
         },
         timestamp: '2026-03-31T11:00:00.000Z',
         includesHumanInput: true
-      }
+      },
+      review: createReview('human')
     });
     assert.deepEqual(nextWorkspace.boards.main.cards.card_1.localeRequests, {});
   }
@@ -714,7 +724,8 @@ test('human actors can overwrite an existing human-authored localized variant', 
       },
       timestamp: '2026-03-31T11:00:00.000Z',
       includesHumanInput: true
-    }
+    },
+    review: createReview('human')
   });
 });
 
@@ -831,7 +842,8 @@ test('agent and system actors can create a missing localized variant', () => {
         },
         timestamp: '2026-03-31T11:00:00.000Z',
         includesHumanInput: false
-      }
+      },
+      review: createReview('ai')
     });
   }
 });
@@ -892,9 +904,63 @@ test('agent and system actors can update automation-authored localized variants'
         },
         timestamp: '2026-03-31T11:00:00.000Z',
         includesHumanInput: false
-      }
+      },
+      review: createReview('ai')
     });
   }
+});
+
+test('human edits keep the stored ai origin on an existing localized variant', () => {
+  const workspace = createWorkspaceWithCard({
+    memberships: [createMembership({ id: 'viewer_123', role: 'editor' })]
+  });
+  workspace.boards.main.languagePolicy = {
+    sourceLocale: 'en',
+    defaultLocale: 'en',
+    supportedLocales: ['en', 'ja'],
+    requiredLocales: ['en']
+  };
+  workspace.boards.main.cards.card_1.contentByLocale.ja = createLocalizedVariant({
+    title: 'AI 初稿',
+    detailsMarkdown: '自動で生成されました。',
+    actor: createActor({ type: 'agent', id: 'seed_translator' }),
+    timestamp: '2026-03-31T09:45:00.000Z',
+    includesHumanInput: false
+  });
+
+  const { workspace: nextWorkspace, result } = applyWorkspaceCommand({
+    record: createRecord(workspace, 0),
+    command: {
+      clientMutationId: 'locale_human_edit_preserves_ai_origin',
+      type: 'card.locale.upsert',
+      payload: {
+        boardId: 'main',
+        cardId: 'card_1',
+        locale: 'ja',
+        title: '人が見直したタイトル',
+        detailsMarkdown: '人が見直した本文'
+      }
+    },
+    expectedRevision: 0,
+    context: createContext({
+      now: '2026-03-31T11:00:00.000Z'
+    })
+  });
+
+  assert.equal(result.noOp, false);
+  assert.deepEqual(nextWorkspace.boards.main.cards.card_1.contentByLocale.ja, {
+    title: '人が見直したタイトル',
+    detailsMarkdown: '人が見直した本文',
+    provenance: {
+      actor: {
+        type: 'human',
+        id: 'viewer_123'
+      },
+      timestamp: '2026-03-31T11:00:00.000Z',
+      includesHumanInput: true
+    },
+    review: createReview('ai')
+  });
 });
 
 test('explicit override allows automation to overwrite a human-authored localized variant', () => {
@@ -948,7 +1014,8 @@ test('explicit override allows automation to overwrite a human-authored localize
       },
       timestamp: '2026-03-31T11:00:00.000Z',
       includesHumanInput: false
-    }
+    },
+    review: createReview('human')
   });
 });
 

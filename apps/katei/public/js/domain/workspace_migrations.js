@@ -9,7 +9,11 @@ import {
 import { normalizeBoardLocalizationGlossary } from './board_localization_glossary.js';
 import { getDefaultBoardStageActionIds, isValidBoardStageActionId } from './board_stage_actions.js';
 import { createDefaultBoardStages, createDefaultBoardTemplates } from './board_workflow.js';
-import { createCardContentProvenance } from './card_localization.js';
+import {
+  createCardContentProvenance,
+  createCardContentReview,
+  normalizeCardContentReview
+} from './card_localization.js';
 import { normalizeCardLocaleRequests } from './card_localization_requests.js';
 import {
   WORKSPACE_ID,
@@ -182,6 +186,9 @@ export function migrateCardToLocalizedContent(card, board, { now = null } = {}) 
         },
         timestamp: resolveMigrationTimestamp(migratedCard, board, now),
         includesHumanInput: true
+      }),
+      review: createCardContentReview({
+        origin: 'human'
       })
     };
   }
@@ -365,12 +372,17 @@ function migrateBoardLanguagePolicy(policy) {
 
 function migrateLocalizedContentVariant(variant, { fallbackTimestamp }) {
   const migratedVariant = isPlainObject(variant) ? structuredClone(variant) : {};
+  const normalizedProvenance = normalizeProvenance(migratedVariant.provenance, fallbackTimestamp);
 
   return {
     ...migratedVariant,
     title: typeof migratedVariant.title === 'string' ? migratedVariant.title : '',
     detailsMarkdown: typeof migratedVariant.detailsMarkdown === 'string' ? migratedVariant.detailsMarkdown : '',
-    provenance: normalizeProvenance(migratedVariant.provenance, fallbackTimestamp)
+    provenance: normalizedProvenance,
+    review: normalizeCardContentReview(migratedVariant.review, {
+      provenance: normalizedProvenance,
+      fallbackOrigin: 'human'
+    })
   };
 }
 

@@ -4,12 +4,23 @@ import {
   applyGeneratedCardLocalization,
   CardLocalizationGenerationConflictError,
   createCardContentProvenance,
+  getStoredCardContentVariant,
   getCardContentVariant,
   getMissingRequiredLocales,
   listCardLocales,
   resolveDefaultCardLocale,
   upsertCardContentVariant
 } from '../public/js/domain/card_localization.js';
+
+function createReview(origin) {
+  return {
+    origin,
+    verificationRequestedBy: null,
+    verificationRequestedAt: null,
+    verifiedBy: null,
+    verifiedAt: null
+  };
+}
 
 test('resolveDefaultCardLocale applies explicit, ui-default, board, and first-available precedence in order', () => {
   const board = {
@@ -282,6 +293,7 @@ test('getCardContentVariant reads explicit localized variants and listCardLocale
         timestamp: '2026-03-31T10:00:00.000Z',
         includesHumanInput: true
       },
+      review: createReview('human'),
       isFallback: false,
       source: 'localized'
     }
@@ -353,6 +365,7 @@ test('getCardContentVariant falls back from requested locale to default, then so
         timestamp: '2026-03-31T10:00:00.000Z',
         includesHumanInput: false
       },
+      review: createReview('ai'),
       isFallback: true,
       source: 'localized'
     }
@@ -432,7 +445,8 @@ test('upsertCardContentVariant adds and updates localized variants without mutat
         actor: { type: 'human', id: 'viewer_123' },
         timestamp: '2026-03-31T12:00:00.000Z',
         includesHumanInput: true
-      }
+      },
+      review: createReview('human')
     }
   });
 
@@ -456,8 +470,28 @@ test('upsertCardContentVariant adds and updates localized variants without mutat
       actor: { type: 'agent', id: 'translator_1' },
       timestamp: '2026-03-31T13:00:00.000Z',
       includesHumanInput: false
-    }
+    },
+    review: createReview('human')
   });
+});
+
+test('getStoredCardContentVariant derives fallback origin when review metadata is missing', () => {
+  const card = {
+    id: 'card_legacy_review_fallback',
+    contentByLocale: {
+      ja: {
+        title: '日本語タイトル',
+        detailsMarkdown: '日本語本文',
+        provenance: {
+          actor: { type: 'agent', id: 'translator_1' },
+          timestamp: '2026-03-31T10:00:00.000Z',
+          includesHumanInput: false
+        }
+      }
+    }
+  };
+
+  assert.deepEqual(getStoredCardContentVariant(card, 'ja')?.review, createReview('ai'));
 });
 
 test('applyGeneratedCardLocalization stores automated provenance and clears an open locale request', () => {
@@ -507,7 +541,8 @@ test('applyGeneratedCardLocalization stores automated provenance and clears an o
       actor: { type: 'agent', id: 'openai-localizer' },
       timestamp: '2026-03-31T10:00:00.000Z',
       includesHumanInput: false
-    }
+    },
+    review: createReview('ai')
   });
   assert.deepEqual(localizedCard.localeRequests, {});
 });

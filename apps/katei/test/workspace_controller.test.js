@@ -1124,6 +1124,13 @@ test('openEdit and openView card dialog state preserves raw localized card data 
     title: 'Titulo por defecto',
     detailsMarkdown: 'Detalles por defecto',
     provenance: null,
+    review: {
+      origin: 'human',
+      verificationRequestedBy: null,
+      verificationRequestedAt: null,
+      verifiedBy: null,
+      verifiedAt: null
+    },
     isFallback: true,
     source: 'localized'
   });
@@ -1137,6 +1144,13 @@ test('openEdit and openView card dialog state preserves raw localized card data 
     title: 'English source',
     detailsMarkdown: 'English details',
     provenance: null,
+    review: {
+      origin: 'human',
+      verificationRequestedBy: null,
+      verificationRequestedAt: null,
+      verifiedBy: null,
+      verifiedAt: null
+    },
     isFallback: true,
     source: 'localized'
   });

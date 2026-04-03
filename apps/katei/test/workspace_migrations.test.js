@@ -10,6 +10,16 @@ import {
 import { WORKSPACE_VERSION } from '../public/js/domain/workspace_read_model.js';
 import { createHomeWorkspaceId } from '../src/workspaces/workspace_record.js';
 
+function createReview(origin) {
+  return {
+    origin,
+    verificationRequestedBy: null,
+    verificationRequestedAt: null,
+    verifiedBy: null,
+    verifiedAt: null
+  };
+}
+
 test('migrateWorkspaceToV6 upgrades a legacy v7 workspace to the current shared-workspace schema', () => {
   const workspace = createLegacyWorkspace({
     workspaceId: 'sub_123',
@@ -291,7 +301,8 @@ test('migrateWorkspaceSnapshot repairs legacy jp locale keys to canonical ja', (
         actor: { type: 'system', id: 'legacy-migration' },
         timestamp: '2026-03-31T10:00:00.000Z',
         includesHumanInput: true
-      }
+      },
+      review: createReview('human')
     }
   });
   assert.deepEqual(migratedWorkspace.boards.main.cards.card_legacy_jp.localeRequests, {
@@ -340,9 +351,42 @@ test('migrateCardToLocalizedContent keeps canonical ja when both ja and legacy j
         actor: { type: 'system', id: 'legacy-migration' },
         timestamp: '2026-03-31T10:00:00.000Z',
         includesHumanInput: true
-      }
+      },
+      review: createReview('human')
     }
   });
+});
+
+test('migrateCardToLocalizedContent derives ai origin for legacy variants without review metadata', () => {
+  const migratedCard = migrateCardToLocalizedContent(
+    {
+      id: 'card_ai_origin_fallback',
+      priority: 'important',
+      createdAt: '2026-03-31T09:00:00.000Z',
+      updatedAt: '2026-03-31T10:00:00.000Z',
+      contentByLocale: {
+        ja: {
+          title: 'AI 日本語タイトル',
+          detailsMarkdown: 'AI 日本語本文',
+          provenance: {
+            actor: { type: 'agent', id: 'translator_1' },
+            timestamp: '2026-03-31T10:00:00.000Z',
+            includesHumanInput: false
+          }
+        }
+      }
+    },
+    {
+      languagePolicy: {
+        sourceLocale: 'en',
+        defaultLocale: 'ja',
+        supportedLocales: ['en', 'ja'],
+        requiredLocales: ['en']
+      }
+    }
+  );
+
+  assert.deepEqual(migratedCard.contentByLocale.ja.review, createReview('ai'));
 });
 
 test('migrateCardToLocalizedContent keeps existing localized variants authoritative over stale legacy aliases', () => {
