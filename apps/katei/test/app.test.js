@@ -409,9 +409,8 @@ test('GET /boards?lang=ja renders localized card content in server HTML and keep
   assert.equal(response.status, 200);
   assert.match(response.text, /<html lang="ja" data-ui-locale="ja">/);
   assert.match(response.text, /<option value="ja" selected>\s*日本語\s*<\/option>/);
-  assert.match(response.text, /日本語チェックリスト/);
-  assert.match(response.text, /日本語プレビュー/);
-  assert.doesNotMatch(response.text, /English checklist/);
+  assert.match(response.text, /<h3 class="card-item-title text-base text-strong" data-card-field="title">日本語チェックリスト<\/h3>/);
+  assert.match(response.text, /<p\s+class="text-sm leading-6 text-muted"[\s\S]*>\s*日本語プレビュー\s*<\/p>/);
   assert.equal(bootstrapPayload.workspace.boards.main.cards[cardId].contentByLocale.ja.title, '日本語チェックリスト');
   assert.equal(bootstrapPayload.workspace.boards.main.cards[cardId].contentByLocale.ja.detailsMarkdown, '日本語プレビュー');
 });
@@ -427,7 +426,6 @@ test('workspace template renders the no-board header with both Options and Profi
         name: 'No Boards Viewer'
       },
       createTranslator('en'),
-      'en',
       workspace,
       {
         revision: 1,
@@ -464,7 +462,6 @@ test('workspace template renders edit localization controls and a simplified loc
         name: 'Locale Editor'
       },
       createTranslator('en'),
-      'en',
       workspace,
       {
         revision: 1,
@@ -516,7 +513,6 @@ test('workspace template renders the board editor without a templates field', ()
         name: 'Board Editor Viewer'
       },
       createTranslator('en'),
-      'en',
       workspace,
       {
         revision: 1,
@@ -1594,6 +1590,15 @@ test('workspace page first paint uses the active ui locale for rendered board ca
     requiredLocales: ['en']
   };
   board.stages.backlog.cardIds = [cardId];
+  board.collaboration.memberships = [
+    {
+      actor: {
+        type: 'human',
+        id: 'sub_locale_render'
+      },
+      role: 'editor'
+    }
+  ];
 
   const html = renderWorkspacePage(
     buildWorkspacePageModel(

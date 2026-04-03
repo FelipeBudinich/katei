@@ -137,6 +137,27 @@ test('getBoardCardContentVariant resolves ui locale, then default, then source, 
           detailsMarkdown: 'English details'
         }
       }),
+      board,
+      {
+        requestedLocale: 'ja',
+        uiLocale: 'en'
+      }
+    )?.locale,
+    'es-CL'
+  );
+
+  assert.equal(
+    getBoardCardContentVariant(
+      createCardWithContent({
+        'es-CL': {
+          title: 'Titulo por defecto',
+          detailsMarkdown: 'Detalles por defecto'
+        },
+        en: {
+          title: 'English title',
+          detailsMarkdown: 'English details'
+        }
+      }),
       board
     )?.locale,
     'es-CL'

@@ -1182,10 +1182,10 @@ test('openView uses the dedicated view dialog and limits locales to present loca
       controller.viewLocaleSelectTarget.options.map((option) => option.value),
       ['en', 'es-CL']
     );
-    assert.equal(controller.viewLocaleSelectTarget.value, 'en');
-    assert.equal(controller.viewDialogState.selectedLocale, 'en');
-    assert.equal(controller.viewCardTitleTarget.textContent, 'English source');
-    assert.equal(controller.viewCardBodyTarget.innerHTML, '<p>English details</p>');
+    assert.equal(controller.viewLocaleSelectTarget.value, 'es-CL');
+    assert.equal(controller.viewDialogState.selectedLocale, 'es-CL');
+    assert.equal(controller.viewCardTitleTarget.textContent, 'Titulo por defecto');
+    assert.equal(controller.viewCardBodyTarget.innerHTML, '<p>Detalles por defecto</p>');
     assert.equal(controller.viewCardPrioritySectionTarget.hidden, false);
     assert.equal(controller.viewCardUpdatedTarget.textContent, 'Apr 1, 2026, 8:00 AM');
   } finally {

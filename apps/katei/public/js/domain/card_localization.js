@@ -40,6 +40,7 @@ export function resolveDefaultCardLocale({
   const languagePolicy = normalizeBoardLanguagePolicy(board?.languagePolicy ?? null);
   const normalizedRequestedLocale = canonicalizeContentLocale(requestedLocale);
   const normalizedUiLocale = canonicalizeContentLocale(uiLocale);
+  const hasExplicitRequestedLocale = normalizedRequestedLocale != null;
   const orderedCandidateLocales = [];
   const seenCandidateLocales = new Set();
 
@@ -60,7 +61,7 @@ export function resolveDefaultCardLocale({
     return normalizedRequestedLocale;
   }
 
-  if (normalizedUiLocale && candidateLocaleSet.has(normalizedUiLocale)) {
+  if (!hasExplicitRequestedLocale && normalizedUiLocale && candidateLocaleSet.has(normalizedUiLocale)) {
     return normalizedUiLocale;
   }
 

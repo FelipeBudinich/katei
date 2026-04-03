@@ -11,7 +11,7 @@ import {
   upsertCardContentVariant
 } from '../public/js/domain/card_localization.js';
 
-test('resolveDefaultCardLocale applies requested, ui, board, and first-available precedence in order', () => {
+test('resolveDefaultCardLocale applies explicit, ui-default, board, and first-available precedence in order', () => {
   const board = {
     languagePolicy: {
       sourceLocale: 'en',
@@ -29,6 +29,16 @@ test('resolveDefaultCardLocale applies requested, ui, board, and first-available
       candidateLocales: ['en', 'es-CL', 'ja']
     }),
     'ja'
+  );
+
+  assert.equal(
+    resolveDefaultCardLocale({
+      board,
+      requestedLocale: 'ja',
+      uiLocale: 'en',
+      candidateLocales: ['en', 'es-CL']
+    }),
+    'es-CL'
   );
 
   assert.equal(
