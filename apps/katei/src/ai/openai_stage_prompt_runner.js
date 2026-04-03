@@ -18,10 +18,18 @@ const STAGE_PROMPT_RESPONSE_SCHEMA = Object.freeze({
       type: 'string'
     },
     priority: {
-      type: 'string'
+      anyOf: [
+        {
+          type: 'string',
+          enum: ['urgent', 'important', 'normal']
+        },
+        {
+          type: 'null'
+        }
+      ]
     }
   },
-  required: ['title', 'detailsMarkdown'],
+  required: ['title', 'detailsMarkdown', 'priority'],
   additionalProperties: false
 });
 
@@ -185,6 +193,7 @@ function normalizeStagePromptRequest({
   return {
     apiKey: normalizedApiKey,
     boardTitle: normalizeOptionalString(board?.title),
+    sourceLocale: normalizedSourceLocale,
     boardSourceLocale: normalizedSourceLocale,
     sourceStageId,
     sourceStageTitle: normalizeOptionalString(board?.stages?.[sourceStageId]?.title),
