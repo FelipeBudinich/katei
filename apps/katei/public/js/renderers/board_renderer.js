@@ -174,13 +174,13 @@ function createCardElement({ board, card, stageId, templates, uiLocale, dateTime
     metaElement.textContent = dateTimeFormatter.format(new Date(card.updatedAt));
   }
 
-  for (const button of cardNode.querySelectorAll('[data-card-id]')) {
-    button.dataset.cardId = card.id;
+  for (const triggerElement of cardNode.querySelectorAll('[data-card-id]')) {
+    triggerElement.dataset.cardId = card.id;
   }
 
-  for (const button of cardNode.querySelectorAll('[data-column-id], [data-stage-id]')) {
-    button.dataset.stageId = stageId;
-    button.dataset.columnId = stageId;
+  for (const triggerElement of cardNode.querySelectorAll('[data-column-id], [data-stage-id]')) {
+    triggerElement.dataset.stageId = stageId;
+    triggerElement.dataset.columnId = stageId;
   }
 
   return cardNode;

@@ -762,17 +762,22 @@
   }
   .card-item-toolbar {
     display: grid;
-    grid-template-columns: auto minmax(0,1fr) auto;
+    grid-template-columns: minmax(0,1fr) auto;
     align-items: center;
     gap: calc(var(--spacing) * 3);
     padding-top: calc(var(--spacing) * 4);
     padding-bottom: calc(var(--spacing) * 3);
     padding-inline: 0;
+    cursor: pointer;
     background-color: var(--color-bg-header-glass);
     @supports (color: color-mix(in srgb, red, red)) {
       background-color: color-mix( in srgb, var(--color-bg-header-glass) 70%, var(--card-priority-accent, transparent) 30% );
     }
     border-bottom: 0.2rem solid var(--card-priority-accent, transparent);
+  }
+  .card-item-toolbar:focus-visible {
+    outline: 0.15rem solid var(--color-focus-ring);
+    outline-offset: 0.15rem;
   }
   .card-item-title {
     min-width: 0;

@@ -1,18 +1,15 @@
 <article class="card-item" data-card-id="{{ card.id }}" data-stage-id="{{ columnId }}" data-column-id="{{ columnId }}" data-priority="{{ card.priority }}">
-  <header class="card-item-toolbar">
+  <header
+    class="card-item-toolbar"
+    data-action="click->workspace#openViewFromToolbar keydown->workspace#openViewFromToolbarKeydown"
+    data-card-id="{{ card.id }}"
+    data-stage-id="{{ columnId }}"
+    data-column-id="{{ columnId }}"
+    role="button"
+    tabindex="0"
+    aria-label="{{ t('cardItem.viewAriaLabel') }}"
+  >
     <h3 class="card-item-title text-base text-strong" data-card-field="title">{{ card.title }}</h3>
-
-    <button
-      type="button"
-      class="card-item-action px-3"
-      aria-label="{{ t('cardItem.viewAriaLabel') }}"
-      data-action="workspace#openView"
-      data-card-id="{{ card.id }}"
-      data-stage-id="{{ columnId }}"
-      data-column-id="{{ columnId }}"
-    >
-      <span class="card-item-view-icon" aria-hidden="true"></span>
-    </button>
   </header>
 
   <div class="card-item-body">

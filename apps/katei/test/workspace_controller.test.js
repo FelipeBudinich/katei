@@ -1422,6 +1422,123 @@ test('openView uses the dedicated view dialog and limits locales to present loca
   }
 });
 
+test('openViewFromToolbar opens view mode for the correct card when the toolbar is clicked', () => {
+  const restoreDom = installViewDialogDomStubs();
+
+  try {
+    const { controller, card } = createViewDialogController({ uiLocale: 'ja' });
+    const trigger = createViewTriggerDouble(card.id, 'review');
+    const title = createToolbarDescendantDouble(trigger);
+
+    WorkspaceController.prototype.openViewFromToolbar.call(controller, {
+      currentTarget: trigger,
+      target: title
+    });
+
+    assert.equal(controller.viewDialogTarget.open, true);
+    assert.equal(controller.viewTriggerElement, trigger);
+    assert.equal(controller.viewDialogState.card, card);
+    assert.equal(controller.viewDialogState.stageId, 'review');
+    assert.equal(controller.viewLocaleSelectTarget.value, 'es-CL');
+  } finally {
+    restoreDom();
+  }
+});
+
+test('openViewFromToolbarKeydown opens view mode on Enter', () => {
+  const restoreDom = installViewDialogDomStubs();
+
+  try {
+    const { controller, card } = createViewDialogController({ uiLocale: 'ja' });
+    const trigger = createViewTriggerDouble(card.id, 'review');
+
+    WorkspaceController.prototype.openViewFromToolbarKeydown.call(controller, {
+      key: 'Enter',
+      currentTarget: trigger,
+      target: trigger
+    });
+
+    assert.equal(controller.viewDialogTarget.open, true);
+    assert.equal(controller.viewTriggerElement, trigger);
+    assert.equal(controller.viewDialogState.stageId, 'review');
+  } finally {
+    restoreDom();
+  }
+});
+
+test('openViewFromToolbarKeydown opens view mode on Space and prevents default scrolling', () => {
+  const restoreDom = installViewDialogDomStubs();
+
+  try {
+    const { controller, card } = createViewDialogController({ uiLocale: 'ja' });
+    const trigger = createViewTriggerDouble(card.id, 'review');
+    let prevented = false;
+
+    WorkspaceController.prototype.openViewFromToolbarKeydown.call(controller, {
+      key: ' ',
+      currentTarget: trigger,
+      target: trigger,
+      preventDefault() {
+        prevented = true;
+      }
+    });
+
+    assert.equal(prevented, true);
+    assert.equal(controller.viewDialogTarget.open, true);
+    assert.equal(controller.viewTriggerElement, trigger);
+  } finally {
+    restoreDom();
+  }
+});
+
+test('openViewFromToolbarKeydown ignores non-activation keys', () => {
+  const restoreDom = installViewDialogDomStubs();
+
+  try {
+    const { controller, card } = createViewDialogController({ uiLocale: 'ja' });
+    const trigger = createViewTriggerDouble(card.id, 'review');
+
+    WorkspaceController.prototype.openViewFromToolbarKeydown.call(controller, {
+      key: 'Escape',
+      currentTarget: trigger,
+      target: trigger
+    });
+
+    assert.equal(controller.viewDialogTarget.open, false);
+    assert.equal(controller.viewDialogState, null);
+    assert.equal(controller.viewTriggerElement, null);
+  } finally {
+    restoreDom();
+  }
+});
+
+test('toolbar view handlers ignore interactive descendants inside the toolbar', () => {
+  const restoreDom = installViewDialogDomStubs();
+
+  try {
+    const { controller, card } = createViewDialogController({ uiLocale: 'ja' });
+    const trigger = createViewTriggerDouble(card.id, 'review');
+    const childButton = createToolbarDescendantDouble(trigger, { matchToken: 'button' });
+
+    WorkspaceController.prototype.openViewFromToolbar.call(controller, {
+      currentTarget: trigger,
+      target: childButton
+    });
+    WorkspaceController.prototype.openViewFromToolbarKeydown.call(controller, {
+      key: 'Enter',
+      currentTarget: trigger,
+      target: childButton
+    });
+
+    assert.equal(controller.viewDialogTarget.open, false);
+    assert.equal(controller.viewDialogTarget.showModalCalls, 0);
+    assert.equal(controller.viewDialogState, null);
+    assert.equal(controller.viewTriggerElement, null);
+  } finally {
+    restoreDom();
+  }
+});
+
 test('openView shows the prompt-run button in the modal for editable prompt-enabled cards', () => {
   const restoreDom = installViewDialogDomStubs();
 
@@ -1742,15 +1859,16 @@ test('openEditFromView closes the view dialog and reuses the edit payload shape'
   }
 });
 
-test('closeViewDialog restores focus to the original view trigger', () => {
+test('closeViewDialog restores focus to the original toolbar view trigger', () => {
   const restoreDom = installViewDialogDomStubs();
 
   try {
     const { controller, card } = createViewDialogController();
     const trigger = createViewTriggerDouble(card.id, 'review');
 
-    WorkspaceController.prototype.openView.call(controller, {
-      currentTarget: trigger
+    WorkspaceController.prototype.openViewFromToolbar.call(controller, {
+      currentTarget: trigger,
+      target: trigger
     });
 
     WorkspaceController.prototype.closeViewDialog.call(controller, {
@@ -2779,7 +2897,8 @@ function createViewDialogController({
 }
 
 function createViewTriggerDouble(cardId, stageId, { requestedLocale = null } = {}) {
-  return {
+  const containedNodes = new Set();
+  const trigger = {
     dataset: {
       cardId,
       stageId,
@@ -2787,10 +2906,38 @@ function createViewTriggerDouble(cardId, stageId, { requestedLocale = null } = {
       ...(requestedLocale ? { requestedLocale } : {})
     },
     isConnected: true,
+    contains(node) {
+      return node === trigger || containedNodes.has(node);
+    },
     focus() {
       this.focused = true;
     }
   };
+
+  trigger.addContainedNode = (node) => {
+    containedNodes.add(node);
+    return node;
+  };
+
+  return trigger;
+}
+
+function createToolbarDescendantDouble(container, { matchToken = null } = {}) {
+  const descendant = {
+    closest(selector) {
+      if (matchToken && selector.includes(matchToken)) {
+        return descendant;
+      }
+
+      if (selector.includes('[role="button"]')) {
+        return container;
+      }
+
+      return null;
+    }
+  };
+
+  return container.addContainedNode(descendant);
 }
 
 function createDialogDouble() {

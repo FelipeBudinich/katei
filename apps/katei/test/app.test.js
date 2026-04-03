@@ -409,8 +409,16 @@ test('GET /boards?lang=ja renders localized card content in server HTML and keep
   assert.equal(response.status, 200);
   assert.match(response.text, /<html lang="ja" data-ui-locale="ja">/);
   assert.match(response.text, /<option value="ja" selected>\s*日本語\s*<\/option>/);
+  assert.match(
+    response.text,
+    new RegExp(
+      `<header\\s+class="card-item-toolbar"[\\s\\S]*?data-action="click->workspace#openViewFromToolbar keydown->workspace#openViewFromToolbarKeydown"[\\s\\S]*?data-card-id="${escapeForRegex(cardId)}"[\\s\\S]*?data-stage-id="backlog"[\\s\\S]*?data-column-id="backlog"[\\s\\S]*?role="button"[\\s\\S]*?tabindex="0"[\\s\\S]*?aria-label="カードを表示"`
+    )
+  );
   assert.match(response.text, /<h3 class="card-item-title text-base text-strong" data-card-field="title">日本語チェックリスト<\/h3>/);
   assert.match(response.text, /<p\s+class="text-sm leading-6 text-muted"[\s\S]*>\s*日本語プレビュー\s*<\/p>/);
+  assert.doesNotMatch(response.text, /data-action="workspace#openView"/);
+  assert.doesNotMatch(response.text, /card-item-view-icon/);
   assert.equal(bootstrapPayload.workspace.boards.main.cards[cardId].contentByLocale.ja.title, '日本語チェックリスト');
   assert.equal(bootstrapPayload.workspace.boards.main.cards[cardId].contentByLocale.ja.detailsMarkdown, '日本語プレビュー');
 });

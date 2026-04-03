@@ -322,7 +322,7 @@ test('renderBoardState does not query a board-card prompt-run button', () => {
   assert.equal(renderedCard.queriedSelectors.includes('[data-card-field="promptRunButton"]'), false);
 });
 
-test('renderBoardState does not query a board-card edit button and still wires the view button datasets', () => {
+test('renderBoardState does not query a board-card edit button and still wires the toolbar trigger datasets', () => {
   const board = createWorkspaceBoard({
     id: 'board_modal_edit',
     title: 'Modal edit board',
@@ -394,7 +394,7 @@ test('renderBoardState does not query a board-card edit button and still wires t
 
   assert.ok(renderedCard);
   assert.equal(renderedCard.queriedSelectors.includes('[data-card-field="editButton"]'), false);
-  assert.deepEqual(renderedCard.viewButton.dataset, {
+  assert.deepEqual(renderedCard.toolbarTrigger.dataset, {
     cardId: card.id,
     stageId: 'review',
     columnId: 'review'
@@ -498,11 +498,11 @@ function createInspectableCardNodeDouble() {
     }
   };
   const metaElement = { textContent: '' };
-  const viewButton = { dataset: {} };
+  const toolbarTrigger = { dataset: {} };
 
   return {
     dataset: {},
-    viewButton,
+    toolbarTrigger,
     queriedSelectors,
     querySelector(selector) {
       queriedSelectors.push(selector);
@@ -522,11 +522,11 @@ function createInspectableCardNodeDouble() {
     },
     querySelectorAll(selector) {
       if (selector === '[data-card-id]') {
-        return [viewButton];
+        return [toolbarTrigger];
       }
 
       if (selector === '[data-column-id], [data-stage-id]') {
-        return [viewButton];
+        return [toolbarTrigger];
       }
 
       return [];

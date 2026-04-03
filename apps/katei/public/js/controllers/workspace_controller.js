@@ -512,33 +512,64 @@ export default class extends Controller {
   }
 
   openView(event) {
-    const board = this.activeBoard;
+    this.openViewForCardTrigger(event?.currentTarget ?? null);
+  }
 
-    if (!board) {
+  openViewFromToolbar(event) {
+    const triggerElement = event?.currentTarget ?? null;
+
+    if (!triggerElement || this.isEventFromInteractiveDescendant(event, triggerElement)) {
       return;
     }
 
-    const button = event.currentTarget;
-    const cardId = button.dataset.cardId;
+    this.openViewForCardTrigger(triggerElement);
+  }
+
+  openViewFromToolbarKeydown(event) {
+    const triggerElement = event?.currentTarget ?? null;
+
+    if (!triggerElement || this.isEventFromInteractiveDescendant(event, triggerElement)) {
+      return;
+    }
+
+    if (event.key !== 'Enter' && event.key !== ' ' && event.key !== 'Spacebar') {
+      return;
+    }
+
+    if (event.key === ' ' || event.key === 'Spacebar') {
+      event.preventDefault();
+    }
+
+    this.openViewForCardTrigger(triggerElement);
+  }
+
+  openViewForCardTrigger(triggerElement) {
+    const board = this.activeBoard;
+
+    if (!board || !triggerElement) {
+      return false;
+    }
+
+    const cardId = triggerElement.dataset.cardId;
     const stageId = resolveBoardStageId(board, {
-      stageId: button.dataset.stageId,
-      columnId: button.dataset.columnId,
+      stageId: triggerElement.dataset.stageId,
+      columnId: triggerElement.dataset.columnId,
       cardId
     });
     const card = board.cards[cardId];
 
     if (!card || !stageId) {
-      return;
+      return false;
     }
 
     const boardState = getBoardCollaborationState(board, this.viewerActor);
 
-    this.viewTriggerElement = button;
+    this.viewTriggerElement = triggerElement;
     this.viewDialogState = {
       board,
       card,
       stageId,
-      selectedLocale: button.dataset.requestedLocale ?? button.dataset.locale ?? null,
+      selectedLocale: triggerElement.dataset.requestedLocale ?? triggerElement.dataset.locale ?? null,
       canRequestHumanVerification: boardState?.canRead ?? false,
       canEditBoard: boardState?.canEdit ?? false
     };
@@ -563,6 +594,27 @@ export default class extends Controller {
         .querySelector?.('[data-view-dialog-initial-focus]')
         ?.focus?.();
     });
+
+    return true;
+  }
+
+  isEventFromInteractiveDescendant(event, container) {
+    const target = event?.target ?? null;
+
+    if (!container || !target || target === container || typeof target.closest !== 'function') {
+      return false;
+    }
+
+    const interactiveAncestor = target.closest(
+      'button, a, input, select, textarea, [role="button"], [role="link"], [data-prevent-card-toolbar-open]'
+    );
+
+    return Boolean(
+      interactiveAncestor &&
+      interactiveAncestor !== container &&
+      typeof container.contains === 'function' &&
+      container.contains(interactiveAncestor)
+    );
   }
 
   changeViewLocale(event) {
