@@ -1446,6 +1446,67 @@ test('localized save planning calls upsertCardLocale first and keeps priority an
   ]);
 });
 
+test('admin can manually edit an existing locale through the localized save plan', () => {
+  const board = createBoardWithCustomStages();
+  const card = {
+    id: 'card_localized_admin',
+    priority: 'important',
+    updatedAt: '2026-03-31T11:00:00.000Z',
+    contentByLocale: {
+      en: {
+        title: 'English source',
+        detailsMarkdown: 'English details',
+        provenance: null
+      },
+      ja: {
+        title: '旧日本語タイトル',
+        detailsMarkdown: '旧日本語本文',
+        provenance: null
+      }
+    },
+    localeRequests: {}
+  };
+
+  board.languagePolicy = {
+    sourceLocale: 'en',
+    defaultLocale: 'en',
+    supportedLocales: ['en', 'ja'],
+    requiredLocales: ['en']
+  };
+
+  const plan = buildCardEditorMutationPlan({
+    mode: 'edit',
+    board,
+    card,
+    boardId: 'main',
+    cardId: 'card_localized_admin',
+    locale: 'ja',
+    input: {
+      title: '新しい日本語タイトル',
+      detailsMarkdown: '更新された日本語本文',
+      priority: 'important'
+    },
+    sourceStageId: 'review',
+    targetStageId: 'review'
+  });
+
+  assert.equal(plan.includesLocalizedUpsert, true);
+  assert.deepEqual(plan.operations, [
+    {
+      method: 'upsertCardLocale',
+      args: [
+        'main',
+        'card_localized_admin',
+        'ja',
+        {
+          title: '新しい日本語タイトル',
+          detailsMarkdown: '更新された日本語本文'
+        }
+      ]
+    }
+  ]);
+});
+
 test('create mode planning still uses createCard without regressing the old flow', () => {
   const plan = buildCardEditorMutationPlan({
     mode: 'create',

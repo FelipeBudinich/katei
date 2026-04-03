@@ -203,6 +203,42 @@ test('missing selected locales surface fallback state and the rendered locale', 
   assert.equal(state.variant?.title, 'Titulo por defecto');
 });
 
+test('editor can manually add a missing locale without an AI key configured', () => {
+  const board = {
+    ...createBoard(),
+    aiLocalization: {
+      provider: 'openai',
+      hasApiKey: false,
+      apiKeyLast4: null
+    }
+  };
+  const card = createCard();
+
+  const state = createLocalizedCardEditorUiState({
+    board,
+    card,
+    selectedLocale: 'ja',
+    mode: 'edit',
+    canEditLocalizedContent: true,
+    currentActorRole: 'editor'
+  });
+
+  assert.equal(state.selectedLocale, 'ja');
+  assert.equal(state.isMissingSelectedLocale, true);
+  assert.equal(state.showSaveControls, true);
+  assert.equal(state.showGenerateLocaleButton, false);
+  assert.equal(state.localeActionHelpKey, 'cardEditor.manualLocaleHelp');
+  assert.deepEqual(state.editableVariant, {
+    locale: 'ja',
+    title: '',
+    detailsMarkdown: '',
+    provenance: null,
+    isFallback: false,
+    source: 'localized'
+  });
+  assert.equal(state.variant?.title, 'Titulo por defecto');
+});
+
 test('view locale selection stays constrained to available localized variants', () => {
   const board = createBoard();
   const card = createCard();
@@ -440,6 +476,47 @@ test('switching locale updates request and save control state together', () => {
     key: 'cardEditor.editingLocaleValue',
     locale: 'es-CL'
   });
+});
+
+test('syncLocalizedCardView keeps fallback reference visible but blanks editable fields for a missing locale', () => {
+  const controller = Object.create(CardEditorController.prototype);
+  let editorValue = '';
+
+  controller.board = {
+    ...createBoard(),
+    aiLocalization: {
+      provider: 'openai',
+      hasApiKey: false,
+      apiKeyLast4: null
+    }
+  };
+  controller.card = createCard();
+  controller.selectedLocale = 'ja';
+  controller.mode = 'edit';
+  controller.currentActorRole = 'editor';
+  controller.canEditLocalizedContent = true;
+  controller.titleInputTarget = { value: '' };
+  controller.t = createTranslator('en');
+  controller.ensureEditor = () => ({
+    value(nextValue) {
+      if (arguments.length > 0) {
+        editorValue = nextValue;
+      }
+
+      return editorValue;
+    }
+  });
+  controller.renderLocalizedReadSection = (localizedView) => {
+    controller.lastLocalizedView = localizedView;
+  };
+
+  CardEditorController.prototype.syncLocalizedCardView.call(controller);
+
+  assert.equal(controller.titleInputTarget.value, '');
+  assert.equal(editorValue, '');
+  assert.equal(controller.lastLocalizedView.variant?.title, 'Titulo por defecto');
+  assert.equal(controller.lastLocalizedView.editableVariant?.title, '');
+  assert.equal(controller.lastLocalizedView.localeActionHelpKey, 'cardEditor.manualLocaleHelp');
 });
 
 test('card editor EasyMDE config uses compact toolbar text with full accessible labels', () => {

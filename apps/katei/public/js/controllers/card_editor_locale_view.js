@@ -97,11 +97,19 @@ export function createLocalizedCardEditorUiState({
     currentActorRole,
     canEditLocalizedContent: Boolean(canEditLocalizedContent),
     isReadOnly,
+    editableVariant: resolveEditableVariant(localizedView, { isReadOnly }),
     showSaveControls: !isReadOnly,
     showReadOnlyNotice: hasCard && isReadOnly,
     showGenerateLocaleButton: canGenerateSelectedLocale,
     canGenerateLocale: canGenerateSelectedLocale,
     generateBlockedReason,
+    localeActionHelpKey: resolveLocaleActionHelpKey({
+      hasCard,
+      isReadOnly,
+      hasSelectedLocale,
+      hasSavedOpenAiKey,
+      hasSelectedLocaleContent: Boolean(selectedStatus?.hasContent)
+    }),
     showRequestLocaleButton: canRequestSelectedLocale,
     showClearLocaleRequestButton: canClearSelectedLocaleRequest,
     localeEditSummaryState: resolveLocaleEditSummaryState({
@@ -228,4 +236,35 @@ function resolveGenerateBlockedReason({
   }
 
   return null;
+}
+
+function resolveEditableVariant(localizedView, { isReadOnly }) {
+  if (isReadOnly || !localizedView.isMissingSelectedLocale) {
+    return localizedView.variant;
+  }
+
+  return {
+    locale: localizedView.selectedLocale,
+    title: '',
+    detailsMarkdown: '',
+    provenance: null,
+    isFallback: false,
+    source: 'localized'
+  };
+}
+
+function resolveLocaleActionHelpKey({
+  hasCard,
+  isReadOnly,
+  hasSelectedLocale,
+  hasSavedOpenAiKey,
+  hasSelectedLocaleContent
+}) {
+  if (!hasCard || !hasSelectedLocale || isReadOnly || hasSelectedLocaleContent) {
+    return null;
+  }
+
+  return hasSavedOpenAiKey
+    ? 'cardEditor.generateLocaleHelp'
+    : 'cardEditor.manualLocaleHelp';
 }

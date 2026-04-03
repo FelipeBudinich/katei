@@ -370,12 +370,12 @@ export default class extends Controller {
       currentActorRole: this.currentActorRole,
       canEditLocalizedContent: this.canEditLocalizedContent
     });
-    const variant = localizedView.variant;
+    const editableVariant = localizedView.editableVariant ?? localizedView.variant;
 
     this.localizedEditorUiState = localizedView;
     this.selectedLocale = localizedView.selectedLocale;
-    this.titleInputTarget.value = variant?.title ?? '';
-    this.ensureEditor().value(variant?.detailsMarkdown ?? '');
+    this.titleInputTarget.value = editableVariant?.title ?? '';
+    this.ensureEditor().value(editableVariant?.detailsMarkdown ?? '');
     this.renderLocalizedReadSection(localizedView);
   }
 
@@ -559,9 +559,11 @@ export default class extends Controller {
         ? 'cardEditor.generatingLocaleButton'
         : 'cardEditor.generateLocaleButton'
     );
-    this.generateLocaleHelpTarget.hidden = !showGenerateLocaleButton;
-    this.generateLocaleHelpTarget.textContent = showGenerateLocaleButton
-      ? this.t('cardEditor.generateLocaleHelp')
+    const localeActionHelpKey = localizedView.localeActionHelpKey ?? null;
+
+    this.generateLocaleHelpTarget.hidden = !localeActionHelpKey;
+    this.generateLocaleHelpTarget.textContent = localeActionHelpKey
+      ? this.t(localeActionHelpKey)
       : '';
   }
 

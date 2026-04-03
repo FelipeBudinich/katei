@@ -8,6 +8,10 @@ const viewerSub = process.env.KATEI_FIXTURE_VIEWER_SUB || 'fixture_debug_sub';
 const viewerEmail = process.env.KATEI_FIXTURE_VIEWER_EMAIL || 'fixture-debug@example.com';
 const viewerName = process.env.KATEI_FIXTURE_VIEWER_NAME || 'Fixture Debug User';
 const debugSecret = process.env.KATEI_FIXTURE_DEBUG_SECRET || 'fixture-debug-secret';
+const boardSecretEncryptionKey =
+  process.env.KATEI_FIXTURE_BOARD_SECRET_ENCRYPTION_KEY
+  || process.env.KATEI_BOARD_SECRET_ENCRYPTION_KEY
+  || 'fixture-board-secret-key-1234567890';
 const baseUrl = `http://127.0.0.1:${port}`;
 
 const workspaceRecordRepository = createInMemoryWorkspaceRecordRepository({
@@ -22,6 +26,7 @@ const app = createApp({
     APP_BASE_URL: baseUrl,
     GOOGLE_CLIENT_ID: 'fixture-google-client-id',
     KATEI_SESSION_SECRET: 'fixture-session-secret',
+    KATEI_BOARD_SECRET_ENCRYPTION_KEY: boardSecretEncryptionKey,
     MONGODB_URI: 'mongodb://127.0.0.1:27017',
     MONGODB_DB_NAME: 'fixture-katei',
     KATEI_DEBUG_AUTH_ENABLED: 'true',
