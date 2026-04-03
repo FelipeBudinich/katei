@@ -11,7 +11,7 @@ import {
   createLocalizedCardEditorUiState,
   resolveCardLocaleSelection
 } from './card_editor_locale_view.js';
-import { canonicalizeContentLocale } from '../domain/board_language_policy.js';
+import { canonicalizeContentLocaleWithLegacyAliases } from '../domain/board_language_policy.js';
 
 const CARD_EDITOR_CODEMIRROR_INPUT_ID = 'card-editor-details-markdown-codemirror-input';
 
@@ -202,7 +202,7 @@ export default class extends Controller {
   changeLocale(event) {
     event.preventDefault();
     this.selectedLocale =
-      canonicalizeContentLocale(event.currentTarget.value) ??
+      canonicalizeContentLocaleWithLegacyAliases(event.currentTarget.value) ??
       this.selectedLocale;
     this.syncLocalizedCardView();
   }

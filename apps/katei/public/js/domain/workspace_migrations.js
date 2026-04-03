@@ -1,6 +1,11 @@
 import { normalizeBoardCollaboration } from './board_collaboration.js';
 import { normalizeBoardAiLocalization } from './board_ai_localization.js';
-import { createDefaultBoardLanguagePolicy, normalizeBoardLanguagePolicy } from './board_language_policy.js';
+import {
+  canonicalizeContentLocale,
+  canonicalizeContentLocaleWithLegacyAliases,
+  createDefaultBoardLanguagePolicy,
+  normalizeBoardLanguagePolicy
+} from './board_language_policy.js';
 import { normalizeBoardLocalizationGlossary } from './board_localization_glossary.js';
 import { getDefaultBoardStageActionIds, isValidBoardStageActionId } from './board_stage_actions.js';
 import { createDefaultBoardStages, createDefaultBoardTemplates } from './board_workflow.js';
@@ -152,6 +157,11 @@ export function migrateCardToLocalizedContent(card, board, { now = null } = {}) 
       const locale = canonicalizeLocale(rawLocale);
 
       if (!locale || !isPlainObject(rawVariant)) {
+        continue;
+      }
+
+      if (Object.prototype.hasOwnProperty.call(nextContentByLocale, locale)
+        && !shouldPreferLocaleEntry(rawLocale, locale, migratedCard.contentByLocale)) {
         continue;
       }
 
@@ -471,15 +481,31 @@ function normalizeStringArray(value, fallback = []) {
 }
 
 function canonicalizeLocale(value) {
-  if (typeof value !== 'string') {
-    return null;
+  return canonicalizeContentLocaleWithLegacyAliases(value);
+}
+
+function shouldPreferLocaleEntry(rawLocale, normalizedLocale, rawEntries) {
+  const canonicalRawLocale = canonicalizeContentLocale(rawLocale);
+
+  if (canonicalRawLocale === normalizedLocale) {
+    return true;
   }
 
-  try {
-    return Intl.getCanonicalLocales(value.trim().replaceAll('_', '-'))[0] ?? null;
-  } catch (error) {
-    return null;
+  for (const candidateRawLocale of Object.keys(rawEntries)) {
+    if (candidateRawLocale === rawLocale) {
+      continue;
+    }
+
+    if (canonicalizeContentLocaleWithLegacyAliases(candidateRawLocale) !== normalizedLocale) {
+      continue;
+    }
+
+    if (canonicalizeContentLocale(candidateRawLocale) === normalizedLocale) {
+      return false;
+    }
   }
+
+  return true;
 }
 
 function normalizeWorkspaceActor(actor) {

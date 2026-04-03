@@ -1,5 +1,6 @@
 import {
   canonicalizeContentLocale,
+  canonicalizeContentLocaleWithLegacyAliases,
   normalizeBoardLanguagePolicy
 } from './board_language_policy.js';
 
@@ -28,7 +29,7 @@ export function listCardLocaleStatuses(board, card) {
 }
 
 export function getOpenLocalizationRequest(card, locale) {
-  const normalizedLocale = canonicalizeContentLocale(locale);
+  const normalizedLocale = canonicalizeContentLocaleWithLegacyAliases(locale);
 
   if (!normalizedLocale) {
     return null;
@@ -88,23 +89,34 @@ export function clearCardLocaleRequest(card, locale) {
 }
 
 export function normalizeCardLocaleRequests(card) {
-  const requests = {};
+  const requests = new Map();
   const rawRequests = readLocaleRequests(card);
 
   if (!isPlainObject(rawRequests)) {
-    return requests;
+    return {};
   }
 
   for (const [rawLocale, rawRequest] of Object.entries(rawRequests)) {
-    const locale = canonicalizeContentLocale(rawLocale);
+    const locale = canonicalizeContentLocaleWithLegacyAliases(rawLocale);
     const normalizedRequest = locale ? normalizeLocalizationRequest(locale, rawRequest) : null;
 
-    if (normalizedRequest) {
-      requests[locale] = normalizedRequest;
+    if (!normalizedRequest) {
+      continue;
+    }
+
+    const currentEntry = requests.get(locale) ?? null;
+
+    if (!currentEntry || shouldPreferLocaleEntry(rawLocale, currentEntry.rawLocale, locale)) {
+      requests.set(locale, {
+        rawLocale,
+        request: normalizedRequest
+      });
     }
   }
 
-  return requests;
+  return Object.fromEntries(
+    [...requests.entries()].map(([locale, entry]) => [locale, entry.request])
+  );
 }
 
 export function validateCardLocaleRequests(card) {
@@ -156,7 +168,7 @@ function listContentLocales(card) {
   const seenLocales = new Set();
 
   for (const [rawLocale, rawVariant] of Object.entries(getContentByLocaleRecord(card))) {
-    const locale = canonicalizeContentLocale(rawLocale);
+    const locale = canonicalizeContentLocaleWithLegacyAliases(rawLocale);
 
     if (!locale || seenLocales.has(locale) || !isPlainObject(rawVariant)) {
       continue;
@@ -177,7 +189,7 @@ function hasCardLocaleContent(card, locale, _languagePolicy) {
 
 function hasLocalizedContentVariant(card, locale) {
   for (const [rawLocale, rawVariant] of Object.entries(getContentByLocaleRecord(card))) {
-    if (canonicalizeContentLocale(rawLocale) === locale && isPlainObject(rawVariant)) {
+    if (canonicalizeContentLocaleWithLegacyAliases(rawLocale) === locale && isPlainObject(rawVariant)) {
       return true;
     }
   }
@@ -189,7 +201,7 @@ function getOpenLocalizationRequestMap(card) {
   const requests = new Map();
 
   for (const [rawLocale, rawRequest] of Object.entries(normalizeCardLocaleRequests(card))) {
-    const locale = canonicalizeContentLocale(rawLocale);
+    const locale = canonicalizeContentLocaleWithLegacyAliases(rawLocale);
     const normalizedRequest = locale ? normalizeLocalizationRequest(locale, rawRequest) : null;
 
     if (normalizedRequest) {
@@ -205,7 +217,7 @@ function normalizeLocalizationRequest(locale, request) {
     return null;
   }
 
-  const requestLocale = canonicalizeContentLocale(request.locale ?? locale);
+  const requestLocale = canonicalizeContentLocaleWithLegacyAliases(request.locale ?? locale);
   const status = normalizeOptionalString(request.status).toLowerCase();
   const requestedBy = readActor(request.requestedBy ?? request.actor ?? null);
   const requestedAt = normalizeOptionalIsoTimestamp(request.requestedAt ?? request.timestamp ?? null);
@@ -250,6 +262,15 @@ function canonicalizeRequiredLocale(locale) {
   }
 
   return normalizedLocale;
+}
+
+function shouldPreferLocaleEntry(rawLocale, currentRawLocale, normalizedLocale) {
+  if (!currentRawLocale) {
+    return true;
+  }
+
+  return canonicalizeContentLocale(rawLocale) === normalizedLocale
+    && canonicalizeContentLocale(currentRawLocale) !== normalizedLocale;
 }
 
 function normalizeActor(actor) {

@@ -131,6 +131,45 @@ test('getCardRenderState falls back from a regional ui locale to same-language c
   });
 });
 
+test('getCardRenderState renders legacy jp card content for ja ui locale', () => {
+  const board = createWorkspaceBoard({
+    id: 'board_legacy_jp',
+    title: 'Legacy JP board',
+    createdAt: '2026-03-31T10:00:00.000Z',
+    updatedAt: '2026-03-31T10:00:00.000Z'
+  });
+  const card = {
+    id: 'card_legacy_jp',
+    priority: 'important',
+    createdAt: '2026-03-31T10:00:00.000Z',
+    updatedAt: '2026-03-31T10:30:00.000Z',
+    contentByLocale: {
+      en: {
+        title: 'English title',
+        detailsMarkdown: 'English details'
+      },
+      jp: {
+        title: '旧日本語タイトル',
+        detailsMarkdown: '## 旧日本語本文'
+      }
+    }
+  };
+
+  board.languagePolicy = {
+    sourceLocale: 'en',
+    defaultLocale: 'en',
+    supportedLocales: ['en', 'jp'],
+    requiredLocales: ['en']
+  };
+
+  const renderState = withMarkdownEnvironment(() => getCardRenderState(board, card, 'ja'));
+
+  assert.deepEqual(renderState, {
+    title: '旧日本語タイトル',
+    previewText: '旧日本語本文'
+  });
+});
+
 test('renderBoardState clears board columns when the actor cannot read the active board', () => {
   const board = createWorkspaceBoard({
     id: 'board_hidden',

@@ -1,4 +1,7 @@
 const EMPTY_LOCALE_LIST = Object.freeze([]);
+const LEGACY_CONTENT_LOCALE_ALIASES = Object.freeze({
+  jp: 'ja'
+});
 
 export function createDefaultBoardLanguagePolicy() {
   return {
@@ -30,6 +33,17 @@ export function canonicalizeContentLocale(input) {
   }
 }
 
+export function canonicalizeContentLocaleWithLegacyAliases(input) {
+  const normalizedInput = normalizeLocaleInput(input).toLowerCase();
+  const legacyAlias = LEGACY_CONTENT_LOCALE_ALIASES[normalizedInput] ?? null;
+
+  if (legacyAlias) {
+    return canonicalizeContentLocale(legacyAlias);
+  }
+
+  return canonicalizeContentLocale(input);
+}
+
 export function normalizeBoardLanguagePolicy(policy) {
   if (policy === null) {
     return createDefaultBoardLanguagePolicy();
@@ -43,8 +57,8 @@ export function normalizeBoardLanguagePolicy(policy) {
     return null;
   }
 
-  const sourceLocale = canonicalizeContentLocale(policy.sourceLocale);
-  const defaultLocale = canonicalizeContentLocale(policy.defaultLocale);
+  const sourceLocale = canonicalizeContentLocaleWithLegacyAliases(policy.sourceLocale);
+  const defaultLocale = canonicalizeContentLocaleWithLegacyAliases(policy.defaultLocale);
 
   if (!sourceLocale || !defaultLocale) {
     return null;
@@ -95,10 +109,14 @@ function normalizeLocaleList(value, fallback = null) {
   const seenLocales = new Set();
 
   for (const entry of value) {
-    const locale = canonicalizeContentLocale(entry);
+    const locale = canonicalizeContentLocaleWithLegacyAliases(entry);
 
-    if (!locale || seenLocales.has(locale)) {
+    if (!locale) {
       return null;
+    }
+
+    if (seenLocales.has(locale)) {
+      continue;
     }
 
     seenLocales.add(locale);

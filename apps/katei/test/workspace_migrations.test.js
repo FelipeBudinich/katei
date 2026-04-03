@@ -239,6 +239,112 @@ test('migrateWorkspaceSnapshot preserves existing locale requests and seeds empt
   });
 });
 
+test('migrateWorkspaceSnapshot repairs legacy jp locale keys to canonical ja', () => {
+  const workspace = createLegacyWorkspace({
+    boards: {
+      main: createLegacyBoard({
+        languagePolicy: {
+          sourceLocale: 'en',
+          defaultLocale: 'jp',
+          supportedLocales: ['en', 'jp'],
+          requiredLocales: ['jp']
+        },
+        cards: {
+          card_legacy_jp: createLegacyCard({
+            id: 'card_legacy_jp',
+            title: '',
+            detailsMarkdown: '',
+            contentByLocale: {
+              jp: {
+                title: '旧日本語タイトル',
+                detailsMarkdown: '旧日本語本文'
+              }
+            },
+            localeRequests: {
+              jp: {
+                locale: 'jp',
+                requestedBy: { type: 'human', id: 'sub_translator_jp' },
+                requestedAt: '2026-03-31T11:30:00.000Z'
+              }
+            }
+          })
+        }
+      })
+    }
+  });
+
+  const migratedWorkspace = migrateWorkspaceSnapshot(workspace, {
+    ownerSub: 'sub_owner'
+  });
+
+  assert.deepEqual(migratedWorkspace.boards.main.languagePolicy, {
+    sourceLocale: 'en',
+    defaultLocale: 'ja',
+    supportedLocales: ['en', 'ja'],
+    requiredLocales: ['ja']
+  });
+  assert.deepEqual(migratedWorkspace.boards.main.cards.card_legacy_jp.contentByLocale, {
+    ja: {
+      title: '旧日本語タイトル',
+      detailsMarkdown: '旧日本語本文',
+      provenance: {
+        actor: { type: 'system', id: 'legacy-migration' },
+        timestamp: '2026-03-31T10:00:00.000Z',
+        includesHumanInput: true
+      }
+    }
+  });
+  assert.deepEqual(migratedWorkspace.boards.main.cards.card_legacy_jp.localeRequests, {
+    ja: {
+      locale: 'ja',
+      status: 'open',
+      requestedBy: { type: 'human', id: 'sub_translator_jp' },
+      requestedAt: '2026-03-31T11:30:00.000Z'
+    }
+  });
+});
+
+test('migrateCardToLocalizedContent keeps canonical ja when both ja and legacy jp exist', () => {
+  const migratedCard = migrateCardToLocalizedContent(
+    {
+      id: 'card_ja_wins',
+      priority: 'important',
+      createdAt: '2026-03-31T09:00:00.000Z',
+      updatedAt: '2026-03-31T10:00:00.000Z',
+      contentByLocale: {
+        jp: {
+          title: '旧日本語タイトル',
+          detailsMarkdown: '旧日本語本文'
+        },
+        ja: {
+          title: '正規の日本語タイトル',
+          detailsMarkdown: '正規の日本語本文'
+        }
+      }
+    },
+    {
+      languagePolicy: {
+        sourceLocale: 'en',
+        defaultLocale: 'ja',
+        supportedLocales: ['en', 'ja'],
+        requiredLocales: ['en']
+      }
+    }
+  );
+
+  assert.deepEqual(migratedCard.contentByLocale, {
+    ja: {
+      title: '正規の日本語タイトル',
+      detailsMarkdown: '正規の日本語本文',
+      provenance: {
+        actor: { type: 'system', id: 'legacy-migration' },
+        timestamp: '2026-03-31T10:00:00.000Z',
+        includesHumanInput: true
+      }
+    }
+  });
+});
+
 test('migrateCardToLocalizedContent keeps existing localized variants authoritative over stale legacy aliases', () => {
   const migratedCard = migrateCardToLocalizedContent(
     {

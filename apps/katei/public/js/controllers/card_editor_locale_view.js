@@ -1,4 +1,7 @@
-import { canonicalizeContentLocale, normalizeBoardLanguagePolicy } from '../domain/board_language_policy.js';
+import {
+  canonicalizeContentLocaleWithLegacyAliases,
+  normalizeBoardLanguagePolicy
+} from '../domain/board_language_policy.js';
 import { normalizeBoardAiLocalization } from '../domain/board_ai_localization.js';
 import { getCardContentVariant, resolveDefaultCardLocale } from '../domain/card_localization.js';
 import { listCardLocaleStatuses } from '../domain/card_localization_requests.js';
@@ -131,7 +134,7 @@ export function resolveCardLocaleSelection({ board, preferredLocale = null, uiLo
     return null;
   }
 
-  return canonicalizeContentLocale(preferredLocale) ?? null;
+  return canonicalizeContentLocaleWithLegacyAliases(preferredLocale) ?? null;
 }
 
 function getSupportedCardLocales(languagePolicy, localeStatuses = []) {

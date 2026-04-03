@@ -1,4 +1,4 @@
-import { canonicalizeContentLocale } from '../domain/board_language_policy.js';
+import { canonicalizeContentLocaleWithLegacyAliases } from '../domain/board_language_policy.js';
 import { getBoardCardContentVariant } from '../domain/workspace.js';
 import { listCardLocaleStatuses } from '../domain/card_localization_requests.js';
 
@@ -52,7 +52,7 @@ export function buildCardEditorMutationPlan({
   }
 
   const operations = [];
-  const normalizedLocale = canonicalizeContentLocale(locale);
+  const normalizedLocale = canonicalizeContentLocaleWithLegacyAliases(locale);
   const selectedStatus = normalizedLocale
     ? listCardLocaleStatuses(board, card).find((entry) => entry.locale === normalizedLocale) ?? null
     : null;
@@ -113,7 +113,7 @@ export function buildCardEditorMutationPlan({
 export function createCardLocaleRequestAction({ boardId, cardId, locale, clear = false } = {}) {
   return {
     method: clear ? 'clearCardLocaleRequest' : 'requestCardLocale',
-    args: [boardId, cardId, canonicalizeContentLocale(locale) ?? locale]
+    args: [boardId, cardId, canonicalizeContentLocaleWithLegacyAliases(locale) ?? locale]
   };
 }
 

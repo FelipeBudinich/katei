@@ -1,5 +1,6 @@
 import {
   canonicalizeContentLocale,
+  canonicalizeContentLocaleWithLegacyAliases,
   normalizeBoardLanguagePolicy
 } from './board_language_policy.js';
 import {
@@ -38,14 +39,14 @@ export function resolveDefaultCardLocale({
   candidateLocales = []
 } = {}) {
   const languagePolicy = normalizeBoardLanguagePolicy(board?.languagePolicy ?? null);
-  const normalizedRequestedLocale = canonicalizeContentLocale(requestedLocale);
-  const normalizedUiLocale = canonicalizeContentLocale(uiLocale);
+  const normalizedRequestedLocale = canonicalizeContentLocaleWithLegacyAliases(requestedLocale);
+  const normalizedUiLocale = canonicalizeContentLocaleWithLegacyAliases(uiLocale);
   const hasExplicitRequestedLocale = normalizedRequestedLocale != null;
   const orderedCandidateLocales = [];
   const seenCandidateLocales = new Set();
 
   for (const candidateLocale of candidateLocales) {
-    const normalizedCandidateLocale = canonicalizeContentLocale(candidateLocale);
+    const normalizedCandidateLocale = canonicalizeContentLocaleWithLegacyAliases(candidateLocale);
 
     if (!normalizedCandidateLocale || seenCandidateLocales.has(normalizedCandidateLocale)) {
       continue;
@@ -98,7 +99,7 @@ export function getCardContentVariant(card, locale, board, { uiLocale = null } =
 
   if (resolvedLocale && localizedContent.has(resolvedLocale)) {
     return materializeVariant(localizedContent.get(resolvedLocale), resolvedLocale, {
-      isFallback: canonicalizeContentLocale(locale) !== resolvedLocale,
+      isFallback: canonicalizeContentLocaleWithLegacyAliases(locale) !== resolvedLocale,
       source: 'localized'
     });
   }
@@ -107,19 +108,13 @@ export function getCardContentVariant(card, locale, board, { uiLocale = null } =
 }
 
 export function getStoredCardContentVariant(card, locale) {
-  const normalizedLocale = canonicalizeContentLocale(locale);
+  const normalizedLocale = canonicalizeContentLocaleWithLegacyAliases(locale);
 
   if (!normalizedLocale) {
     return null;
   }
 
-  const storedVariant = getContentByLocaleRecord(card)[normalizedLocale];
-
-  if (!isPlainObject(storedVariant)) {
-    return null;
-  }
-
-  return normalizeStoredVariant(storedVariant);
+  return getLocalizedContentMap(card).get(normalizedLocale) ?? null;
 }
 
 export function getBoardCardContentVariant(card, board, { requestedLocale = null, uiLocale = null } = {}) {
@@ -303,20 +298,39 @@ function getLocalizedContentMap(card) {
   const localizedContent = new Map();
 
   for (const [rawLocale, rawVariant] of Object.entries(contentByLocale)) {
-    const locale = canonicalizeContentLocale(rawLocale);
+    const locale = canonicalizeContentLocaleWithLegacyAliases(rawLocale);
 
     if (!locale || !isPlainObject(rawVariant)) {
       continue;
     }
 
-    localizedContent.set(locale, normalizeStoredVariant(rawVariant));
+    const normalizedVariant = normalizeStoredVariant(rawVariant);
+    const currentEntry = localizedContent.get(locale) ?? null;
+
+    if (!currentEntry || shouldPreferLocaleEntry(rawLocale, currentEntry.rawLocale, locale)) {
+      localizedContent.set(locale, {
+        rawLocale,
+        variant: normalizedVariant
+      });
+    }
   }
 
-  return localizedContent;
+  return new Map(
+    [...localizedContent.entries()].map(([locale, entry]) => [locale, entry.variant])
+  );
 }
 
 function getContentByLocaleRecord(card) {
   return isPlainObject(card?.contentByLocale) ? card.contentByLocale : {};
+}
+
+function shouldPreferLocaleEntry(nextRawLocale, currentRawLocale, normalizedLocale) {
+  if (!currentRawLocale) {
+    return true;
+  }
+
+  return canonicalizeContentLocale(nextRawLocale) === normalizedLocale
+    && canonicalizeContentLocale(currentRawLocale) !== normalizedLocale;
 }
 
 function materializeVariant(variant, locale, { isFallback, source }) {

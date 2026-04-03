@@ -192,6 +192,56 @@ test('getBoardCardContentVariant resolves ui locale, then default, then source, 
   assert.equal(
     getBoardCardContentVariant(
       createCardWithContent({
+        en: {
+          title: 'English title',
+          detailsMarkdown: 'English details'
+        },
+        jp: {
+          title: '旧日本語タイトル',
+          detailsMarkdown: '旧日本語本文'
+        }
+      }),
+      {
+        languagePolicy: {
+          sourceLocale: 'en',
+          defaultLocale: 'en',
+          supportedLocales: ['en', 'ja'],
+          requiredLocales: ['en']
+        }
+      },
+      { uiLocale: 'ja' }
+    )?.locale,
+    'ja'
+  );
+
+  assert.equal(
+    getBoardCardContentVariant(
+      createCardWithContent({
+        jp: {
+          title: '旧日本語タイトル',
+          detailsMarkdown: '旧日本語本文'
+        },
+        ja: {
+          title: '正規の日本語タイトル',
+          detailsMarkdown: '正規の日本語本文'
+        }
+      }),
+      {
+        languagePolicy: {
+          sourceLocale: 'en',
+          defaultLocale: 'en',
+          supportedLocales: ['en', 'ja'],
+          requiredLocales: ['en']
+        }
+      },
+      { uiLocale: 'ja' }
+    )?.title,
+    '正規の日本語タイトル'
+  );
+
+  assert.equal(
+    getBoardCardContentVariant(
+      createCardWithContent({
         'es-CL': {
           title: 'Titulo por defecto',
           detailsMarkdown: 'Detalles por defecto'

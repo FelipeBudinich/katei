@@ -1208,6 +1208,45 @@ test('openView falls back from a regional ui locale to same-language content whe
   }
 });
 
+test('openView resolves legacy jp content as ja when bootstrapped data is legacy-shaped', () => {
+  const restoreDom = installViewDialogDomStubs();
+
+  try {
+    const { controller, card } = createViewDialogController({
+      uiLocale: 'ja',
+      contentByLocale: {
+        en: {
+          title: 'English source',
+          detailsMarkdown: 'English details',
+          provenance: null
+        },
+        jp: {
+          title: '旧日本語タイトル',
+          detailsMarkdown: '旧日本語本文',
+          provenance: null
+        }
+      },
+      languagePolicy: {
+        sourceLocale: 'en',
+        defaultLocale: 'jp',
+        supportedLocales: ['en', 'jp'],
+        requiredLocales: ['en']
+      }
+    });
+
+    WorkspaceController.prototype.openView.call(controller, {
+      currentTarget: createViewTriggerDouble(card.id, 'review')
+    });
+
+    assert.equal(controller.viewLocaleSelectTarget.value, 'ja');
+    assert.equal(controller.viewDialogState.selectedLocale, 'ja');
+    assert.equal(controller.viewCardTitleTarget.textContent, '旧日本語タイトル');
+    assert.equal(controller.viewCardBodyTarget.innerHTML, '<p>旧日本語本文</p>');
+  } finally {
+    restoreDom();
+  }
+});
+
 test('openView uses the dedicated view dialog and limits locales to present localized variants', () => {
   const restoreDom = installViewDialogDomStubs();
 

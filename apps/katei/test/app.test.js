@@ -475,6 +475,77 @@ test('GET /boards?lang=es-CL renders same-language card content when only generi
   assert.equal(bootstrapPayload.workspace.boards.main.cards[cardId].contentByLocale.es.detailsMarkdown, 'Vista previa en español');
 });
 
+test('GET /boards?lang=ja repairs legacy jp card content and language policy for first paint', async () => {
+  const workspace = createEmptyWorkspace();
+  const board = workspace.boards.main;
+  const cardId = 'card_legacy_jp';
+
+  board.cards[cardId] = {
+    id: cardId,
+    priority: 'urgent',
+    createdAt: '2026-04-02T10:00:00.000Z',
+    updatedAt: '2026-04-02T11:00:00.000Z',
+    contentByLocale: {
+      en: {
+        title: 'English checklist',
+        detailsMarkdown: 'English preview'
+      },
+      jp: {
+        title: '旧日本語チェックリスト',
+        detailsMarkdown: '旧日本語プレビュー'
+      }
+    },
+    localeRequests: {
+      jp: {
+        locale: 'jp',
+        requestedBy: { type: 'human', id: 'sub_translator_jp' },
+        requestedAt: '2026-04-02T10:30:00.000Z'
+      }
+    }
+  };
+  board.stages.backlog.cardIds = [cardId];
+  board.languagePolicy = {
+    sourceLocale: 'en',
+    defaultLocale: 'jp',
+    supportedLocales: ['en', 'jp'],
+    requiredLocales: ['jp']
+  };
+
+  const record = createUpdatedWorkspaceRecord(
+    createInitialWorkspaceRecord('sub_jp_cards', {
+      now: '2026-04-02T10:00:00.000Z'
+    }),
+    {
+      workspace,
+      actor: { id: 'sub_jp_cards' },
+      now: '2026-04-02T11:00:00.000Z'
+    }
+  );
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([record]);
+  const app = createTestApp({
+    googleTokenVerifier: async () => ({ sub: 'sub_jp_cards' }),
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .get('/boards?lang=ja')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_jp_cards', name: 'Tester' }));
+  const bootstrapPayload = readWorkspaceBootstrapPayload(response.text);
+
+  assert.equal(response.status, 200);
+  assert.match(response.text, /<html lang="ja" data-ui-locale="ja">/);
+  assert.match(response.text, /<h3 class="card-item-title text-base text-strong" data-card-field="title">旧日本語チェックリスト<\/h3>/);
+  assert.match(response.text, /<p\s+class="text-sm leading-6 text-muted"[\s\S]*>\s*旧日本語プレビュー\s*<\/p>/);
+  assert.deepEqual(bootstrapPayload.workspace.boards.main.languagePolicy, {
+    sourceLocale: 'en',
+    defaultLocale: 'ja',
+    supportedLocales: ['en', 'ja'],
+    requiredLocales: ['ja']
+  });
+  assert.equal(bootstrapPayload.workspace.boards.main.cards[cardId].contentByLocale.ja.title, '旧日本語チェックリスト');
+  assert.equal(bootstrapPayload.workspace.boards.main.cards[cardId].localeRequests.ja.locale, 'ja');
+});
+
 test('workspace template renders the no-board header with both Options and Profile entry points', () => {
   const workspace = createEmptyWorkspace();
   workspace.ui.activeBoardId = 'missing_board';

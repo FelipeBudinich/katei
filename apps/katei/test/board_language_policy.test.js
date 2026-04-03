@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   canonicalizeContentLocale,
+  canonicalizeContentLocaleWithLegacyAliases,
   createDefaultBoardLanguagePolicy,
   normalizeBoardLanguagePolicy,
   validateBoardLanguagePolicy
@@ -12,6 +13,8 @@ test('canonicalizeContentLocale normalizes content locales deterministically', (
   assert.equal(canonicalizeContentLocale('JA'), 'ja');
   assert.equal(canonicalizeContentLocale('not a locale'), null);
   assert.equal(canonicalizeContentLocale('*'), null);
+  assert.equal(canonicalizeContentLocale('jp'), 'jp');
+  assert.equal(canonicalizeContentLocaleWithLegacyAliases('jp'), 'ja');
 });
 
 test('validateBoardLanguagePolicy accepts canonicalizable language policies', () => {
@@ -29,6 +32,21 @@ test('validateBoardLanguagePolicy accepts canonicalizable language policies', ()
     supportedLocales: ['ja', 'es-CL', 'en'],
     requiredLocales: ['es-CL', 'ja']
   });
+
+  assert.deepEqual(
+    normalizeBoardLanguagePolicy({
+      sourceLocale: 'jp',
+      defaultLocale: 'jp',
+      supportedLocales: ['en', 'jp', 'ja'],
+      requiredLocales: ['jp']
+    }),
+    {
+      sourceLocale: 'ja',
+      defaultLocale: 'ja',
+      supportedLocales: ['en', 'ja'],
+      requiredLocales: ['ja']
+    }
+  );
 });
 
 test('createDefaultBoardLanguagePolicy returns a fresh default object', () => {
@@ -53,16 +71,6 @@ test('validateBoardLanguagePolicy rejects invalid language policies', () => {
       sourceLocale: 'en',
       defaultLocale: 'en',
       supportedLocales: ['ja']
-    }),
-    false
-  );
-
-  assert.equal(
-    validateBoardLanguagePolicy({
-      sourceLocale: 'en',
-      defaultLocale: 'en',
-      supportedLocales: ['en', 'ja'],
-      requiredLocales: ['ja', 'JA']
     }),
     false
   );

@@ -174,6 +174,63 @@ test('getCardContentVariant falls back from a regional ui locale to same-languag
   );
 });
 
+test('getCardContentVariant resolves legacy jp content as ja and prefers canonical ja when both exist', () => {
+  const board = {
+    languagePolicy: {
+      sourceLocale: 'en',
+      defaultLocale: 'en',
+      supportedLocales: ['en', 'ja'],
+      requiredLocales: ['en']
+    }
+  };
+
+  assert.equal(
+    getCardContentVariant(
+      {
+        id: 'card_legacy_jp',
+        contentByLocale: {
+          en: {
+            title: 'English source',
+            detailsMarkdown: 'English details',
+            provenance: null
+          },
+          jp: {
+            title: '旧日本語タイトル',
+            detailsMarkdown: '旧日本語本文',
+            provenance: null
+          }
+        }
+      },
+      'ja',
+      board
+    )?.title,
+    '旧日本語タイトル'
+  );
+
+  assert.equal(
+    getCardContentVariant(
+      {
+        id: 'card_both_jp_ja',
+        contentByLocale: {
+          jp: {
+            title: '旧日本語タイトル',
+            detailsMarkdown: '旧日本語本文',
+            provenance: null
+          },
+          ja: {
+            title: '正規の日本語タイトル',
+            detailsMarkdown: '正規の日本語本文',
+            provenance: null
+          }
+        }
+      },
+      'ja',
+      board
+    )?.title,
+    '正規の日本語タイトル'
+  );
+});
+
 test('getCardContentVariant reads explicit localized variants and listCardLocales canonicalizes keys', () => {
   const card = {
     id: 'card_1',

@@ -108,6 +108,57 @@ test('edit dialog falls back from a regional ui locale to same-language content'
   assert.equal(state.variant?.title, 'Titulo en español');
 });
 
+test('edit dialog resolves legacy jp content as ja by default', () => {
+  const board = createBoardWithOpenAiKey({
+    languagePolicy: {
+      sourceLocale: 'en',
+      defaultLocale: 'jp',
+      supportedLocales: ['en', 'jp'],
+      requiredLocales: ['en']
+    }
+  });
+  const card = {
+    id: 'card_legacy_jp',
+    priority: 'important',
+    createdAt: '2026-03-31T09:00:00.000Z',
+    updatedAt: '2026-03-31T10:00:00.000Z',
+    contentByLocale: {
+      en: {
+        title: 'English source',
+        detailsMarkdown: 'English details',
+        provenance: createCardContentProvenance({
+          actor: { type: 'human', id: 'viewer_123' },
+          timestamp: '2026-03-31T09:00:00.000Z',
+          includesHumanInput: true
+        })
+      },
+      jp: {
+        title: '旧日本語タイトル',
+        detailsMarkdown: '旧日本語本文',
+        provenance: createCardContentProvenance({
+          actor: { type: 'agent', id: 'translator_1' },
+          timestamp: '2026-03-31T10:00:00.000Z',
+          includesHumanInput: false
+        })
+      }
+    },
+    localeRequests: {}
+  };
+
+  const state = createLocalizedCardEditorUiState({
+    board,
+    card,
+    uiLocale: 'ja',
+    mode: 'edit',
+    canEditLocalizedContent: true,
+    currentActorRole: 'editor'
+  });
+
+  assert.equal(state.selectedLocale, 'ja');
+  assert.equal(state.renderedLocale, 'ja');
+  assert.equal(state.variant?.title, '旧日本語タイトル');
+});
+
 test('edit dialog keeps an explicit requested locale sticky over the ui locale', () => {
   const board = createBoardWithOpenAiKey();
   const card = createCardWithHumanJapaneseLocalization();
