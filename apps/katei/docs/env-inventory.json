@@ -14,12 +14,14 @@
       "app": [
         "apps/katei",
         "apps/katei/src",
+        "apps/katei/src/ai",
         "apps/katei/src/auth",
         "apps/katei/src/data",
         "apps/katei/src/i18n",
         "apps/katei/src/lib",
         "apps/katei/src/middleware",
         "apps/katei/src/routes",
+        "apps/katei/src/security",
         "apps/katei/src/workspaces"
       ],
       "package": [],
@@ -41,10 +43,10 @@
     ]
   },
   "summary": {
-    "totalVariables": 16,
-    "totalDefinitions": 16,
-    "totalUsages": 26,
-    "secretLikeCount": 3,
+    "totalVariables": 17,
+    "totalDefinitions": 17,
+    "totalUsages": 27,
+    "secretLikeCount": 4,
     "publicLikeCount": 0,
     "dynamicAccessCount": 0
   },
@@ -57,7 +59,7 @@
         {
           "kind": "envFile",
           "file": "apps/katei/.env.example",
-          "line": 20,
+          "line": 23,
           "scope": "app",
           "snippet": "APP_BASE_URL=http://localhost:3000",
           "comment": "# Optional canonical app URL used to validate sign-in request origins in production. Local development defaults to http://localhost:3000; set this explicitly outside development when origin validation matters."
@@ -67,7 +69,7 @@
         {
           "kind": "default",
           "file": "apps/katei/src/config.js",
-          "line": 5,
+          "line": 6,
           "scope": "app",
           "snippet": "const appBaseUrl = normalizeOptionalString(env.APP_BASE_URL) || (nodeEnv === 'development' ? `http://localhost:${Number(env.PORT) || 3000}` : '');"
         }
@@ -81,7 +83,7 @@
         {
           "kind": "envFile",
           "file": "apps/katei/.env.example",
-          "line": 14,
+          "line": 17,
           "scope": "app",
           "snippet": "GOOGLE_ALLOWLIST_SUBS=",
           "comment": "# Optional comma-separated allowlist of Google `sub` identifiers. Leave blank to allow any verified account."
@@ -91,7 +93,7 @@
         {
           "kind": "default",
           "file": "apps/katei/src/config.js",
-          "line": 16,
+          "line": 19,
           "scope": "app",
           "snippet": "googleAllowlistSubs: parseAllowlistSubs(normalizeOptionalString(env.GOOGLE_ALLOWLIST_SUBS) || ''),"
         }
@@ -115,7 +117,7 @@
         {
           "kind": "requiredHelper",
           "file": "apps/katei/src/config.js",
-          "line": 14,
+          "line": 16,
           "scope": "app",
           "snippet": "googleClientId: requireNonEmptyEnv('GOOGLE_CLIENT_ID', env.GOOGLE_CLIENT_ID),"
         }
@@ -129,7 +131,7 @@
         {
           "kind": "envFile",
           "file": "apps/katei/.env.example",
-          "line": 47,
+          "line": 50,
           "scope": "app",
           "snippet": "HEROKU_API_KEY=YOUR_HEROKU_API_KEY",
           "comment": "# Replace YOUR_HEROKU_API_KEY with a real Heroku API key as a Github Repository secret"
@@ -181,7 +183,7 @@
         {
           "kind": "envFile",
           "file": "apps/katei/.env.example",
-          "line": 44,
+          "line": 47,
           "scope": "app",
           "snippet": "HEROKU_APP_NAME=HEROKU_KATEI_APP_PROD",
           "comment": "# set HEROKU_KATEI_APP_PROD as a GitHub repository secret, it should be the name of the app you created in Heroku"
@@ -233,6 +235,30 @@
       ]
     },
     {
+      "name": "KATEI_BOARD_SECRET_ENCRYPTION_KEY",
+      "secretLike": true,
+      "publicLike": false,
+      "definitions": [
+        {
+          "kind": "envFile",
+          "file": "apps/katei/.env.example",
+          "line": 14,
+          "scope": "app",
+          "snippet": "KATEI_BOARD_SECRET_ENCRYPTION_KEY=",
+          "comment": "# Secret used to encrypt board-scoped AI credentials before persistence."
+        }
+      ],
+      "usages": [
+        {
+          "kind": "read",
+          "file": "apps/katei/src/config.js",
+          "line": 11,
+          "scope": "app",
+          "snippet": "const boardSecretEncryptionKey = resolveBoardSecretEncryptionKey(env.KATEI_BOARD_SECRET_ENCRYPTION_KEY, nodeEnv);"
+        }
+      ]
+    },
+    {
       "name": "KATEI_DEBUG_AUTH_ENABLED",
       "secretLike": false,
       "publicLike": false,
@@ -240,7 +266,7 @@
         {
           "kind": "envFile",
           "file": "apps/katei/.env.example",
-          "line": 23,
+          "line": 26,
           "scope": "app",
           "snippet": "KATEI_DEBUG_AUTH_ENABLED=false",
           "comment": "# Optional guarded hosted debug login toggle. When true, POST /__debug/login can mint a Katei session for the configured debug viewer."
@@ -250,7 +276,7 @@
         {
           "kind": "read",
           "file": "apps/katei/src/config.js",
-          "line": 58,
+          "line": 61,
           "scope": "app",
           "snippet": "const enabled = parseBooleanEnv(env.KATEI_DEBUG_AUTH_ENABLED);"
         }
@@ -264,7 +290,7 @@
         {
           "kind": "envFile",
           "file": "apps/katei/.env.example",
-          "line": 26,
+          "line": 29,
           "scope": "app",
           "snippet": "KATEI_DEBUG_AUTH_SECRET=",
           "comment": "# Shared secret required in the x-katei-debug-auth request header when debug auth is enabled."
@@ -274,7 +300,7 @@
         {
           "kind": "read",
           "file": "apps/katei/src/config.js",
-          "line": 59,
+          "line": 62,
           "scope": "app",
           "snippet": "const secret = normalizeOptionalString(env.KATEI_DEBUG_AUTH_SECRET);"
         }
@@ -288,7 +314,7 @@
         {
           "kind": "envFile",
           "file": "apps/katei/.env.example",
-          "line": 32,
+          "line": 35,
           "scope": "app",
           "snippet": "KATEI_DEBUG_AUTH_VIEWER_EMAIL=",
           "comment": "# Optional email for the debug viewer session."
@@ -298,7 +324,7 @@
         {
           "kind": "read",
           "file": "apps/katei/src/config.js",
-          "line": 61,
+          "line": 64,
           "scope": "app",
           "snippet": "const viewerEmail = normalizeOptionalEmail(env.KATEI_DEBUG_AUTH_VIEWER_EMAIL);"
         }
@@ -312,7 +338,7 @@
         {
           "kind": "envFile",
           "file": "apps/katei/.env.example",
-          "line": 35,
+          "line": 38,
           "scope": "app",
           "snippet": "KATEI_DEBUG_AUTH_VIEWER_NAME=",
           "comment": "# Optional display name for the debug viewer session."
@@ -322,7 +348,7 @@
         {
           "kind": "read",
           "file": "apps/katei/src/config.js",
-          "line": 62,
+          "line": 65,
           "scope": "app",
           "snippet": "const viewerName = normalizeOptionalString(env.KATEI_DEBUG_AUTH_VIEWER_NAME);"
         }
@@ -336,7 +362,7 @@
         {
           "kind": "envFile",
           "file": "apps/katei/.env.example",
-          "line": 29,
+          "line": 32,
           "scope": "app",
           "snippet": "KATEI_DEBUG_AUTH_VIEWER_SUB=",
           "comment": "# Required Google sub for the debug viewer when hosted debug auth is enabled."
@@ -346,7 +372,7 @@
         {
           "kind": "read",
           "file": "apps/katei/src/config.js",
-          "line": 60,
+          "line": 63,
           "scope": "app",
           "snippet": "const viewerSub = normalizeOptionalString(env.KATEI_DEBUG_AUTH_VIEWER_SUB);"
         }
@@ -370,7 +396,7 @@
         {
           "kind": "requiredHelper",
           "file": "apps/katei/src/config.js",
-          "line": 15,
+          "line": 17,
           "scope": "app",
           "snippet": "sessionSecret: requireNonEmptyEnv('KATEI_SESSION_SECRET', env.KATEI_SESSION_SECRET),"
         }
@@ -384,7 +410,7 @@
         {
           "kind": "envFile",
           "file": "apps/katei/.env.example",
-          "line": 41,
+          "line": 44,
           "scope": "app",
           "snippet": "MONGODB_DB_NAME=",
           "comment": "# Optional MongoDB database name used for server-owned workspace persistence."
@@ -394,7 +420,7 @@
         {
           "kind": "requiredHelper",
           "file": "apps/katei/src/config.js",
-          "line": 7,
+          "line": 8,
           "scope": "app",
           "snippet": "const mongoDbName = requireNonEmptyEnv('MONGODB_DB_NAME', env.MONGODB_DB_NAME);"
         }
@@ -408,7 +434,7 @@
         {
           "kind": "envFile",
           "file": "apps/katei/.env.example",
-          "line": 38,
+          "line": 41,
           "scope": "app",
           "snippet": "MONGODB_URI=",
           "comment": "# Optional MongoDB connection string used for server-owned workspace persistence."
@@ -418,7 +444,7 @@
         {
           "kind": "requiredHelper",
           "file": "apps/katei/src/config.js",
-          "line": 6,
+          "line": 7,
           "scope": "app",
           "snippet": "const mongoUri = requireNonEmptyEnv('MONGODB_URI', env.MONGODB_URI);"
         }
@@ -442,7 +468,7 @@
         {
           "kind": "default",
           "file": "apps/katei/src/config.js",
-          "line": 4,
+          "line": 5,
           "scope": "app",
           "snippet": "const nodeEnv = normalizeOptionalString(env.NODE_ENV) || 'development';"
         }
@@ -466,7 +492,7 @@
         {
           "kind": "default",
           "file": "apps/katei/src/config.js",
-          "line": 5,
+          "line": 6,
           "scope": "app",
           "snippet": "const appBaseUrl = normalizeOptionalString(env.APP_BASE_URL) || (nodeEnv === 'development' ? `http://localhost:${Number(env.PORT) || 3000}` : '');"
         },
@@ -487,7 +513,7 @@
         {
           "kind": "envFile",
           "file": "apps/katei/.env.example",
-          "line": 17,
+          "line": 20,
           "scope": "app",
           "snippet": "SESSION_TTL_SECONDS=604800",
           "comment": "# Optional session duration for the Katei session cookie. Defaults to 7 days."
@@ -497,7 +523,7 @@
         {
           "kind": "default",
           "file": "apps/katei/src/config.js",
-          "line": 8,
+          "line": 9,
           "scope": "app",
           "snippet": "const sessionTtlSeconds = parseSessionTtlSeconds(normalizeOptionalString(env.SESSION_TTL_SECONDS) || String(DEFAULT_SESSION_TTL_SECONDS));"
         }
