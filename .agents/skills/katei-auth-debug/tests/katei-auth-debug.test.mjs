@@ -24,6 +24,7 @@ import {
   selectLocalizationCandidate,
   summarizeBoardLocalizationState
 } from '../scripts/lib/localization_flow.mjs';
+import { findReviewOriginVerificationTarget } from '../scripts/lib/review_origin_verification.mjs';
 
 test('loadKateiAuthDebugConfig applies defaults for debug-route auth', async () => {
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'katei-auth-debug-config-'));
@@ -357,7 +358,14 @@ test('selectLocalizationCandidate chooses the first missing non-source locale wi
       sourceVariant: {
         title: 'Ship localization',
         detailsMarkdown: 'Translate me',
-        provenance: null
+        provenance: null,
+        review: {
+          origin: 'human',
+          verificationRequestedBy: null,
+          verificationRequestedAt: null,
+          verifiedBy: null,
+          verifiedAt: null
+        }
       },
       targetVariant: null
     },
@@ -840,4 +848,151 @@ test('classifyWorkspaceSwitchOutcome detects mis-flagged external home workspace
   });
 
   assert.equal(diagnosis.category, 'home-workspace-routing-or-history-issue');
+});
+
+test('findReviewOriginVerificationTarget selects an editable AI-enabled board with a non-source locale', () => {
+  const actor = {
+    type: 'human',
+    id: 'viewer_sub_1'
+  };
+  const payloads = [
+    {
+      activeWorkspace: {
+        workspaceId: 'workspace_home_viewer_sub_1'
+      },
+      meta: {
+        revision: 12
+      },
+      workspace: {
+        workspaceId: 'workspace_home_viewer_sub_1',
+        boardOrder: ['main'],
+        boards: {
+          main: {
+            id: 'main',
+            title: 'Roadmap',
+            stageOrder: ['backlog'],
+            stages: {
+              backlog: {
+                id: 'backlog',
+                title: 'Backlog',
+                cardIds: []
+              }
+            },
+            aiLocalization: {
+              provider: 'openai',
+              hasApiKey: true,
+              apiKeyLast4: '1234'
+            },
+            languagePolicy: {
+              sourceLocale: 'en',
+              defaultLocale: 'en',
+              supportedLocales: ['en', 'es'],
+              requiredLocales: ['en']
+            },
+            collaboration: {
+              memberships: [
+                {
+                  actor,
+                  role: 'editor',
+                  joinedAt: '2026-04-03T09:00:00.000Z'
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  ];
+
+  const selection = findReviewOriginVerificationTarget(payloads, { actor });
+
+  assert.deepEqual(selection, {
+    candidate: {
+      workspaceId: 'workspace_home_viewer_sub_1',
+      workspaceRevision: 12,
+      boardId: 'main',
+      boardTitle: 'Roadmap',
+      sourceLocale: 'en',
+      targetLocale: 'es',
+      boardSummary: {
+        boardId: 'main',
+        title: 'Roadmap',
+        sourceLocale: 'en',
+        defaultLocale: 'en',
+        supportedLocales: ['en', 'es'],
+        requiredLocales: ['en'],
+        hasApiKey: true,
+        apiKeyLast4: '1234',
+        cardCount: 0
+      }
+    },
+    reason: null
+  });
+});
+
+test('findReviewOriginVerificationTarget reports missing target locales for an explicit board selection', () => {
+  const actor = {
+    type: 'human',
+    id: 'viewer_sub_1'
+  };
+  const payloads = [
+    {
+      activeWorkspace: {
+        workspaceId: 'workspace_home_viewer_sub_1'
+      },
+      meta: {
+        revision: 12
+      },
+      workspace: {
+        workspaceId: 'workspace_home_viewer_sub_1',
+        boardOrder: ['main'],
+        boards: {
+          main: {
+            id: 'main',
+            title: 'Roadmap',
+            stageOrder: ['backlog'],
+            stages: {
+              backlog: {
+                id: 'backlog',
+                title: 'Backlog',
+                cardIds: []
+              }
+            },
+            aiLocalization: {
+              provider: 'openai',
+              hasApiKey: true,
+              apiKeyLast4: '1234'
+            },
+            languagePolicy: {
+              sourceLocale: 'en',
+              defaultLocale: 'en',
+              supportedLocales: ['en', 'es'],
+              requiredLocales: ['en']
+            },
+            collaboration: {
+              memberships: [
+                {
+                  actor,
+                  role: 'editor',
+                  joinedAt: '2026-04-03T09:00:00.000Z'
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  ];
+
+  const selection = findReviewOriginVerificationTarget(payloads, {
+    actor,
+    workspaceId: 'workspace_home_viewer_sub_1',
+    boardId: 'main',
+    targetLocale: 'ja'
+  });
+
+  assert.deepEqual(selection, {
+    candidate: null,
+    reason: 'board-missing-target-locale'
+  });
 });

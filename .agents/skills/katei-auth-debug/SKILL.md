@@ -40,13 +40,19 @@ node .agents/skills/katei-auth-debug/scripts/capture-auth-debug-artifacts.mjs
 node .agents/skills/katei-auth-debug/scripts/exercise-localization-flow.mjs --board-title "過程 - Roadmap"
 ```
 
-7. Exercise create -> edit -> delete board flows:
+7. Verify `review.origin` persistence with a direct authenticated API flow that creates and deletes a temporary card:
+
+```bash
+node .agents/skills/katei-auth-debug/scripts/verify-review-origin.mjs --board-title "過程 - Roadmap"
+```
+
+8. Exercise create -> edit -> delete board flows:
 
 ```bash
 node .agents/skills/katei-auth-debug/scripts/exercise-board-lifecycle.mjs
 ```
 
-8. Reproduce cross-workspace board switching or invite acceptance:
+9. Reproduce cross-workspace board switching or invite acceptance:
 
 ```bash
 node .agents/skills/katei-auth-debug/scripts/repro-cross-workspace-switch.mjs
@@ -67,6 +73,7 @@ Hosted convenience commands:
 
 ```bash
 bash .agents/skills/katei-auth-debug/scripts/smoke-hosted.sh
+bash .agents/skills/katei-auth-debug/scripts/smoke-review-origin.sh
 bash .agents/skills/katei-auth-debug/scripts/smoke-board-lifecycle.sh
 bash .agents/skills/katei-auth-debug/scripts/smoke-cross-workspace-switch.sh
 bash .agents/skills/katei-auth-debug/scripts/store-debug-secret-in-keychain.sh
@@ -79,10 +86,12 @@ Important behavior:
 - `open-authenticated-page.mjs` writes `latest-session.json` and `latest-open.png` into the artifact directory.
 - `capture-auth-debug-artifacts.mjs` writes a timestamped JSON report and PNG screenshot.
 - `exercise-localization-flow.mjs` writes a timestamped JSON report plus `latest-localization-flow.json`, resolving the target workspace/board/card/locale over an authenticated session and recording the localization generation response.
+- `verify-review-origin.mjs` talks to `/api/workspace`, `/api/workspace/commands`, and `/api/workspace/localizations/generate` directly, writes a timestamped JSON report plus `latest-review-origin-verification.json`, creates and removes a temporary card by default, and avoids unrelated browser-only failures when you only need to validate `review.origin` persistence.
 - `exercise-board-lifecycle.mjs` creates a temporary board, edits it, then deletes it, writing per-step screenshots plus `latest-board-lifecycle.json`.
 - `repro-cross-workspace-switch.mjs` runs the local or hosted workspace-navigation repro, recording switch-button or invite-button datasets, emitted board-options event detail, `/api/workspace*` traffic, history transitions, and per-scenario screenshots into `latest-cross-workspace-switch.json`.
 - The local fixture now includes a readable foreign home workspace board titled `Casa` plus a separate invite-only `Casa` workspace so the skill can exercise both the home-workspace routing bug and the accept-first invite flow.
 - Lifecycle verification uses the initial `#workspace-bootstrap` payload for orientation and then reads live `/api/workspace` state after each mutation because the bootstrap script is not rewritten after in-page commands.
+- `verify-review-origin.mjs` does not require Chrome, so it can run against a local fixture config for permission-free local smoke checks. Hosted runs still need the configured debug auth secret and any required network approval.
 - Do not commit `.agents/katei-auth-debug.config.json` or debug secrets.
 
 Config:
