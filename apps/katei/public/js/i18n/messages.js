@@ -282,9 +282,21 @@ const EN_MESSAGES = freezeCatalog({
     stagesLabel: 'Stages',
     stagesHelp:
       'One line per stage: stage-id | Display title | target-a, target-b | action-a, action-b. Example: backlog | Backlog | doing, done | card.create',
+    stageSummaryLabel: 'Current draft',
+    stageSummaryEmpty: 'No stages configured.',
+    stageSummaryValue: '{count} stages · {stages}',
+    configureStagesButton: 'Configure stages',
     saveButton: 'Save Board',
     createButton: 'Create Board',
     deleteButton: 'Delete Board'
+  },
+  boardStageConfigDialog: {
+    sectionLabel: 'Stages',
+    heading: 'Configure stages',
+    help:
+      'Use one line per stage: stage-id | Title | target-a, target-b | action-a, action-b. You can omit the third or fourth segment, and leave transitions empty before actions when needed.',
+    definitionsLabel: 'Stage definitions',
+    applyButton: 'Apply stages'
   },
   confirmDialog: {
     deleteCardTitle: 'Delete card?',
@@ -302,6 +314,8 @@ const EN_MESSAGES = freezeCatalog({
     boardTitleRequired: 'Board title is required.',
     boardLanguagePolicyInvalid: 'Board language policy is invalid.',
     boardStagesRequired: 'Add at least one stage.',
+    boardStageDefinitionFormatInvalid:
+      'Each stage must use "stage-id | Title", "stage-id | Title | target-a, target-b", or "stage-id | Title | target-a, target-b | action-a, action-b".',
     boardStageIdInvalid: 'Stage ids must use lowercase slugs.',
     boardStageIdsUnique: 'Stage ids must be unique.',
     boardStageTitleRequired: 'Each stage needs a title.',
@@ -626,9 +640,21 @@ const ES_CL_MESSAGES = freezeCatalog({
     stagesLabel: 'Etapas',
     stagesHelp:
       'Una línea por etapa: stage-id | Título visible | destino-a, destino-b | acción-a, acción-b. Ejemplo: backlog | Backlog | doing, done | card.create',
+    stageSummaryLabel: 'Borrador actual',
+    stageSummaryEmpty: 'No hay etapas configuradas.',
+    stageSummaryValue: '{count} etapas · {stages}',
+    configureStagesButton: 'Configurar etapas',
     saveButton: 'Guardar tablero',
     createButton: 'Crear tablero',
     deleteButton: 'Eliminar tablero'
+  },
+  boardStageConfigDialog: {
+    sectionLabel: 'Etapas',
+    heading: 'Configurar etapas',
+    help:
+      'Usa una línea por etapa: stage-id | Título | destino-a, destino-b | acción-a, acción-b. Puedes omitir el tercer o cuarto segmento y dejar vacías las transiciones antes de las acciones cuando haga falta.',
+    definitionsLabel: 'Definiciones de etapas',
+    applyButton: 'Aplicar etapas'
   },
   confirmDialog: {
     deleteCardTitle: '¿Eliminar tarjeta?',
@@ -646,6 +672,8 @@ const ES_CL_MESSAGES = freezeCatalog({
     boardTitleRequired: 'El título del tablero es obligatorio.',
     boardLanguagePolicyInvalid: 'La política de idioma del tablero no es válida.',
     boardStagesRequired: 'Agrega al menos una etapa.',
+    boardStageDefinitionFormatInvalid:
+      'Cada etapa debe usar "stage-id | Título", "stage-id | Título | destino-a, destino-b" o "stage-id | Título | destino-a, destino-b | acción-a, acción-b".',
     boardStageIdInvalid: 'Los ids de etapa deben usar slugs en minúsculas.',
     boardStageIdsUnique: 'Los ids de etapa deben ser únicos.',
     boardStageTitleRequired: 'Cada etapa necesita un título.',
@@ -970,9 +998,21 @@ const JA_MESSAGES = freezeCatalog({
     stagesLabel: 'ステージ',
     stagesHelp:
       '1 行ごとに入力: stage-id | 表示名 | 遷移先-a, 遷移先-b | action-a, action-b。例: backlog | Backlog | doing, done | card.create',
+    stageSummaryLabel: '現在の下書き',
+    stageSummaryEmpty: '設定されたステージはありません。',
+    stageSummaryValue: '{count} ステージ · {stages}',
+    configureStagesButton: 'ステージを設定',
     saveButton: 'ボードを保存',
     createButton: 'ボードを作成',
     deleteButton: 'ボードを削除'
+  },
+  boardStageConfigDialog: {
+    sectionLabel: 'ステージ',
+    heading: 'ステージを設定',
+    help:
+      '1 行ごとに入力: stage-id | Title | target-a, target-b | action-a, action-b。必要に応じて 3 つ目や 4 つ目の区切りは省略でき、action の前で遷移先を空にすることもできます。',
+    definitionsLabel: 'ステージ定義',
+    applyButton: 'ステージを適用'
   },
   confirmDialog: {
     deleteCardTitle: 'カードを削除しますか？',
@@ -990,6 +1030,8 @@ const JA_MESSAGES = freezeCatalog({
     boardTitleRequired: 'ボード名は必須です。',
     boardLanguagePolicyInvalid: 'ボードの言語ポリシーが無効です。',
     boardStagesRequired: '少なくとも 1 つのステージを追加してください。',
+    boardStageDefinitionFormatInvalid:
+      '各ステージは "stage-id | Title"、"stage-id | Title | target-a, target-b"、または "stage-id | Title | target-a, target-b | action-a, action-b" 形式で入力してください。',
     boardStageIdInvalid: 'ステージ id は小文字のスラッグで入力してください。',
     boardStageIdsUnique: 'ステージ id は重複できません。',
     boardStageTitleRequired: '各ステージに表示名が必要です。',

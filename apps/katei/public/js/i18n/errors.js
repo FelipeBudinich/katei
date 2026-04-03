@@ -19,6 +19,8 @@ const KNOWN_ERROR_KEY_BY_MESSAGE = Object.freeze({
   'Board title is required.': 'errors.boardTitleRequired',
   'Board language policy is invalid.': 'errors.boardLanguagePolicyInvalid',
   'Board must define at least one stage.': 'errors.boardStagesRequired',
+  'Each stage must use "stage-id | Title", "stage-id | Title | target-a, target-b", or "stage-id | Title | target-a, target-b | action-a, action-b".':
+    'errors.boardStageDefinitionFormatInvalid',
   'Stage ids must be lowercase slugs like "in-review".': 'errors.boardStageIdInvalid',
   'Stage ids must be unique.': 'errors.boardStageIdsUnique',
   'Stage titles are required.': 'errors.boardStageTitleRequired',

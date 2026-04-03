@@ -656,6 +656,7 @@ test('workspace template renders the board editor without a templates field', ()
     )
   );
   const boardEditorDialog = extractDialogHtml(html, 'board-editor');
+  const boardStageConfigDialog = extractDialogHtml(html, 'board-stage-config');
 
   assert.match(boardEditorDialog, /name="aiProvider"/);
   assert.match(boardEditorDialog, /name="openAiApiKey"/);
@@ -666,12 +667,19 @@ test('workspace template renders the board editor without a templates field', ()
   assert.match(boardEditorDialog, /data-board-editor-target="apiKeyStatus"/);
   assert.match(boardEditorDialog, /data-board-editor-target="localizationGlossaryInput"/);
   assert.match(boardEditorDialog, /data-board-editor-target="stageDefinitionsInput"/);
+  assert.match(boardEditorDialog, /data-board-editor-target="stageSummary"/);
+  assert.match(boardEditorDialog, /data-board-editor-target="configureStagesButton"/);
   assert.match(boardEditorDialog, /data-board-editor-target="deleteActions"/);
   assert.match(boardEditorDialog, /data-board-editor-target="deleteButton"/);
+  assert.match(boardEditorDialog, /board-stage-config:apply@window->board-editor#applyStageConfig/);
+  assert.match(boardEditorDialog, /board-editor#openStageConfig/);
   assert.match(boardEditorDialog, /board-editor#closeForAction workspace#confirmDeleteBoard/);
   assert.doesNotMatch(boardEditorDialog, /name="templates"/);
   assert.doesNotMatch(boardEditorDialog, /data-board-editor-target="templatesInput"/);
   assert.doesNotMatch(boardEditorDialog, />\s*Templates\s*</);
+  assert.match(boardStageConfigDialog, /workspace:open-board-stage-config@window->board-stage-config#openFromEvent/);
+  assert.match(boardStageConfigDialog, /data-board-stage-config-target="definitionsInput"/);
+  assert.match(boardStageConfigDialog, /data-board-stage-config-target="error"/);
 });
 
 test('GET /boards bootstraps only safe board AI metadata and never serialized secrets', async () => {

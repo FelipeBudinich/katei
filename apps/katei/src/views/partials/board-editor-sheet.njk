@@ -4,6 +4,7 @@
   data-board-editor-target="dialog"
   data-action="
     workspace:open-board-editor@window->board-editor#openFromEvent
+    board-stage-config:apply@window->board-editor#applyStageConfig
     click->board-editor#backdropClose
     cancel->board-editor#close
   "
@@ -145,18 +146,42 @@
         </label>
       </section>
 
-      <label class="block space-y-2">
-        <span class="field-label text-sm font-semibold">{{ t('boardEditor.stagesLabel') }}</span>
-        <p class="text-xs leading-5 text-muted">{{ t('boardEditor.stagesHelp') }}</p>
+      <section class="space-y-3">
+        <div class="space-y-1">
+          <p class="field-label text-sm font-semibold">{{ t('boardEditor.stagesLabel') }}</p>
+          <p class="text-xs leading-5 text-muted">{{ t('boardEditor.stagesHelp') }}</p>
+        </div>
+
+        <div class="paper-panel px-4 py-4 space-y-3">
+          <div class="space-y-1">
+            <p class="text-xs uppercase tracking-[0.24em] text-subtle">{{ t('boardEditor.stageSummaryLabel') }}</p>
+            <p class="text-sm leading-6 text-strong" data-board-editor-target="stageSummary">
+              {{ t('boardEditor.stageSummaryEmpty') }}
+            </p>
+          </div>
+
+          <div class="action-wrap-grid">
+            <button
+              type="button"
+              class="touch-button-secondary"
+              data-board-editor-target="configureStagesButton"
+              data-action="board-editor#openStageConfig"
+            >
+              {{ t('boardEditor.configureStagesButton') }}
+            </button>
+          </div>
+        </div>
+
         <textarea
           name="stageDefinitions"
           rows="7"
           class="field-control font-mono text-sm"
           placeholder="backlog | Backlog | doing, done | card.create"
           required
+          hidden
           data-board-editor-target="stageDefinitionsInput"
         ></textarea>
-      </label>
+      </section>
 
       <p class="text-sm leading-6" style="color: var(--color-danger);" hidden data-board-editor-target="error"></p>
 

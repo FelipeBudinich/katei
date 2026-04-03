@@ -4,6 +4,7 @@ import BoardOptionsController from '/js/controllers/board_options_controller.js'
 import ProfileOptionsController from '/js/controllers/profile_options_controller.js';
 import BoardCollaboratorsController from '/js/controllers/board_collaborators_controller.js';
 import BoardEditorController from '/js/controllers/board_editor_controller.js';
+import BoardStageConfigController from '/js/controllers/board_stage_config_controller.js';
 import CardEditorController from '/js/controllers/card_editor_controller.js';
 import LandingController from '/js/controllers/landing_controller.js';
 import SessionController from '/js/controllers/session_controller.js';
@@ -15,6 +16,7 @@ application.register('board-options', BoardOptionsController);
 application.register('profile-options', ProfileOptionsController);
 application.register('board-collaborators', BoardCollaboratorsController);
 application.register('board-editor', BoardEditorController);
+application.register('board-stage-config', BoardStageConfigController);
 application.register('card-editor', CardEditorController);
 application.register('landing', LandingController);
 application.register('session', SessionController);

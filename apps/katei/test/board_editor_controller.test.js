@@ -315,6 +315,150 @@ test('parseBoardEditorFormInput clears the saved OpenAI key when requested', () 
   assert.equal(Object.prototype.hasOwnProperty.call(parsedInput, 'openAiApiKey'), false);
 });
 
+test('board editor initializes the stage summary from the opened board draft', async () => {
+  const controller = createBoardEditorControllerDouble();
+  const board = createEmptyWorkspace().boards.main;
+
+  await withImmediateAnimationFrame(() => {
+    BoardEditorController.prototype.openFromEvent.call(controller, {
+      detail: {
+        mode: 'edit',
+        board,
+        canDeleteBoard: true
+      }
+    });
+  });
+
+  assert.equal(controller.stageDefinitionsInputTarget.value, createBoardEditorFormState(board).stageDefinitions);
+  assert.equal(controller.stageSummaryTarget.textContent, '4 stages · backlog, doing, done, archived');
+});
+
+test('board editor opens the stage-config dialog by dispatching the current draft on window', async () => {
+  const controller = createBoardEditorControllerDouble();
+  const board = createEmptyWorkspace().boards.main;
+  const dispatchedEvents = [];
+  let prevented = false;
+
+  controller.currentBoard = board;
+  controller.stageDefinitionsInputTarget.value = createBoardEditorFormState(board).stageDefinitions;
+
+  await withWindowDispatchCapture(dispatchedEvents, () => {
+    BoardEditorController.prototype.openStageConfig.call(controller, {
+      preventDefault() {
+        prevented = true;
+      },
+      currentTarget: controller.configureStagesButtonTarget
+    });
+  });
+
+  assert.equal(prevented, true);
+  assert.equal(dispatchedEvents.length, 1);
+  assert.equal(dispatchedEvents[0].type, 'workspace:open-board-stage-config');
+  assert.deepEqual(dispatchedEvents[0].detail, {
+    stageDefinitions: controller.stageDefinitionsInputTarget.value,
+    currentBoard: board,
+    triggerElement: controller.configureStagesButtonTarget
+  });
+});
+
+test('board editor applies returned stage definitions back into the hidden draft and refreshes the summary', () => {
+  const controller = createBoardEditorControllerDouble();
+
+  controller.currentBoard = createEmptyWorkspace().boards.main;
+  controller.errorTarget.hidden = false;
+  controller.errorTarget.textContent = 'Old error';
+
+  BoardEditorController.prototype.applyStageConfig.call(controller, {
+    detail: {
+      stageDefinitions: ['backlog | Backlog | review | card.create', 'review | Review | backlog'].join('\n')
+    }
+  });
+
+  assert.equal(
+    controller.stageDefinitionsInputTarget.value,
+    ['backlog | Backlog | review | card.create', 'review | Review | backlog'].join('\n')
+  );
+  assert.equal(controller.stageSummaryTarget.textContent, '2 stages · backlog, review');
+  assert.equal(controller.errorTarget.hidden, true);
+  assert.equal(controller.errorTarget.textContent, '');
+  assert.equal(controller.configureStagesButtonTarget.focused, true);
+});
+
+test('board editor submit still uses the applied stage definitions draft', async () => {
+  const controller = createBoardEditorControllerDouble();
+  const dispatchedEvents = [];
+  let prevented = false;
+
+  controller.dispatch = (name, detail) => {
+    dispatchedEvents.push({ name, detail });
+  };
+  controller.closeDialog = () => {
+    controller.closeDialogCalls = (controller.closeDialogCalls ?? 0) + 1;
+  };
+  controller.titleInputTarget.value = 'Editorial board';
+  controller.sourceLocaleInputTarget.value = 'en';
+  controller.defaultLocaleInputTarget.value = 'en';
+  controller.supportedLocalesInputTarget.value = 'en';
+  controller.requiredLocalesInputTarget.value = 'en';
+  controller.aiProviderInputTarget.value = 'OpenAI';
+  controller.localizationGlossaryInputTarget.value = '';
+
+  BoardEditorController.prototype.applyStageConfig.call(controller, {
+    detail: {
+      stageDefinitions: ['backlog | Backlog | review | card.create', 'review | Review | backlog'].join('\n')
+    }
+  });
+
+  await withFormDataStub(() => {
+    BoardEditorController.prototype.submit.call(controller, {
+      preventDefault() {
+        prevented = true;
+      }
+    });
+  });
+
+  assert.equal(prevented, true);
+  assert.equal(controller.closeDialogCalls, 1);
+  assert.deepEqual(dispatchedEvents, [
+    {
+      name: 'save',
+      detail: {
+        detail: {
+          mode: 'create',
+          boardId: '',
+          input: {
+            title: 'Editorial board',
+            languagePolicy: {
+              sourceLocale: 'en',
+              defaultLocale: 'en',
+              supportedLocales: ['en'],
+              requiredLocales: ['en']
+            },
+            stageDefinitions: [
+              {
+                id: 'backlog',
+                title: 'Backlog',
+                allowedTransitionStageIds: ['review'],
+                actionIds: ['card.create']
+              },
+              {
+                id: 'review',
+                title: 'Review',
+                allowedTransitionStageIds: ['backlog'],
+                actionIds: []
+              }
+            ],
+            templates: [],
+            localizationGlossary: [],
+            aiProvider: 'openai',
+            clearOpenAiApiKey: false
+          }
+        }
+      }
+    }
+  ]);
+});
+
 test('board editor hides delete actions in create mode', async () => {
   const controller = createBoardEditorControllerDouble();
 
@@ -425,12 +569,7 @@ function createBoardEditorControllerDouble() {
   controller.t = createTranslator('en');
   controller.currentBoard = null;
   controller.dialogTarget = createDialogTarget();
-  controller.formTarget = {
-    resetCalls: 0,
-    reset() {
-      this.resetCalls += 1;
-    }
-  };
+  controller.formTarget = createBoardEditorFormTarget(controller);
   controller.headingTarget = createTextTarget();
   controller.modeInputTarget = createValueTarget('create');
   controller.boardIdInputTarget = createValueTarget('');
@@ -450,6 +589,8 @@ function createBoardEditorControllerDouble() {
   };
   controller.localizationGlossaryInputTarget = createValueTarget('');
   controller.stageDefinitionsInputTarget = createValueTarget('');
+  controller.stageSummaryTarget = createTextTarget();
+  controller.configureStagesButtonTarget = createFocusableButtonTarget();
   controller.deleteActionsTarget = {
     hidden: true
   };
@@ -462,6 +603,29 @@ function createBoardEditorControllerDouble() {
   controller.dispatch = () => {};
 
   return controller;
+}
+
+function createBoardEditorFormTarget(controller) {
+  return {
+    resetCalls: 0,
+    reset() {
+      this.resetCalls += 1;
+    },
+    getFormDataEntries() {
+      return {
+        title: controller.titleInputTarget.value,
+        sourceLocale: controller.sourceLocaleInputTarget.value,
+        defaultLocale: controller.defaultLocaleInputTarget.value,
+        supportedLocales: controller.supportedLocalesInputTarget.value,
+        requiredLocales: controller.requiredLocalesInputTarget.value,
+        aiProvider: controller.aiProviderInputTarget.value,
+        openAiApiKey: controller.openAiApiKeyInputTarget.value,
+        clearOpenAiApiKey: controller.clearOpenAiApiKeyInputTarget.checked ? 'true' : null,
+        localizationGlossary: controller.localizationGlossaryInputTarget.value,
+        stageDefinitions: controller.stageDefinitionsInputTarget.value
+      };
+    }
+  };
 }
 
 function createDialogTarget() {
@@ -503,6 +667,16 @@ function createFocusableValueTarget(value = '') {
   };
 }
 
+function createFocusableButtonTarget() {
+  return {
+    focused: false,
+    isConnected: true,
+    focus() {
+      this.focused = true;
+    }
+  };
+}
+
 async function withImmediateAnimationFrame(callback) {
   const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
   globalThis.requestAnimationFrame = (frameCallback) => frameCallback();
@@ -514,6 +688,51 @@ async function withImmediateAnimationFrame(callback) {
       globalThis.requestAnimationFrame = originalRequestAnimationFrame;
     } else {
       delete globalThis.requestAnimationFrame;
+    }
+  }
+}
+
+async function withWindowDispatchCapture(dispatchedEvents, callback) {
+  const originalWindow = globalThis.window;
+
+  globalThis.window = {
+    dispatchEvent(event) {
+      dispatchedEvents.push(event);
+      return true;
+    }
+  };
+
+  try {
+    return await callback();
+  } finally {
+    if (typeof originalWindow === 'undefined') {
+      delete globalThis.window;
+    } else {
+      globalThis.window = originalWindow;
+    }
+  }
+}
+
+async function withFormDataStub(callback) {
+  const originalFormData = globalThis.FormData;
+
+  globalThis.FormData = class FormDataStub {
+    constructor(form) {
+      this.values = typeof form?.getFormDataEntries === 'function' ? form.getFormDataEntries() : {};
+    }
+
+    get(name) {
+      return Object.prototype.hasOwnProperty.call(this.values, name) ? this.values[name] : null;
+    }
+  };
+
+  try {
+    return await callback();
+  } finally {
+    if (typeof originalFormData === 'undefined') {
+      delete globalThis.FormData;
+    } else {
+      globalThis.FormData = originalFormData;
     }
   }
 }

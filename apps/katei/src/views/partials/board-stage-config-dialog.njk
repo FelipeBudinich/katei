@@ -1,0 +1,50 @@
+<dialog
+  class="sheet-dialog"
+  data-controller="board-stage-config"
+  data-board-stage-config-target="dialog"
+  data-action="
+    workspace:open-board-stage-config@window->board-stage-config#openFromEvent
+    click->board-stage-config#backdropClose
+    cancel->board-stage-config#close
+  "
+>
+  <div class="sheet-panel">
+    <div class="dialog-handle mx-auto h-1.5 w-16 rounded-full lg:hidden"></div>
+
+    <div class="dialog-header-row mt-4">
+      <div class="min-w-0 space-y-2">
+        <p class="field-label text-sm font-semibold">{{ t('boardStageConfigDialog.sectionLabel') }}</p>
+        <h2 class="font-serif text-3xl text-strong">{{ t('boardStageConfigDialog.heading') }}</h2>
+      </div>
+
+      <button type="button" class="touch-button-secondary" data-action="board-stage-config#close">
+        {{ t('common.close') }}
+      </button>
+    </div>
+
+    <form class="mt-6 space-y-4" data-action="submit->board-stage-config#apply">
+      <label class="block space-y-2">
+        <span class="field-label text-sm font-semibold">{{ t('boardStageConfigDialog.definitionsLabel') }}</span>
+        <textarea
+          rows="8"
+          class="field-control font-mono text-sm"
+          placeholder="backlog | Backlog | doing, done | card.create"
+          required
+          data-board-stage-config-target="definitionsInput"
+        ></textarea>
+        <p class="text-xs leading-5 text-muted">{{ t('boardStageConfigDialog.help') }}</p>
+      </label>
+
+      <p class="text-sm leading-6" style="color: var(--color-danger);" hidden data-board-stage-config-target="error"></p>
+
+      <div class="dialog-actions pt-2">
+        <button type="button" class="touch-button-secondary" data-action="board-stage-config#close">
+          {{ t('common.cancel') }}
+        </button>
+        <button type="submit" class="touch-button-primary">
+          {{ t('boardStageConfigDialog.applyButton') }}
+        </button>
+      </div>
+    </form>
+  </div>
+</dialog>

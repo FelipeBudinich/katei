@@ -7,6 +7,7 @@ import { createDefaultBoardLanguagePolicy } from '../domain/board_language_polic
 import { normalizeBoardLocalizationGlossary } from '../domain/board_localization_glossary.js';
 import { normalizeBoardSchemaInput, assertBoardSchemaCompatibleWithBoard } from '../domain/board_schema.js';
 import { createDefaultBoardStages } from '../domain/board_workflow.js';
+import { parseStageDefinitions, serializeStageDefinitions } from './board_stage_config_schema.js';
 
 export function createBoardEditorFormState(board = null) {
   const baseLanguagePolicy = board?.languagePolicy ?? createDefaultBoardLanguagePolicy();
@@ -38,9 +39,7 @@ export function createBoardEditorFormState(board = null) {
         supportedLocales: baseLanguagePolicy.supportedLocales
       })
     ),
-    stageDefinitions: stageDefinitions
-      .map((stage) => serializeStageDefinition(stage))
-      .join('\n')
+    stageDefinitions: serializeStageDefinitions(stageDefinitions)
   };
 }
 
@@ -84,36 +83,6 @@ export function parseBoardEditorFormInput(input, { currentBoard = null } = {}) {
     ...(openAiApiKey ? { openAiApiKey } : {}),
     clearOpenAiApiKey
   };
-}
-
-function parseStageDefinitions(rawValue) {
-  const lines = splitMultilineInput(rawValue);
-
-  if (lines.length < 1) {
-    throw new Error('Board must define at least one stage.');
-  }
-
-  return lines.map((line) => {
-    const segments = splitStagePipeSegments(line);
-
-    if (segments.length < 2 || segments.length > 4) {
-      throw new Error(
-        'Each stage must use "stage-id | Title", "stage-id | Title | target-a, target-b", or "stage-id | Title | target-a, target-b | action-a, action-b".'
-      );
-    }
-
-    const stageDefinition = {
-      id: segments[0],
-      title: segments[1],
-      allowedTransitionStageIds: splitInlineList(segments[2] ?? '')
-    };
-
-    if (segments.length === 4) {
-      stageDefinition.actionIds = splitInlineList(segments[3] ?? '');
-    }
-
-    return stageDefinition;
-  });
 }
 
 function splitMultilineInput(value) {
@@ -188,15 +157,4 @@ function serializeLocalizationGlossary(localizationGlossary) {
       return `${entry.source} | ${translations}`;
     })
     .join('\n');
-}
-
-function serializeStageDefinition(stage) {
-  const transitions = stage.allowedTransitionStageIds.join(', ');
-  const actionIds = Array.isArray(stage.actionIds) ? stage.actionIds : [];
-
-  if (actionIds.length > 0) {
-    return `${stage.id} | ${stage.title} | ${transitions} | ${actionIds.join(', ')}`;
-  }
-
-  return `${stage.id} | ${stage.title} | ${transitions}`;
 }

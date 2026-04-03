@@ -1,5 +1,6 @@
 import { Controller } from '../../vendor/stimulus/stimulus.js';
 import { createBoardEditorFormState, parseBoardEditorFormInput } from './board_editor_schema.js';
+import { createStageDefinitionsSummary } from './board_stage_config_schema.js';
 import { getBrowserTranslator } from '../i18n/browser.js';
 import { localizeErrorMessage } from '../i18n/errors.js';
 
@@ -22,6 +23,8 @@ export default class extends Controller {
     'clearOpenAiApiKeyInput',
     'localizationGlossaryInput',
     'stageDefinitionsInput',
+    'stageSummary',
+    'configureStagesButton',
     'deleteActions',
     'deleteButton',
     'submitButton',
@@ -55,6 +58,7 @@ export default class extends Controller {
     this.localizationGlossaryInputTarget.value = formState.localizationGlossary;
     this.syncApiKeyStatus(formState);
     this.stageDefinitionsInputTarget.value = formState.stageDefinitions;
+    this.syncStageSummary();
     this.headingTarget.textContent = isEditMode ? this.t('boardEditor.editHeading') : this.t('boardEditor.newHeading');
     this.submitButtonTarget.textContent = isEditMode ? this.t('boardEditor.saveButton') : this.t('boardEditor.createButton');
     this.syncDeleteAction({
@@ -69,6 +73,36 @@ export default class extends Controller {
     }
 
     requestAnimationFrame(() => this.titleInputTarget.focus());
+  }
+
+  openStageConfig(event) {
+    if (event) {
+      event.preventDefault();
+    }
+
+    window.dispatchEvent(
+      new CustomEvent('workspace:open-board-stage-config', {
+        detail: {
+          stageDefinitions: this.stageDefinitionsInputTarget.value,
+          currentBoard: this.currentBoard,
+          triggerElement: event?.currentTarget ?? this.configureStagesButtonTarget
+        }
+      })
+    );
+  }
+
+  applyStageConfig(event) {
+    if (typeof event.detail?.stageDefinitions !== 'string') {
+      return;
+    }
+
+    this.stageDefinitionsInputTarget.value = event.detail.stageDefinitions;
+    this.syncStageSummary();
+    this.hideError();
+
+    if ((this.configureStagesButtonTarget?.isConnected ?? true) && typeof this.configureStagesButtonTarget?.focus === 'function') {
+      this.configureStagesButtonTarget.focus();
+    }
   }
 
   backdropClose(event) {
@@ -155,6 +189,7 @@ export default class extends Controller {
     this.aiSectionTarget.hidden = true;
     this.apiKeyStatusTarget.hidden = true;
     this.apiKeyStatusTarget.textContent = '';
+    this.stageSummaryTarget.textContent = this.t('boardEditor.stageSummaryEmpty');
 
     if (clearDeleteBoardId) {
       this.deleteButtonTarget.dataset.boardId = '';
@@ -190,5 +225,20 @@ export default class extends Controller {
     this.apiKeyStatusTarget.textContent = formState.openAiApiKeyLast4
       ? this.t('boardEditor.openAiApiKeySavedWithLast4', { last4: formState.openAiApiKeyLast4 })
       : this.t('boardEditor.openAiApiKeySaved');
+  }
+
+  syncStageSummary() {
+    try {
+      const summary = createStageDefinitionsSummary(this.stageDefinitionsInputTarget.value);
+
+      if (summary.count < 1 || !summary.stages) {
+        this.stageSummaryTarget.textContent = this.t('boardEditor.stageSummaryEmpty');
+        return;
+      }
+
+      this.stageSummaryTarget.textContent = this.t('boardEditor.stageSummaryValue', summary);
+    } catch (error) {
+      this.stageSummaryTarget.textContent = this.t('boardEditor.stageSummaryEmpty');
+    }
   }
 }
