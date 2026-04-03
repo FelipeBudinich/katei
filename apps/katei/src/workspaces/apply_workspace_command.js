@@ -27,6 +27,7 @@ import {
   getBoardMembershipForActor,
   isBoardAdminMembership
 } from '../../public/js/domain/board_permissions.js';
+import { stageSupportsAction } from '../../public/js/domain/board_stage_actions.js';
 import {
   createCardContentProvenance,
   createCardContentReview,
@@ -684,10 +685,16 @@ function applyBoardReset(workspace, command, context) {
 function applyCardCreate(workspace, command, context) {
   const currentBoard = getBoard(workspace, command.payload.boardId);
   assertActorCanEditBoard(currentBoard, context.actor);
+  assertValidColumnId(command.payload.stageId, currentBoard);
+
+  if (!stageSupportsAction(currentBoard, command.payload.stageId, 'card.create')) {
+    throw new Error('Cards can only be created in create-enabled stages.');
+  }
+
   const nextWorkspace = cloneWorkspace(workspace);
   const board = getBoard(nextWorkspace, command.payload.boardId);
   const cardId = context.createCardId();
-  const initialStageId = board.stageOrder[0];
+  const initialStageId = command.payload.stageId;
   const sourceLocale = board.languagePolicy.sourceLocale;
 
   board.cards[cardId] = {

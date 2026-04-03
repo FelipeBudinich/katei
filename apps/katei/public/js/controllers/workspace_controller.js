@@ -27,8 +27,8 @@ import {
 import { createLocalizedCardViewState } from './card_editor_locale_view.js';
 import {
   getBoardStageTitle,
-  getDefaultBoardStageId,
   resolveBoardStageId,
+  shouldShowCreateForStage,
   shouldShowPriorityForStage
 } from './stage_ui.js';
 
@@ -42,7 +42,6 @@ export default class extends Controller {
     'boardTitle',
     'boardAccessNotice',
     'desktopColumns',
-    'createCardButton',
     'announcer',
     'viewDialog',
     'viewLocaleSection',
@@ -397,13 +396,23 @@ export default class extends Controller {
       return;
     }
 
+    const stageId = resolveBoardStageId(this.activeBoard, {
+      stageId: event?.currentTarget?.dataset?.stageId,
+      columnId: event?.currentTarget?.dataset?.columnId
+    });
+
+    if (!stageId || !shouldShowCreateForStage(this.activeBoard, stageId)) {
+      this.announce(this.t('errors.cardCreateStageUnavailable'));
+      return;
+    }
+
     this.dispatchWorkspaceEvent('open-card-editor', {
       mode: 'create',
       boardId: this.activeBoard.id,
       board: this.activeBoard,
       currentActorRole: this.activeBoardCollaborationState?.currentRole ?? null,
       canEditLocalizedContent: this.canEditActiveBoard,
-      stageId: getDefaultBoardStageId(this.activeBoard),
+      stageId,
       triggerElement: event?.currentTarget ?? null
     });
   }
@@ -575,7 +584,10 @@ export default class extends Controller {
       return;
     }
 
-    await this.runAction(() => this.service.createCard(boardId, input), this.t('workspace.announcements.cardCreated'));
+    await this.runAction(
+      () => this.service.createCard(boardId, { ...input, stageId: targetStageId }),
+      this.t('workspace.announcements.cardCreated')
+    );
   }
 
   async handleCardLocaleRequest(event) {
@@ -831,12 +843,6 @@ export default class extends Controller {
     }
 
     if (!this.activeBoard || !activeBoardState) {
-      if (this.hasCreateCardButtonTarget) {
-        this.createCardButtonTarget.hidden = true;
-        this.createCardButtonTarget.disabled = true;
-        this.createCardButtonTarget.setAttribute('aria-disabled', 'true');
-      }
-
       if (this.hasBoardAccessNoticeTarget) {
         this.boardAccessNoticeTarget.hidden = false;
         this.boardAccessNoticeTarget.textContent = this.t('workspace.noVisibleBoardsDescription');
@@ -859,12 +865,6 @@ export default class extends Controller {
       });
       this.syncWorkspaceHistory();
       return;
-    }
-
-    if (this.hasCreateCardButtonTarget) {
-      this.createCardButtonTarget.hidden = !activeBoardState.canEdit;
-      this.createCardButtonTarget.disabled = !activeBoardState.canEdit;
-      this.createCardButtonTarget.setAttribute('aria-disabled', String(!activeBoardState.canEdit));
     }
 
     if (this.hasBoardAccessNoticeTarget) {

@@ -194,6 +194,55 @@ test('renderBoardState clears board columns when the actor cannot read the activ
   assert.deepEqual(regions.desktopColumns.children, []);
 });
 
+test('renderBoardState shows stage-local create buttons only for create-enabled editable stages', () => {
+  const board = createWorkspaceBoard({
+    id: 'board_actions',
+    title: 'Action board',
+    createdAt: '2026-03-31T10:00:00.000Z',
+    updatedAt: '2026-03-31T10:00:00.000Z'
+  });
+  const regions = {
+    boardTitle: { textContent: '' },
+    desktopColumns: createRegionDouble()
+  };
+  const t = Object.assign(
+    (key, values = {}) => (key === 'workspace.cardCount' ? String(values.count ?? 0) : key),
+    { locale: 'en' }
+  );
+
+  renderBoardState({
+    board,
+    canReadBoard: true,
+    canEditBoard: true,
+    regions,
+    templates: {
+      columnTemplate: createColumnTemplateDouble(),
+      cardTemplate: createCardTemplateDouble()
+    },
+    t
+  });
+
+  assert.equal(regions.desktopColumns.children[0].createButton.hidden, false);
+  assert.equal(regions.desktopColumns.children[0].createButton.disabled, false);
+  assert.equal(regions.desktopColumns.children[2].createButton.hidden, true);
+  assert.equal(regions.desktopColumns.children[3].createButton.hidden, true);
+
+  renderBoardState({
+    board,
+    canReadBoard: true,
+    canEditBoard: false,
+    regions,
+    templates: {
+      columnTemplate: createColumnTemplateDouble(),
+      cardTemplate: createCardTemplateDouble()
+    },
+    t
+  });
+
+  assert.equal(regions.desktopColumns.children[0].createButton.hidden, true);
+  assert.equal(regions.desktopColumns.children[0].createButton.disabled, true);
+});
+
 function withMarkdownEnvironment(action) {
   const previousWindow = globalThis.window;
   const previousDocument = globalThis.document;
@@ -241,6 +290,91 @@ function createRegionDouble(initialChildren = []) {
     children: [...initialChildren],
     replaceChildren(...nodes) {
       this.children = nodes;
+    }
+  };
+}
+
+function createColumnTemplateDouble() {
+  return {
+    content: {
+      firstElementChild: {
+        cloneNode() {
+          return createColumnPanelDouble();
+        }
+      }
+    }
+  };
+}
+
+function createCardTemplateDouble() {
+  return {
+    content: {
+      firstElementChild: {
+        cloneNode() {
+          return {};
+        }
+      }
+    }
+  };
+}
+
+function createColumnPanelDouble() {
+  const titleElement = { textContent: '' };
+  const countElement = { textContent: '' };
+  const countChipElement = {
+    attributes: {},
+    setAttribute(name, value) {
+      this.attributes[name] = String(value);
+    }
+  };
+  const toggleElement = {
+    dataset: {},
+    disabled: false,
+    attributes: {},
+    setAttribute(name, value) {
+      this.attributes[name] = String(value);
+    }
+  };
+  const createButton = {
+    dataset: {},
+    hidden: true,
+    disabled: true,
+    attributes: {},
+    setAttribute(name, value) {
+      this.attributes[name] = String(value);
+    }
+  };
+  const bodyElement = {
+    id: '',
+    hidden: false
+  };
+  const cardsContainer = {
+    innerHTML: '',
+    appendChild() {}
+  };
+
+  return {
+    dataset: {},
+    createButton,
+    querySelector(selector) {
+      switch (selector) {
+        case '[data-column-field="title"]':
+          return titleElement;
+        case '[data-column-field="count"]':
+          return countElement;
+        case '.count-chip':
+          return countChipElement;
+        case '[data-column-toggle]':
+          return toggleElement;
+        case '[data-column-create]':
+          return createButton;
+        case '.column-panel-body':
+          return bodyElement;
+        case '[data-column-cards]':
+          return cardsContainer;
+        default:
+          return null;
+      }
     }
   };
 }

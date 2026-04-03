@@ -1,9 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createWorkspaceBoard } from '../public/js/domain/workspace_read_model.js';
-import { shouldShowDeleteForStage } from '../public/js/controllers/stage_ui.js';
+import {
+  shouldShowCreateForStage,
+  shouldShowDeleteForStage
+} from '../public/js/controllers/stage_ui.js';
 
-test('shouldShowDeleteForStage follows schema-defined stage actions instead of literal stage ids', () => {
+test('stage action helpers follow schema-defined stage actions instead of literal stage ids', () => {
   const board = createWorkspaceBoard({
     id: 'board_actions',
     title: 'Board actions',
@@ -19,7 +22,7 @@ test('shouldShowDeleteForStage follows schema-defined stage actions instead of l
       cardIds: [],
       allowedTransitionStageIds: ['archive-bin', 'archived'],
       templateIds: [],
-      actionIds: []
+      actionIds: ['card.create']
     },
     'archive-bin': {
       id: 'archive-bin',
@@ -39,6 +42,9 @@ test('shouldShowDeleteForStage follows schema-defined stage actions instead of l
     }
   };
 
+  assert.equal(shouldShowCreateForStage(board, 'backlog'), true);
+  assert.equal(shouldShowCreateForStage(board, 'archive-bin'), false);
+  assert.equal(shouldShowCreateForStage(board, 'archived'), false);
   assert.equal(shouldShowDeleteForStage(board, 'backlog'), false);
   assert.equal(shouldShowDeleteForStage(board, 'archive-bin'), true);
   assert.equal(shouldShowDeleteForStage(board, 'archived'), false);

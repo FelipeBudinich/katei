@@ -281,7 +281,7 @@ const EN_MESSAGES = freezeCatalog({
     clearOpenAiApiKeyLabel: 'Clear the saved OpenAI API key',
     stagesLabel: 'Stages',
     stagesHelp:
-      'One line per stage: stage-id | Display title | target-a, target-b | action-a, action-b. Example: archived | Archived | backlog, doing, done | card.delete',
+      'One line per stage: stage-id | Display title | target-a, target-b | action-a, action-b. Example: backlog | Backlog | doing, done | card.create',
     saveButton: 'Save Board',
     createButton: 'Create Board',
     deleteButton: 'Delete Board'
@@ -323,6 +323,7 @@ const EN_MESSAGES = freezeCatalog({
     boardOpenAiKeyMissing: 'This board does not have AI localization configured.',
     boardOpenAiKeyUnavailable: 'The saved AI localization settings are unavailable.',
     cardTitleRequired: 'Card title is required.',
+    cardCreateStageUnavailable: 'Cards can only be created in create-enabled stages.',
     cannotDeleteLastBoard: 'Cannot delete the last remaining board.',
     boardNotFound: 'Board not found.',
     cardNotFound: 'Card not found.',
@@ -624,7 +625,7 @@ const ES_CL_MESSAGES = freezeCatalog({
     clearOpenAiApiKeyLabel: 'Eliminar la clave de OpenAI guardada',
     stagesLabel: 'Etapas',
     stagesHelp:
-      'Una línea por etapa: stage-id | Título visible | destino-a, destino-b | acción-a, acción-b. Ejemplo: archived | Archived | backlog, doing, done | card.delete',
+      'Una línea por etapa: stage-id | Título visible | destino-a, destino-b | acción-a, acción-b. Ejemplo: backlog | Backlog | doing, done | card.create',
     saveButton: 'Guardar tablero',
     createButton: 'Crear tablero',
     deleteButton: 'Eliminar tablero'
@@ -666,6 +667,7 @@ const ES_CL_MESSAGES = freezeCatalog({
     boardOpenAiKeyMissing: 'Este tablero no tiene configuración de IA para localización.',
     boardOpenAiKeyUnavailable: 'La configuración guardada de IA para localización no está disponible.',
     cardTitleRequired: 'El título de la tarjeta es obligatorio.',
+    cardCreateStageUnavailable: 'Las tarjetas solo se pueden crear en etapas con creación habilitada.',
     cannotDeleteLastBoard: 'No se puede eliminar el último tablero restante.',
     boardNotFound: 'No se encontró el tablero.',
     cardNotFound: 'No se encontró la tarjeta.',
@@ -967,7 +969,7 @@ const JA_MESSAGES = freezeCatalog({
     clearOpenAiApiKeyLabel: '保存済みの OpenAI API キーを削除する',
     stagesLabel: 'ステージ',
     stagesHelp:
-      '1 行ごとに入力: stage-id | 表示名 | 遷移先-a, 遷移先-b | action-a, action-b。例: archived | Archived | backlog, doing, done | card.delete',
+      '1 行ごとに入力: stage-id | 表示名 | 遷移先-a, 遷移先-b | action-a, action-b。例: backlog | Backlog | doing, done | card.create',
     saveButton: 'ボードを保存',
     createButton: 'ボードを作成',
     deleteButton: 'ボードを削除'
@@ -1009,6 +1011,7 @@ const JA_MESSAGES = freezeCatalog({
     boardOpenAiKeyMissing: 'このボードには AI ローカライズ設定がありません。',
     boardOpenAiKeyUnavailable: '保存済みの AI ローカライズ設定を利用できません。',
     cardTitleRequired: 'カード名は必須です。',
+    cardCreateStageUnavailable: 'カードは作成が有効なステージでのみ作成できます。',
     cannotDeleteLastBoard: '最後のボードは削除できません。',
     boardNotFound: 'ボードが見つかりません。',
     cardNotFound: 'カードが見つかりません。',

@@ -5,6 +5,7 @@ import {
   getStoredCardContentVariant,
   upsertCardContentVariant
 } from './card_localization.js';
+import { stageSupportsAction } from './board_stage_actions.js';
 import {
   DEFAULT_PRIORITY,
   cloneWorkspace,
@@ -113,8 +114,15 @@ export function createCard(workspace, boardId, input) {
   const board = getBoard(nextWorkspace, boardId);
   const timestamp = createTimestamp();
   const cardId = createCardId();
-  const initialStageId = board.stageOrder[0];
+  const initialStageId =
+    (typeof input?.stageId === 'string' && input.stageId.trim()) ? input.stageId : board.stageOrder[0];
   const sourceLocale = board.languagePolicy.sourceLocale;
+
+  assertValidColumnId(initialStageId, board);
+
+  if (typeof input?.stageId === 'string' && input.stageId.trim() && !stageSupportsAction(board, initialStageId, 'card.create')) {
+    throw new Error('Cards can only be created in create-enabled stages.');
+  }
 
   board.cards[cardId] = {
     id: cardId,

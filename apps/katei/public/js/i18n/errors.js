@@ -39,6 +39,7 @@ const KNOWN_ERROR_KEY_BY_MESSAGE = Object.freeze({
   'Localization glossary translations are required.': 'errors.boardLocalizationGlossaryTranslationsRequired',
   'Localization glossary translations must use supported locale ids.': 'errors.boardLocalizationGlossaryLocalesInvalid',
   'Card title is required.': 'errors.cardTitleRequired',
+  'Cards can only be created in create-enabled stages.': 'errors.cardCreateStageUnavailable',
   'Cannot delete the last remaining board.': 'errors.cannotDeleteLastBoard',
   'Board not found.': 'errors.boardNotFound',
   'Card not found.': 'errors.cardNotFound',

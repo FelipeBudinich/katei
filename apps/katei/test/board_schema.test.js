@@ -20,7 +20,7 @@ test('normalizeBoardSchemaInput canonicalizes valid schema edits', () => {
         id: 'backlog',
         title: 'Backlog',
         allowedTransitionStageIds: ['review'],
-        actionIds: ['card.delete']
+        actionIds: ['card.create']
       },
       {
         id: 'review',
@@ -50,7 +50,7 @@ test('normalizeBoardSchemaInput canonicalizes valid schema edits', () => {
       id: 'backlog',
       title: 'Backlog',
       allowedTransitionStageIds: ['review'],
-      actionIds: ['card.delete']
+      actionIds: ['card.create']
     },
     {
       id: 'review',
@@ -60,7 +60,7 @@ test('normalizeBoardSchemaInput canonicalizes valid schema edits', () => {
     }
   ]);
   assert.deepEqual(normalizedSchema.stages.backlog.templateIds, ['starter']);
-  assert.deepEqual(normalizedSchema.stages.backlog.actionIds, ['card.delete']);
+  assert.deepEqual(normalizedSchema.stages.backlog.actionIds, ['card.create']);
 });
 
 test('normalizeBoardSchemaInput rejects invalid locale policy, transitions, and template stages', () => {
@@ -134,8 +134,8 @@ test('normalizeBoardSchemaInput rejects invalid locale policy, transitions, and 
   );
 });
 
-test('normalizeBoardSchemaInput backfills missing archived actionIds and preserves explicit empties', () => {
-  const archivedDefaultSchema = normalizeBoardSchemaInput({
+test('normalizeBoardSchemaInput backfills default stage actionIds and preserves explicit empties', () => {
+  const defaultActionSchema = normalizeBoardSchemaInput({
     languagePolicy: {
       sourceLocale: 'en',
       defaultLocale: 'en',
@@ -157,7 +157,8 @@ test('normalizeBoardSchemaInput backfills missing archived actionIds and preserv
     templates: []
   });
 
-  assert.deepEqual(archivedDefaultSchema.stageDefinitions[1].actionIds, ['card.delete']);
+  assert.deepEqual(defaultActionSchema.stageDefinitions[0].actionIds, ['card.create']);
+  assert.deepEqual(defaultActionSchema.stageDefinitions[1].actionIds, ['card.delete']);
 
   const explicitEmptySchema = normalizeBoardSchemaInput({
     languagePolicy: {
@@ -234,13 +235,13 @@ test('serializeBoardSchemaInput includes stage action ids', () => {
       id: 'backlog',
       title: 'Backlog',
       allowedTransitionStageIds: ['doing', 'done'],
-      actionIds: []
+      actionIds: ['card.create']
     },
     {
       id: 'doing',
       title: 'Doing',
       allowedTransitionStageIds: ['backlog', 'done'],
-      actionIds: []
+      actionIds: ['card.create']
     },
     {
       id: 'done',

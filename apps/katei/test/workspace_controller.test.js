@@ -54,6 +54,52 @@ test('getDefaultBoardStageId follows the board-defined stage order for create fl
   assert.equal(getDefaultBoardStageId(board), 'review');
 });
 
+test('openCreateCard dispatches create mode for the requested create-enabled stage', () => {
+  const viewerActor = createActor('viewer_1', 'viewer@example.com', 'Viewer');
+  const workspace = createViewerWorkspace('workspace_home', viewerActor);
+  const controller = Object.create(WorkspaceController.prototype);
+  const dispatchedEvents = [];
+  const triggerElement = {
+    dataset: {
+      stageId: 'doing',
+      columnId: 'doing'
+    }
+  };
+
+  workspace.boards.main.collaboration.memberships = workspace.boards.main.collaboration.memberships.map((membership) =>
+    membership.actor.id === viewerActor.id ? { ...membership, role: 'editor' } : membership
+  );
+
+  controller.workspace = workspace;
+  controller.viewerActor = viewerActor;
+  controller.t = (key) => key;
+  controller.announce = () => {
+    throw new Error('Did not expect announcement');
+  };
+  controller.dispatchWorkspaceEvent = (name, detail) => {
+    dispatchedEvents.push({ name, detail });
+  };
+
+  WorkspaceController.prototype.openCreateCard.call(controller, {
+    currentTarget: triggerElement
+  });
+
+  assert.deepEqual(dispatchedEvents, [
+    {
+      name: 'open-card-editor',
+      detail: {
+        mode: 'create',
+        boardId: 'main',
+        board: workspace.boards.main,
+        currentActorRole: 'editor',
+        canEditLocalizedContent: true,
+        stageId: 'doing',
+        triggerElement
+      }
+    }
+  ]);
+});
+
 test('performWorkspaceCollaboratorAction routes collaborator UI actions through WorkspaceService', async () => {
   const workspace = createEmptyWorkspace();
   const scenarios = [
@@ -249,12 +295,6 @@ test('workspace controller sync-board-options payload includes pendingWorkspaceI
     }
   };
   controller.t = (key) => key;
-  controller.hasCreateCardButtonTarget = true;
-  controller.createCardButtonTarget = {
-    hidden: false,
-    disabled: false,
-    setAttribute() {}
-  };
   controller.hasBoardAccessNoticeTarget = true;
   controller.boardAccessNoticeTarget = {
     hidden: true,
@@ -1668,6 +1708,7 @@ test('create mode planning still uses createCard without regressing the old flow
   const plan = buildCardEditorMutationPlan({
     mode: 'create',
     boardId: 'main',
+    targetStageId: 'doing',
     input: {
       title: 'Create me',
       detailsMarkdown: 'Still source-locale pinned for now',
@@ -1682,6 +1723,7 @@ test('create mode planning still uses createCard without regressing the old flow
       args: [
         'main',
         {
+          stageId: 'doing',
           title: 'Create me',
           detailsMarkdown: 'Still source-locale pinned for now',
           priority: 'important'

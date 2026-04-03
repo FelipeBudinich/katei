@@ -1,7 +1,15 @@
-export const BOARD_STAGE_ACTION_IDS = Object.freeze(['card.delete']);
+export const BOARD_STAGE_ACTION_IDS = Object.freeze(['card.create', 'card.delete']);
 
 export function getDefaultBoardStageActionIds(stageId) {
-  return stageId === 'archived' ? ['card.delete'] : [];
+  switch (stageId) {
+    case 'backlog':
+    case 'doing':
+      return ['card.create'];
+    case 'archived':
+      return ['card.delete'];
+    default:
+      return [];
+  }
 }
 
 export function isValidBoardStageActionId(actionId) {

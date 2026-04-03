@@ -37,7 +37,13 @@ export function buildCardEditorMutationPlan({
       operations: [
         {
           method: 'createCard',
-          args: [boardId, input]
+          args: [
+            boardId,
+            {
+              ...input,
+              stageId: targetStageId
+            }
+          ]
         }
       ],
       includesLocalizedUpsert: false

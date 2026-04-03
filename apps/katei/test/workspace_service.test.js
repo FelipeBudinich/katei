@@ -411,6 +411,7 @@ test('WorkspaceService createCard calls repository.applyCommand and returns work
   await assertServiceCommand({
     action: (service) =>
       service.createCard('main', {
+        stageId: 'doing',
         title: 'Ship service rewrite',
         detailsMarkdown: 'Server is the source of truth',
         priority: 'urgent'
@@ -418,6 +419,7 @@ test('WorkspaceService createCard calls repository.applyCommand and returns work
     expectedType: 'card.create',
     expectedPayload: {
       boardId: 'main',
+      stageId: 'doing',
       title: 'Ship service rewrite',
       detailsMarkdown: 'Server is the source of truth',
       priority: 'urgent'

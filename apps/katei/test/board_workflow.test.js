@@ -18,7 +18,7 @@ test('createDefaultBoardStages returns the default workflow stages as fresh obje
       cardIds: [],
       allowedTransitionStageIds: ['doing', 'done'],
       templateIds: [],
-      actionIds: []
+      actionIds: ['card.create']
     },
     {
       id: 'doing',
@@ -26,7 +26,7 @@ test('createDefaultBoardStages returns the default workflow stages as fresh obje
       cardIds: [],
       allowedTransitionStageIds: ['backlog', 'done'],
       templateIds: [],
-      actionIds: []
+      actionIds: ['card.create']
     },
     {
       id: 'done',

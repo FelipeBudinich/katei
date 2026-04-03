@@ -67,6 +67,10 @@ export function shouldShowPriorityForStage(stageId) {
   return stageId !== 'done' && stageId !== 'archived';
 }
 
+export function shouldShowCreateForStage(board, stageId) {
+  return stageSupportsAction(board, stageId, 'card.create');
+}
+
 export function shouldShowDeleteForStage(board, stageId) {
   return stageSupportsAction(board, stageId, 'card.delete');
 }

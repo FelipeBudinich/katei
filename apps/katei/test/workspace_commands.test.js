@@ -154,6 +154,7 @@ test('validateWorkspaceCommand accepts valid command envelopes', () => {
       type: 'card.create',
       payload: {
         boardId: 'main',
+        stageId: 'doing',
         title: 'Ship step 6b.1',
         detailsMarkdown: 'Contract only',
         priority: 'urgent'
@@ -592,6 +593,18 @@ test('validateWorkspaceCommand rejects invalid payloads', () => {
   assert.equal(
     validateWorkspaceCommand({
       clientMutationId: 'm2',
+      type: 'card.create',
+      payload: {
+        boardId: 'main',
+        title: 'Missing stage'
+      }
+    }),
+    false
+  );
+
+  assert.equal(
+    validateWorkspaceCommand({
+      clientMutationId: 'm3',
       type: 'card.move',
       payload: {
         boardId: 'main',
@@ -604,7 +617,7 @@ test('validateWorkspaceCommand rejects invalid payloads', () => {
 
   assert.equal(
     validateWorkspaceCommand({
-      clientMutationId: 'm3',
+      clientMutationId: 'm4',
       type: 'board.update',
       payload: {
         boardId: 'main',

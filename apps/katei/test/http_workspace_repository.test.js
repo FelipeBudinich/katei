@@ -650,6 +650,7 @@ test('HttpWorkspaceRepository applyCommand sends expectedRevision and updates lo
     type: 'card.create',
     payload: {
       boardId: 'main',
+      stageId: 'backlog',
       title: 'Command result',
       priority: 'urgent'
     }
@@ -676,6 +677,7 @@ test('HttpWorkspaceRepository applyCommand sends expectedRevision and updates lo
       type: 'card.create',
       payload: {
         boardId: 'main',
+        stageId: 'backlog',
         title: 'Command result',
         priority: 'urgent'
       }

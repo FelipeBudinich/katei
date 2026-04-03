@@ -490,7 +490,7 @@ test('board.update clears the stored OpenAI key when requested', () => {
   assert.equal(nextWorkspace.boards.main.aiLocalizationSecrets, undefined);
 });
 
-test('card.create mints a server-side card id and stores the card in backlog', () => {
+test('card.create mints a server-side card id and stores the card in the requested stage', () => {
   const { workspace, result } = applyWorkspaceCommand({
     record: createRecord(),
     command: {
@@ -498,6 +498,7 @@ test('card.create mints a server-side card id and stores the card in backlog', (
       type: 'card.create',
       payload: {
         boardId: 'main',
+        stageId: 'doing',
         title: 'Ship service',
         detailsMarkdown: 'Server-authoritative',
         priority: 'urgent'
@@ -508,7 +509,8 @@ test('card.create mints a server-side card id and stores the card in backlog', (
   });
 
   assert.equal(result.cardId, 'card_srv001');
-  assert.deepEqual(workspace.boards.main.stages.backlog.cardIds, ['card_srv001']);
+  assert.deepEqual(workspace.boards.main.stages.backlog.cardIds, []);
+  assert.deepEqual(workspace.boards.main.stages.doing.cardIds, ['card_srv001']);
   assert.equal(workspace.boards.main.cards.card_srv001.createdAt, '2026-03-31T10:00:00.000Z');
   assert.equal(workspace.boards.main.cards.card_srv001.updatedAt, '2026-03-31T10:00:00.000Z');
   assert.deepEqual(workspace.boards.main.cards.card_srv001.localeRequests, {});
@@ -527,6 +529,27 @@ test('card.create mints a server-side card id and stores the card in backlog', (
   });
 });
 
+test('card.create rejects stages that are not create-enabled', () => {
+  assert.throws(
+    () =>
+      applyWorkspaceCommand({
+        record: createRecord(),
+        command: {
+          clientMutationId: 'm2a',
+          type: 'card.create',
+          payload: {
+            boardId: 'main',
+            stageId: 'done',
+            title: 'Blocked stage'
+          }
+        },
+        expectedRevision: 0,
+        context: createContext()
+      }),
+    /create-enabled stages/
+  );
+});
+
 test('card.create writes only the board source locale when the command engine uses a non-default language policy', () => {
   const workspace = createWorkspaceForActor();
   workspace.boards.main.languagePolicy = {
@@ -543,6 +566,7 @@ test('card.create writes only the board source locale when the command engine us
       type: 'card.create',
       payload: {
         boardId: 'main',
+        stageId: 'backlog',
         title: '日本語カード',
         detailsMarkdown: '日本語の本文'
       }
@@ -565,6 +589,7 @@ test('card.update changes updatedAt only and preserves createdAt', () => {
       type: 'card.create',
       payload: {
         boardId: 'main',
+        stageId: 'backlog',
         title: 'Original title'
       }
     },
@@ -1495,6 +1520,7 @@ test('card.move changes the correct source and target columns', () => {
       type: 'card.create',
       payload: {
         boardId: 'main',
+        stageId: 'backlog',
         title: 'Move me'
       }
     },
@@ -1535,6 +1561,7 @@ test('card.delete removes card references from columns and cards map', () => {
       type: 'card.create',
       payload: {
         boardId: 'main',
+        stageId: 'backlog',
         title: 'Delete me'
       }
     },
@@ -2020,6 +2047,7 @@ test('card create, update, move, and delete require edit permission', () => {
         type: 'card.create',
         payload: {
           boardId: 'main',
+          stageId: 'backlog',
           title: 'Blocked card'
         }
       }

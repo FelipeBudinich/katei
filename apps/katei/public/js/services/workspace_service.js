@@ -171,6 +171,7 @@ export class WorkspaceService {
   async createCard(boardId, input) {
     return this.#applyCommand('card.create', {
       boardId,
+      stageId: input?.stageId,
       title: input?.title,
       detailsMarkdown: input?.detailsMarkdown,
       priority: input?.priority

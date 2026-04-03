@@ -326,6 +326,12 @@ function validateCardCreatePayload(payload) {
     return boardIdValidation;
   }
 
+  const stageValidation = requireColumnId(payload.stageId, 'card.create payload.stageId is required.');
+
+  if (!stageValidation.isValid) {
+    return stageValidation;
+  }
+
   const titleValidation = requireNonEmptyString(payload.title, 'card.create payload.title is required.');
 
   if (!titleValidation.isValid) {

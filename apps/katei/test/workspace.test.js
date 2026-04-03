@@ -21,6 +21,21 @@ test('createCard stores detailsMarkdown on new cards', () => {
   assert.equal(board.cards[cardId].priority, 'urgent');
 });
 
+test('createCard inserts into an explicitly requested create-enabled stage', () => {
+  const workspace = createEmptyWorkspace();
+  const nextWorkspace = createCard(workspace, 'main', {
+    stageId: 'doing',
+    title: 'Review analytics',
+    detailsMarkdown: 'Check the new retention slice',
+    priority: 'important'
+  });
+  const board = nextWorkspace.boards.main;
+  const [cardId] = board.stages.doing.cardIds;
+
+  assert.equal(board.stages.backlog.cardIds.length, 0);
+  assert.equal(cardId in board.cards, true);
+});
+
 test('updateCard updates detailsMarkdown on existing cards', () => {
   const workspace = createCard(createEmptyWorkspace(), 'main', {
     title: 'Write launch notes',

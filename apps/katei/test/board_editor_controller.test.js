@@ -22,7 +22,7 @@ test('createBoardEditorFormState serializes the current board schema without exp
   const formState = createBoardEditorFormState(board);
 
   assert.equal(formState.title, '過程');
-  assert.match(formState.stageDefinitions, /backlog \| Backlog \| doing, done/);
+  assert.match(formState.stageDefinitions, /backlog \| Backlog \| doing, done \| card\.create/);
   assert.match(formState.stageDefinitions, /archived \| Archived \| backlog, doing, done \| card\.delete/);
   assert.equal(Object.prototype.hasOwnProperty.call(formState, 'templates'), false);
 });
@@ -86,7 +86,7 @@ test('parseBoardEditorFormInput parses valid schema edits and clears templates f
     supportedLocales: 'en, ja',
     requiredLocales: 'en',
     aiProvider: 'OpenAI',
-    stageDefinitions: ['backlog | Backlog | review', 'review | Review | backlog'].join('\n')
+    stageDefinitions: ['backlog | Backlog | review | card.create', 'review | Review | backlog'].join('\n')
   });
 
   assert.equal(parsedInput.title, 'Editorial board');
@@ -101,7 +101,7 @@ test('parseBoardEditorFormInput parses valid schema edits and clears templates f
       id: 'backlog',
       title: 'Backlog',
       allowedTransitionStageIds: ['review'],
-      actionIds: []
+      actionIds: ['card.create']
     },
     {
       id: 'review',
@@ -154,7 +154,7 @@ test('parseBoardEditorFormInput accepts 2-, 3-, and 4-segment stage lines and pr
     supportedLocales: 'en',
     requiredLocales: 'en',
     stageDefinitions: [
-      'backlog | Backlog',
+      'backlog | Backlog | | card.create',
       'archived | Archived | backlog',
       'archive-bin | Archive Bin | | card.delete'
     ].join('\n')
@@ -165,7 +165,7 @@ test('parseBoardEditorFormInput accepts 2-, 3-, and 4-segment stage lines and pr
       id: 'backlog',
       title: 'Backlog',
       allowedTransitionStageIds: [],
-      actionIds: []
+      actionIds: ['card.create']
     },
     {
       id: 'archived',
@@ -252,7 +252,7 @@ test('parseBoardEditorFormInput clears legacy templates when editing an existing
       id: 'backlog',
       title: 'Backlog',
       allowedTransitionStageIds: ['review'],
-      actionIds: []
+      actionIds: ['card.create']
     },
     {
       id: 'review',

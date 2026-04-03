@@ -72,6 +72,7 @@ export function renderBoardState({
 function createStagePanel({ board, stageId, stage, collapsedColumns, canReadBoard, canEditBoard, templates, t, uiLocale, dateTimeFormatter }) {
   const columnNode = cloneTemplate(templates.columnTemplate);
   const isCollapsed = Boolean(collapsedColumns[stageId]);
+  const shouldShowCreateButton = canEditBoard && Array.isArray(stage?.actionIds) && stage.actionIds.includes('card.create');
   columnNode.dataset.stageId = stage.id;
   columnNode.dataset.columnId = stage.id;
   columnNode.dataset.collapsed = String(isCollapsed);
@@ -92,6 +93,7 @@ function createStagePanel({ board, stageId, stage, collapsedColumns, canReadBoar
   }
 
   const toggleElement = columnNode.querySelector('[data-column-toggle]');
+  const createButton = columnNode.querySelector('[data-column-create]');
   const bodyElement = columnNode.querySelector('.column-panel-body');
 
   if (toggleElement) {
@@ -100,6 +102,14 @@ function createStagePanel({ board, stageId, stage, collapsedColumns, canReadBoar
     toggleElement.setAttribute('aria-expanded', String(!isCollapsed));
     toggleElement.disabled = !canReadBoard;
     toggleElement.setAttribute('aria-disabled', String(!canReadBoard));
+  }
+
+  if (createButton) {
+    createButton.dataset.stageId = stage.id;
+    createButton.dataset.columnId = stage.id;
+    createButton.hidden = !shouldShowCreateButton;
+    createButton.disabled = !shouldShowCreateButton;
+    createButton.setAttribute('aria-disabled', String(!shouldShowCreateButton));
   }
 
   if (bodyElement) {
