@@ -319,18 +319,23 @@ test('board editor initializes the stage summary from the opened board draft', a
   const controller = createBoardEditorControllerDouble();
   const board = createEmptyWorkspace().boards.main;
 
-  await withImmediateAnimationFrame(() => {
-    BoardEditorController.prototype.openFromEvent.call(controller, {
-      detail: {
-        mode: 'edit',
-        board,
-        canDeleteBoard: true
-      }
+  await withMockDocument(async () => {
+    await withImmediateAnimationFrame(() => {
+      BoardEditorController.prototype.openFromEvent.call(controller, {
+        detail: {
+          mode: 'edit',
+          board,
+          canDeleteBoard: true
+        }
+      });
     });
+
+    assert.equal(globalThis.document.activeElement, controller.titleInputTarget);
   });
 
   assert.equal(controller.stageDefinitionsInputTarget.value, createBoardEditorFormState(board).stageDefinitions);
   assert.equal(controller.stageSummaryTarget.textContent, '4 stages · backlog, doing, done, archived');
+  assert.equal(controller.titleInputTarget.focused, true);
 });
 
 test('board editor opens the stage-config dialog by dispatching the current draft on window', async () => {
@@ -462,12 +467,14 @@ test('board editor submit still uses the applied stage definitions draft', async
 test('board editor hides delete actions in create mode', async () => {
   const controller = createBoardEditorControllerDouble();
 
-  await withImmediateAnimationFrame(() => {
-    BoardEditorController.prototype.openFromEvent.call(controller, {
-      detail: {
-        mode: 'create',
-        canDeleteBoard: false
-      }
+  await withMockDocument(async () => {
+    await withImmediateAnimationFrame(() => {
+      BoardEditorController.prototype.openFromEvent.call(controller, {
+        detail: {
+          mode: 'create',
+          canDeleteBoard: false
+        }
+      });
     });
   });
 
@@ -499,13 +506,15 @@ test('board editor shows delete actions for a deletable board in edit mode', asy
     }
   ];
 
-  await withImmediateAnimationFrame(() => {
-    BoardEditorController.prototype.openFromEvent.call(controller, {
-      detail: {
-        mode: 'edit',
-        board,
-        canDeleteBoard: true
-      }
+  await withMockDocument(async () => {
+    await withImmediateAnimationFrame(() => {
+      BoardEditorController.prototype.openFromEvent.call(controller, {
+        detail: {
+          mode: 'edit',
+          board,
+          canDeleteBoard: true
+        }
+      });
     });
   });
 
@@ -523,13 +532,15 @@ test('board editor keeps delete actions hidden when edit mode cannot delete the 
   const controller = createBoardEditorControllerDouble();
   const board = createEmptyWorkspace().boards.main;
 
-  await withImmediateAnimationFrame(() => {
-    BoardEditorController.prototype.openFromEvent.call(controller, {
-      detail: {
-        mode: 'edit',
-        board,
-        canDeleteBoard: false
-      }
+  await withMockDocument(async () => {
+    await withImmediateAnimationFrame(() => {
+      BoardEditorController.prototype.openFromEvent.call(controller, {
+        detail: {
+          mode: 'edit',
+          board,
+          canDeleteBoard: false
+        }
+      });
     });
   });
 
@@ -541,13 +552,15 @@ test('board editor closeForAction closes first and clears the delete board id af
   const controller = createBoardEditorControllerDouble();
   const board = createEmptyWorkspace().boards.main;
 
-  await withImmediateAnimationFrame(() => {
-    BoardEditorController.prototype.openFromEvent.call(controller, {
-      detail: {
-        mode: 'edit',
-        board,
-        canDeleteBoard: true
-      }
+  await withMockDocument(async () => {
+    await withImmediateAnimationFrame(() => {
+      BoardEditorController.prototype.openFromEvent.call(controller, {
+        detail: {
+          mode: 'edit',
+          board,
+          canDeleteBoard: true
+        }
+      });
     });
   });
 
@@ -663,6 +676,10 @@ function createFocusableValueTarget(value = '') {
     focused: false,
     focus() {
       this.focused = true;
+
+      if (globalThis.document && typeof globalThis.document === 'object') {
+        globalThis.document.activeElement = this;
+      }
     }
   };
 }
@@ -673,6 +690,10 @@ function createFocusableButtonTarget() {
     isConnected: true,
     focus() {
       this.focused = true;
+
+      if (globalThis.document && typeof globalThis.document === 'object') {
+        globalThis.document.activeElement = this;
+      }
     }
   };
 }
@@ -733,6 +754,23 @@ async function withFormDataStub(callback) {
       delete globalThis.FormData;
     } else {
       globalThis.FormData = originalFormData;
+    }
+  }
+}
+
+async function withMockDocument(callback) {
+  const originalDocument = globalThis.document;
+  globalThis.document = {
+    activeElement: null
+  };
+
+  try {
+    return await callback();
+  } finally {
+    if (typeof originalDocument === 'undefined') {
+      delete globalThis.document;
+    } else {
+      globalThis.document = originalDocument;
     }
   }
 }

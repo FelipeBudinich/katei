@@ -1,6 +1,7 @@
 import { Controller } from '../../vendor/stimulus/stimulus.js';
 import { getBrowserTranslator } from '../i18n/browser.js';
 import { localizeErrorMessage } from '../i18n/errors.js';
+import { openDialogWithInitialFocus } from './dialog_initial_focus.js';
 import { validateAndNormalizeStageDefinitions } from './board_stage_config_schema.js';
 
 export default class extends Controller {
@@ -19,13 +20,7 @@ export default class extends Controller {
     this.definitionsInputTarget.value = typeof event.detail?.stageDefinitions === 'string' ? event.detail.stageDefinitions : '';
     this.hideError();
 
-    if (!this.dialogTarget.open) {
-      this.dialogTarget.showModal();
-    }
-
-    requestAnimationFrame(() => {
-      this.definitionsInputTarget.focus();
-    });
+    openDialogWithInitialFocus(this.dialogTarget, this.definitionsInputTarget);
   }
 
   apply(event) {

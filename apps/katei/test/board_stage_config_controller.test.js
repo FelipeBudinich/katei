@@ -10,14 +10,18 @@ test('board stage config opens from the workspace event and populates the textar
   const triggerElement = createFocusableElement();
   const stageDefinitions = ['backlog | Backlog | review | card.create', 'review | Review | backlog'].join('\n');
 
-  await withImmediateAnimationFrame(() => {
-    BoardStageConfigController.prototype.openFromEvent.call(controller, {
-      detail: {
-        stageDefinitions,
-        currentBoard: board,
-        triggerElement
-      }
+  await withMockDocument(async () => {
+    await withImmediateAnimationFrame(() => {
+      BoardStageConfigController.prototype.openFromEvent.call(controller, {
+        detail: {
+          stageDefinitions,
+          currentBoard: board,
+          triggerElement
+        }
+      });
     });
+
+    assert.equal(globalThis.document.activeElement, controller.definitionsInputTarget);
   });
 
   assert.equal(controller.dialogTarget.open, true);
@@ -177,6 +181,10 @@ function createFocusableValueTarget(value = '') {
     focused: false,
     focus() {
       this.focused = true;
+
+      if (globalThis.document && typeof globalThis.document === 'object') {
+        globalThis.document.activeElement = this;
+      }
     }
   };
 }
@@ -194,6 +202,10 @@ function createFocusableElement() {
     isConnected: true,
     focus() {
       this.focused = true;
+
+      if (globalThis.document && typeof globalThis.document === 'object') {
+        globalThis.document.activeElement = this;
+      }
     }
   };
 }
@@ -230,6 +242,23 @@ async function withWindowDispatchCapture(dispatchedEvents, callback) {
       delete globalThis.window;
     } else {
       globalThis.window = originalWindow;
+    }
+  }
+}
+
+async function withMockDocument(callback) {
+  const originalDocument = globalThis.document;
+  globalThis.document = {
+    activeElement: null
+  };
+
+  try {
+    return await callback();
+  } finally {
+    if (typeof originalDocument === 'undefined') {
+      delete globalThis.document;
+    } else {
+      globalThis.document = originalDocument;
     }
   }
 }
