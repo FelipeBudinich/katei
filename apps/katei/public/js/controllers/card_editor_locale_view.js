@@ -82,6 +82,12 @@ export function createLocalizedCardEditorUiState({
     !isReadOnly &&
     hasSelectedLocale &&
     Boolean(selectedStatus?.isRequested);
+  const canDiscardSelectedLocale =
+    hasCard &&
+    !isReadOnly &&
+    hasSelectedLocale &&
+    !isSourceLocaleSelected &&
+    Boolean(selectedStatus?.hasContent);
   const generateBlockedReason = resolveGenerateBlockedReason({
     hasCard,
     isReadOnly,
@@ -112,6 +118,7 @@ export function createLocalizedCardEditorUiState({
     }),
     showRequestLocaleButton: canRequestSelectedLocale,
     showClearLocaleRequestButton: canClearSelectedLocaleRequest,
+    showDiscardLocaleButton: canDiscardSelectedLocale,
     localeEditSummaryState: resolveLocaleEditSummaryState({
       hasCard,
       isReadOnly,

@@ -189,6 +189,36 @@ export function upsertCardContentVariant(card, locale, patch, provenance) {
   };
 }
 
+export function discardCardContentVariant(card, locale) {
+  const normalizedLocale = canonicalizeContentLocale(locale);
+
+  if (!normalizedLocale) {
+    throw new Error(`Invalid content locale: ${locale}`);
+  }
+
+  const currentContentByLocale = getContentByLocaleRecord(card);
+  const localeKeysToRemove = Object.keys(currentContentByLocale).filter(
+    (rawLocale) => canonicalizeContentLocaleWithLegacyAliases(rawLocale) === normalizedLocale
+  );
+
+  if (localeKeysToRemove.length < 1) {
+    return isPlainObject(card) ? structuredClone(card) : {};
+  }
+
+  const nextContentByLocale = {
+    ...currentContentByLocale
+  };
+
+  for (const rawLocale of localeKeysToRemove) {
+    delete nextContentByLocale[rawLocale];
+  }
+
+  return {
+    ...(isPlainObject(card) ? card : {}),
+    contentByLocale: nextContentByLocale
+  };
+}
+
 export function applyGeneratedCardLocalization(card, locale, patch, { actor, timestamp } = {}) {
   const normalizedLocale = canonicalizeContentLocale(locale);
 

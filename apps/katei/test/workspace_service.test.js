@@ -460,6 +460,18 @@ test('WorkspaceService upsertCardLocale calls repository.applyCommand and return
   });
 });
 
+test('WorkspaceService discardCardLocale calls repository.applyCommand and returns workspace', async () => {
+  await assertServiceCommand({
+    action: (service) => service.discardCardLocale('main', 'card_1', 'es-CL'),
+    expectedType: 'card.locale.discard',
+    expectedPayload: {
+      boardId: 'main',
+      cardId: 'card_1',
+      locale: 'es-CL'
+    }
+  });
+});
+
 test('WorkspaceService generateCardLocalization calls repository.generateCardLocalization and returns workspace', async () => {
   const workspace = createEmptyWorkspace({ workspaceId: 'workspace_home' });
   const repository = createRepositoryDouble({

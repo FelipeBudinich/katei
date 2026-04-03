@@ -952,7 +952,91 @@ test('explicit override allows automation to overwrite a human-authored localize
   });
 });
 
-test('viewer cannot upsert, request, or clear localized card content', () => {
+test('human actors can discard an existing localized variant and clear any open request', () => {
+  const workspace = createWorkspaceWithCard({
+    memberships: [createMembership({ id: 'viewer_123', role: 'editor' })]
+  });
+  workspace.boards.main.languagePolicy = {
+    sourceLocale: 'en',
+    defaultLocale: 'en',
+    supportedLocales: ['en', 'ja'],
+    requiredLocales: ['en']
+  };
+  workspace.boards.main.cards.card_1.contentByLocale.ja = createLocalizedVariant({
+    title: '日本語タイトル',
+    detailsMarkdown: '日本語本文',
+    actor: createActor({ id: 'viewer_admin' }),
+    timestamp: '2026-03-31T09:45:00.000Z',
+    includesHumanInput: true
+  });
+  workspace.boards.main.cards.card_1.localeRequests = {
+    ja: {
+      locale: 'ja',
+      status: 'open',
+      requestedBy: { type: 'human', id: 'viewer_admin' },
+      requestedAt: '2026-03-31T09:46:00.000Z'
+    }
+  };
+
+  const { workspace: nextWorkspace, result } = applyWorkspaceCommand({
+    record: createRecord(workspace, 0),
+    command: {
+      clientMutationId: 'locale_discard_human',
+      type: 'card.locale.discard',
+      payload: {
+        boardId: 'main',
+        cardId: 'card_1',
+        locale: 'ja'
+      }
+    },
+    expectedRevision: 0,
+    context: createContext({
+      now: '2026-03-31T11:00:00.000Z'
+    })
+  });
+
+  assert.equal(result.noOp, false);
+  assert.equal(result.locale, 'ja');
+  assert.equal(nextWorkspace.boards.main.updatedAt, '2026-03-31T11:00:00.000Z');
+  assert.equal(nextWorkspace.boards.main.cards.card_1.updatedAt, '2026-03-31T11:00:00.000Z');
+  assert.equal(nextWorkspace.boards.main.cards.card_1.contentByLocale.ja, undefined);
+  assert.deepEqual(nextWorkspace.boards.main.cards.card_1.localeRequests, {});
+});
+
+test('discarding a source locale is rejected', () => {
+  const workspace = createWorkspaceWithCard({
+    memberships: [createMembership({ id: 'viewer_123', role: 'editor' })]
+  });
+  workspace.boards.main.languagePolicy = {
+    sourceLocale: 'en',
+    defaultLocale: 'en',
+    supportedLocales: ['en', 'ja'],
+    requiredLocales: ['en']
+  };
+
+  assert.throws(
+    () =>
+      applyWorkspaceCommand({
+        record: createRecord(workspace, 0),
+        command: {
+          clientMutationId: 'locale_discard_source',
+          type: 'card.locale.discard',
+          payload: {
+            boardId: 'main',
+            cardId: 'card_1',
+            locale: 'en'
+          }
+        },
+        expectedRevision: 0,
+        context: createContext({
+          now: '2026-03-31T11:00:00.000Z'
+        })
+      }),
+    /source locale cannot be discarded/i
+  );
+});
+
+test('viewer cannot upsert, discard, request, or clear localized card content', () => {
   const workspace = createWorkspaceWithCard({
     memberships: [createMembership({ id: 'viewer_123', role: 'viewer' })]
   });
@@ -981,6 +1065,15 @@ test('viewer cannot upsert, request, or clear localized card content', () => {
         locale: 'ja',
         title: '日本語タイトル',
         detailsMarkdown: '日本語本文'
+      }
+    },
+    {
+      clientMutationId: 'locale_discard_viewer',
+      type: 'card.locale.discard',
+      payload: {
+        boardId: 'main',
+        cardId: 'card_1',
+        locale: 'ja'
       }
     },
     {

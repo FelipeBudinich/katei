@@ -29,6 +29,7 @@ import {
 } from '../../public/js/domain/board_permissions.js';
 import {
   createCardContentProvenance,
+  discardCardContentVariant,
   getStoredCardContentVariant,
   upsertCardContentVariant
 } from '../../public/js/domain/card_localization.js';
@@ -177,6 +178,8 @@ function applyCommandToWorkspace({ workspace, command, context }) {
       return applyCardUpdate(workspace, command, context);
     case 'card.locale.upsert':
       return applyCardLocaleUpsert(workspace, command, context);
+    case 'card.locale.discard':
+      return applyCardLocaleDiscard(workspace, command, context);
     case 'card.locale.request':
       return applyCardLocaleRequest(workspace, command, context);
     case 'card.locale.request.clear':
@@ -900,6 +903,62 @@ function applyCardLocaleRequest(workspace, command, context) {
     result: createCommandResult(command, {
       boardId: board.id,
       cardId: card.id,
+      locale
+    })
+  };
+}
+
+function applyCardLocaleDiscard(workspace, command, context) {
+  const currentBoard = getBoard(workspace, command.payload.boardId);
+  const actor = assertAuthenticatedHumanActor(
+    context.actor,
+    'You must be signed in to discard localized card content.'
+  );
+  assertActorCanEditBoard(currentBoard, actor);
+  const currentCard = getCard(currentBoard, command.payload.cardId);
+  const locale = normalizeCommandLocale(command.payload.locale);
+  assertBoardSupportsLocale(currentBoard, locale);
+
+  if (currentBoard.languagePolicy?.sourceLocale === locale) {
+    throw new Error('The source locale cannot be discarded.');
+  }
+
+  const selectedVariant = getExistingCardLocaleVariant(currentCard, locale);
+  const openRequest = getOpenLocalizationRequest(currentCard, locale);
+
+  if (!selectedVariant && !openRequest) {
+    return {
+      workspace,
+      result: createCommandResult(command, {
+        noOp: true,
+        boardId: currentBoard.id,
+        cardId: currentCard.id,
+        locale
+      })
+    };
+  }
+
+  const nextWorkspace = cloneWorkspace(workspace);
+  const board = getBoard(nextWorkspace, command.payload.boardId);
+  const card = getCard(board, command.payload.cardId);
+  let nextCard = discardCardContentVariant(
+    {
+      ...card,
+      updatedAt: context.now
+    },
+    locale
+  );
+
+  nextCard = clearCardLocaleRequest(nextCard, locale);
+  nextCard.updatedAt = context.now;
+  board.cards[nextCard.id] = nextCard;
+  board.updatedAt = context.now;
+
+  return {
+    workspace: nextWorkspace,
+    result: createCommandResult(command, {
+      boardId: board.id,
+      cardId: nextCard.id,
       locale
     })
   };

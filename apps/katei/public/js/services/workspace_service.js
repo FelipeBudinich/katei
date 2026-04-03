@@ -195,6 +195,14 @@ export class WorkspaceService {
     });
   }
 
+  async discardCardLocale(boardId, cardId, locale) {
+    return this.#applyCommand('card.locale.discard', {
+      boardId,
+      cardId,
+      locale
+    });
+  }
+
   async generateCardLocalization(boardId, cardId, targetLocale) {
     const targetWorkspaceId = this.getActiveWorkspaceId();
     const expectedRevision = await this.#resolveWorkspaceRevision(targetWorkspaceId);

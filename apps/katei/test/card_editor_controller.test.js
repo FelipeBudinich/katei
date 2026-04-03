@@ -368,6 +368,7 @@ test('generate button stays hidden when the selected locale already has human-au
   assert.equal(uiState.showGenerateLocaleButton, false);
   assert.equal(uiState.canGenerateLocale, false);
   assert.equal(uiState.generateBlockedReason, 'cardEditor.generateLocaleBlockedAlreadyPresent');
+  assert.equal(uiState.showDiscardLocaleButton, true);
 });
 
 test('generate button stays hidden when the board has no saved OpenAI key', () => {
@@ -383,6 +384,67 @@ test('generate button stays hidden when the board has no saved OpenAI key', () =
   assert.equal(uiState.showGenerateLocaleButton, false);
   assert.equal(uiState.canGenerateLocale, false);
   assert.equal(uiState.generateBlockedReason, 'cardEditor.generateLocaleBlockedNoAiKey');
+});
+
+test('discard button stays hidden for source and missing locales', () => {
+  const sourceLocaleState = createLocalizedCardEditorUiState({
+    board: createBoardWithOpenAiKey(),
+    card: createCard(),
+    selectedLocale: 'en',
+    mode: 'edit',
+    canEditLocalizedContent: true,
+    currentActorRole: 'editor'
+  });
+  const missingLocaleState = createLocalizedCardEditorUiState({
+    board: createBoardWithOpenAiKey(),
+    card: createCard(),
+    selectedLocale: 'ja',
+    mode: 'edit',
+    canEditLocalizedContent: true,
+    currentActorRole: 'editor'
+  });
+
+  assert.equal(sourceLocaleState.showDiscardLocaleButton, false);
+  assert.equal(missingLocaleState.showDiscardLocaleButton, false);
+});
+
+test('card editor dispatches discard-locale with board, card, locale, and trigger payload', () => {
+  const controller = Object.create(CardEditorController.prototype);
+  const dispatchedEvents = [];
+  const triggerElement = { id: 'discard-locale-button' };
+
+  controller.isReadOnlyLocaleView = false;
+  controller.card = createCardWithHumanJapaneseLocalization();
+  controller.mode = 'edit';
+  controller.selectedLocale = 'ja';
+  controller.localizedEditorUiState = {
+    showDiscardLocaleButton: true
+  };
+  controller.boardIdInputTarget = { value: 'board_localized' };
+  controller.cardIdInputTarget = { value: 'card_1' };
+  controller.dispatch = (name, payload) => {
+    dispatchedEvents.push({ name, payload });
+  };
+
+  CardEditorController.prototype.discardSelectedLocale.call(controller, {
+    preventDefault() {},
+    currentTarget: triggerElement
+  });
+
+  assert.deepEqual(dispatchedEvents, [
+    {
+      name: 'discard-locale',
+      payload: {
+        detail: {
+          mode: 'edit',
+          boardId: 'board_localized',
+          cardId: 'card_1',
+          locale: 'ja',
+          triggerElement
+        }
+      }
+    }
+  ]);
 });
 
 test('card editor dispatches generate event with board, card, and locale payload', () => {

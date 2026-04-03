@@ -75,6 +75,7 @@ const EN_MESSAGES = freezeCatalog({
       cardCreated: 'Card created.',
       localizedContentUpdated: 'Localized content updated.',
       localizationGenerated: 'Localization generated.',
+      localeDiscarded: 'Localized content discarded.',
       localeRequested: 'Locale requested.',
       localeRequestCleared: 'Locale request cleared.',
       movedCard: 'Moved card to {column}.',
@@ -91,7 +92,10 @@ const EN_MESSAGES = freezeCatalog({
       resetBoardConfirm: 'Reset board',
       deleteCardTitle: 'Delete card?',
       deleteCardMessage: 'This action cannot be undone. "{title}" will be removed permanently.',
-      deleteCardConfirm: 'Delete'
+      deleteCardConfirm: 'Delete',
+      discardLocaleTitle: 'Discard localized content?',
+      discardLocaleMessage: 'This action cannot be undone. The {locale} localization for "{title}" will be removed.',
+      discardLocaleConfirm: 'Discard localization'
     },
     columns: {
       backlog: 'Backlog',
@@ -190,6 +194,7 @@ const EN_MESSAGES = freezeCatalog({
     generatingLocaleButton: 'Generating localization...',
     generateLocaleHelp: 'Uses this board\'s AI localization settings.',
     manualLocaleHelp: 'You can write and save this locale manually, even without AI localization configured.',
+    discardLocaleButton: 'Discard localization',
     generateLocaleBlockedReadOnly: 'Only editors can generate localizations.',
     generateLocaleBlockedNoAiKey: 'This board does not have AI localization configured.',
     generateLocaleBlockedSourceLocale: 'The source locale must be written by hand.',
@@ -398,6 +403,7 @@ const ES_CL_MESSAGES = freezeCatalog({
       cardCreated: 'Tarjeta creada.',
       localizedContentUpdated: 'Contenido localizado actualizado.',
       localizationGenerated: 'Localización generada.',
+      localeDiscarded: 'Contenido localizado descartado.',
       localeRequested: 'Locale solicitado.',
       localeRequestCleared: 'Solicitud de locale eliminada.',
       movedCard: 'Tarjeta movida a {column}.',
@@ -414,7 +420,10 @@ const ES_CL_MESSAGES = freezeCatalog({
       resetBoardConfirm: 'Reiniciar tablero',
       deleteCardTitle: '¿Eliminar tarjeta?',
       deleteCardMessage: 'Esta acción no se puede deshacer. "{title}" se eliminará permanentemente.',
-      deleteCardConfirm: 'Eliminar'
+      deleteCardConfirm: 'Eliminar',
+      discardLocaleTitle: '¿Descartar contenido localizado?',
+      discardLocaleMessage: 'Esta acción no se puede deshacer. La localización {locale} de "{title}" se eliminará.',
+      discardLocaleConfirm: 'Descartar localización'
     },
     columns: {
       backlog: 'Pendientes',
@@ -513,6 +522,7 @@ const ES_CL_MESSAGES = freezeCatalog({
     generatingLocaleButton: 'Generando localización...',
     generateLocaleHelp: 'Usa la configuración de IA de este tablero para localización.',
     manualLocaleHelp: 'Puedes escribir y guardar este locale manualmente, incluso sin IA configurada para localización.',
+    discardLocaleButton: 'Descartar localización',
     generateLocaleBlockedReadOnly: 'Solo quienes pueden editar pueden generar localizaciones.',
     generateLocaleBlockedNoAiKey: 'Este tablero no tiene configuración de IA para localización.',
     generateLocaleBlockedSourceLocale: 'El locale de origen debe escribirse manualmente.',
@@ -721,6 +731,7 @@ const JA_MESSAGES = freezeCatalog({
       cardCreated: 'カードを作成しました。',
       localizedContentUpdated: 'ローカライズ済みコンテンツを更新しました。',
       localizationGenerated: 'ローカライズを生成しました。',
+      localeDiscarded: 'ローカライズ済みコンテンツを破棄しました。',
       localeRequested: 'ロケールをリクエストしました。',
       localeRequestCleared: 'ロケールリクエストを解除しました。',
       movedCard: 'カードを {column} に移動しました。',
@@ -737,7 +748,10 @@ const JA_MESSAGES = freezeCatalog({
       resetBoardConfirm: 'ボードをリセット',
       deleteCardTitle: 'カードを削除しますか？',
       deleteCardMessage: 'この操作は元に戻せません。"{title}" は完全に削除されます。',
-      deleteCardConfirm: '削除'
+      deleteCardConfirm: '削除',
+      discardLocaleTitle: 'ローカライズ済みコンテンツを破棄しますか？',
+      discardLocaleMessage: 'この操作は元に戻せません。"{title}" の {locale} ロケール内容を削除します。',
+      discardLocaleConfirm: 'ローカライズを破棄'
     },
     columns: {
       backlog: 'バックログ',
@@ -836,6 +850,7 @@ const JA_MESSAGES = freezeCatalog({
     generatingLocaleButton: 'ローカライズを生成中...',
     generateLocaleHelp: 'このボードの AI ローカライズ設定を使います。',
     manualLocaleHelp: 'AI ローカライズ設定がなくても、このロケールを手動で入力して保存できます。',
+    discardLocaleButton: 'ローカライズを破棄',
     generateLocaleBlockedReadOnly: 'ローカライズを生成できるのは編集者のみです。',
     generateLocaleBlockedNoAiKey: 'このボードには AI ローカライズ設定がありません。',
     generateLocaleBlockedSourceLocale: 'source ロケールは手動で入力してください。',

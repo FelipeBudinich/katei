@@ -588,6 +588,37 @@ export default class extends Controller {
     }
   }
 
+  handleDiscardCardLocale(event) {
+    const boardId = normalizeOptionalWorkspaceId(event.detail?.boardId);
+    const cardId = normalizeOptionalWorkspaceId(event.detail?.cardId);
+    const locale = normalizeOptionalWorkspaceId(event.detail?.locale);
+    const board = boardId ? this.workspace?.boards?.[boardId] : null;
+    const card = board?.cards?.[cardId] ?? null;
+
+    if (!board || !card || !locale) {
+      return;
+    }
+
+    this.openConfirmDialog({
+      triggerElement: event.detail?.triggerElement ?? null,
+      confirmation: {
+        type: 'discard-card-locale',
+        boardId,
+        cardId,
+        locale,
+        title: this.t('workspace.confirmations.discardLocaleTitle'),
+        message: this.t('workspace.confirmations.discardLocaleMessage', {
+          locale,
+          title: getBoardCardContentVariant(card, board, {
+            requestedLocale: locale,
+            uiLocale: this.t.locale
+          })?.title ?? ''
+        }),
+        confirmLabel: this.t('workspace.confirmations.discardLocaleConfirm')
+      }
+    });
+  }
+
   async handleGenerateCardLocalization(event) {
     const boardId = normalizeOptionalWorkspaceId(event.detail?.boardId);
     const cardId = normalizeOptionalWorkspaceId(event.detail?.cardId);
@@ -968,6 +999,11 @@ export default class extends Controller {
         () => this.service.deleteCard(confirmation.boardId, confirmation.cardId),
         this.t('workspace.announcements.cardDeleted')
       );
+    } else if (confirmation.type === 'discard-card-locale') {
+      success = await this.runAction(
+        () => this.service.discardCardLocale(confirmation.boardId, confirmation.cardId, confirmation.locale),
+        this.t('workspace.announcements.localeDiscarded')
+      );
     } else if (confirmation.type === 'delete-board') {
       success = await this.runAction(
         () => this.service.deleteBoard(confirmation.boardId),
@@ -984,6 +1020,15 @@ export default class extends Controller {
     this.isConfirming = false;
 
     if (success) {
+      if (confirmation.type === 'discard-card-locale' && this.isCardEditorOpenFor(confirmation)) {
+        this.refreshCardEditor({
+          boardId: confirmation.boardId,
+          cardId: confirmation.cardId,
+          locale: confirmation.locale,
+          mode: 'edit'
+        });
+      }
+
       this.closeConfirmDialog();
     }
   }

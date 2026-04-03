@@ -21,6 +21,7 @@ export const WORKSPACE_COMMAND_TYPES = Object.freeze([
   'card.create',
   'card.update',
   'card.locale.upsert',
+  'card.locale.discard',
   'card.locale.request',
   'card.locale.request.clear',
   'card.delete',
@@ -116,6 +117,7 @@ function validatePayload(type, payload) {
       return validateCardUpdatePayload(payload);
     case 'card.locale.upsert':
       return validateCardLocaleUpsertPayload(payload);
+    case 'card.locale.discard':
     case 'card.locale.request':
     case 'card.locale.request.clear':
       return validateCardLocaleRequestPayload(type, payload);

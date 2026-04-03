@@ -38,6 +38,7 @@ export default class extends Controller {
     'localeReadOnlyNotice',
     'generateLocaleButton',
     'generateLocaleHelp',
+    'discardLocaleButton',
     'requestLocaleButton',
     'clearLocaleRequestButton',
     'editActions',
@@ -298,6 +299,29 @@ export default class extends Controller {
     });
   }
 
+  discardSelectedLocale(event) {
+    event.preventDefault();
+
+    if (
+      this.isReadOnlyLocaleView ||
+      !this.card ||
+      !this.selectedLocale ||
+      !this.localizedEditorUiState?.showDiscardLocaleButton
+    ) {
+      return;
+    }
+
+    this.dispatch('discard-locale', {
+      detail: {
+        mode: this.mode,
+        boardId: this.boardIdInputTarget.value,
+        cardId: this.cardIdInputTarget.value,
+        locale: this.selectedLocale,
+        triggerElement: event.currentTarget
+      }
+    });
+  }
+
   generateSelectedLocale(event) {
     event.preventDefault();
 
@@ -456,6 +480,7 @@ export default class extends Controller {
       this.generateLocaleButtonTarget.hidden = true;
       this.generateLocaleButtonTarget.disabled = true;
       this.generateLocaleButtonTarget.setAttribute('aria-disabled', 'true');
+      this.discardLocaleButtonTarget.hidden = true;
       this.generateLocaleHelpTarget.hidden = true;
       this.generateLocaleHelpTarget.textContent = '';
       return;
@@ -547,6 +572,7 @@ export default class extends Controller {
 
     this.requestLocaleButtonTarget.hidden = !localizedView.showRequestLocaleButton;
     this.clearLocaleRequestButtonTarget.hidden = !localizedView.showClearLocaleRequestButton;
+    this.discardLocaleButtonTarget.hidden = !localizedView.showDiscardLocaleButton;
 
     const showGenerateLocaleButton = localizedView.showGenerateLocaleButton;
     const isGenerateDisabled = !localizedView.canGenerateLocale || this.isGeneratingLocale;

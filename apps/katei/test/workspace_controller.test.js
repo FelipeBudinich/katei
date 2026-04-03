@@ -614,6 +614,74 @@ test('confirmDeleteBoard accepts a board id from a board editor delete button da
   assert.deepEqual(announcements, []);
 });
 
+test('handleDiscardCardLocale opens a discard confirmation for the selected locale', () => {
+  const workspace = createEmptyWorkspace();
+  const controller = Object.create(WorkspaceController.prototype);
+  const confirmations = [];
+  const triggerElement = { id: 'discard-locale-button' };
+
+  workspace.boards.main.languagePolicy = {
+    sourceLocale: 'en',
+    defaultLocale: 'en',
+    supportedLocales: ['en', 'ja'],
+    requiredLocales: ['en']
+  };
+  workspace.boards.main.cards.card_1 = {
+    id: 'card_1',
+    priority: 'important',
+    createdAt: '2026-03-31T09:00:00.000Z',
+    updatedAt: '2026-03-31T10:00:00.000Z',
+    contentByLocale: {
+      en: {
+        title: 'English source',
+        detailsMarkdown: 'English details',
+        provenance: null
+      },
+      ja: {
+        title: '手動の日本語タイトル',
+        detailsMarkdown: '人が編集しました。',
+        provenance: null
+      }
+    },
+    localeRequests: {}
+  };
+  controller.workspace = workspace;
+  controller.t = (key, values = {}) => {
+    if (values.title && values.locale) {
+      return `${key}:${values.locale}:${values.title}`;
+    }
+
+    return key;
+  };
+  controller.openConfirmDialog = (options) => {
+    confirmations.push(options);
+  };
+
+  WorkspaceController.prototype.handleDiscardCardLocale.call(controller, {
+    detail: {
+      boardId: 'main',
+      cardId: 'card_1',
+      locale: 'ja',
+      triggerElement
+    }
+  });
+
+  assert.deepEqual(confirmations, [
+    {
+      triggerElement,
+      confirmation: {
+        type: 'discard-card-locale',
+        boardId: 'main',
+        cardId: 'card_1',
+        locale: 'ja',
+        title: 'workspace.confirmations.discardLocaleTitle',
+        message: 'workspace.confirmations.discardLocaleMessage:ja:手動の日本語タイトル',
+        confirmLabel: 'workspace.confirmations.discardLocaleConfirm'
+      }
+    }
+  ]);
+});
+
 test('openBoardCollaborators dispatches the collaborators sheet event for the requested board', () => {
   const viewerActor = createActor('viewer_1', 'viewer@example.com', 'Viewer');
   const workspace = createViewerWorkspace('workspace_home', viewerActor);
@@ -1727,6 +1795,54 @@ test('handleGenerateCardLocalization reports localized failures and skips refres
       }
     }
   ]);
+});
+
+test('confirmPendingAction discards localized content and refreshes the editor on the same locale', async () => {
+  const controller = Object.create(WorkspaceController.prototype);
+  const serviceCalls = [];
+  const refreshCalls = [];
+
+  controller.pendingConfirmation = {
+    type: 'discard-card-locale',
+    boardId: 'main',
+    cardId: 'card_1',
+    locale: 'ja'
+  };
+  controller.confirmButtonTarget = {
+    disabled: false
+  };
+  controller.service = {
+    async discardCardLocale(...args) {
+      serviceCalls.push(args);
+      return createEmptyWorkspace();
+    }
+  };
+  controller.t = createTranslator('en');
+  controller.runAction = async (action) => {
+    await action();
+    return true;
+  };
+  controller.isCardEditorOpenFor = () => true;
+  controller.refreshCardEditor = (detail) => {
+    refreshCalls.push(detail);
+  };
+  controller.closeConfirmDialog = () => {
+    controller.closed = true;
+  };
+
+  await WorkspaceController.prototype.confirmPendingAction.call(controller);
+
+  assert.deepEqual(serviceCalls, [['main', 'card_1', 'ja']]);
+  assert.deepEqual(refreshCalls, [
+    {
+      boardId: 'main',
+      cardId: 'card_1',
+      locale: 'ja',
+      mode: 'edit'
+    }
+  ]);
+  assert.equal(controller.closed, true);
+  assert.equal(controller.confirmButtonTarget.disabled, false);
 });
 
 function createBoardWithCustomStages() {
