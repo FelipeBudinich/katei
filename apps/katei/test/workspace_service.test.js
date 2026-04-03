@@ -525,6 +525,30 @@ test('WorkspaceService clearCardLocaleRequest calls repository.applyCommand and 
   });
 });
 
+test('WorkspaceService requestCardLocaleReview calls repository.applyCommand and returns workspace', async () => {
+  await assertServiceCommand({
+    action: (service) => service.requestCardLocaleReview('main', 'card_1', 'ja'),
+    expectedType: 'card.locale.review.request',
+    expectedPayload: {
+      boardId: 'main',
+      cardId: 'card_1',
+      locale: 'ja'
+    }
+  });
+});
+
+test('WorkspaceService verifyCardLocaleReview calls repository.applyCommand and returns workspace', async () => {
+  await assertServiceCommand({
+    action: (service) => service.verifyCardLocaleReview('main', 'card_1', 'ja'),
+    expectedType: 'card.locale.review.verify',
+    expectedPayload: {
+      boardId: 'main',
+      cardId: 'card_1',
+      locale: 'ja'
+    }
+  });
+});
+
 test('WorkspaceService deleteCard calls repository.applyCommand and returns workspace', async () => {
   await assertServiceCommand({
     action: (service) => service.deleteCard('main', 'card_1'),

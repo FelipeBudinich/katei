@@ -19,6 +19,7 @@ import {
 import {
   buildCardEditorMutationPlan,
   createCardLocaleRequestAction,
+  createCardLocaleReviewAction,
   createRuntimeCardDialogState,
   executeWorkspaceCardEditorPlan,
   executeWorkspaceServiceAction
@@ -46,6 +47,8 @@ export default class extends Controller {
     'viewDialog',
     'viewLocaleSection',
     'viewLocaleSelect',
+    'viewReviewState',
+    'viewRequestVerificationButton',
     'viewCardTitle',
     'viewCardBody',
     'viewCardPrioritySection',
@@ -463,12 +466,15 @@ export default class extends Controller {
       return;
     }
 
+    const boardState = getBoardCollaborationState(board, this.viewerActor);
+
     this.viewTriggerElement = button;
     this.viewDialogState = {
       board,
       card,
       stageId,
-      selectedLocale: button.dataset.requestedLocale ?? button.dataset.locale ?? null
+      selectedLocale: button.dataset.requestedLocale ?? button.dataset.locale ?? null,
+      canRequestHumanVerification: boardState?.canRead ?? false
     };
     this.syncViewDialog();
 
@@ -505,6 +511,27 @@ export default class extends Controller {
       selectedLocale: event.currentTarget.value || null
     };
     this.syncViewDialog();
+  }
+
+  async requestViewLocaleReview(event) {
+    event.preventDefault();
+
+    const boardId = this.viewDialogState?.board?.id ?? null;
+    const cardId = this.viewDialogState?.card?.id ?? null;
+    const locale = this.viewDialogState?.selectedLocale ?? null;
+
+    if (!boardId || !cardId || !locale) {
+      return;
+    }
+
+    const success = await this.runAction(
+      () => executeWorkspaceServiceAction(this.service, createCardLocaleReviewAction({ boardId, cardId, locale })),
+      this.t('workspace.announcements.humanVerificationRequested')
+    );
+
+    if (success && this.isViewDialogOpenFor({ boardId, cardId })) {
+      this.refreshViewDialog({ boardId, cardId, locale });
+    }
   }
 
   async handleCardEditorSave(event) {
@@ -938,7 +965,13 @@ export default class extends Controller {
   }
 
   syncViewDialog() {
-    const { board, card, stageId, selectedLocale } = this.viewDialogState ?? {};
+    const {
+      board,
+      card,
+      stageId,
+      selectedLocale,
+      canRequestHumanVerification = false
+    } = this.viewDialogState ?? {};
     const localizedView = createLocalizedCardViewState({
       board,
       card,
@@ -959,12 +992,33 @@ export default class extends Controller {
       this.viewLocaleSelectTarget.setAttribute('aria-disabled', String(!shouldShowLocaleSection));
     }
 
+    if (this.hasViewReviewStateTarget) {
+      this.viewReviewStateTarget.hidden = localizedView.reviewState.status == null;
+      this.viewReviewStateTarget.textContent = localizedView.reviewState.status == null
+        ? ''
+        : this.t(`cardViewDialog.reviewState.${localizedView.reviewState.status}`);
+    }
+
+    if (this.hasViewRequestVerificationButtonTarget) {
+      const shouldShowRequestVerificationButton =
+        canRequestHumanVerification &&
+        localizedView.reviewState.status === 'ai';
+
+      this.viewRequestVerificationButtonTarget.hidden = !shouldShowRequestVerificationButton;
+      this.viewRequestVerificationButtonTarget.disabled = !shouldShowRequestVerificationButton;
+      this.viewRequestVerificationButtonTarget.setAttribute(
+        'aria-disabled',
+        String(!shouldShowRequestVerificationButton)
+      );
+    }
+
     this.viewDialogState = card
       ? {
           board,
           card,
           stageId,
-          selectedLocale: localizedView.selectedLocale
+          selectedLocale: localizedView.selectedLocale,
+          canRequestHumanVerification
         }
       : null;
 
@@ -1193,6 +1247,27 @@ export default class extends Controller {
     });
   }
 
+  refreshViewDialog({ boardId, cardId, locale = null } = {}) {
+    const board = boardId ? this.workspace?.boards?.[boardId] : null;
+    const card = board?.cards?.[cardId] ?? null;
+
+    if (!board || !card) {
+      return;
+    }
+
+    const boardState = getBoardCollaborationState(board, this.viewerActor);
+    const stageId = resolveBoardStageId(board, { cardId });
+
+    this.viewDialogState = {
+      board,
+      card,
+      stageId,
+      selectedLocale: locale,
+      canRequestHumanVerification: boardState?.canRead ?? false
+    };
+    this.syncViewDialog();
+  }
+
   isCardEditorOpenFor({ boardId, cardId } = {}) {
     const cardEditorDialog = this.element?.querySelector?.('[data-controller="card-editor"]');
 
@@ -1204,6 +1279,14 @@ export default class extends Controller {
     const currentCardIdInput = cardEditorDialog.querySelector?.('[data-card-editor-target="cardIdInput"]');
 
     return currentBoardIdInput?.value === boardId && currentCardIdInput?.value === cardId;
+  }
+
+  isViewDialogOpenFor({ boardId, cardId } = {}) {
+    return Boolean(
+      this.viewDialogTarget?.open &&
+      this.viewDialogState?.board?.id === boardId &&
+      this.viewDialogState?.card?.id === cardId
+    );
   }
 }
 

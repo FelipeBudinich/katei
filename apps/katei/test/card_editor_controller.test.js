@@ -341,6 +341,52 @@ test('clear-request button appears when the selected locale is already requested
   });
 });
 
+test('editor sees AI review state and a verify button for localized AI content', () => {
+  const uiState = createLocalizedCardEditorUiState({
+    board: createBoardWithOpenAiKey(),
+    card: createCard(),
+    selectedLocale: 'es-CL',
+    mode: 'edit',
+    canEditLocalizedContent: true,
+    currentActorRole: 'editor'
+  });
+
+  assert.deepEqual(uiState.selectedLocaleReviewState, {
+    origin: 'ai',
+    status: 'ai',
+    isAiOrigin: true,
+    isVerificationRequested: false,
+    isVerified: false
+  });
+  assert.equal(uiState.showSelectedLocaleReviewState, true);
+  assert.equal(uiState.showVerifyLocaleButton, true);
+  assert.equal(uiState.canVerifyLocale, true);
+});
+
+test('verified AI localized content shows the verified state and hides the verify button', () => {
+  const card = createCard();
+  card.contentByLocale['es-CL'].review = {
+    origin: 'ai',
+    verificationRequestedBy: { type: 'human', id: 'viewer_123' },
+    verificationRequestedAt: '2026-03-31T12:30:00.000Z',
+    verifiedBy: { type: 'human', id: 'editor_456' },
+    verifiedAt: '2026-03-31T13:00:00.000Z'
+  };
+
+  const uiState = createLocalizedCardEditorUiState({
+    board: createBoardWithOpenAiKey(),
+    card,
+    selectedLocale: 'es-CL',
+    mode: 'edit',
+    canEditLocalizedContent: true,
+    currentActorRole: 'admin'
+  });
+
+  assert.equal(uiState.selectedLocaleReviewState.status, 'verified');
+  assert.equal(uiState.showVerifyLocaleButton, false);
+  assert.equal(uiState.canVerifyLocale, false);
+});
+
 test('generate button appears when the selected locale is missing, editable, and the board has an OpenAI key', () => {
   const uiState = createLocalizedCardEditorUiState({
     board: createBoardWithOpenAiKey(),
@@ -485,6 +531,42 @@ test('card editor dispatches generate event with board, card, and locale payload
           boardId: 'board_localized',
           cardId: 'card_1',
           locale: 'ja'
+        }
+      }
+    }
+  ]);
+});
+
+test('card editor dispatches verify-locale with board, card, and locale payload', () => {
+  const controller = Object.create(CardEditorController.prototype);
+  const dispatchedEvents = [];
+
+  controller.isReadOnlyLocaleView = false;
+  controller.card = createCard();
+  controller.mode = 'edit';
+  controller.selectedLocale = 'es-CL';
+  controller.localizedEditorUiState = {
+    canVerifyLocale: true
+  };
+  controller.boardIdInputTarget = { value: 'board_localized' };
+  controller.cardIdInputTarget = { value: 'card_1' };
+  controller.dispatch = (name, payload) => {
+    dispatchedEvents.push({ name, payload });
+  };
+
+  CardEditorController.prototype.verifySelectedLocale.call(controller, {
+    preventDefault() {}
+  });
+
+  assert.deepEqual(dispatchedEvents, [
+    {
+      name: 'verify-locale',
+      payload: {
+        detail: {
+          mode: 'edit',
+          boardId: 'board_localized',
+          cardId: 'card_1',
+          locale: 'es-CL'
         }
       }
     }

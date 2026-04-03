@@ -1223,6 +1223,86 @@ test('POST /api/workspace/commands applies a valid runtime command for the authe
   assert.equal(workspaceRecordRepository.replaceRecordCalls[0].record.commandReceipts[0].clientMutationId, 'm1');
 });
 
+test('POST /api/workspace/commands persists locale review activity for viewer verification requests', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_review_request', {
+    memberRole: 'viewer',
+    includeInvite: false
+  });
+  const memberBoard = sharedRecord.workspace.boards.member;
+  const [cardId] = memberBoard.stages.backlog.cardIds;
+
+  memberBoard.languagePolicy = {
+    sourceLocale: 'en',
+    defaultLocale: 'en',
+    supportedLocales: ['en', 'ja'],
+    requiredLocales: ['en']
+  };
+  memberBoard.cards[cardId].contentByLocale.ja = {
+    title: 'AI draft',
+    detailsMarkdown: 'AI body',
+    provenance: {
+      actor: { type: 'agent', id: 'translator_1' },
+      timestamp: '2026-04-02T10:20:00.000Z',
+      includesHumanInput: false
+    },
+    review: {
+      origin: 'ai',
+      verificationRequestedBy: null,
+      verificationRequestedAt: null,
+      verifiedBy: null,
+      verifiedAt: null
+    }
+  };
+
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord]);
+  const app = createTestApp({
+    googleTokenVerifier: async () => ({ sub: 'sub_member', email: 'member@example.com' }),
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .post('/api/workspace/commands')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_member', email: 'member@example.com' }))
+    .send({
+      workspaceId: 'workspace_shared_review_request',
+      command: {
+        clientMutationId: 'review_request_1',
+        type: 'card.locale.review.request',
+        payload: {
+          boardId: 'member',
+          cardId,
+          locale: 'ja'
+        }
+      },
+      expectedRevision: 1
+    });
+
+  assert.equal(response.status, 200);
+  assert.equal(response.body.result.type, 'card.locale.review.request');
+  assert.equal(response.body.workspace.boards.member.cards[cardId].contentByLocale.ja.review.verificationRequestedBy.id, 'sub_member');
+  assert.equal(workspaceRecordRepository.replaceRecordCalls.length, 1);
+  assert.deepEqual(workspaceRecordRepository.replaceRecordCalls[0].record.activityEvents.at(-1), {
+    id: workspaceRecordRepository.replaceRecordCalls[0].record.activityEvents.at(-1).id,
+    type: 'workspace.card.locale.review.requested',
+    actor: {
+      type: 'human',
+      id: 'sub_member'
+    },
+    createdAt: workspaceRecordRepository.replaceRecordCalls[0].record.activityEvents.at(-1).createdAt,
+    revision: 2,
+    entity: {
+      kind: 'card',
+      boardId: 'member',
+      cardId
+    },
+    details: {
+      locale: 'ja',
+      reviewAction: 'request',
+      reviewStatus: 'needs-human-verification'
+    }
+  });
+});
+
 test('POST /api/workspace/commands routes mutations by workspaceId for accessible shared workspaces', async () => {
   const sharedWorkspace = createEmptyWorkspace({ workspaceId: 'workspace_shared_2' });
   sharedWorkspace.boards.main.collaboration.memberships = [

@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { getCardContentReviewState } from '../public/js/domain/card_localization.js';
 import { createEmptyWorkspace, createWorkspaceBoard } from '../public/js/domain/workspace_read_model.js';
 import { validateWorkspaceShape } from '../public/js/domain/workspace_validation.js';
 import { createMutationContext } from '../src/workspaces/mutation_context.js';
@@ -1160,6 +1161,15 @@ test('viewer cannot upsert, discard, request, or clear localized card content', 
         cardId: 'card_1',
         locale: 'ja'
       }
+    },
+    {
+      clientMutationId: 'locale_review_verify_viewer',
+      type: 'card.locale.review.verify',
+      payload: {
+        boardId: 'main',
+        cardId: 'card_1',
+        locale: 'ja'
+      }
     }
   ]) {
     assertPermissionError(
@@ -1173,6 +1183,192 @@ test('viewer cannot upsert, discard, request, or clear localized card content', 
       /modify this board/i
     );
   }
+});
+
+test('viewer can request human verification for an AI-origin locale', () => {
+  const workspace = createWorkspaceWithCard({
+    memberships: [createMembership({ id: 'viewer_123', role: 'viewer' })]
+  });
+  workspace.boards.main.languagePolicy = {
+    sourceLocale: 'en',
+    defaultLocale: 'en',
+    supportedLocales: ['en', 'ja'],
+    requiredLocales: ['en']
+  };
+  workspace.boards.main.cards.card_1.contentByLocale.ja = createLocalizedVariant({
+    title: 'AI タイトル',
+    detailsMarkdown: 'AI 本文',
+    actor: createActor({ type: 'agent', id: 'translator_1' }),
+    timestamp: '2026-03-31T09:45:00.000Z',
+    includesHumanInput: false
+  });
+
+  const { workspace: nextWorkspace, result, activityEvent } = applyWorkspaceCommand({
+    record: createRecord(workspace, 0),
+    command: {
+      clientMutationId: 'locale_review_request_viewer',
+      type: 'card.locale.review.request',
+      payload: {
+        boardId: 'main',
+        cardId: 'card_1',
+        locale: 'ja'
+      }
+    },
+    expectedRevision: 0,
+    context: createContext({
+      now: '2026-03-31T11:00:00.000Z'
+    })
+  });
+
+  assert.equal(result.noOp, false);
+  assert.deepEqual(nextWorkspace.boards.main.cards.card_1.contentByLocale.ja.review, {
+    origin: 'ai',
+    verificationRequestedBy: {
+      type: 'human',
+      id: 'viewer_123'
+    },
+    verificationRequestedAt: '2026-03-31T11:00:00.000Z',
+    verifiedBy: null,
+    verifiedAt: null
+  });
+  assert.equal(activityEvent.type, 'workspace.card.locale.review.requested');
+  assert.deepEqual(activityEvent.entity, {
+    kind: 'card',
+    boardId: 'main',
+    cardId: 'card_1'
+  });
+  assert.deepEqual(activityEvent.details, {
+    locale: 'ja',
+    reviewAction: 'request',
+    reviewStatus: 'needs-human-verification'
+  });
+});
+
+test('editor can verify an AI-origin locale and backfill request metadata when needed', () => {
+  const workspace = createWorkspaceWithCard({
+    memberships: [createMembership({ id: 'viewer_123', role: 'editor' })]
+  });
+  workspace.boards.main.languagePolicy = {
+    sourceLocale: 'en',
+    defaultLocale: 'en',
+    supportedLocales: ['en', 'ja'],
+    requiredLocales: ['en']
+  };
+  workspace.boards.main.cards.card_1.contentByLocale.ja = createLocalizedVariant({
+    title: 'AI タイトル',
+    detailsMarkdown: 'AI 本文',
+    actor: createActor({ type: 'agent', id: 'translator_1' }),
+    timestamp: '2026-03-31T09:45:00.000Z',
+    includesHumanInput: false
+  });
+
+  const { workspace: nextWorkspace, result, activityEvent } = applyWorkspaceCommand({
+    record: createRecord(workspace, 0),
+    command: {
+      clientMutationId: 'locale_review_verify_editor',
+      type: 'card.locale.review.verify',
+      payload: {
+        boardId: 'main',
+        cardId: 'card_1',
+        locale: 'ja'
+      }
+    },
+    expectedRevision: 0,
+    context: createContext({
+      now: '2026-03-31T11:30:00.000Z'
+    })
+  });
+
+  assert.equal(result.noOp, false);
+  assert.deepEqual(nextWorkspace.boards.main.cards.card_1.contentByLocale.ja.review, {
+    origin: 'ai',
+    verificationRequestedBy: {
+      type: 'human',
+      id: 'viewer_123'
+    },
+    verificationRequestedAt: '2026-03-31T11:30:00.000Z',
+    verifiedBy: {
+      type: 'human',
+      id: 'viewer_123'
+    },
+    verifiedAt: '2026-03-31T11:30:00.000Z'
+  });
+  assert.equal(activityEvent.type, 'workspace.card.locale.review.verified');
+  assert.deepEqual(activityEvent.details, {
+    locale: 'ja',
+    reviewAction: 'verify',
+    reviewStatus: 'verified'
+  });
+});
+
+test('request and verify lifecycle updates AI review metadata and status together', () => {
+  const workspace = createWorkspaceWithCard({
+    memberships: [createMembership({ id: 'viewer_123', role: 'editor' })]
+  });
+  workspace.boards.main.languagePolicy = {
+    sourceLocale: 'en',
+    defaultLocale: 'en',
+    supportedLocales: ['en', 'ja'],
+    requiredLocales: ['en']
+  };
+  workspace.boards.main.cards.card_1.contentByLocale.ja = createLocalizedVariant({
+    title: 'AI タイトル',
+    detailsMarkdown: 'AI 本文',
+    actor: createActor({ type: 'agent', id: 'translator_1' }),
+    timestamp: '2026-03-31T09:45:00.000Z',
+    includesHumanInput: false
+  });
+
+  const requested = applyWorkspaceCommand({
+    record: createRecord(workspace, 0),
+    command: {
+      clientMutationId: 'locale_review_request_lifecycle',
+      type: 'card.locale.review.request',
+      payload: {
+        boardId: 'main',
+        cardId: 'card_1',
+        locale: 'ja'
+      }
+    },
+    expectedRevision: 0,
+    context: createContext({
+      now: '2026-03-31T11:00:00.000Z'
+    })
+  });
+
+  const verified = applyWorkspaceCommand({
+    record: createRecord(requested.workspace, 1),
+    command: {
+      clientMutationId: 'locale_review_verify_lifecycle',
+      type: 'card.locale.review.verify',
+      payload: {
+        boardId: 'main',
+        cardId: 'card_1',
+        locale: 'ja'
+      }
+    },
+    expectedRevision: 1,
+    context: createContext({
+      now: '2026-03-31T12:00:00.000Z'
+    })
+  });
+
+  const review = verified.workspace.boards.main.cards.card_1.contentByLocale.ja.review;
+
+  assert.deepEqual(review, {
+    origin: 'ai',
+    verificationRequestedBy: {
+      type: 'human',
+      id: 'viewer_123'
+    },
+    verificationRequestedAt: '2026-03-31T11:00:00.000Z',
+    verifiedBy: {
+      type: 'human',
+      id: 'viewer_123'
+    },
+    verifiedAt: '2026-03-31T12:00:00.000Z'
+  });
+  assert.equal(getCardContentReviewState(review).status, 'verified');
 });
 
 test('card.locale.request creates an open request and duplicate requests become no-ops', () => {

@@ -12,6 +12,9 @@ import { isHumanAuthoredVariant } from './localized_content_guard.js';
 
 const CARD_CONTENT_REVIEW_ORIGIN_AI = 'ai';
 const CARD_CONTENT_REVIEW_ORIGIN_HUMAN = 'human';
+const CARD_CONTENT_REVIEW_STATUS_AI = 'ai';
+const CARD_CONTENT_REVIEW_STATUS_NEEDS_HUMAN_VERIFICATION = 'needs-human-verification';
+const CARD_CONTENT_REVIEW_STATUS_VERIFIED = 'verified';
 
 export class CardLocalizationGenerationConflictError extends Error {
   constructor(message, { code = 'LOCALIZATION_ALREADY_PRESENT', locale = null, status = 409 } = {}) {
@@ -58,6 +61,116 @@ export function createCardContentReview({
     verifiedBy: completedVerification?.actor ?? null,
     verifiedAt: completedVerification?.timestamp ?? null
   };
+}
+
+export function getCardContentReviewState(review) {
+  const normalizedReview = normalizeCardContentReview(review, {
+    fallbackOrigin: null
+  });
+
+  if (!normalizedReview) {
+    return {
+      origin: null,
+      status: null,
+      isAiOrigin: false,
+      isVerificationRequested: false,
+      isVerified: false
+    };
+  }
+
+  if (normalizedReview.origin !== CARD_CONTENT_REVIEW_ORIGIN_AI) {
+    return {
+      origin: normalizedReview.origin,
+      status: null,
+      isAiOrigin: false,
+      isVerificationRequested: false,
+      isVerified: false
+    };
+  }
+
+  if (normalizedReview.verifiedAt) {
+    return {
+      origin: normalizedReview.origin,
+      status: CARD_CONTENT_REVIEW_STATUS_VERIFIED,
+      isAiOrigin: true,
+      isVerificationRequested: true,
+      isVerified: true
+    };
+  }
+
+  if (normalizedReview.verificationRequestedAt) {
+    return {
+      origin: normalizedReview.origin,
+      status: CARD_CONTENT_REVIEW_STATUS_NEEDS_HUMAN_VERIFICATION,
+      isAiOrigin: true,
+      isVerificationRequested: true,
+      isVerified: false
+    };
+  }
+
+  return {
+    origin: normalizedReview.origin,
+    status: CARD_CONTENT_REVIEW_STATUS_AI,
+    isAiOrigin: true,
+    isVerificationRequested: false,
+    isVerified: false
+  };
+}
+
+export function requestCardContentHumanVerification(review, actor, timestamp) {
+  const normalizedReview = normalizeCardContentReview(review, {
+    fallbackOrigin: null
+  });
+
+  if (!normalizedReview || normalizedReview.origin !== CARD_CONTENT_REVIEW_ORIGIN_AI) {
+    return normalizedReview;
+  }
+
+  if (getCardContentReviewState(normalizedReview).status !== CARD_CONTENT_REVIEW_STATUS_AI) {
+    return normalizedReview;
+  }
+
+  const verificationRequest = createRequiredReviewEvent(
+    actor,
+    timestamp,
+    'Card content review request timestamp is required.'
+  );
+
+  return createCardContentReview({
+    origin: normalizedReview.origin,
+    verificationRequestedBy: verificationRequest.actor,
+    verificationRequestedAt: verificationRequest.timestamp,
+    verifiedBy: normalizedReview.verifiedBy,
+    verifiedAt: normalizedReview.verifiedAt
+  });
+}
+
+export function verifyCardContentHumanVerification(review, actor, timestamp) {
+  const normalizedReview = normalizeCardContentReview(review, {
+    fallbackOrigin: null
+  });
+
+  if (!normalizedReview || normalizedReview.origin !== CARD_CONTENT_REVIEW_ORIGIN_AI) {
+    return normalizedReview;
+  }
+
+  if (getCardContentReviewState(normalizedReview).status === CARD_CONTENT_REVIEW_STATUS_VERIFIED) {
+    return normalizedReview;
+  }
+
+  const verificationEvent = createRequiredReviewEvent(
+    actor,
+    timestamp,
+    'Card content verification timestamp is required.'
+  );
+
+  return createCardContentReview({
+    origin: normalizedReview.origin,
+    verificationRequestedBy: normalizedReview.verificationRequestedBy ?? verificationEvent.actor,
+    verificationRequestedAt: normalizedReview.verificationRequestedAt ?? verificationEvent.timestamp,
+    verifiedBy: verificationEvent.actor,
+    verifiedAt: verificationEvent.timestamp
+  });
 }
 
 export function normalizeCardContentReview(review, { provenance = null, fallbackOrigin = null } = {}) {
@@ -239,11 +352,7 @@ export function upsertCardContentVariant(card, locale, patch, provenance, { revi
       : createCardContentProvenance(provenance);
   const nextReview =
     review === undefined
-      ? currentVariant.review
-        ?? normalizeCardContentReview(null, {
-          provenance: nextProvenance,
-          fallbackOrigin: null
-        })
+      ? resolveImplicitCardContentReview(currentVariant, nextProvenance, nextPatch)
       : normalizeCardContentReview(review, {
         provenance: nextProvenance,
         fallbackOrigin: null
@@ -490,6 +599,27 @@ function normalizeVariantPatch(patch) {
   return normalizedPatch;
 }
 
+function resolveImplicitCardContentReview(currentVariant, provenance, patch) {
+  const currentReview = currentVariant.review
+    ?? normalizeCardContentReview(null, {
+      provenance,
+      fallbackOrigin: null
+    });
+
+  if (!didVariantContentChange(currentVariant, patch)) {
+    return currentReview;
+  }
+
+  return clearCardContentReviewVerification(currentReview);
+}
+
+function didVariantContentChange(currentVariant, patch) {
+  return (
+    (Object.prototype.hasOwnProperty.call(patch, 'title') && patch.title !== currentVariant.title) ||
+    (Object.prototype.hasOwnProperty.call(patch, 'detailsMarkdown') && patch.detailsMarkdown !== currentVariant.detailsMarkdown)
+  );
+}
+
 function normalizeRequiredLocalizedTitle(value) {
   const normalizedValue = normalizeOptionalLocalizedString(value);
 
@@ -506,6 +636,31 @@ function normalizeOptionalLocalizedString(value) {
 
 function cloneValue(value) {
   return value == null ? value : structuredClone(value);
+}
+
+function createRequiredReviewEvent(actor, timestamp, errorMessage) {
+  return {
+    actor: normalizeProvenanceActor(actor),
+    timestamp: normalizeIsoTimestamp(timestamp, errorMessage)
+  };
+}
+
+function clearCardContentReviewVerification(review) {
+  const normalizedReview = normalizeCardContentReview(review, {
+    fallbackOrigin: null
+  });
+
+  if (!normalizedReview || normalizedReview.origin !== CARD_CONTENT_REVIEW_ORIGIN_AI) {
+    return normalizedReview;
+  }
+
+  return createCardContentReview({
+    origin: normalizedReview.origin,
+    verificationRequestedBy: normalizedReview.verificationRequestedBy,
+    verificationRequestedAt: normalizedReview.verificationRequestedAt,
+    verifiedBy: null,
+    verifiedAt: null
+  });
 }
 
 function hasMeaningfulVariantContent(variant) {

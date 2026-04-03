@@ -117,6 +117,13 @@ export function createCardLocaleRequestAction({ boardId, cardId, locale, clear =
   };
 }
 
+export function createCardLocaleReviewAction({ boardId, cardId, locale, verify = false } = {}) {
+  return {
+    method: verify ? 'verifyCardLocaleReview' : 'requestCardLocaleReview',
+    args: [boardId, cardId, canonicalizeContentLocaleWithLegacyAliases(locale) ?? locale]
+  };
+}
+
 export async function executeWorkspaceCardEditorPlan(service, plan) {
   let nextWorkspace = null;
 

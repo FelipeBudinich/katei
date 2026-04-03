@@ -4,12 +4,15 @@ import {
   applyGeneratedCardLocalization,
   CardLocalizationGenerationConflictError,
   createCardContentProvenance,
+  getCardContentReviewState,
   getStoredCardContentVariant,
   getCardContentVariant,
   getMissingRequiredLocales,
   listCardLocales,
+  requestCardContentHumanVerification,
   resolveDefaultCardLocale,
-  upsertCardContentVariant
+  upsertCardContentVariant,
+  verifyCardContentHumanVerification
 } from '../public/js/domain/card_localization.js';
 
 function createReview(origin) {
@@ -21,6 +24,108 @@ function createReview(origin) {
     verifiedAt: null
   };
 }
+
+test('getCardContentReviewState maps AI review lifecycle states', () => {
+  assert.equal(getCardContentReviewState(createReview('ai')).status, 'ai');
+  assert.equal(
+    getCardContentReviewState({
+      ...createReview('ai'),
+      verificationRequestedBy: { type: 'human', id: 'viewer_123' },
+      verificationRequestedAt: '2026-03-31T10:00:00.000Z'
+    }).status,
+    'needs-human-verification'
+  );
+  assert.equal(
+    getCardContentReviewState({
+      ...createReview('ai'),
+      verificationRequestedBy: { type: 'human', id: 'viewer_123' },
+      verificationRequestedAt: '2026-03-31T10:00:00.000Z',
+      verifiedBy: { type: 'human', id: 'editor_456' },
+      verifiedAt: '2026-03-31T11:00:00.000Z'
+    }).status,
+    'verified'
+  );
+  assert.equal(getCardContentReviewState(createReview('human')).status, null);
+});
+
+test('verifyCardContentHumanVerification backfills request metadata when it was never requested', () => {
+  const review = verifyCardContentHumanVerification(
+    createReview('ai'),
+    { type: 'human', id: 'editor_456' },
+    '2026-03-31T11:00:00.000Z'
+  );
+
+  assert.deepEqual(review, {
+    origin: 'ai',
+    verificationRequestedBy: { type: 'human', id: 'editor_456' },
+    verificationRequestedAt: '2026-03-31T11:00:00.000Z',
+    verifiedBy: { type: 'human', id: 'editor_456' },
+    verifiedAt: '2026-03-31T11:00:00.000Z'
+  });
+});
+
+test('requestCardContentHumanVerification marks plain AI content as needing human verification', () => {
+  const review = requestCardContentHumanVerification(
+    createReview('ai'),
+    { type: 'human', id: 'viewer_123' },
+    '2026-03-31T10:00:00.000Z'
+  );
+
+  assert.deepEqual(review, {
+    origin: 'ai',
+    verificationRequestedBy: { type: 'human', id: 'viewer_123' },
+    verificationRequestedAt: '2026-03-31T10:00:00.000Z',
+    verifiedBy: null,
+    verifiedAt: null
+  });
+});
+
+test('upsertCardContentVariant clears verified AI status after content changes and keeps the request metadata', () => {
+  const card = {
+    id: 'card_verified_ai',
+    contentByLocale: {
+      ja: {
+        title: 'AI 初稿',
+        detailsMarkdown: '初稿本文',
+        provenance: createCardContentProvenance({
+          actor: { type: 'agent', id: 'translator_1' },
+          timestamp: '2026-03-31T09:00:00.000Z',
+          includesHumanInput: false
+        }),
+        review: {
+          origin: 'ai',
+          verificationRequestedBy: { type: 'human', id: 'viewer_123' },
+          verificationRequestedAt: '2026-03-31T10:00:00.000Z',
+          verifiedBy: { type: 'human', id: 'editor_456' },
+          verifiedAt: '2026-03-31T11:00:00.000Z'
+        }
+      }
+    }
+  };
+
+  const nextCard = upsertCardContentVariant(
+    card,
+    'ja',
+    {
+      title: 'AI 改稿',
+      detailsMarkdown: '改稿本文'
+    },
+    {
+      actor: { type: 'human', id: 'editor_456' },
+      timestamp: '2026-03-31T12:00:00.000Z',
+      includesHumanInput: true
+    }
+  );
+
+  assert.deepEqual(getStoredCardContentVariant(nextCard, 'ja')?.review, {
+    origin: 'ai',
+    verificationRequestedBy: { type: 'human', id: 'viewer_123' },
+    verificationRequestedAt: '2026-03-31T10:00:00.000Z',
+    verifiedBy: null,
+    verifiedAt: null
+  });
+  assert.equal(getCardContentReviewState(getStoredCardContentVariant(nextCard, 'ja')?.review).status, 'needs-human-verification');
+});
 
 test('resolveDefaultCardLocale applies explicit, ui-default, board, and first-available precedence in order', () => {
   const board = {

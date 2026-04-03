@@ -48,6 +48,7 @@
           <p class="text-sm leading-6 text-muted" aria-live="polite" data-card-editor-target="localeSummary"></p>
           <p class="text-sm leading-6 text-muted" aria-live="polite" hidden data-card-editor-target="localeFallbackNotice"></p>
           <p class="text-sm leading-6 text-strong" aria-live="polite" data-card-editor-target="localeEditSummary"></p>
+          <p class="text-sm leading-6 text-strong" aria-live="polite" hidden data-card-editor-target="localeReviewState"></p>
           <p class="text-sm leading-6 text-muted" aria-live="polite" hidden data-card-editor-target="localeReadOnlyNotice"></p>
 
           <div class="action-wrap-grid">
@@ -89,6 +90,16 @@
               data-action="card-editor#clearSelectedLocaleRequest"
             >
               {{ t('cardEditor.clearLocaleRequestButton') }}
+            </button>
+
+            <button
+              type="button"
+              class="touch-button-secondary"
+              hidden
+              data-card-editor-target="verifyLocaleButton"
+              data-action="card-editor#verifySelectedLocale"
+            >
+              {{ t('cardEditor.verifyLocaleButton') }}
             </button>
           </div>
 

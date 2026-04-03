@@ -235,6 +235,22 @@ export class WorkspaceService {
     });
   }
 
+  async requestCardLocaleReview(boardId, cardId, locale) {
+    return this.#applyCommand('card.locale.review.request', {
+      boardId,
+      cardId,
+      locale
+    });
+  }
+
+  async verifyCardLocaleReview(boardId, cardId, locale) {
+    return this.#applyCommand('card.locale.review.verify', {
+      boardId,
+      cardId,
+      locale
+    });
+  }
+
   async deleteCard(boardId, cardId) {
     return this.#applyCommand('card.delete', {
       boardId,

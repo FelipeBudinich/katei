@@ -35,12 +35,14 @@ export default class extends Controller {
     'localeSummary',
     'localeFallbackNotice',
     'localeEditSummary',
+    'localeReviewState',
     'localeReadOnlyNotice',
     'generateLocaleButton',
     'generateLocaleHelp',
     'discardLocaleButton',
     'requestLocaleButton',
     'clearLocaleRequestButton',
+    'verifyLocaleButton',
     'editActions',
     'deleteActions',
     'deleteActionRegion',
@@ -299,6 +301,28 @@ export default class extends Controller {
     });
   }
 
+  verifySelectedLocale(event) {
+    event.preventDefault();
+
+    if (
+      this.isReadOnlyLocaleView ||
+      !this.card ||
+      !this.selectedLocale ||
+      !this.localizedEditorUiState?.canVerifyLocale
+    ) {
+      return;
+    }
+
+    this.dispatch('verify-locale', {
+      detail: {
+        mode: this.mode,
+        boardId: this.boardIdInputTarget.value,
+        cardId: this.cardIdInputTarget.value,
+        locale: this.selectedLocale
+      }
+    });
+  }
+
   discardSelectedLocale(event) {
     event.preventDefault();
 
@@ -477,10 +501,13 @@ export default class extends Controller {
       this.localeSummaryTarget.textContent = '';
       this.localeFallbackNoticeTarget.textContent = '';
       this.localeFallbackNoticeTarget.hidden = true;
+      this.localeReviewStateTarget.textContent = '';
+      this.localeReviewStateTarget.hidden = true;
       this.generateLocaleButtonTarget.hidden = true;
       this.generateLocaleButtonTarget.disabled = true;
       this.generateLocaleButtonTarget.setAttribute('aria-disabled', 'true');
       this.discardLocaleButtonTarget.hidden = true;
+      this.verifyLocaleButtonTarget.hidden = true;
       this.generateLocaleHelpTarget.hidden = true;
       this.generateLocaleHelpTarget.textContent = '';
       return;
@@ -554,9 +581,14 @@ export default class extends Controller {
 
   renderLocaleEditingState(localizedView) {
     const localeEditSummaryState = localizedView.localeEditSummaryState;
+    const localeReviewState = localizedView.selectedLocaleReviewState;
 
     this.localeEditSummaryTarget.textContent = localeEditSummaryState
       ? this.t(localeEditSummaryState.key, { locale: localeEditSummaryState.locale })
+      : '';
+    this.localeReviewStateTarget.hidden = !localizedView.showSelectedLocaleReviewState;
+    this.localeReviewStateTarget.textContent = localizedView.showSelectedLocaleReviewState
+      ? this.t(`cardEditor.reviewState.${localeReviewState.status}`)
       : '';
     this.localeReadOnlyNoticeTarget.hidden = !localizedView.showReadOnlyNotice;
 
@@ -573,6 +605,7 @@ export default class extends Controller {
     this.requestLocaleButtonTarget.hidden = !localizedView.showRequestLocaleButton;
     this.clearLocaleRequestButtonTarget.hidden = !localizedView.showClearLocaleRequestButton;
     this.discardLocaleButtonTarget.hidden = !localizedView.showDiscardLocaleButton;
+    this.verifyLocaleButtonTarget.hidden = !localizedView.showVerifyLocaleButton;
 
     const showGenerateLocaleButton = localizedView.showGenerateLocaleButton;
     const isGenerateDisabled = !localizedView.canGenerateLocale || this.isGeneratingLocale;

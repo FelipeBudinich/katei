@@ -3,7 +3,12 @@ import {
   normalizeBoardLanguagePolicy
 } from '../domain/board_language_policy.js';
 import { normalizeBoardAiLocalization } from '../domain/board_ai_localization.js';
-import { getCardContentVariant, resolveDefaultCardLocale } from '../domain/card_localization.js';
+import {
+  getCardContentReviewState,
+  getCardContentVariant,
+  getStoredCardContentVariant,
+  resolveDefaultCardLocale
+} from '../domain/card_localization.js';
 import { listCardLocaleStatuses } from '../domain/card_localization_requests.js';
 
 export function createLocalizedCardViewState({
@@ -36,6 +41,7 @@ export function createLocalizedCardViewState({
     variant,
     localeStatuses,
     selectedStatus,
+    reviewState: getCardContentReviewState(variant?.review ?? null),
     presentCount: localeStatuses.filter((entry) => entry.hasContent).length,
     requestedCount: localeStatuses.filter((entry) => entry.isRequested).length,
     missingCount: localeStatuses.filter((entry) => !entry.hasContent && !entry.isRequested).length,
@@ -58,6 +64,11 @@ export function createLocalizedCardEditorUiState({
   const selectedStatus = localizedView.selectedStatus;
   const hasCard = Boolean(card);
   const hasSelectedLocale = Boolean(localizedView.selectedLocale);
+  const selectedStoredVariant =
+    hasCard && hasSelectedLocale && selectedStatus?.hasContent
+      ? getStoredCardContentVariant(card, localizedView.selectedLocale)
+      : null;
+  const selectedLocaleReviewState = getCardContentReviewState(selectedStoredVariant?.review ?? null);
   const languagePolicy = normalizeBoardLanguagePolicy(board?.languagePolicy ?? null);
   const boardAiLocalization = normalizeBoardAiLocalization(board?.aiLocalization ?? null);
   const hasSavedOpenAiKey = boardAiLocalization.hasApiKey === true;
@@ -88,6 +99,14 @@ export function createLocalizedCardEditorUiState({
     hasSelectedLocale &&
     !isSourceLocaleSelected &&
     Boolean(selectedStatus?.hasContent);
+  const canVerifySelectedLocale =
+    hasCard &&
+    !isReadOnly &&
+    hasSelectedLocale &&
+    Boolean(selectedStatus?.hasContent) &&
+    canRoleVerifyLocalizedReview(currentActorRole) &&
+    selectedLocaleReviewState.status != null &&
+    selectedLocaleReviewState.status !== 'verified';
   const generateBlockedReason = resolveGenerateBlockedReason({
     hasCard,
     isReadOnly,
@@ -103,6 +122,8 @@ export function createLocalizedCardEditorUiState({
     currentActorRole,
     canEditLocalizedContent: Boolean(canEditLocalizedContent),
     isReadOnly,
+    selectedLocaleReviewState,
+    showSelectedLocaleReviewState: selectedLocaleReviewState.status != null,
     editableVariant: resolveEditableVariant(localizedView, { isReadOnly }),
     showSaveControls: !isReadOnly,
     showReadOnlyNotice: hasCard && isReadOnly,
@@ -119,6 +140,8 @@ export function createLocalizedCardEditorUiState({
     showRequestLocaleButton: canRequestSelectedLocale,
     showClearLocaleRequestButton: canClearSelectedLocaleRequest,
     showDiscardLocaleButton: canDiscardSelectedLocale,
+    showVerifyLocaleButton: canVerifySelectedLocale,
+    canVerifyLocale: canVerifySelectedLocale,
     localeEditSummaryState: resolveLocaleEditSummaryState({
       hasCard,
       isReadOnly,
@@ -180,6 +203,10 @@ function getAvailableCardLocales(localeStatuses = []) {
   return localeStatuses
     .filter((entry) => entry.hasContent)
     .map((entry) => entry.locale);
+}
+
+function canRoleVerifyLocalizedReview(role) {
+  return role === 'admin' || role === 'editor';
 }
 
 function resolveLocaleEditSummaryState({ hasCard, isReadOnly, selectedStatus, selectedLocale }) {

@@ -31,8 +31,11 @@ import {
   createCardContentProvenance,
   createCardContentReview,
   discardCardContentVariant,
+  getCardContentReviewState,
   getStoredCardContentVariant,
-  upsertCardContentVariant
+  requestCardContentHumanVerification,
+  upsertCardContentVariant,
+  verifyCardContentHumanVerification
 } from '../../public/js/domain/card_localization.js';
 import {
   isHumanAuthoredVariant,
@@ -115,7 +118,7 @@ export function applyWorkspaceCommand({
     throw new WorkspaceRevisionConflictError();
   }
 
-  const { workspace, result } = applyCommandToWorkspace({
+  const { workspace, result, activityEventInput = null } = applyCommandToWorkspace({
     workspace: currentRecord.workspace,
     command,
     context: mutationContext
@@ -125,10 +128,12 @@ export function applyWorkspaceCommand({
     ? null
     : createWorkspaceActivityEvent({
         id: createWorkspaceActivityEventId(),
-        type: 'workspace.command.applied',
+        type: activityEventInput?.type ?? 'workspace.command.applied',
         actor: mutationContext.actor,
         createdAt: mutationContext.now,
-        revision: currentRecord.revision + 1
+        revision: currentRecord.revision + 1,
+        entity: activityEventInput?.entity ?? null,
+        details: activityEventInput?.details ?? null
       });
 
   return {
@@ -185,6 +190,10 @@ function applyCommandToWorkspace({ workspace, command, context }) {
       return applyCardLocaleRequest(workspace, command, context);
     case 'card.locale.request.clear':
       return applyCardLocaleRequestClear(workspace, command, context);
+    case 'card.locale.review.request':
+      return applyCardLocaleReviewRequest(workspace, command, context);
+    case 'card.locale.review.verify':
+      return applyCardLocaleReviewVerify(workspace, command, context);
     case 'card.delete':
       return applyCardDelete(workspace, command, context);
     case 'card.move':
@@ -1014,6 +1023,136 @@ function applyCardLocaleRequestClear(workspace, command, context) {
   };
 }
 
+function applyCardLocaleReviewRequest(workspace, command, context) {
+  const currentBoard = getBoard(workspace, command.payload.boardId);
+  const actor = assertAuthenticatedHumanActor(
+    context.actor,
+    'You must be signed in to request human verification.'
+  );
+  assertActorCanReadBoard(currentBoard, actor);
+  const currentCard = getCard(currentBoard, command.payload.cardId);
+  const locale = normalizeCommandLocale(command.payload.locale);
+  assertBoardSupportsLocale(currentBoard, locale);
+  const currentStoredVariant = getExistingCardLocaleVariant(currentCard, locale);
+  const currentReviewState = getCardContentReviewState(currentStoredVariant?.review ?? null);
+
+  if (!currentStoredVariant || currentReviewState.status !== 'ai') {
+    return {
+      workspace,
+      result: createCommandResult(command, {
+        noOp: true,
+        boardId: currentBoard.id,
+        cardId: currentCard.id,
+        locale
+      })
+    };
+  }
+
+  const nextReview = requestCardContentHumanVerification(currentStoredVariant.review, actor, context.now);
+  const nextReviewState = getCardContentReviewState(nextReview);
+  const nextWorkspace = cloneWorkspace(workspace);
+  const board = getBoard(nextWorkspace, command.payload.boardId);
+  const card = getCard(board, command.payload.cardId);
+
+  board.cards[card.id] = upsertCardContentVariant(
+    {
+      ...card,
+      updatedAt: context.now
+    },
+    locale,
+    {
+      title: currentStoredVariant.title,
+      detailsMarkdown: currentStoredVariant.detailsMarkdown
+    },
+    undefined,
+    {
+      review: nextReview
+    }
+  );
+  board.updatedAt = context.now;
+
+  return {
+    workspace: nextWorkspace,
+    result: createCommandResult(command, {
+      boardId: board.id,
+      cardId: card.id,
+      locale
+    }),
+    activityEventInput: createCardLocaleReviewActivityEventInput({
+      boardId: board.id,
+      cardId: card.id,
+      locale,
+      reviewAction: 'request',
+      reviewState: nextReviewState
+    })
+  };
+}
+
+function applyCardLocaleReviewVerify(workspace, command, context) {
+  const currentBoard = getBoard(workspace, command.payload.boardId);
+  const actor = assertAuthenticatedHumanActor(
+    context.actor,
+    'You must be signed in to verify localized card content.'
+  );
+  assertActorCanEditBoard(currentBoard, actor);
+  const currentCard = getCard(currentBoard, command.payload.cardId);
+  const locale = normalizeCommandLocale(command.payload.locale);
+  assertBoardSupportsLocale(currentBoard, locale);
+  const currentStoredVariant = getExistingCardLocaleVariant(currentCard, locale);
+  const currentReviewState = getCardContentReviewState(currentStoredVariant?.review ?? null);
+
+  if (!currentStoredVariant || currentReviewState.status == null || currentReviewState.status === 'verified') {
+    return {
+      workspace,
+      result: createCommandResult(command, {
+        noOp: true,
+        boardId: currentBoard.id,
+        cardId: currentCard.id,
+        locale
+      })
+    };
+  }
+
+  const nextReview = verifyCardContentHumanVerification(currentStoredVariant.review, actor, context.now);
+  const nextReviewState = getCardContentReviewState(nextReview);
+  const nextWorkspace = cloneWorkspace(workspace);
+  const board = getBoard(nextWorkspace, command.payload.boardId);
+  const card = getCard(board, command.payload.cardId);
+
+  board.cards[card.id] = upsertCardContentVariant(
+    {
+      ...card,
+      updatedAt: context.now
+    },
+    locale,
+    {
+      title: currentStoredVariant.title,
+      detailsMarkdown: currentStoredVariant.detailsMarkdown
+    },
+    undefined,
+    {
+      review: nextReview
+    }
+  );
+  board.updatedAt = context.now;
+
+  return {
+    workspace: nextWorkspace,
+    result: createCommandResult(command, {
+      boardId: board.id,
+      cardId: card.id,
+      locale
+    }),
+    activityEventInput: createCardLocaleReviewActivityEventInput({
+      boardId: board.id,
+      cardId: card.id,
+      locale,
+      reviewAction: 'verify',
+      reviewState: nextReviewState
+    })
+  };
+}
+
 function applyCardDelete(workspace, command, context) {
   const currentBoard = getBoard(workspace, command.payload.boardId);
   assertActorCanEditBoard(currentBoard, context.actor);
@@ -1330,6 +1469,31 @@ function createBlockedAutomatedOverwriteResult(command, data = {}) {
     reason: 'human-authored-locale-protected',
     ...data
   });
+}
+
+function createCardLocaleReviewActivityEventInput({
+  boardId,
+  cardId,
+  locale,
+  reviewAction,
+  reviewState
+} = {}) {
+  return {
+    type:
+      reviewAction === 'verify'
+        ? 'workspace.card.locale.review.verified'
+        : 'workspace.card.locale.review.requested',
+    entity: {
+      kind: 'card',
+      boardId,
+      cardId
+    },
+    details: {
+      locale,
+      reviewAction,
+      reviewStatus: reviewState?.status ?? null
+    }
+  };
 }
 
 function assertExpectedRevision(expectedRevision) {

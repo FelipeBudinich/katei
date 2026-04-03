@@ -78,6 +78,8 @@ const EN_MESSAGES = freezeCatalog({
       localeDiscarded: 'Localized content discarded.',
       localeRequested: 'Locale requested.',
       localeRequestCleared: 'Locale request cleared.',
+      humanVerificationRequested: 'Human verification requested.',
+      localeVerified: 'Localization verified.',
       movedCard: 'Moved card to {column}.',
       cardDeleted: 'Card deleted.',
       boardDeleted: 'Board deleted.',
@@ -201,8 +203,15 @@ const EN_MESSAGES = freezeCatalog({
     generateLocaleBlockedAlreadyPresent: 'Localized content already exists for this locale.',
     requestLocaleButton: 'Request locale',
     clearLocaleRequestButton: 'Clear locale request',
+    verifyLocaleButton: 'Verify',
+    reviewState: {
+      ai: 'AI',
+      'needs-human-verification': 'Needs human verification',
+      verified: 'Verified'
+    },
     localeReadOnlyNotice: 'This localized card view is read-only.',
-    viewerReadOnlyNotice: 'Viewers can inspect localized content, but cannot edit or request locales.',
+    viewerReadOnlyNotice:
+      'Viewers can inspect localized content and request human verification, but cannot edit or verify it.',
     priorityLabel: 'Priority',
     priorityGroupAriaLabel: 'Priority',
     statusLabel: 'Task Status',
@@ -240,7 +249,13 @@ const EN_MESSAGES = freezeCatalog({
   cardViewDialog: {
     titlePlaceholder: 'Card title',
     detailsLabel: 'Details',
-    updatedLabel: 'Updated'
+    updatedLabel: 'Updated',
+    requestHumanVerificationButton: 'Request human verification',
+    reviewState: {
+      ai: 'AI',
+      'needs-human-verification': 'Needs human verification',
+      verified: 'Verified'
+    }
   },
   boardEditor: {
     newHeading: 'New board',
@@ -406,6 +421,8 @@ const ES_CL_MESSAGES = freezeCatalog({
       localeDiscarded: 'Contenido localizado descartado.',
       localeRequested: 'Locale solicitado.',
       localeRequestCleared: 'Solicitud de locale eliminada.',
+      humanVerificationRequested: 'Se solicitó verificación humana.',
+      localeVerified: 'Localización verificada.',
       movedCard: 'Tarjeta movida a {column}.',
       cardDeleted: 'Tarjeta eliminada.',
       boardDeleted: 'Tablero eliminado.',
@@ -529,8 +546,15 @@ const ES_CL_MESSAGES = freezeCatalog({
     generateLocaleBlockedAlreadyPresent: 'Ya existe contenido localizado para este locale.',
     requestLocaleButton: 'Solicitar locale',
     clearLocaleRequestButton: 'Quitar solicitud de locale',
+    verifyLocaleButton: 'Verificar',
+    reviewState: {
+      ai: 'IA',
+      'needs-human-verification': 'Necesita verificación humana',
+      verified: 'Verificado'
+    },
     localeReadOnlyNotice: 'Esta vista localizada es de solo lectura.',
-    viewerReadOnlyNotice: 'Los lectores pueden inspeccionar el contenido localizado, pero no editarlo ni solicitar locales.',
+    viewerReadOnlyNotice:
+      'Los lectores pueden inspeccionar el contenido localizado y solicitar verificación humana, pero no editarlo ni verificarlo.',
     priorityLabel: 'Prioridad',
     priorityGroupAriaLabel: 'Prioridad',
     statusLabel: 'Estado de la tarea',
@@ -568,7 +592,13 @@ const ES_CL_MESSAGES = freezeCatalog({
   cardViewDialog: {
     titlePlaceholder: 'Título de la tarjeta',
     detailsLabel: 'Detalles',
-    updatedLabel: 'Actualizado'
+    updatedLabel: 'Actualizado',
+    requestHumanVerificationButton: 'Solicitar verificación humana',
+    reviewState: {
+      ai: 'IA',
+      'needs-human-verification': 'Necesita verificación humana',
+      verified: 'Verificado'
+    }
   },
   boardEditor: {
     newHeading: 'Nuevo tablero',
@@ -734,6 +764,8 @@ const JA_MESSAGES = freezeCatalog({
       localeDiscarded: 'ローカライズ済みコンテンツを破棄しました。',
       localeRequested: 'ロケールをリクエストしました。',
       localeRequestCleared: 'ロケールリクエストを解除しました。',
+      humanVerificationRequested: '人による確認を依頼しました。',
+      localeVerified: 'ローカライズを確認済みにしました。',
       movedCard: 'カードを {column} に移動しました。',
       cardDeleted: 'カードを削除しました。',
       boardDeleted: 'ボードを削除しました。',
@@ -857,8 +889,15 @@ const JA_MESSAGES = freezeCatalog({
     generateLocaleBlockedAlreadyPresent: 'このロケールには既にローカライズ済みコンテンツがあります。',
     requestLocaleButton: 'ロケールをリクエスト',
     clearLocaleRequestButton: 'ロケールリクエストを解除',
+    verifyLocaleButton: '確認済みにする',
+    reviewState: {
+      ai: 'AI',
+      'needs-human-verification': '人による確認が必要',
+      verified: '確認済み'
+    },
     localeReadOnlyNotice: 'このローカライズ済みカードビューは読み取り専用です。',
-    viewerReadOnlyNotice: '閲覧者はローカライズ済みコンテンツを確認できますが、編集やリクエストはできません。',
+    viewerReadOnlyNotice:
+      '閲覧者はローカライズ済みコンテンツを確認し、人による確認を依頼できますが、編集や確認済みへの変更はできません。',
     priorityLabel: '優先度',
     priorityGroupAriaLabel: '優先度',
     statusLabel: 'タスクの状態',
@@ -896,7 +935,13 @@ const JA_MESSAGES = freezeCatalog({
   cardViewDialog: {
     titlePlaceholder: 'カード名',
     detailsLabel: '詳細',
-    updatedLabel: '更新日時'
+    updatedLabel: '更新日時',
+    requestHumanVerificationButton: '人による確認を依頼',
+    reviewState: {
+      ai: 'AI',
+      'needs-human-verification': '人による確認が必要',
+      verified: '確認済み'
+    }
   },
   boardEditor: {
     newHeading: '新しいボード',

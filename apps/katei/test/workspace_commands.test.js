@@ -19,6 +19,8 @@ test('isWorkspaceCommandType accepts known command types and rejects unknown one
   assert.equal(isWorkspaceCommandType('card.locale.discard'), true);
   assert.equal(isWorkspaceCommandType('card.locale.request'), true);
   assert.equal(isWorkspaceCommandType('card.locale.request.clear'), true);
+  assert.equal(isWorkspaceCommandType('card.locale.review.request'), true);
+  assert.equal(isWorkspaceCommandType('card.locale.review.verify'), true);
   assert.equal(isWorkspaceCommandType('card.move'), true);
   assert.equal(isWorkspaceCommandType('board.archive'), false);
   assert.equal(isWorkspaceCommandType('ui.columnCollapsed.set'), false);
@@ -206,11 +208,29 @@ test('validateWorkspaceCommand accepts valid command envelopes', () => {
     },
     {
       clientMutationId: 'm18',
+      type: 'card.locale.review.request',
+      payload: {
+        boardId: 'main',
+        cardId: 'card_1',
+        locale: 'ja'
+      }
+    },
+    {
+      clientMutationId: 'm19',
+      type: 'card.locale.review.verify',
+      payload: {
+        boardId: 'main',
+        cardId: 'card_1',
+        locale: 'ja'
+      }
+    },
+    {
+      clientMutationId: 'm20',
       type: 'card.delete',
       payload: { boardId: 'main', cardId: 'card_1' }
     },
     {
-      clientMutationId: 'm19',
+      clientMutationId: 'm21',
       type: 'card.move',
       payload: {
         boardId: 'main',
@@ -220,7 +240,7 @@ test('validateWorkspaceCommand accepts valid command envelopes', () => {
       }
     },
     {
-      clientMutationId: 'm20',
+      clientMutationId: 'm22',
       type: 'ui.activeBoard.set',
       payload: { boardId: 'main' }
     }
@@ -483,6 +503,31 @@ test('validateWorkspaceCommand rejects invalid localized card payloads', () => {
   assert.equal(
     validateWorkspaceCommand({
       clientMutationId: 'l6',
+      type: 'card.locale.review.request',
+      payload: {
+        boardId: 'main',
+        cardId: 'card_1',
+        locale: '???'
+      }
+    }),
+    false
+  );
+
+  assert.equal(
+    validateWorkspaceCommand({
+      clientMutationId: 'l7',
+      type: 'card.locale.review.verify',
+      payload: {
+        boardId: 'main',
+        locale: 'ja'
+      }
+    }),
+    false
+  );
+
+  assert.equal(
+    validateWorkspaceCommand({
+      clientMutationId: 'l8',
       type: 'card.locale.upsert',
       payload: {
         boardId: 'main',

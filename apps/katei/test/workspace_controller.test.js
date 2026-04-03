@@ -23,6 +23,7 @@ import {
 import {
   buildCardEditorMutationPlan,
   createCardLocaleRequestAction,
+  createCardLocaleReviewAction,
   createRuntimeCardDialogState
 } from '../public/js/controllers/workspace_card_dialog.js';
 import { createTranslator } from '../public/js/i18n/translate.js';
@@ -105,6 +106,24 @@ test('performWorkspaceCollaboratorAction routes collaborator UI actions through 
       }
     ]);
   }
+});
+
+test('createCardLocaleReviewAction routes review request and verify actions through WorkspaceService', () => {
+  assert.deepEqual(
+    createCardLocaleReviewAction({ boardId: 'main', cardId: 'card_1', locale: 'ja' }),
+    {
+      method: 'requestCardLocaleReview',
+      args: ['main', 'card_1', 'ja']
+    }
+  );
+
+  assert.deepEqual(
+    createCardLocaleReviewAction({ boardId: 'main', cardId: 'card_1', locale: 'ja', verify: true }),
+    {
+      method: 'verifyCardLocaleReview',
+      args: ['main', 'card_1', 'ja']
+    }
+  );
 });
 
 test('workspace controller includes pendingWorkspaceInvites and activeWorkspaceId when opening board options', () => {
@@ -1357,6 +1376,62 @@ test('openView uses the dedicated view dialog and limits locales to present loca
   }
 });
 
+test('openView shows the AI review state and a human verification request button for viewers', () => {
+  const restoreDom = installViewDialogDomStubs();
+
+  try {
+    const { controller, card } = createViewDialogController({ uiLocale: 'es-CL' });
+
+    WorkspaceController.prototype.openView.call(controller, {
+      currentTarget: createViewTriggerDouble(card.id, 'review')
+    });
+
+    assert.equal(controller.viewReviewStateTarget.hidden, false);
+    assert.equal(controller.viewReviewStateTarget.textContent, 'cardViewDialog.reviewState.ai');
+    assert.equal(controller.viewRequestVerificationButtonTarget.hidden, false);
+  } finally {
+    restoreDom();
+  }
+});
+
+test('openView shows verified AI review state and hides the request button once verified', () => {
+  const restoreDom = installViewDialogDomStubs();
+
+  try {
+    const { controller, card } = createViewDialogController({
+      uiLocale: 'es-CL',
+      contentByLocale: {
+        en: {
+          title: 'English source',
+          detailsMarkdown: 'English details',
+          provenance: null
+        },
+        'es-CL': {
+          title: 'Titulo verificado',
+          detailsMarkdown: 'Detalles verificados',
+          provenance: null,
+          review: {
+            origin: 'ai',
+            verificationRequestedBy: { type: 'human', id: 'viewer_123' },
+            verificationRequestedAt: '2026-03-31T12:00:00.000Z',
+            verifiedBy: { type: 'human', id: 'editor_456' },
+            verifiedAt: '2026-03-31T13:00:00.000Z'
+          }
+        }
+      }
+    });
+
+    WorkspaceController.prototype.openView.call(controller, {
+      currentTarget: createViewTriggerDouble(card.id, 'review')
+    });
+
+    assert.equal(controller.viewReviewStateTarget.textContent, 'cardViewDialog.reviewState.verified');
+    assert.equal(controller.viewRequestVerificationButtonTarget.hidden, true);
+  } finally {
+    restoreDom();
+  }
+});
+
 test('openView preserves an explicit requested locale from the trigger', () => {
   const restoreDom = installViewDialogDomStubs();
 
@@ -2075,16 +2150,25 @@ function createColumnPanelDouble({ stageId, columnId, cardCount = 0 } = {}) {
 
 function createViewDialogController({
   uiLocale = 'en',
+  viewerRole = 'viewer',
   contentByLocale = {
     en: {
       title: 'English source',
       detailsMarkdown: 'English details',
-      provenance: null
+      provenance: {
+        actor: { type: 'human', id: 'viewer_123' },
+        timestamp: '2026-03-31T09:00:00.000Z',
+        includesHumanInput: true
+      }
     },
     'es-CL': {
       title: 'Titulo por defecto',
       detailsMarkdown: 'Detalles por defecto',
-      provenance: null
+      provenance: {
+        actor: { type: 'agent', id: 'translator_1' },
+        timestamp: '2026-03-31T10:00:00.000Z',
+        includesHumanInput: false
+      }
     }
   },
   languagePolicy = {
@@ -2096,6 +2180,7 @@ function createViewDialogController({
 } = {}) {
   const workspace = createEmptyWorkspace();
   const board = createBoardWithCustomStages();
+  const viewerActor = createActor('viewer_123', 'viewer@example.com', 'Viewer');
   const card = {
     id: 'card_localized',
     priority: 'important',
@@ -2113,6 +2198,15 @@ function createViewDialogController({
   };
 
   board.languagePolicy = languagePolicy;
+  board.collaboration = {
+    memberships: [
+      {
+        actor: viewerActor,
+        role: viewerRole
+      }
+    ],
+    invites: []
+  };
   board.cards[card.id] = card;
   board.stages.review.cardIds = [card.id];
   workspace.boards = {
@@ -2123,6 +2217,7 @@ function createViewDialogController({
 
   const controller = Object.create(WorkspaceController.prototype);
   controller.workspace = workspace;
+  controller.viewerActor = viewerActor;
   controller.t = Object.assign(
     (key) => (key === 'workspace.view.noDetails' ? 'No details added.' : key),
     { locale: uiLocale }
@@ -2137,6 +2232,10 @@ function createViewDialogController({
   controller.viewLocaleSectionTarget = { hidden: true };
   controller.hasViewLocaleSelectTarget = true;
   controller.viewLocaleSelectTarget = createSelectDouble();
+  controller.hasViewReviewStateTarget = true;
+  controller.viewReviewStateTarget = { hidden: true, textContent: '' };
+  controller.hasViewRequestVerificationButtonTarget = true;
+  controller.viewRequestVerificationButtonTarget = createButtonDouble();
   controller.viewCardTitleTarget = { textContent: '' };
   controller.viewCardBodyTarget = createContentRegionDouble();
   controller.viewCardPrioritySectionTarget = { hidden: true };
@@ -2199,6 +2298,17 @@ function createSelectDouble() {
     },
     focus() {
       this.focused = true;
+    }
+  };
+}
+
+function createButtonDouble() {
+  return {
+    hidden: true,
+    disabled: false,
+    attributes: {},
+    setAttribute(name, value) {
+      this.attributes[name] = String(value);
     }
   };
 }
