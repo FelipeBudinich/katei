@@ -5,7 +5,58 @@
 </template>
 
 <template id="card-item-template">
-  {% set card = { "id": "__CARD_ID__", "title": "Card title", "priority": "important", "detailsMarkdown": "", "updatedAt": "" } %}
-  {% set columnId = "__COLUMN_ID__" %}
-  {% include "partials/card-item.njk" %}
+  <article class="card-item" data-card-id="__CARD_ID__" data-stage-id="__COLUMN_ID__" data-column-id="__COLUMN_ID__" data-priority="important">
+    <header class="card-item-toolbar">
+      <button
+        type="button"
+        class="card-item-action px-3"
+        aria-label="{{ t('cardItem.editAriaLabel') }}"
+        data-card-field="editButton"
+        data-action="workspace#openEdit"
+        data-card-id="__CARD_ID__"
+        data-stage-id="__COLUMN_ID__"
+        data-column-id="__COLUMN_ID__"
+      >
+        <span class="card-item-action-icon" aria-hidden="true"></span>
+      </button>
+
+      <h3 class="card-item-title text-base text-strong" data-card-field="title">Card title</h3>
+
+      <button
+        type="button"
+        class="card-item-action px-3"
+        aria-label="{{ t('cardItem.viewAriaLabel') }}"
+        data-action="workspace#openView"
+        data-card-id="__CARD_ID__"
+        data-stage-id="__COLUMN_ID__"
+        data-column-id="__COLUMN_ID__"
+      >
+        <span class="card-item-view-icon" aria-hidden="true"></span>
+      </button>
+    </header>
+
+    <div class="card-item-body">
+      <p class="text-sm leading-6 text-muted hidden" data-card-field="preview"></p>
+    </div>
+
+    <footer class="card-item-footer flex items-center justify-between gap-3">
+      <p class="card-item-meta text-xs uppercase tracking-[0.24em] text-subtle">
+        <span class="card-item-meta-icon" aria-hidden="true"></span>
+        <span data-card-field="meta"></span>
+      </p>
+
+      <button
+        type="button"
+        class="card-item-action px-3 text-xs"
+        data-card-field="promptRunButton"
+        data-action="workspace#handleRunStagePrompt"
+        data-card-id="__CARD_ID__"
+        data-stage-id="__COLUMN_ID__"
+        data-column-id="__COLUMN_ID__"
+        hidden
+      >
+        {{ t('workspace.cardPromptRunButton') }}
+      </button>
+    </footer>
+  </article>
 </template>

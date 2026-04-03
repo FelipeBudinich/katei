@@ -503,6 +503,34 @@ test('WorkspaceService generateCardLocalization calls repository.generateCardLoc
   ]);
 });
 
+test('WorkspaceService runStagePrompt calls repository.runStagePrompt and returns workspace', async () => {
+  const workspace = createEmptyWorkspace({ workspaceId: 'workspace_home' });
+  const repository = createRepositoryDouble({
+    workspace,
+    activeWorkspaceId: 'workspace_home',
+    revision: 12,
+    lastRevisionWorkspaceId: 'workspace_home'
+  });
+  const service = new WorkspaceService(repository);
+
+  const resultWorkspace = await service.runStagePrompt('main', 'card_1');
+
+  assert.deepEqual(resultWorkspace, workspace);
+  assert.equal(repository.runStagePromptCalls.length, 1);
+  assert.match(repository.runStagePromptCalls[0].clientMutationId, /^cmd_/);
+  assert.deepEqual(repository.runStagePromptCalls[0], {
+    clientMutationId: repository.runStagePromptCalls[0].clientMutationId,
+    boardId: 'main',
+    cardId: 'card_1'
+  });
+  assert.deepEqual(repository.runStagePromptContexts, [
+    {
+      workspaceId: 'workspace_home',
+      expectedRevision: 12
+    }
+  ]);
+});
+
 test('WorkspaceService requestCardLocale calls repository.applyCommand and returns workspace', async () => {
   await assertServiceCommand({
     action: (service) => service.requestCardLocale('main', 'card_1', 'ja'),
@@ -618,6 +646,8 @@ function createRepositoryDouble({
     applyCommandContexts: [],
     generateCardLocalizationCalls: [],
     generateCardLocalizationContexts: [],
+    runStagePromptCalls: [],
+    runStagePromptContexts: [],
     resolveWorkspaceRevisionCalls: [],
     setActiveWorkspaceCalls: [],
     events: [],
@@ -689,6 +719,24 @@ function createRepositoryDouble({
         result: {
           clientMutationId: request.clientMutationId,
           type: 'card.locale.generate',
+          noOp: false
+        }
+      };
+    },
+    async runStagePrompt(request, options = {}) {
+      this.runStagePromptCalls.push(structuredClone(request));
+      this.runStagePromptContexts.push(structuredClone(options));
+      return {
+        workspace: structuredClone(workspace),
+        meta: {
+          revision: 1,
+          updatedAt: '2026-04-04T10:00:00.000Z',
+          lastChangedBy: 'sub_123',
+          isPristine: false
+        },
+        result: {
+          clientMutationId: request.clientMutationId,
+          type: 'card.stage-prompt.run',
           noOp: false
         }
       };

@@ -6,7 +6,13 @@ import { createDebugAuthRouter } from './debug_auth.js';
 import { createPublicRouter } from './public.js';
 import { createWorkspaceApiRouter } from './workspace_api.js';
 
-export function createWebRouter({ config, verifyGoogleIdToken, workspaceRecordRepository, openAiLocalizer = null }) {
+export function createWebRouter({
+  config,
+  verifyGoogleIdToken,
+  workspaceRecordRepository,
+  openAiLocalizer = null,
+  openAiStagePromptRunner = null
+}) {
   const router = Router();
   const requireBoardSession = createRequireSessionMiddleware({
     onUnauthorized: (request, response) => response.redirect('/')
@@ -20,7 +26,8 @@ export function createWebRouter({ config, verifyGoogleIdToken, workspaceRecordRe
     config,
     requireSession: requireApiSession,
     workspaceRecordRepository,
-    openAiLocalizer
+    openAiLocalizer,
+    openAiStagePromptRunner
   }));
   router.use(createAuthRouter({ config, verifyGoogleIdToken, requireSession: requireApiSession }));
 

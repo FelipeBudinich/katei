@@ -1,21 +1,32 @@
 import { Router } from 'express';
+import { randomUUID } from 'node:crypto';
 import { normalizeBoardCollaboration } from '../../public/js/domain/board_collaboration.js';
 import {
   canonicalizeContentLocale,
   normalizeBoardLanguagePolicy
 } from '../../public/js/domain/board_language_policy.js';
+import { BOARD_STAGE_PROMPT_RUN_ACTION_ID, stageSupportsAction } from '../../public/js/domain/board_stage_actions.js';
+import { getBoardStagePromptAction } from '../../public/js/domain/board_stage_prompt_action.js';
 import { canActorEditBoard } from '../../public/js/domain/board_permissions.js';
 import {
+  createCardContentProvenance,
+  createCardContentReview,
   applyGeneratedCardLocalization,
   CardLocalizationGenerationConflictError,
   getStoredCardContentVariant
 } from '../../public/js/domain/card_localization.js';
 import { isHumanAuthoredVariant } from '../../public/js/domain/localized_content_guard.js';
+import { DEFAULT_PRIORITY } from '../../public/js/domain/workspace_read_model.js';
 import { cloneWorkspace } from '../../public/js/domain/workspace_read_model.js';
 import { migrateWorkspaceSnapshot } from '../../public/js/domain/workspace_migrations.js';
+import { normalizePriority } from '../../public/js/domain/workspace_validation.js';
 import { validateWorkspaceShape } from '../../public/js/domain/workspace_validation.js';
-import { getBoard, getCard } from '../../public/js/domain/workspace_selectors.js';
+import { findColumnIdByCardId, getBoard, getCard } from '../../public/js/domain/workspace_selectors.js';
 import { createOpenAiLocalizer, OpenAiLocalizerError } from '../ai/openai_localizer.js';
+import {
+  createOpenAiStagePromptRunner,
+  OpenAiStagePromptRunnerError
+} from '../ai/openai_stage_prompt_runner.js';
 import { applyWorkspaceCommand, WorkspaceCommandPermissionError } from '../workspaces/apply_workspace_command.js';
 import { buildInviteResponseDebugFields, createInviteAcceptDebugLogger, createInviteDebugLogger } from '../lib/invite_debug.js';
 import { decryptBoardSecret } from '../security/board_secret_crypto.js';
@@ -37,15 +48,18 @@ import { canViewerReplaceWorkspaceSnapshot } from '../workspaces/workspace_acces
 
 const BOARD_OPENAI_SECRET_FIELD = 'openAiApiKeyEncrypted';
 const CARD_LOCALIZATION_GENERATE_COMMAND_TYPE = 'card.locale.generate';
+const CARD_STAGE_PROMPT_RUN_COMMAND_TYPE = 'card.stage-prompt.run';
 
 export function createWorkspaceApiRouter({
   config,
   requireSession,
   workspaceRecordRepository,
-  openAiLocalizer = createOpenAiLocalizer()
+  openAiLocalizer = createOpenAiLocalizer(),
+  openAiStagePromptRunner = createOpenAiStagePromptRunner()
 }) {
   const router = Router();
   const resolvedOpenAiLocalizer = openAiLocalizer ?? createOpenAiLocalizer();
+  const resolvedOpenAiStagePromptRunner = openAiStagePromptRunner ?? createOpenAiStagePromptRunner();
 
   router.get('/api/workspace', requireSession, async (request, response, next) => {
     const debugLog = createInviteDebugLogger({ request });
@@ -72,6 +86,7 @@ export function createWorkspaceApiRouter({
         ...extras
       });
     } catch (error) {
+      console.error('DEBUG stage prompt route error', error);
       if (error instanceof WorkspaceAccessDeniedError || error?.code === 'WORKSPACE_ACCESS_DENIED') {
         response.status(404).json({
           ok: false,
@@ -543,6 +558,158 @@ export function createWorkspaceApiRouter({
     }
   });
 
+  router.post('/api/workspace/stage-prompts/run', requireSession, async (request, response, next) => {
+    const debugLog = createInviteDebugLogger({ request });
+    const { expectedRevision, isValid: hasValidExpectedRevision } = parseExpectedRevision(request.body?.expectedRevision);
+    const requestedWorkspaceId = resolveRequestedWorkspaceId(request);
+    let currentRecord = null;
+
+    if (!hasValidExpectedRevision) {
+      response.status(400).json({
+        ok: false,
+        error: 'expectedRevision must be a non-negative integer.'
+      });
+      return;
+    }
+
+    try {
+      const stagePromptRequest = normalizeRunStagePromptRequest(request.body);
+
+      logViewerIdentity(debugLog, 'POST /api/workspace/stage-prompts/run', request, {
+        boardId: stagePromptRequest.boardId,
+        cardId: stagePromptRequest.cardId,
+        clientMutationId: stagePromptRequest.clientMutationId,
+        expectedRevision
+      });
+      currentRecord = await workspaceRecordRepository.loadOrCreateAuthoritativeWorkspaceRecord({
+        viewerSub: request.viewer.sub,
+        viewerEmail: request.viewer.email ?? null,
+        workspaceId: requestedWorkspaceId,
+        debugLog
+      });
+      const existingReceipt = findExistingCommandReceipt(currentRecord, stagePromptRequest.clientMutationId);
+
+      if (existingReceipt) {
+        const projectedCurrentRecord = projectRecordForViewer(
+          currentRecord,
+          createViewerProjectionContext(request.viewer, debugLog)
+        );
+        const extras = await listActorFacingWorkspaceExtras(
+          workspaceRecordRepository,
+          request,
+          projectedCurrentRecord.workspaceId,
+          debugLog
+        );
+        sendWorkspaceApiResponse(response, {
+          debugLog,
+          request,
+          route: 'POST /api/workspace/stage-prompts/run',
+          record: projectedCurrentRecord,
+          result: existingReceipt.result,
+          ...extras
+        });
+        return;
+      }
+
+      if (currentRecord.revision !== expectedRevision) {
+        throw new WorkspaceRevisionConflictError();
+      }
+
+      const mutation = await runStagePromptMutation({
+        record: currentRecord,
+        requestViewer: request.viewer,
+        clientMutationId: stagePromptRequest.clientMutationId,
+        boardId: stagePromptRequest.boardId,
+        cardId: stagePromptRequest.cardId,
+        config,
+        openAiStagePromptRunner: resolvedOpenAiStagePromptRunner
+      });
+      const nextRecord = createCommandAppliedWorkspaceRecord(currentRecord, {
+        workspace: mutation.workspace,
+        actor: createViewerMutationActor(request.viewer),
+        now: mutation.now,
+        activityEvent: mutation.activityEvent,
+        commandReceipt: createCommandReceipt({
+          clientMutationId: stagePromptRequest.clientMutationId,
+          commandType: CARD_STAGE_PROMPT_RUN_COMMAND_TYPE,
+          actorId: request.viewer.sub,
+          revision: currentRecord.revision + 1,
+          appliedAt: mutation.now,
+          result: mutation.result
+        })
+      });
+      const persistedRecord = await workspaceRecordRepository.replaceWorkspaceRecord({
+        record: nextRecord,
+        expectedRevision
+      });
+      const extras = await listActorFacingWorkspaceExtras(
+        workspaceRecordRepository,
+        request,
+        persistedRecord.workspaceId,
+        debugLog
+      );
+
+      sendWorkspaceApiResponse(response, {
+        debugLog,
+        request,
+        route: 'POST /api/workspace/stage-prompts/run',
+        record: projectRecordForViewer(persistedRecord, createViewerProjectionContext(request.viewer, debugLog)),
+        result: mutation.result,
+        ...extras
+      });
+    } catch (error) {
+      if (error instanceof WorkspaceAccessDeniedError || error?.code === 'WORKSPACE_ACCESS_DENIED') {
+        response.status(404).json({
+          ok: false,
+          error: 'Workspace not found.'
+        });
+        return;
+      }
+
+      if (error instanceof WorkspaceRevisionConflictError || error?.code === 'WORKSPACE_REVISION_CONFLICT') {
+        response.status(409).json({
+          ok: false,
+          error: error.message,
+          errorCode: 'WORKSPACE_REVISION_CONFLICT'
+        });
+        return;
+      }
+
+      if (error instanceof WorkspaceCommandPermissionError || error?.code === 'WORKSPACE_COMMAND_FORBIDDEN') {
+        response.status(403).json({
+          ok: false,
+          error: error.message,
+          errorCode: error.code ?? 'WORKSPACE_COMMAND_FORBIDDEN'
+        });
+        return;
+      }
+
+      if (
+        error instanceof WorkspaceStagePromptRequestError
+        || error instanceof WorkspaceLocalizationRequestError
+        || error instanceof OpenAiStagePromptRunnerError
+      ) {
+        response.status(error.status ?? 400).json({
+          ok: false,
+          error: error.message,
+          errorCode: error.code ?? 'CARD_STAGE_PROMPT_RUN_FAILED'
+        });
+        return;
+      }
+
+      if (error?.message === 'Board not found.' || error?.message === 'Card not found.') {
+        response.status(400).json({
+          ok: false,
+          error: error.message,
+          errorCode: 'CARD_STAGE_PROMPT_REQUEST_INVALID'
+        });
+        return;
+      }
+
+      next(error);
+    }
+  });
+
   router.post('/api/workspace/import', requireSession, async (request, response, next) => {
     const debugLog = createInviteDebugLogger({ request });
     const workspace = migrateWorkspaceSnapshot(request.body?.workspace);
@@ -615,6 +782,15 @@ class WorkspaceLocalizationRequestError extends Error {
   constructor(message, { code = 'CARD_LOCALIZATION_REQUEST_INVALID', status = 400 } = {}) {
     super(message);
     this.name = 'WorkspaceLocalizationRequestError';
+    this.code = code;
+    this.status = status;
+  }
+}
+
+class WorkspaceStagePromptRequestError extends Error {
+  constructor(message, { code = 'CARD_STAGE_PROMPT_REQUEST_INVALID', status = 400 } = {}) {
+    super(message);
+    this.name = 'WorkspaceStagePromptRequestError';
     this.code = code;
     this.status = status;
   }
@@ -743,6 +919,142 @@ async function generateCardLocalizationMutation({
   };
 }
 
+async function runStagePromptMutation({
+  record,
+  requestViewer,
+  clientMutationId,
+  boardId,
+  cardId,
+  config,
+  openAiStagePromptRunner
+} = {}) {
+  const now = new Date().toISOString();
+  const actor = createViewerMutationActor(requestViewer);
+  const board = getBoard(record.workspace, boardId);
+
+  if (!canActorEditBoard(board, actor)) {
+    throw new WorkspaceCommandPermissionError('You do not have permission to modify this board.');
+  }
+
+  const card = getCard(board, cardId);
+  const sourceStageId = findColumnIdByCardId(board, cardId);
+
+  if (!sourceStageId) {
+    throw new WorkspaceStagePromptRequestError('Card is not assigned to a stage.', {
+      code: 'CARD_STAGE_PROMPT_REQUEST_INVALID',
+      status: 400
+    });
+  }
+
+  if (!stageSupportsAction(board, sourceStageId, BOARD_STAGE_PROMPT_RUN_ACTION_ID)) {
+    throw new WorkspaceStagePromptRequestError('This stage does not allow prompt runs.', {
+      code: 'STAGE_PROMPT_ACTION_DISABLED',
+      status: 400
+    });
+  }
+
+  const promptAction = getBoardStagePromptAction(board, sourceStageId);
+
+  if (!promptAction) {
+    throw new WorkspaceStagePromptRequestError('This stage is missing a valid prompt action configuration.', {
+      code: 'STAGE_PROMPT_ACTION_CONFIG_MISSING',
+      status: 400
+    });
+  }
+
+  const languagePolicy = normalizeBoardLanguagePolicy(board?.languagePolicy ?? null);
+  const sourceLocale = languagePolicy?.sourceLocale ?? null;
+  const sourceVariant = sourceLocale ? getStoredCardContentVariant(card, sourceLocale) : null;
+
+  if (!sourceLocale || !hasMeaningfulLocalizedContent(sourceVariant)) {
+    throw new WorkspaceStagePromptRequestError(
+      'Source locale content is required before running a stage prompt.',
+      {
+        code: 'SOURCE_LOCALE_MISSING',
+        status: 400
+      }
+    );
+  }
+
+  const apiKey = readBoardOpenAiApiKey(board, config);
+  const generatedCard = await openAiStagePromptRunner.runStagePrompt({
+    apiKey,
+    board,
+    card,
+    sourceLocale,
+    stageId: sourceStageId,
+    promptAction
+  });
+  const nextWorkspace = cloneWorkspace(record.workspace);
+  const nextBoard = getBoard(nextWorkspace, boardId);
+  const createdCardId = createGeneratedCardId();
+  const targetStageId = promptAction.targetStageId;
+  const nextPriority = generatedCard.priority ? normalizePriority(generatedCard.priority) : DEFAULT_PRIORITY;
+
+  nextBoard.cards[createdCardId] = {
+    id: createdCardId,
+    priority: nextPriority,
+    createdAt: now,
+    updatedAt: now,
+    localeRequests: {},
+    generation: {
+      source: 'stage-prompt',
+      sourceCardId: cardId,
+      sourceStageId,
+      actionId: BOARD_STAGE_PROMPT_RUN_ACTION_ID,
+      targetStageId
+    },
+    contentByLocale: {
+      [sourceLocale]: {
+        title: generatedCard.title,
+        detailsMarkdown: generatedCard.detailsMarkdown,
+        provenance: createCardContentProvenance({
+          actor: generatedCard.actor,
+          timestamp: now,
+          includesHumanInput: false
+        }),
+        review: createCardContentReview({
+          origin: 'ai'
+        })
+      }
+    }
+  };
+  nextBoard.stages[targetStageId].cardIds = [...nextBoard.stages[targetStageId].cardIds, createdCardId];
+  nextBoard.updatedAt = now;
+
+  return {
+    workspace: nextWorkspace,
+    now,
+    result: {
+      clientMutationId,
+      type: CARD_STAGE_PROMPT_RUN_COMMAND_TYPE,
+      noOp: false,
+      boardId,
+      sourceCardId: cardId,
+      createdCardId,
+      sourceStageId,
+      targetStageId
+    },
+    activityEvent: createWorkspaceActivityEvent({
+      type: 'workspace.card.prompt.generated',
+      actor,
+      createdAt: now,
+      revision: record.revision + 1,
+      entity: {
+        kind: 'card',
+        boardId,
+        cardId: createdCardId
+      },
+      details: {
+        sourceCardId: cardId,
+        sourceStageId,
+        targetStageId,
+        provider: generatedCard.provider
+      }
+    })
+  };
+}
+
 function normalizeGenerateLocalizationRequest(body) {
   const clientMutationId = normalizeRequiredBodyString(
     body?.clientMutationId,
@@ -765,6 +1077,21 @@ function normalizeGenerateLocalizationRequest(body) {
     boardId,
     cardId,
     targetLocale
+  };
+}
+
+function normalizeRunStagePromptRequest(body) {
+  const clientMutationId = normalizeRequiredStagePromptBodyString(
+    body?.clientMutationId,
+    'clientMutationId is required.'
+  );
+  const boardId = normalizeRequiredStagePromptBodyString(body?.boardId, 'boardId is required.');
+  const cardId = normalizeRequiredStagePromptBodyString(body?.cardId, 'cardId is required.');
+
+  return {
+    clientMutationId,
+    boardId,
+    cardId
   };
 }
 
@@ -807,6 +1134,35 @@ function normalizeRequiredBodyString(value, errorMessage) {
   }
 
   return normalizedValue;
+}
+
+function normalizeRequiredStagePromptBodyString(value, errorMessage) {
+  const normalizedValue = normalizeOptionalString(value);
+
+  if (!normalizedValue) {
+    throw new WorkspaceStagePromptRequestError(errorMessage, {
+      code: 'CARD_STAGE_PROMPT_REQUEST_INVALID',
+      status: 400
+    });
+  }
+
+  return normalizedValue;
+}
+
+function findExistingCommandReceipt(record, clientMutationId) {
+  const normalizedClientMutationId = normalizeOptionalString(clientMutationId);
+
+  if (!normalizedClientMutationId || !Array.isArray(record?.commandReceipts)) {
+    return null;
+  }
+
+  return (
+    record.commandReceipts.find((receipt) => receipt?.clientMutationId === normalizedClientMutationId) ?? null
+  );
+}
+
+function createGeneratedCardId() {
+  return `card_${randomUUID().replaceAll('-', '').slice(0, 12)}`;
 }
 
 function createWorkspaceApiResponse(record, result = undefined, pendingWorkspaceInvites = [], accessibleWorkspaces = []) {

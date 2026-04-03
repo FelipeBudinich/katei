@@ -789,6 +789,79 @@ test('HttpWorkspaceRepository generateCardLocalization sends expectedRevision an
   });
 });
 
+test('HttpWorkspaceRepository runStagePrompt sends expectedRevision and updates local meta state', async () => {
+  const promptWorkspace = createEmptyWorkspace({
+    workspaceId: 'workspace_prompt'
+  });
+  const cardId = Object.keys(promptWorkspace.boards.main.cards)[0] ?? 'card_1';
+  const repository = new HttpWorkspaceRepository({
+    fetchImpl: createFetchDouble([]).fetch,
+    viewerSub: 'sub_123',
+    storage: null
+  });
+
+  repository.activeWorkspaceId = promptWorkspace.workspaceId;
+  repository.revision = 7;
+  repository.meta = {
+    revision: 7,
+    updatedAt: '2026-04-03T15:00:00.000Z',
+    lastChangedBy: 'sub_123',
+    isPristine: false
+  };
+
+  const fetchDouble = createFetchDouble([
+    createJsonResponse(createWorkspaceApiPayload(promptWorkspace, {
+      revision: 8,
+      updatedAt: '2026-04-03T15:12:00.000Z',
+      lastChangedBy: 'sub_123',
+      isPristine: false
+    }, {
+      clientMutationId: 'm_stage_prompt_1',
+      type: 'card.stage-prompt.run',
+      noOp: false,
+      boardId: 'main',
+      sourceCardId: cardId,
+      createdCardId: 'card_generated_1',
+      sourceStageId: 'backlog',
+      targetStageId: 'doing'
+    }))
+  ]);
+  repository.fetchImpl = fetchDouble.fetch;
+
+  const payload = await repository.runStagePrompt({
+    clientMutationId: 'm_stage_prompt_1',
+    boardId: 'main',
+    cardId
+  });
+
+  assert.deepEqual(payload.result, {
+    clientMutationId: 'm_stage_prompt_1',
+    type: 'card.stage-prompt.run',
+    noOp: false,
+    boardId: 'main',
+    sourceCardId: cardId,
+    createdCardId: 'card_generated_1',
+    sourceStageId: 'backlog',
+    targetStageId: 'doing'
+  });
+  assert.deepEqual(repository.meta, {
+    revision: 8,
+    updatedAt: '2026-04-03T15:12:00.000Z',
+    lastChangedBy: 'sub_123',
+    isPristine: false
+  });
+  assert.equal(repository.revision, 8);
+  assert.equal(fetchDouble.calls[0].url, '/api/workspace/stage-prompts/run');
+  assert.equal(fetchDouble.calls[0].options.method, 'POST');
+  assert.deepEqual(JSON.parse(fetchDouble.calls[0].options.body), {
+    clientMutationId: 'm_stage_prompt_1',
+    workspaceId: promptWorkspace.workspaceId,
+    boardId: 'main',
+    cardId,
+    expectedRevision: 7
+  });
+});
+
 test('HttpWorkspaceRepository resolves a cross-workspace revision without replacing the active cached workspace state', async () => {
   const homeWorkspace = createEmptyWorkspace({
     workspaceId: 'workspace_home'

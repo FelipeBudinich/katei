@@ -26,6 +26,7 @@ import {
 import { canViewerAccessWorkspace, filterWorkspaceForViewer } from '../src/workspaces/workspace_access.js';
 import { encryptBoardSecret } from '../src/security/board_secret_crypto.js';
 import { OpenAiLocalizerError } from '../src/ai/openai_localizer.js';
+import { OpenAiStagePromptRunnerError } from '../src/ai/openai_stage_prompt_runner.js';
 
 function createReview(origin) {
   return {
@@ -542,6 +543,300 @@ test('POST /api/workspace/localizations/generate returns 502 when OpenAI generat
   assert.equal(response.body.errorCode, 'OPENAI_UPSTREAM_ERROR');
 });
 
+test('POST /api/workspace/stage-prompts/run creates a new AI-authored card in the target stage and leaves the source card unchanged', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_api_stage_prompt_success', {
+    memberRole: 'editor',
+    includeInvite: false
+  });
+  const { cardId, sourceStageId, targetStageId } = configureBoardForStagePrompt(sharedRecord.workspace.boards.member);
+  const openAiStagePromptRunner = createOpenAiStagePromptRunnerDouble({
+    title: 'Generated implementation task',
+    detailsMarkdown: 'Ship the implementation details.',
+    priority: 'important'
+  });
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord]);
+  const app = createTestApp({ workspaceRecordRepository, openAiStagePromptRunner });
+  const sourceCardBefore = structuredClone(sharedRecord.workspace.boards.member.cards[cardId]);
+
+  const response = await request(app)
+    .post('/api/workspace/stage-prompts/run')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_member', email: 'member@example.com', name: 'Member' }))
+    .send({
+      workspaceId: 'workspace_shared_api_stage_prompt_success',
+      clientMutationId: 'stage_prompt_member_1',
+      boardId: 'member',
+      cardId,
+      expectedRevision: 1
+    });
+
+  assert.equal(response.status, 200);
+  assert.equal(openAiStagePromptRunner.calls.length, 1);
+  assert.equal(openAiStagePromptRunner.calls[0].apiKey, 'sk-member-board-9876');
+  assert.equal(openAiStagePromptRunner.calls[0].sourceLocale, 'en');
+  assert.equal(openAiStagePromptRunner.calls[0].stageId, sourceStageId);
+  assert.deepEqual(openAiStagePromptRunner.calls[0].promptAction, {
+    enabled: true,
+    prompt: 'Turn this card into a new implementation task.',
+    targetStageId
+  });
+  assert.deepEqual(response.body.workspace.boards.member.cards[cardId], sourceCardBefore);
+
+  const createdCardId = response.body.result.createdCardId;
+  const createdCard = response.body.workspace.boards.member.cards[createdCardId];
+
+  assert.ok(createdCardId);
+  assert.ok(createdCard);
+  assert.deepEqual(createdCard.localeRequests, {});
+  assert.equal(createdCard.priority, 'important');
+  assert.deepEqual(createdCard.generation, {
+    source: 'stage-prompt',
+    sourceCardId: cardId,
+    sourceStageId,
+    actionId: 'card.prompt.run',
+    targetStageId
+  });
+  assert.deepEqual(createdCard.contentByLocale.en, {
+    title: 'Generated implementation task',
+    detailsMarkdown: 'Ship the implementation details.',
+    provenance: {
+      actor: {
+        type: 'agent',
+        id: 'openai-stage-prompt-runner'
+      },
+      timestamp: createdCard.contentByLocale.en.provenance.timestamp,
+      includesHumanInput: false
+    },
+    review: createReview('ai')
+  });
+  assert.equal(
+    response.body.workspace.boards.member.stages[targetStageId].cardIds.includes(createdCardId),
+    true
+  );
+  assert.deepEqual(response.body.result, {
+    clientMutationId: 'stage_prompt_member_1',
+    type: 'card.stage-prompt.run',
+    noOp: false,
+    boardId: 'member',
+    sourceCardId: cardId,
+    createdCardId,
+    sourceStageId,
+    targetStageId
+  });
+});
+
+test('POST /api/workspace/stage-prompts/run rejects stages without the prompt-run action', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_api_stage_prompt_disabled', {
+    memberRole: 'editor',
+    includeInvite: false
+  });
+  const { cardId } = configureBoardForStagePrompt(sharedRecord.workspace.boards.member, {
+    includePromptRunAction: false
+  });
+  const openAiStagePromptRunner = createOpenAiStagePromptRunnerDouble();
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord]);
+  const app = createTestApp({ workspaceRecordRepository, openAiStagePromptRunner });
+
+  const response = await request(app)
+    .post('/api/workspace/stage-prompts/run')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_member', email: 'member@example.com', name: 'Member' }))
+    .send({
+      workspaceId: 'workspace_shared_api_stage_prompt_disabled',
+      clientMutationId: 'stage_prompt_member_disabled',
+      boardId: 'member',
+      cardId,
+      expectedRevision: 1
+    });
+
+  assert.equal(response.status, 400);
+  assert.equal(response.body.errorCode, 'STAGE_PROMPT_ACTION_DISABLED');
+  assert.equal(openAiStagePromptRunner.calls.length, 0);
+});
+
+test('POST /api/workspace/stage-prompts/run rejects missing prompt action config', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_api_stage_prompt_missing_config', {
+    memberRole: 'editor',
+    includeInvite: false
+  });
+  const { cardId } = configureBoardForStagePrompt(sharedRecord.workspace.boards.member, {
+    includePromptAction: false
+  });
+  const openAiStagePromptRunner = createOpenAiStagePromptRunnerDouble();
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord], {
+    allowInvalidWorkspaceIds: ['workspace_shared_api_stage_prompt_missing_config']
+  });
+  const app = createTestApp({ workspaceRecordRepository, openAiStagePromptRunner });
+
+  const response = await request(app)
+    .post('/api/workspace/stage-prompts/run')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_member', email: 'member@example.com', name: 'Member' }))
+    .send({
+      workspaceId: 'workspace_shared_api_stage_prompt_missing_config',
+      clientMutationId: 'stage_prompt_member_missing_config',
+      boardId: 'member',
+      cardId,
+      expectedRevision: 1
+    });
+
+  assert.equal(response.status, 400);
+  assert.equal(response.body.errorCode, 'STAGE_PROMPT_ACTION_CONFIG_MISSING');
+  assert.equal(openAiStagePromptRunner.calls.length, 0);
+});
+
+test('POST /api/workspace/stage-prompts/run returns 400 when the board has no OpenAI key', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_api_stage_prompt_missing_key', {
+    memberRole: 'editor',
+    includeInvite: false
+  });
+  const { cardId } = configureBoardForStagePrompt(sharedRecord.workspace.boards.member, {
+    seedApiKey: false
+  });
+  const openAiStagePromptRunner = createOpenAiStagePromptRunnerDouble();
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord]);
+  const app = createTestApp({ workspaceRecordRepository, openAiStagePromptRunner });
+
+  const response = await request(app)
+    .post('/api/workspace/stage-prompts/run')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_member', email: 'member@example.com', name: 'Member' }))
+    .send({
+      workspaceId: 'workspace_shared_api_stage_prompt_missing_key',
+      clientMutationId: 'stage_prompt_member_missing_key',
+      boardId: 'member',
+      cardId,
+      expectedRevision: 1
+    });
+
+  assert.equal(response.status, 400);
+  assert.equal(response.body.errorCode, 'BOARD_OPENAI_KEY_MISSING');
+  assert.equal(openAiStagePromptRunner.calls.length, 0);
+});
+
+test('POST /api/workspace/stage-prompts/run returns 400 when source locale content is missing', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_api_stage_prompt_source_missing', {
+    memberRole: 'editor',
+    includeInvite: false
+  });
+  const { cardId } = configureBoardForStagePrompt(sharedRecord.workspace.boards.member, {
+    removeSourceContent: true
+  });
+  const openAiStagePromptRunner = createOpenAiStagePromptRunnerDouble();
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord], {
+    allowInvalidWorkspaceIds: ['workspace_shared_api_stage_prompt_source_missing']
+  });
+  const app = createTestApp({ workspaceRecordRepository, openAiStagePromptRunner });
+
+  const response = await request(app)
+    .post('/api/workspace/stage-prompts/run')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_member', email: 'member@example.com', name: 'Member' }))
+    .send({
+      workspaceId: 'workspace_shared_api_stage_prompt_source_missing',
+      clientMutationId: 'stage_prompt_member_source_missing',
+      boardId: 'member',
+      cardId,
+      expectedRevision: 1
+    });
+
+  assert.equal(response.status, 400);
+  assert.equal(response.body.errorCode, 'SOURCE_LOCALE_MISSING');
+  assert.equal(openAiStagePromptRunner.calls.length, 0);
+});
+
+test('POST /api/workspace/stage-prompts/run returns 409 for revision conflicts', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_api_stage_prompt_conflict', {
+    memberRole: 'editor',
+    includeInvite: false
+  });
+  const { cardId } = configureBoardForStagePrompt(sharedRecord.workspace.boards.member);
+  const openAiStagePromptRunner = createOpenAiStagePromptRunnerDouble();
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord]);
+  const app = createTestApp({ workspaceRecordRepository, openAiStagePromptRunner });
+
+  const response = await request(app)
+    .post('/api/workspace/stage-prompts/run')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_member', email: 'member@example.com', name: 'Member' }))
+    .send({
+      workspaceId: 'workspace_shared_api_stage_prompt_conflict',
+      clientMutationId: 'stage_prompt_member_conflict',
+      boardId: 'member',
+      cardId,
+      expectedRevision: 0
+    });
+
+  assert.equal(response.status, 409);
+  assert.equal(response.body.errorCode, 'WORKSPACE_REVISION_CONFLICT');
+  assert.equal(openAiStagePromptRunner.calls.length, 0);
+});
+
+test('POST /api/workspace/stage-prompts/run returns 502 when the model output is invalid', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_api_stage_prompt_invalid_output', {
+    memberRole: 'editor',
+    includeInvite: false
+  });
+  const { cardId } = configureBoardForStagePrompt(sharedRecord.workspace.boards.member);
+  const openAiStagePromptRunner = createOpenAiStagePromptRunnerDouble({
+    error: new OpenAiStagePromptRunnerError('OpenAI returned an invalid card priority.', {
+      code: 'STAGE_PROMPT_OUTPUT_INVALID',
+      status: 502
+    })
+  });
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord]);
+  const app = createTestApp({ workspaceRecordRepository, openAiStagePromptRunner });
+
+  const response = await request(app)
+    .post('/api/workspace/stage-prompts/run')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_member', email: 'member@example.com', name: 'Member' }))
+    .send({
+      workspaceId: 'workspace_shared_api_stage_prompt_invalid_output',
+      clientMutationId: 'stage_prompt_member_invalid_output',
+      boardId: 'member',
+      cardId,
+      expectedRevision: 1
+    });
+
+  assert.equal(response.status, 502);
+  assert.equal(response.body.errorCode, 'STAGE_PROMPT_OUTPUT_INVALID');
+});
+
+test('POST /api/workspace/stage-prompts/run replays the stored result for duplicate clientMutationId requests', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_api_stage_prompt_duplicate', {
+    memberRole: 'editor',
+    includeInvite: false
+  });
+  const { cardId } = configureBoardForStagePrompt(sharedRecord.workspace.boards.member);
+  const openAiStagePromptRunner = createOpenAiStagePromptRunnerDouble({
+    title: 'Generated duplicate-safe task',
+    detailsMarkdown: 'Created once.',
+    priority: 'normal'
+  });
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord]);
+  const app = createTestApp({ workspaceRecordRepository, openAiStagePromptRunner });
+  const requestBody = {
+    workspaceId: 'workspace_shared_api_stage_prompt_duplicate',
+    clientMutationId: 'stage_prompt_member_duplicate',
+    boardId: 'member',
+    cardId,
+    expectedRevision: 1
+  };
+
+  const firstResponse = await request(app)
+    .post('/api/workspace/stage-prompts/run')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_member', email: 'member@example.com', name: 'Member' }))
+    .send(requestBody);
+
+  const duplicateResponse = await request(app)
+    .post('/api/workspace/stage-prompts/run')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_member', email: 'member@example.com', name: 'Member' }))
+    .send(requestBody);
+
+  assert.equal(firstResponse.status, 200);
+  assert.equal(duplicateResponse.status, 200);
+  assert.equal(openAiStagePromptRunner.calls.length, 1);
+  assert.deepEqual(duplicateResponse.body.result, firstResponse.body.result);
+  assert.equal(
+    duplicateResponse.body.workspace.boards.member.stages.doing.cardIds.includes(firstResponse.body.result.createdCardId),
+    true
+  );
+});
+
 test('PUT /api/workspace rejects shared snapshot replacement when hidden boards exist', async () => {
   const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_api_put', {
     memberRole: 'admin',
@@ -622,7 +917,11 @@ test('PUT /api/workspace responses include pendingWorkspaceInvites without chang
   assert.deepEqual(Object.keys(response.body), ['ok', 'workspace', 'activeWorkspace', 'meta', 'pendingWorkspaceInvites', 'accessibleWorkspaces']);
 });
 
-function createTestApp({ workspaceRecordRepository, openAiLocalizer = null } = {}) {
+function createTestApp({
+  workspaceRecordRepository,
+  openAiLocalizer = null,
+  openAiStagePromptRunner = null
+} = {}) {
   return createApp({
     env: {
       NODE_ENV: 'test',
@@ -634,7 +933,8 @@ function createTestApp({ workspaceRecordRepository, openAiLocalizer = null } = {
     },
     googleTokenVerifier: async () => ({ sub: 'sub_any' }),
     workspaceRecordRepository: workspaceRecordRepository ?? createWorkspaceRecordRepositoryDouble(),
-    openAiLocalizer
+    openAiLocalizer,
+    openAiStagePromptRunner
   });
 }
 
@@ -662,6 +962,39 @@ function createOpenAiLocalizerDouble({
         targetLocale: input.targetLocale,
         title,
         detailsMarkdown,
+        model: 'gpt-5.4-mini'
+      };
+    }
+  };
+}
+
+function createOpenAiStagePromptRunnerDouble({
+  title = 'Generated task',
+  detailsMarkdown = 'Generated details',
+  priority = 'important',
+  error = null
+} = {}) {
+  return {
+    calls: [],
+    async runStagePrompt(input) {
+      this.calls.push(structuredClone(input));
+
+      if (error) {
+        throw error;
+      }
+
+      return {
+        provider: 'openai',
+        actor: {
+          type: 'agent',
+          id: 'openai-stage-prompt-runner'
+        },
+        sourceLocale: input.sourceLocale,
+        sourceStageId: input.stageId,
+        targetStageId: input.promptAction.targetStageId,
+        title,
+        detailsMarkdown,
+        priority,
         model: 'gpt-5.4-mini'
       };
     }
@@ -727,6 +1060,63 @@ function configureBoardForLocalization(board, {
   return { cardId };
 }
 
+function configureBoardForStagePrompt(board, {
+  sourceStageId = 'backlog',
+  targetStageId = 'doing',
+  includePromptRunAction = true,
+  includePromptAction = true,
+  seedApiKey = true,
+  removeSourceContent = false
+} = {}) {
+  board.languagePolicy = {
+    sourceLocale: 'en',
+    defaultLocale: 'en',
+    supportedLocales: ['en'],
+    requiredLocales: ['en']
+  };
+
+  if (seedApiKey) {
+    seedBoardOpenAiKey(board, 'sk-member-board-9876');
+  } else {
+    board.aiLocalization = {
+      provider: 'openai',
+      hasApiKey: false,
+      apiKeyLast4: null
+    };
+    delete board.aiLocalizationSecrets;
+  }
+
+  const [cardId] = Object.keys(board.cards);
+  const card = board.cards[cardId];
+
+  for (const stage of Object.values(board.stages)) {
+    stage.cardIds = Array.isArray(stage.cardIds) ? stage.cardIds.filter((currentCardId) => currentCardId !== cardId) : [];
+  }
+
+  board.stages[sourceStageId].cardIds.push(cardId);
+  board.stages[sourceStageId].actionIds = includePromptRunAction ? ['card.prompt.run'] : [];
+
+  if (includePromptAction) {
+    board.stages[sourceStageId].promptAction = {
+      enabled: true,
+      prompt: 'Turn this card into a new implementation task.',
+      targetStageId
+    };
+  } else {
+    delete board.stages[sourceStageId].promptAction;
+  }
+
+  if (removeSourceContent) {
+    delete card.contentByLocale.en;
+  }
+
+  return {
+    cardId,
+    sourceStageId,
+    targetStageId
+  };
+}
+
 function seedBoardOpenAiKey(board, apiKey) {
   board.aiLocalization = {
     provider: 'openai',
@@ -746,8 +1136,11 @@ function createSessionCookieHeader(viewer, { ttlSeconds = 300, now = '2099-01-01
   return `${KATEI_SESSION_COOKIE_NAME}=${value}`;
 }
 
-function createWorkspaceRecordRepositoryDouble(initialRecords = []) {
+function createWorkspaceRecordRepositoryDouble(initialRecords = [], { allowInvalidWorkspaceIds = [] } = {}) {
   const records = new Map(initialRecords.map((record) => [record.workspaceId, structuredClone(record)]));
+  const invalidWorkspaceIdSet = new Set(
+    Array.isArray(allowInvalidWorkspaceIds) ? allowInvalidWorkspaceIds : []
+  );
 
   function projectRecord(record, { viewerSub, viewerEmail = null } = {}) {
     const normalizedRecord = createWorkspaceRecord(record);
@@ -766,6 +1159,9 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = []) {
   async function loadFullRecord({ viewerSub, viewerEmail = null, workspaceId = null } = {}) {
     if (workspaceId) {
       const requestedRecord = records.get(workspaceId);
+      if (requestedRecord && invalidWorkspaceIdSet.has(workspaceId)) {
+        return structuredClone(requestedRecord);
+      }
       const normalizedRequestedRecord = requestedRecord ? createWorkspaceRecord(requestedRecord) : null;
 
       if (

@@ -27,9 +27,9 @@ import {
 import { createLocalizedCardViewState } from './card_editor_locale_view.js';
 import {
   getBoardStageTitle,
-  resolveBoardStageId,
-  shouldShowCreateForStage,
-  shouldShowPriorityForStage
+    resolveBoardStageId,
+    shouldShowCreateForStage,
+    shouldShowPriorityForStage
 } from './stage_ui.js';
 
 export default class extends Controller {
@@ -98,6 +98,7 @@ export default class extends Controller {
     this.confirmTriggerElement = null;
     this.isConfirming = false;
     this.pendingLocalizationGenerationKeys = new Set();
+    this.pendingStagePromptRunKeys = new Set();
 
     if (typeof this.browserWindow?.addEventListener === 'function') {
       this.browserWindow.addEventListener('popstate', this.handlePopState);
@@ -702,6 +703,41 @@ export default class extends Controller {
         locale,
         success
       });
+    }
+  }
+
+  async handleRunStagePrompt(event) {
+    const boardId =
+      normalizeOptionalWorkspaceId(event?.detail?.boardId)
+      ?? normalizeOptionalWorkspaceId(event?.currentTarget?.dataset?.boardId)
+      ?? this.activeBoard?.id
+      ?? null;
+    const cardId =
+      normalizeOptionalWorkspaceId(event?.detail?.cardId)
+      ?? normalizeOptionalWorkspaceId(event?.currentTarget?.dataset?.cardId);
+    const requestKey = createStagePromptRunRequestKey({ boardId, cardId });
+
+    if (!requestKey) {
+      return;
+    }
+
+    if (!(this.pendingStagePromptRunKeys instanceof Set)) {
+      this.pendingStagePromptRunKeys = new Set();
+    }
+
+    if (this.pendingStagePromptRunKeys.has(requestKey)) {
+      return;
+    }
+
+    this.pendingStagePromptRunKeys.add(requestKey);
+
+    try {
+      await this.runAction(
+        () => this.service.runStagePrompt(boardId, cardId),
+        this.t('workspace.announcements.stagePromptRunSucceeded')
+      );
+    } finally {
+      this.pendingStagePromptRunKeys.delete(requestKey);
     }
   }
 
@@ -1313,6 +1349,17 @@ function createLocalizationGenerationRequestKey({ boardId, cardId, locale } = {}
   }
 
   return `${normalizedBoardId}::${normalizedCardId}::${normalizedLocale}`;
+}
+
+function createStagePromptRunRequestKey({ boardId, cardId } = {}) {
+  const normalizedBoardId = normalizeOptionalWorkspaceId(boardId);
+  const normalizedCardId = normalizeOptionalWorkspaceId(cardId);
+
+  if (!normalizedBoardId || !normalizedCardId) {
+    return null;
+  }
+
+  return `${normalizedBoardId}::${normalizedCardId}`;
 }
 
 function scheduleBrowserFrame(callback) {

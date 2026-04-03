@@ -30,10 +30,21 @@
           class="field-control font-mono text-sm"
           placeholder="backlog | Backlog | doing, done | card.create"
           required
+          data-action="input->board-stage-config#handleDefinitionsInput"
           data-board-stage-config-target="definitionsInput"
         ></textarea>
         <p class="text-xs leading-5 text-muted">{{ t('boardStageConfigDialog.help') }}</p>
       </label>
+
+      <section class="space-y-3">
+        <div class="space-y-1">
+          <p class="field-label text-sm font-semibold">{{ t('boardStageConfigDialog.promptActionSectionLabel') }}</p>
+          <p class="text-xs leading-5 text-muted">{{ t('boardStageConfigDialog.promptActionHelp') }}</p>
+        </div>
+
+        <textarea hidden data-board-stage-config-target="promptActionsInput"></textarea>
+        <div class="space-y-3" data-board-stage-config-target="promptActionRegion"></div>
+      </section>
 
       <p class="text-sm leading-6" style="color: var(--color-danger);" hidden data-board-stage-config-target="error"></p>
 

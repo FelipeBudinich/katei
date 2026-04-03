@@ -203,6 +203,36 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
     );
   }
 
+  async runStagePrompt(
+    {
+      clientMutationId,
+      boardId,
+      cardId
+    },
+    {
+      workspaceId = null,
+      expectedRevision = null
+    } = {}
+  ) {
+    const targetWorkspaceId = normalizeOptionalWorkspaceId(workspaceId) ?? this.activeWorkspaceId;
+    const mutationExpectedRevision = Number.isInteger(expectedRevision) ? expectedRevision : (this.revision ?? 0);
+
+    return this.#requestWorkspace(
+      '/api/workspace/stage-prompts/run',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          clientMutationId,
+          workspaceId: targetWorkspaceId,
+          boardId,
+          cardId,
+          expectedRevision: mutationExpectedRevision
+        })
+      },
+      'Unable to run stage prompt.'
+    );
+  }
+
   async #requestWorkspace(url, options, fallbackMessage, { updateState = true } = {}) {
     const parsedRequestBody = parseRequestBody(options?.body);
     const inviteDecisionDebugFields = buildInviteAcceptRequestDebugFields({

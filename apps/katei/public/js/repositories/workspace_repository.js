@@ -7,6 +7,10 @@ export class WorkspaceRepository {
     throw new Error('Not implemented');
   }
 
+  async runStagePrompt(_request, _options) {
+    throw new Error('Not implemented');
+  }
+
   async applyCommand(command) {
     throw new Error('Not implemented');
   }

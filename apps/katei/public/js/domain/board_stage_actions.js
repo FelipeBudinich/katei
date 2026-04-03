@@ -1,4 +1,10 @@
-export const BOARD_STAGE_ACTION_IDS = Object.freeze(['card.create', 'card.delete']);
+export const BOARD_STAGE_PROMPT_RUN_ACTION_ID = 'card.prompt.run';
+
+export const BOARD_STAGE_ACTION_IDS = Object.freeze([
+  'card.create',
+  'card.delete',
+  BOARD_STAGE_PROMPT_RUN_ACTION_ID
+]);
 
 export function getDefaultBoardStageActionIds(stageId) {
   switch (stageId) {

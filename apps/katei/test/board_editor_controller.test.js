@@ -24,6 +24,7 @@ test('createBoardEditorFormState serializes the current board schema without exp
   assert.equal(formState.title, '過程');
   assert.match(formState.stageDefinitions, /backlog \| Backlog \| doing, done \| card\.create/);
   assert.match(formState.stageDefinitions, /archived \| Archived \| backlog, doing, done \| card\.delete/);
+  assert.equal(formState.stagePromptActions, '');
   assert.equal(Object.prototype.hasOwnProperty.call(formState, 'templates'), false);
 });
 
@@ -78,6 +79,53 @@ test('createBoardEditorFormState serializes a fourth stage segment only when act
   assert.match(formState.stageDefinitions, /archive-bin \| Archive Bin \|  \| card\.delete/);
 });
 
+test('createBoardEditorFormState serializes prompt action drafts alongside stage definitions', () => {
+  const board = createEmptyWorkspace().boards.main;
+
+  board.stageOrder = ['backlog', 'doing'];
+  board.stages = {
+    backlog: {
+      id: 'backlog',
+      title: 'Backlog',
+      cardIds: [],
+      allowedTransitionStageIds: ['doing'],
+      templateIds: [],
+      actionIds: ['card.prompt.run'],
+      promptAction: {
+        enabled: true,
+        prompt: 'Turn this card into a task.',
+        targetStageId: 'doing'
+      }
+    },
+    doing: {
+      id: 'doing',
+      title: 'Doing',
+      cardIds: [],
+      allowedTransitionStageIds: ['backlog'],
+      templateIds: [],
+      actionIds: []
+    }
+  };
+
+  const formState = createBoardEditorFormState(board);
+
+  assert.match(formState.stageDefinitions, /card\.prompt\.run/);
+  assert.equal(
+    formState.stagePromptActions,
+    JSON.stringify(
+      {
+        backlog: {
+          enabled: true,
+          prompt: 'Turn this card into a task.',
+          targetStageId: 'doing'
+        }
+      },
+      null,
+      2
+    )
+  );
+});
+
 test('parseBoardEditorFormInput parses valid schema edits and clears templates from board editor submissions', () => {
   const parsedInput = parseBoardEditorFormInput({
     title: 'Editorial board',
@@ -114,6 +162,51 @@ test('parseBoardEditorFormInput parses valid schema edits and clears templates f
   assert.equal(parsedInput.aiProvider, 'openai');
   assert.equal(parsedInput.clearOpenAiApiKey, false);
   assert.equal(Object.prototype.hasOwnProperty.call(parsedInput, 'openAiApiKey'), false);
+});
+
+test('parseBoardEditorFormInput merges stage prompt actions into the saved stage definitions', () => {
+  const parsedInput = parseBoardEditorFormInput({
+    title: 'Editorial board',
+    sourceLocale: 'en',
+    defaultLocale: 'en',
+    supportedLocales: 'en',
+    requiredLocales: 'en',
+    stageDefinitions: [
+      'backlog | Backlog | doing | card.prompt.run',
+      'doing | Doing | backlog'
+    ].join('\n'),
+    stagePromptActions: JSON.stringify(
+      {
+        backlog: {
+          enabled: true,
+          prompt: 'Turn this card into a task.',
+          targetStageId: 'doing'
+        }
+      },
+      null,
+      2
+    )
+  });
+
+  assert.deepEqual(parsedInput.stageDefinitions, [
+    {
+      id: 'backlog',
+      title: 'Backlog',
+      allowedTransitionStageIds: ['doing'],
+      actionIds: ['card.prompt.run'],
+      promptAction: {
+        enabled: true,
+        prompt: 'Turn this card into a task.',
+        targetStageId: 'doing'
+      }
+    },
+    {
+      id: 'doing',
+      title: 'Doing',
+      allowedTransitionStageIds: ['backlog'],
+      actionIds: ['card.create']
+    }
+  ]);
 });
 
 test('parseBoardEditorFormInput parses localization glossary entries for supported locales', () => {
@@ -334,6 +427,7 @@ test('board editor initializes the stage summary from the opened board draft', a
   });
 
   assert.equal(controller.stageDefinitionsInputTarget.value, createBoardEditorFormState(board).stageDefinitions);
+  assert.equal(controller.stagePromptActionsInputTarget.value, createBoardEditorFormState(board).stagePromptActions);
   assert.equal(controller.stageSummaryTarget.textContent, '4 stages · backlog, doing, done, archived');
   assert.equal(controller.titleInputTarget.focused, true);
 });
@@ -346,6 +440,7 @@ test('board editor opens the stage-config dialog by dispatching the current draf
 
   controller.currentBoard = board;
   controller.stageDefinitionsInputTarget.value = createBoardEditorFormState(board).stageDefinitions;
+  controller.stagePromptActionsInputTarget.value = createBoardEditorFormState(board).stagePromptActions;
 
   await withWindowDispatchCapture(dispatchedEvents, () => {
     BoardEditorController.prototype.openStageConfig.call(controller, {
@@ -361,12 +456,13 @@ test('board editor opens the stage-config dialog by dispatching the current draf
   assert.equal(dispatchedEvents[0].type, 'workspace:open-board-stage-config');
   assert.deepEqual(dispatchedEvents[0].detail, {
     stageDefinitions: controller.stageDefinitionsInputTarget.value,
+    stagePromptActions: controller.stagePromptActionsInputTarget.value,
     currentBoard: board,
     triggerElement: controller.configureStagesButtonTarget
   });
 });
 
-test('board editor applies returned stage definitions back into the hidden draft and refreshes the summary', () => {
+test('board editor applies returned stage drafts back into the hidden inputs and refreshes the summary', () => {
   const controller = createBoardEditorControllerDouble();
 
   controller.currentBoard = createEmptyWorkspace().boards.main;
@@ -375,13 +471,38 @@ test('board editor applies returned stage definitions back into the hidden draft
 
   BoardEditorController.prototype.applyStageConfig.call(controller, {
     detail: {
-      stageDefinitions: ['backlog | Backlog | review | card.create', 'review | Review | backlog'].join('\n')
+      stageDefinitions: ['backlog | Backlog | review | card.create', 'review | Review | backlog'].join('\n'),
+      stagePromptActions: JSON.stringify(
+        {
+          backlog: {
+            enabled: true,
+            prompt: 'Turn this card into a review task.',
+            targetStageId: 'review'
+          }
+        },
+        null,
+        2
+      )
     }
   });
 
   assert.equal(
     controller.stageDefinitionsInputTarget.value,
     ['backlog | Backlog | review | card.create', 'review | Review | backlog'].join('\n')
+  );
+  assert.equal(
+    controller.stagePromptActionsInputTarget.value,
+    JSON.stringify(
+      {
+        backlog: {
+          enabled: true,
+          prompt: 'Turn this card into a review task.',
+          targetStageId: 'review'
+        }
+      },
+      null,
+      2
+    )
   );
   assert.equal(controller.stageSummaryTarget.textContent, '2 stages · backlog, review');
   assert.equal(controller.errorTarget.hidden, true);
@@ -410,7 +531,18 @@ test('board editor submit still uses the applied stage definitions draft', async
 
   BoardEditorController.prototype.applyStageConfig.call(controller, {
     detail: {
-      stageDefinitions: ['backlog | Backlog | review | card.create', 'review | Review | backlog'].join('\n')
+      stageDefinitions: ['backlog | Backlog | review | card.prompt.run', 'review | Review | backlog'].join('\n'),
+      stagePromptActions: JSON.stringify(
+        {
+          backlog: {
+            enabled: true,
+            prompt: 'Turn this card into a review task.',
+            targetStageId: 'review'
+          }
+        },
+        null,
+        2
+      )
     }
   });
 
@@ -444,7 +576,12 @@ test('board editor submit still uses the applied stage definitions draft', async
                 id: 'backlog',
                 title: 'Backlog',
                 allowedTransitionStageIds: ['review'],
-                actionIds: ['card.create']
+                actionIds: ['card.prompt.run'],
+                promptAction: {
+                  enabled: true,
+                  prompt: 'Turn this card into a review task.',
+                  targetStageId: 'review'
+                }
               },
               {
                 id: 'review',
@@ -602,6 +739,7 @@ function createBoardEditorControllerDouble() {
   };
   controller.localizationGlossaryInputTarget = createValueTarget('');
   controller.stageDefinitionsInputTarget = createValueTarget('');
+  controller.stagePromptActionsInputTarget = createValueTarget('');
   controller.stageSummaryTarget = createTextTarget();
   controller.configureStagesButtonTarget = createFocusableButtonTarget();
   controller.deleteActionsTarget = {
@@ -635,7 +773,8 @@ function createBoardEditorFormTarget(controller) {
         openAiApiKey: controller.openAiApiKeyInputTarget.value,
         clearOpenAiApiKey: controller.clearOpenAiApiKeyInputTarget.checked ? 'true' : null,
         localizationGlossary: controller.localizationGlossaryInputTarget.value,
-        stageDefinitions: controller.stageDefinitionsInputTarget.value
+        stageDefinitions: controller.stageDefinitionsInputTarget.value,
+        stagePromptActions: controller.stagePromptActionsInputTarget.value
       };
     }
   };

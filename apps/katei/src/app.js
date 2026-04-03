@@ -18,7 +18,8 @@ export function createApp({
   env = process.env,
   googleTokenVerifier,
   workspaceRecordRepository,
-  openAiLocalizer = null
+  openAiLocalizer = null,
+  openAiStagePromptRunner = null
 } = {}) {
   const app = express();
   const config = createRuntimeConfig(env);
@@ -49,7 +50,8 @@ export function createApp({
     config,
     verifyGoogleIdToken,
     workspaceRecordRepository: resolvedWorkspaceRecordRepository,
-    openAiLocalizer
+    openAiLocalizer,
+    openAiStagePromptRunner
   }));
   app.use(handleBodyParserError);
   app.use(handleUnexpectedError);

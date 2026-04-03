@@ -1,7 +1,9 @@
 import {
+  BOARD_STAGE_PROMPT_RUN_ACTION_ID,
   getDefaultBoardStageActionIds,
   isValidBoardStageActionId
 } from './board_stage_actions.js';
+import { normalizeBoardStagePromptAction } from './board_stage_prompt_action.js';
 
 const DEFAULT_BOARD_STAGES = Object.freeze([
   Object.freeze({
@@ -81,20 +83,41 @@ export function validateBoardStages(board) {
   for (const stageId of board.stageOrder) {
     const stage = board.stages[stageId];
 
-    if (
-      !isPlainObject(stage) ||
-      stage.id !== stageId ||
-      !isNonEmptyString(stage.title) ||
-      !isStringArray(stage.cardIds) ||
-      !isUniqueStringArray(stage.allowedTransitionStageIds) ||
-      !isUniqueStringArray(stage.templateIds) ||
-      !isValidStageActionIds(stage.actionIds)
-    ) {
+    if (!isPlainObject(stage) || stage.id !== stageId) {
       return false;
     }
 
+    if (
+      !isNonEmptyString(stage.title)
+      || !isStringArray(stage.cardIds)
+      || !isUniqueStringArray(stage.allowedTransitionStageIds)
+      || !isUniqueStringArray(stage.templateIds)
+      || !isValidStageActionIds(stage.actionIds)
+    ) {
+      return false;
+    }
+  }
+
+  for (const stageId of board.stageOrder) {
+    const stage = board.stages[stageId];
+
     if (stage.allowedTransitionStageIds.some((targetStageId) => !validStageIds.has(targetStageId))) {
       return false;
+    }
+
+    const hasPromptRunAction = stage.actionIds.includes(BOARD_STAGE_PROMPT_RUN_ACTION_ID);
+    const hasPromptAction = Object.prototype.hasOwnProperty.call(stage, 'promptAction');
+
+    if (hasPromptRunAction !== hasPromptAction) {
+      return false;
+    }
+
+    if (hasPromptAction) {
+      try {
+        normalizeBoardStagePromptAction(stage.promptAction, validStageIds);
+      } catch (error) {
+        return false;
+      }
     }
   }
 

@@ -227,6 +227,140 @@ test('normalizeBoardSchemaInput rejects invalid or duplicate stage action ids', 
   );
 });
 
+test('normalizeBoardSchemaInput preserves valid prompt-run stage actions', () => {
+  const normalizedSchema = normalizeBoardSchemaInput({
+    languagePolicy: {
+      sourceLocale: 'en',
+      defaultLocale: 'en',
+      supportedLocales: ['en'],
+      requiredLocales: ['en']
+    },
+    stageDefinitions: [
+      {
+        id: 'backlog',
+        title: 'Backlog',
+        allowedTransitionStageIds: ['doing'],
+        actionIds: ['card.prompt.run'],
+        promptAction: {
+          enabled: true,
+          prompt: 'Turn this card into a new task.',
+          targetStageId: 'doing'
+        }
+      },
+      {
+        id: 'doing',
+        title: 'Doing',
+        allowedTransitionStageIds: ['backlog'],
+        actionIds: []
+      }
+    ],
+    templates: []
+  });
+
+  assert.deepEqual(normalizedSchema.stageDefinitions, [
+    {
+      id: 'backlog',
+      title: 'Backlog',
+      allowedTransitionStageIds: ['doing'],
+      actionIds: ['card.prompt.run'],
+      promptAction: {
+        enabled: true,
+        prompt: 'Turn this card into a new task.',
+        targetStageId: 'doing'
+      }
+    },
+    {
+      id: 'doing',
+      title: 'Doing',
+      allowedTransitionStageIds: ['backlog'],
+      actionIds: []
+    }
+  ]);
+  assert.deepEqual(normalizedSchema.stages.backlog.promptAction, {
+    enabled: true,
+    prompt: 'Turn this card into a new task.',
+    targetStageId: 'doing'
+  });
+});
+
+test('normalizeBoardSchemaInput rejects invalid prompt-run stage prompt action combinations', () => {
+  assert.throws(
+    () =>
+      normalizeBoardSchemaInput({
+        languagePolicy: {
+          sourceLocale: 'en',
+          defaultLocale: 'en',
+          supportedLocales: ['en'],
+          requiredLocales: ['en']
+        },
+        stageDefinitions: [
+          {
+            id: 'backlog',
+            title: 'Backlog',
+            allowedTransitionStageIds: [],
+            actionIds: ['card.prompt.run']
+          }
+        ],
+        templates: []
+      }),
+    /must define a prompt action/
+  );
+
+  assert.throws(
+    () =>
+      normalizeBoardSchemaInput({
+        languagePolicy: {
+          sourceLocale: 'en',
+          defaultLocale: 'en',
+          supportedLocales: ['en'],
+          requiredLocales: ['en']
+        },
+        stageDefinitions: [
+          {
+            id: 'backlog',
+            title: 'Backlog',
+            allowedTransitionStageIds: [],
+            actionIds: [],
+            promptAction: {
+              enabled: true,
+              prompt: 'Turn this card into a task.',
+              targetStageId: 'backlog'
+            }
+          }
+        ],
+        templates: []
+      }),
+    /require the "card\.prompt\.run" action id/
+  );
+
+  assert.throws(
+    () =>
+      normalizeBoardSchemaInput({
+        languagePolicy: {
+          sourceLocale: 'en',
+          defaultLocale: 'en',
+          supportedLocales: ['en'],
+          requiredLocales: ['en']
+        },
+        stageDefinitions: [
+          {
+            id: 'backlog',
+            title: 'Backlog',
+            allowedTransitionStageIds: [],
+            actionIds: ['card.prompt.run'],
+            promptAction: {
+              enabled: true,
+              prompt: 'Turn this card into a task.',
+              targetStageId: 'missing'
+            }
+          }
+        ],
+        templates: []
+      }),
+    /must target an existing stage/
+  );
+});
+
 test('serializeBoardSchemaInput includes stage action ids', () => {
   const board = createEmptyWorkspace().boards.main;
 
@@ -254,6 +388,55 @@ test('serializeBoardSchemaInput includes stage action ids', () => {
       title: 'Archived',
       allowedTransitionStageIds: ['backlog', 'doing', 'done'],
       actionIds: ['card.delete']
+    }
+  ]);
+});
+
+test('serializeBoardSchemaInput includes prompt action data for prompt-run stages', () => {
+  const board = createEmptyWorkspace().boards.main;
+
+  board.stageOrder = ['backlog', 'doing'];
+  board.stages = {
+    backlog: {
+      id: 'backlog',
+      title: 'Backlog',
+      cardIds: [],
+      allowedTransitionStageIds: ['doing'],
+      templateIds: [],
+      actionIds: ['card.prompt.run'],
+      promptAction: {
+        enabled: true,
+        prompt: 'Turn this card into a task.',
+        targetStageId: 'doing'
+      }
+    },
+    doing: {
+      id: 'doing',
+      title: 'Doing',
+      cardIds: [],
+      allowedTransitionStageIds: ['backlog'],
+      templateIds: [],
+      actionIds: []
+    }
+  };
+
+  assert.deepEqual(serializeBoardSchemaInput(board).stageDefinitions, [
+    {
+      id: 'backlog',
+      title: 'Backlog',
+      allowedTransitionStageIds: ['doing'],
+      actionIds: ['card.prompt.run'],
+      promptAction: {
+        enabled: true,
+        prompt: 'Turn this card into a task.',
+        targetStageId: 'doing'
+      }
+    },
+    {
+      id: 'doing',
+      title: 'Doing',
+      allowedTransitionStageIds: ['backlog'],
+      actionIds: []
     }
   ]);
 });

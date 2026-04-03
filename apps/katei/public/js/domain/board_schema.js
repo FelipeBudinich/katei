@@ -1,8 +1,13 @@
 import { normalizeBoardLanguagePolicy } from './board_language_policy.js';
 import {
+  BOARD_STAGE_PROMPT_RUN_ACTION_ID,
   getDefaultBoardStageActionIds,
   normalizeBoardStageActionIds
 } from './board_stage_actions.js';
+import {
+  normalizeBoardStagePromptAction,
+  serializeBoardStagePromptAction
+} from './board_stage_prompt_action.js';
 import { isValidBoardStageId } from './board_workflow.js';
 
 export function normalizeBoardSchemaInput(input) {
@@ -25,7 +30,8 @@ export function normalizeBoardSchemaInput(input) {
         cardIds: [],
         allowedTransitionStageIds: [...stage.allowedTransitionStageIds],
         templateIds: [],
-        actionIds: [...stage.actionIds]
+        actionIds: [...stage.actionIds],
+        ...(stage.promptAction ? { promptAction: serializeBoardStagePromptAction(stage.promptAction, stageIds) } : {})
       }
     ])
   );
@@ -58,7 +64,15 @@ export function serializeBoardSchemaInput(board) {
           id: stageId,
           title: board.stages?.[stageId]?.title ?? '',
           allowedTransitionStageIds: [...(board.stages?.[stageId]?.allowedTransitionStageIds ?? [])],
-          actionIds: [...(board.stages?.[stageId]?.actionIds ?? [])]
+          actionIds: [...(board.stages?.[stageId]?.actionIds ?? [])],
+          ...(board.stages?.[stageId]?.promptAction
+            ? {
+                promptAction: serializeBoardStagePromptAction(
+                  board.stages[stageId].promptAction,
+                  board.stageOrder
+                )
+              }
+            : {})
         }))
       : [],
     templates: Array.isArray(board?.templates?.default)
@@ -118,6 +132,7 @@ function normalizeStageDefinitions(value) {
 
     seenStageIds.add(stageId);
     const hasActionIds = isPlainObject(rawStage) && Object.prototype.hasOwnProperty.call(rawStage, 'actionIds');
+    const hasPromptAction = isPlainObject(rawStage) && Object.prototype.hasOwnProperty.call(rawStage, 'promptAction');
     stageDefinitions.push({
       id: stageId,
       title: normalizeRequiredText(rawStage?.title, 'Stage titles are required.'),
@@ -127,7 +142,8 @@ function normalizeStageDefinitions(value) {
       }),
       actionIds: hasActionIds
         ? normalizeBoardStageActionIds(rawStage.actionIds)
-        : getDefaultBoardStageActionIds(stageId)
+        : getDefaultBoardStageActionIds(stageId),
+      ...(hasPromptAction ? { promptAction: rawStage.promptAction } : {})
     });
   }
 
@@ -136,6 +152,21 @@ function normalizeStageDefinitions(value) {
   for (const stage of stageDefinitions) {
     if (stage.allowedTransitionStageIds.some((targetStageId) => !validStageIds.has(targetStageId))) {
       throw new Error('Stage transitions must reference existing stages.');
+    }
+
+    const hasPromptRunAction = stage.actionIds.includes(BOARD_STAGE_PROMPT_RUN_ACTION_ID);
+    const hasPromptAction = Object.prototype.hasOwnProperty.call(stage, 'promptAction');
+
+    if (hasPromptRunAction && !hasPromptAction) {
+      throw new Error('Stages with "card.prompt.run" must define a prompt action.');
+    }
+
+    if (!hasPromptRunAction && hasPromptAction) {
+      throw new Error('Stage prompt actions require the "card.prompt.run" action id.');
+    }
+
+    if (hasPromptAction) {
+      stage.promptAction = normalizeBoardStagePromptAction(stage.promptAction, validStageIds);
     }
   }
 

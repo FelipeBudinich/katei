@@ -1,4 +1,5 @@
 import { stageSupportsAction } from '../domain/board_stage_actions.js';
+import { stageSupportsPromptRun } from '../domain/board_stage_prompt_action.js';
 
 export function getDefaultBoardStageId(board, fallbackStageId = 'backlog') {
   if (Array.isArray(board?.stageOrder) && board.stageOrder.length > 0) {
@@ -73,6 +74,10 @@ export function shouldShowCreateForStage(board, stageId) {
 
 export function shouldShowDeleteForStage(board, stageId) {
   return stageSupportsAction(board, stageId, 'card.delete');
+}
+
+export function shouldShowPromptRunForStage(board, stageId) {
+  return stageSupportsPromptRun(board, stageId);
 }
 
 function isValidStageId(board, stageId) {

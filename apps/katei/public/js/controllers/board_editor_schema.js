@@ -5,9 +5,17 @@ import {
 } from '../domain/board_ai_localization.js';
 import { createDefaultBoardLanguagePolicy } from '../domain/board_language_policy.js';
 import { normalizeBoardLocalizationGlossary } from '../domain/board_localization_glossary.js';
+import { serializeBoardStagePromptAction } from '../domain/board_stage_prompt_action.js';
 import { normalizeBoardSchemaInput, assertBoardSchemaCompatibleWithBoard } from '../domain/board_schema.js';
 import { createDefaultBoardStages } from '../domain/board_workflow.js';
-import { parseStageDefinitions, serializeStageDefinitions } from './board_stage_config_schema.js';
+import {
+  extractStagePromptActionsFromDefinitions,
+  mergeStageDefinitionsWithPromptActions,
+  parseStageDefinitions,
+  serializeStageDefinitions,
+  serializeStagePromptActions,
+  validateAndNormalizeStagePromptActions
+} from './board_stage_config_schema.js';
 
 export function createBoardEditorFormState(board = null) {
   const baseLanguagePolicy = board?.languagePolicy ?? createDefaultBoardLanguagePolicy();
@@ -16,7 +24,15 @@ export function createBoardEditorFormState(board = null) {
         id: stageId,
         title: board.stages?.[stageId]?.title ?? '',
         allowedTransitionStageIds: [...(board.stages?.[stageId]?.allowedTransitionStageIds ?? [])],
-        actionIds: [...(board.stages?.[stageId]?.actionIds ?? [])]
+        actionIds: [...(board.stages?.[stageId]?.actionIds ?? [])],
+        ...(board.stages?.[stageId]?.promptAction
+          ? {
+              promptAction: serializeBoardStagePromptAction(
+                board.stages[stageId].promptAction,
+                board.stageOrder
+              )
+            }
+          : {})
       }))
     : createDefaultBoardStages().map((stage) => ({
         id: stage.id,
@@ -39,7 +55,8 @@ export function createBoardEditorFormState(board = null) {
         supportedLocales: baseLanguagePolicy.supportedLocales
       })
     ),
-    stageDefinitions: serializeStageDefinitions(stageDefinitions)
+    stageDefinitions: serializeStageDefinitions(stageDefinitions),
+    stagePromptActions: serializeStagePromptActions(extractStagePromptActionsFromDefinitions(stageDefinitions))
   };
 }
 
@@ -50,6 +67,15 @@ export function parseBoardEditorFormInput(input, { currentBoard = null } = {}) {
     throw new Error('Board title is required.');
   }
 
+  const parsedStageDefinitions = parseStageDefinitions(input?.stageDefinitions);
+  const stagePromptActions = validateAndNormalizeStagePromptActions(
+    input?.stagePromptActions,
+    parsedStageDefinitions
+  );
+  const mergedStageDefinitions = mergeStageDefinitionsWithPromptActions(
+    parsedStageDefinitions,
+    stagePromptActions
+  );
   const normalizedSchema = normalizeBoardSchemaInput({
     languagePolicy: {
       sourceLocale: input?.sourceLocale,
@@ -57,7 +83,7 @@ export function parseBoardEditorFormInput(input, { currentBoard = null } = {}) {
       supportedLocales: splitInlineList(input?.supportedLocales),
       requiredLocales: splitInlineList(input?.requiredLocales)
     },
-    stageDefinitions: parseStageDefinitions(input?.stageDefinitions),
+    stageDefinitions: mergedStageDefinitions,
     templates: []
   });
 

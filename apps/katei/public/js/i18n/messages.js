@@ -80,11 +80,13 @@ const EN_MESSAGES = freezeCatalog({
       localeRequestCleared: 'Locale request cleared.',
       humanVerificationRequested: 'Human verification requested.',
       localeVerified: 'Localization verified.',
+      stagePromptRunSucceeded: 'Prompt run completed.',
       movedCard: 'Moved card to {column}.',
       cardDeleted: 'Card deleted.',
       boardDeleted: 'Board deleted.',
       boardReset: 'Board reset.'
     },
+    cardPromptRunButton: 'Run prompt',
     confirmations: {
       deleteBoardTitle: 'Delete board?',
       deleteBoardMessage: 'This action cannot be undone. "{title}" will be removed permanently.',
@@ -296,6 +298,16 @@ const EN_MESSAGES = freezeCatalog({
     help:
       'Use one line per stage: stage-id | Title | target-a, target-b | action-a, action-b. You can omit the third or fourth segment, and leave transitions empty before actions when needed.',
     definitionsLabel: 'Stage definitions',
+    promptActionSectionLabel: 'Prompt actions',
+    promptActionEnableLabel: 'Enable prompt run',
+    promptActionPromptLabel: 'Prompt',
+    promptActionPromptPlaceholder: 'Turn this card into a new implementation task.',
+    promptActionTargetStageLabel: 'Target stage',
+    promptActionHelp: 'Use the stage prompt plus the source card content to create a new card in the selected target stage.',
+    promptActionRequiresActionHelp:
+      'Add "card.prompt.run" to the stage action list above before configuring this prompt action.',
+    promptActionUncheckedHelp:
+      'This prompt action will be removed from the stage when you apply these changes.',
     applyButton: 'Apply stages'
   },
   confirmDialog: {
@@ -323,6 +335,15 @@ const EN_MESSAGES = freezeCatalog({
     boardTransitionsMissingTarget: 'Stage transitions must point to existing stages.',
     boardStageActionsInvalid: 'Stage actions must use known action ids.',
     boardStageActionIdsUnique: 'Stage action ids must be unique.',
+    boardStagePromptActionRequired: 'Stages with prompt runs need a prompt action configuration.',
+    boardStagePromptActionRequiresActionId: 'Prompt actions require the card.prompt.run action id.',
+    boardStagePromptActionInvalid: 'Stage prompt action settings are invalid.',
+    boardStagePromptActionEnabledRequired: 'Enabled prompt actions must be stored as enabled.',
+    boardStagePromptActionPromptRequired: 'Prompt-enabled stages need a prompt.',
+    boardStagePromptActionTargetRequired: 'Prompt-enabled stages need a target stage.',
+    boardStagePromptActionTargetMissing: 'Prompt actions must target an existing stage.',
+    boardStagePromptActionJsonInvalid: 'Prompt action draft data is invalid.',
+    boardStagePromptActionStageMissing: 'Prompt action draft data must reference current stages.',
     boardTemplateIdRequired: 'Each template needs an id.',
     boardTemplateIdsUnique: 'Template ids must be unique.',
     boardTemplateTitleRequired: 'Each template needs a title.',
@@ -351,6 +372,9 @@ const EN_MESSAGES = freezeCatalog({
     localizationHumanAuthoredConflict: 'Cannot overwrite human-authored localization with AI-generated content.',
     localizationAlreadyPresent: 'Localized content already exists for this locale.',
     localizationGenerateFailed: 'Unable to generate localization right now.',
+    stagePromptActionDisabled: 'This stage does not allow prompt runs.',
+    stagePromptActionConfigMissing: 'This stage needs a valid prompt action configuration first.',
+    stagePromptRunFailed: 'Unable to run the stage prompt right now.',
     requestUnavailable: 'Unable to complete the request.'
   }
 });
@@ -438,11 +462,13 @@ const ES_CL_MESSAGES = freezeCatalog({
       localeRequestCleared: 'Solicitud de locale eliminada.',
       humanVerificationRequested: 'Se solicitó verificación humana.',
       localeVerified: 'Localización verificada.',
+      stagePromptRunSucceeded: 'La ejecución del prompt terminó.',
       movedCard: 'Tarjeta movida a {column}.',
       cardDeleted: 'Tarjeta eliminada.',
       boardDeleted: 'Tablero eliminado.',
       boardReset: 'Tablero reiniciado.'
     },
+    cardPromptRunButton: 'Ejecutar prompt',
     confirmations: {
       deleteBoardTitle: '¿Eliminar tablero?',
       deleteBoardMessage: 'Esta acción no se puede deshacer. "{title}" se eliminará permanentemente.',
@@ -654,6 +680,17 @@ const ES_CL_MESSAGES = freezeCatalog({
     help:
       'Usa una línea por etapa: stage-id | Título | destino-a, destino-b | acción-a, acción-b. Puedes omitir el tercer o cuarto segmento y dejar vacías las transiciones antes de las acciones cuando haga falta.',
     definitionsLabel: 'Definiciones de etapas',
+    promptActionSectionLabel: 'Acciones con prompt',
+    promptActionEnableLabel: 'Activar prompt',
+    promptActionPromptLabel: 'Prompt',
+    promptActionPromptPlaceholder: 'Convierte esta tarjeta en una nueva tarea de implementación.',
+    promptActionTargetStageLabel: 'Etapa de destino',
+    promptActionHelp:
+      'Usa el prompt de la etapa junto con el contenido de la tarjeta de origen para crear una nueva tarjeta en la etapa seleccionada.',
+    promptActionRequiresActionHelp:
+      'Agrega "card.prompt.run" a la lista de acciones de la etapa para configurar esta acción.',
+    promptActionUncheckedHelp:
+      'Esta acción con prompt se quitará de la etapa cuando apliques estos cambios.',
     applyButton: 'Aplicar etapas'
   },
   confirmDialog: {
@@ -681,6 +718,15 @@ const ES_CL_MESSAGES = freezeCatalog({
     boardTransitionsMissingTarget: 'Las transiciones deben apuntar a etapas existentes.',
     boardStageActionsInvalid: 'Las acciones de etapa deben usar ids conocidos.',
     boardStageActionIdsUnique: 'Los ids de acción por etapa deben ser únicos.',
+    boardStagePromptActionRequired: 'Las etapas con prompt necesitan una configuración de prompt.',
+    boardStagePromptActionRequiresActionId: 'Las acciones con prompt requieren el id card.prompt.run.',
+    boardStagePromptActionInvalid: 'La configuración de la acción con prompt no es válida.',
+    boardStagePromptActionEnabledRequired: 'Las acciones con prompt guardadas deben quedar activadas.',
+    boardStagePromptActionPromptRequired: 'Las etapas con prompt necesitan un prompt.',
+    boardStagePromptActionTargetRequired: 'Las etapas con prompt necesitan una etapa de destino.',
+    boardStagePromptActionTargetMissing: 'Las acciones con prompt deben apuntar a una etapa existente.',
+    boardStagePromptActionJsonInvalid: 'El borrador JSON de acciones con prompt no es válido.',
+    boardStagePromptActionStageMissing: 'El borrador de acciones con prompt debe apuntar a etapas actuales.',
     boardTemplateIdRequired: 'Cada plantilla necesita un id.',
     boardTemplateIdsUnique: 'Los ids de plantilla deben ser únicos.',
     boardTemplateTitleRequired: 'Cada plantilla necesita un título.',
@@ -709,6 +755,9 @@ const ES_CL_MESSAGES = freezeCatalog({
     localizationHumanAuthoredConflict: 'No se puede sobrescribir una localización editada por una persona con contenido generado por IA.',
     localizationAlreadyPresent: 'Ya existe contenido localizado para este locale.',
     localizationGenerateFailed: 'No se pudo generar la localización en este momento.',
+    stagePromptActionDisabled: 'Esta etapa no permite ejecutar prompts.',
+    stagePromptActionConfigMissing: 'Esta etapa necesita primero una configuración de prompt válida.',
+    stagePromptRunFailed: 'No se pudo ejecutar el prompt de la etapa en este momento.',
     requestUnavailable: 'No se pudo completar la solicitud.'
   }
 });
@@ -796,11 +845,13 @@ const JA_MESSAGES = freezeCatalog({
       localeRequestCleared: 'ロケールリクエストを解除しました。',
       humanVerificationRequested: '人による確認を依頼しました。',
       localeVerified: 'ローカライズを確認済みにしました。',
+      stagePromptRunSucceeded: 'プロンプト実行が完了しました。',
       movedCard: 'カードを {column} に移動しました。',
       cardDeleted: 'カードを削除しました。',
       boardDeleted: 'ボードを削除しました。',
       boardReset: 'ボードをリセットしました。'
     },
+    cardPromptRunButton: 'プロンプト実行',
     confirmations: {
       deleteBoardTitle: 'ボードを削除しますか？',
       deleteBoardMessage: 'この操作は元に戻せません。"{title}" は完全に削除されます。',
@@ -1012,6 +1063,17 @@ const JA_MESSAGES = freezeCatalog({
     help:
       '1 行ごとに入力: stage-id | Title | target-a, target-b | action-a, action-b。必要に応じて 3 つ目や 4 つ目の区切りは省略でき、action の前で遷移先を空にすることもできます。',
     definitionsLabel: 'ステージ定義',
+    promptActionSectionLabel: 'プロンプト操作',
+    promptActionEnableLabel: 'プロンプト実行を有効化',
+    promptActionPromptLabel: 'プロンプト',
+    promptActionPromptPlaceholder: 'このカードを新しい実装タスクに変換してください。',
+    promptActionTargetStageLabel: '移動先ステージ',
+    promptActionHelp:
+      'ステージのプロンプトと元カードの内容を使って、選択した移動先ステージに新しいカードを作成します。',
+    promptActionRequiresActionHelp:
+      'この操作を設定するには、上のステージ action 一覧へ "card.prompt.run" を追加してください。',
+    promptActionUncheckedHelp:
+      'このプロンプト操作は、適用時にステージから削除されます。',
     applyButton: 'ステージを適用'
   },
   confirmDialog: {
@@ -1039,6 +1101,15 @@ const JA_MESSAGES = freezeCatalog({
     boardTransitionsMissingTarget: '遷移先は存在するステージを参照してください。',
     boardStageActionsInvalid: 'ステージの操作は既知の action id を使ってください。',
     boardStageActionIdsUnique: 'ステージ action id は重複できません。',
+    boardStagePromptActionRequired: 'プロンプト実行を使うステージには設定が必要です。',
+    boardStagePromptActionRequiresActionId: 'プロンプト操作には card.prompt.run の action id が必要です。',
+    boardStagePromptActionInvalid: 'ステージのプロンプト設定が無効です。',
+    boardStagePromptActionEnabledRequired: '保存されるプロンプト操作は有効化されている必要があります。',
+    boardStagePromptActionPromptRequired: 'プロンプト実行を使うステージにはプロンプトが必要です。',
+    boardStagePromptActionTargetRequired: 'プロンプト実行を使うステージには移動先ステージが必要です。',
+    boardStagePromptActionTargetMissing: 'プロンプト操作は存在するステージを参照してください。',
+    boardStagePromptActionJsonInvalid: 'プロンプト操作の下書き JSON が無効です。',
+    boardStagePromptActionStageMissing: 'プロンプト操作の下書きは現在のステージを参照してください。',
     boardTemplateIdRequired: '各テンプレートに id が必要です。',
     boardTemplateIdsUnique: 'テンプレート id は重複できません。',
     boardTemplateTitleRequired: '各テンプレートにタイトルが必要です。',
@@ -1067,6 +1138,9 @@ const JA_MESSAGES = freezeCatalog({
     localizationHumanAuthoredConflict: '人が編集したローカライズを AI 生成コンテンツで上書きすることはできません。',
     localizationAlreadyPresent: 'このロケールには既にローカライズ済みコンテンツがあります。',
     localizationGenerateFailed: '現在ローカライズを生成できません。',
+    stagePromptActionDisabled: 'このステージではプロンプト実行を使えません。',
+    stagePromptActionConfigMissing: 'このステージには有効なプロンプト設定が必要です。',
+    stagePromptRunFailed: '現在ステージのプロンプトを実行できません。',
     requestUnavailable: 'リクエストを完了できませんでした。'
   }
 });

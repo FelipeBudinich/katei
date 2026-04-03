@@ -4,17 +4,29 @@ import { createTranslator } from '../public/js/i18n/translate.js';
 import { createEmptyWorkspace } from '../public/js/domain/workspace_read_model.js';
 import BoardStageConfigController from '../public/js/controllers/board_stage_config_controller.js';
 
-test('board stage config opens from the workspace event and populates the textarea draft', async () => {
+test('board stage config opens from the workspace event and populates both stage draft fields', async () => {
   const controller = createBoardStageConfigControllerDouble();
   const board = createEmptyWorkspace().boards.main;
   const triggerElement = createFocusableElement();
   const stageDefinitions = ['backlog | Backlog | review | card.create', 'review | Review | backlog'].join('\n');
+  const stagePromptActions = JSON.stringify(
+    {
+      backlog: {
+        enabled: true,
+        prompt: 'Turn this card into a review task.',
+        targetStageId: 'review'
+      }
+    },
+    null,
+    2
+  );
 
   await withMockDocument(async () => {
     await withImmediateAnimationFrame(() => {
       BoardStageConfigController.prototype.openFromEvent.call(controller, {
         detail: {
           stageDefinitions,
+          stagePromptActions,
           currentBoard: board,
           triggerElement
         }
@@ -26,19 +38,30 @@ test('board stage config opens from the workspace event and populates the textar
 
   assert.equal(controller.dialogTarget.open, true);
   assert.equal(controller.definitionsInputTarget.value, stageDefinitions);
+  assert.equal(controller.promptActionsInputTarget.value, stagePromptActions);
   assert.equal(controller.currentBoard, board);
   assert.equal(controller.restoreFocusElement, triggerElement);
   assert.equal(controller.definitionsInputTarget.focused, true);
+  assert.match(controller.promptActionRegionTarget.innerHTML, /data-stage-id="backlog"/);
+  assert.match(controller.promptActionRegionTarget.innerHTML, /data-stage-id="review"/);
   assert.equal(controller.errorTarget.hidden, true);
 });
 
-test('board stage config apply shows a localized error for invalid input and does not dispatch apply', async () => {
+test('board stage config apply shows a localized error for invalid prompt action config and does not dispatch apply', async () => {
   const controller = createBoardStageConfigControllerDouble();
   const dispatchedEvents = [];
   let prevented = false;
 
   controller.dialogTarget.open = true;
-  controller.definitionsInputTarget.value = 'backlog';
+  controller.definitionsInputTarget.value = ['backlog | Backlog | review | card.prompt.run', 'review | Review | backlog'].join('\n');
+  controller.promptActionDrafts = {
+    backlog: {
+      enabled: true,
+      prompt: '',
+      targetStageId: 'review'
+    }
+  };
+  controller.syncPromptActionRows();
 
   await withWindowDispatchCapture(dispatchedEvents, () => {
     BoardStageConfigController.prototype.apply.call(controller, {
@@ -51,10 +74,7 @@ test('board stage config apply shows a localized error for invalid input and doe
   assert.equal(prevented, true);
   assert.equal(controller.dialogTarget.open, true);
   assert.equal(controller.errorTarget.hidden, false);
-  assert.equal(
-    controller.errorTarget.textContent,
-    'Each stage must use "stage-id | Title", "stage-id | Title | target-a, target-b", or "stage-id | Title | target-a, target-b | action-a, action-b".'
-  );
+  assert.equal(controller.errorTarget.textContent, 'Prompt-enabled stages need a prompt.');
   assert.deepEqual(dispatchedEvents, []);
 });
 
@@ -94,12 +114,25 @@ test('board stage config apply enforces existing-board stage compatibility befor
 test('board stage config apply dispatches board-stage-config:apply on window for valid input', async () => {
   const controller = createBoardStageConfigControllerDouble();
   const dispatchedEvents = [];
-  const stageDefinitions = ['backlog | Backlog | review | card.create', 'review | Review | backlog'].join('\n');
+  const stageDefinitions = ['backlog | Backlog | review | card.prompt.run', 'review | Review | backlog'].join('\n');
+  const stagePromptActions = JSON.stringify(
+    {
+      backlog: {
+        enabled: true,
+        prompt: 'Turn this card into a review task.',
+        targetStageId: 'review'
+      }
+    },
+    null,
+    2
+  );
 
   controller.dialogTarget.open = true;
   controller.currentBoard = createEmptyWorkspace().boards.main;
   controller.restoreFocusElement = createFocusableElement();
   controller.definitionsInputTarget.value = stageDefinitions;
+  controller.promptActionDrafts = JSON.parse(stagePromptActions);
+  controller.syncPromptActionRows();
 
   await withWindowDispatchCapture(dispatchedEvents, () => {
     BoardStageConfigController.prototype.apply.call(controller, {
@@ -111,7 +144,10 @@ test('board stage config apply dispatches board-stage-config:apply on window for
   assert.equal(controller.errorTarget.hidden, true);
   assert.equal(dispatchedEvents.length, 1);
   assert.equal(dispatchedEvents[0].type, 'board-stage-config:apply');
-  assert.deepEqual(dispatchedEvents[0].detail, { stageDefinitions });
+  assert.deepEqual(dispatchedEvents[0].detail, {
+    stageDefinitions,
+    stagePromptActions
+  });
   assert.equal(controller.restoreFocusElement, null);
 });
 
@@ -153,6 +189,12 @@ function createBoardStageConfigControllerDouble() {
   controller.restoreFocusElement = null;
   controller.dialogTarget = createDialogTarget();
   controller.definitionsInputTarget = createFocusableValueTarget('');
+  controller.promptActionsInputTarget = createFocusableValueTarget('');
+  controller.promptActionRegionTarget = {
+    innerHTML: ''
+  };
+  controller.hasPromptActionRegionTarget = true;
+  controller.promptActionDrafts = {};
   controller.errorTarget = createTextTarget({ hidden: true });
   controller.hasErrorTarget = true;
 

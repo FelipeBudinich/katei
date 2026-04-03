@@ -1905,8 +1905,125 @@ test('handleGenerateCardLocalization reports localized failures and skips refres
         boardId: 'main',
         cardId: 'card_1',
         locale: 'ja'
+  }
+});
+
+test('handleRunStagePrompt calls the service, applies workspace state, and announces success', async () => {
+  const initialWorkspace = createEmptyWorkspace();
+  const updatedWorkspace = createEmptyWorkspace();
+  const controller = Object.create(WorkspaceController.prototype);
+  const announcements = [];
+  const serviceCalls = [];
+  let renderCalls = 0;
+
+  updatedWorkspace.workspaceId = initialWorkspace.workspaceId;
+
+  controller.workspace = initialWorkspace;
+  controller.service = {
+    async runStagePrompt(...args) {
+      serviceCalls.push(args);
+      return updatedWorkspace;
+    }
+  };
+  controller.t = createTranslator('en');
+  controller.render = () => {
+    renderCalls += 1;
+  };
+  controller.announce = (message) => {
+    announcements.push(message);
+  };
+
+  await WorkspaceController.prototype.handleRunStagePrompt.call(controller, {
+    currentTarget: {
+      dataset: {
+        boardId: 'main',
+        cardId: 'card_1'
+      }
+    }
+  });
+
+  assert.deepEqual(serviceCalls, [['main', 'card_1']]);
+  assert.equal(controller.workspace, updatedWorkspace);
+  assert.equal(renderCalls, 1);
+  assert.deepEqual(announcements, ['Prompt run completed.']);
+});
+
+test('handleRunStagePrompt ignores repeated clicks while the same prompt run is already pending', async () => {
+  const controller = Object.create(WorkspaceController.prototype);
+  const serviceCalls = [];
+  let resolveWorkspace;
+
+  controller.workspace = createEmptyWorkspace();
+  controller.service = {
+    async runStagePrompt(...args) {
+      serviceCalls.push(args);
+      return new Promise((resolve) => {
+        resolveWorkspace = () => resolve(createEmptyWorkspace());
+      });
+    }
+  };
+  controller.t = createTranslator('en');
+  controller.render = () => {};
+  controller.announce = () => {};
+
+  const event = {
+    currentTarget: {
+      dataset: {
+        boardId: 'main',
+        cardId: 'card_1'
+      }
+    }
+  };
+  const firstCall = WorkspaceController.prototype.handleRunStagePrompt.call(controller, event);
+  const secondCall = WorkspaceController.prototype.handleRunStagePrompt.call(controller, event);
+
+  resolveWorkspace();
+  await Promise.all([firstCall, secondCall]);
+
+  assert.deepEqual(serviceCalls, [['main', 'card_1']]);
+});
+
+test('handleRunStagePrompt reports localized failures without changing workspace state', async () => {
+  const controller = Object.create(WorkspaceController.prototype);
+  const announcements = [];
+  const error = new Error('Unable to run the stage prompt right now.');
+  const originalConsoleError = console.error;
+
+  error.data = {
+    errorCode: 'STAGE_PROMPT_RUN_FAILED'
+  };
+
+  controller.workspace = createEmptyWorkspace();
+  controller.service = {
+    async runStagePrompt() {
+      throw error;
+    }
+  };
+  controller.t = createTranslator('en');
+  controller.render = () => {
+    throw new Error('render should not be called on failed prompt runs');
+  };
+  controller.announce = (message) => {
+    announcements.push(message);
+  };
+
+  console.error = () => {};
+
+  try {
+    await WorkspaceController.prototype.handleRunStagePrompt.call(controller, {
+      currentTarget: {
+        dataset: {
+          boardId: 'main',
+          cardId: 'card_1'
+        }
       }
     });
+  } finally {
+    console.error = originalConsoleError;
+  }
+
+  assert.deepEqual(announcements, ['Unable to run the stage prompt right now.']);
+});
   } finally {
     console.error = originalConsoleError;
   }

@@ -7,7 +7,12 @@ import {
   normalizeBoardLanguagePolicy
 } from './board_language_policy.js';
 import { normalizeBoardLocalizationGlossary } from './board_localization_glossary.js';
-import { getDefaultBoardStageActionIds, isValidBoardStageActionId } from './board_stage_actions.js';
+import {
+  BOARD_STAGE_PROMPT_RUN_ACTION_ID,
+  getDefaultBoardStageActionIds,
+  isValidBoardStageActionId
+} from './board_stage_actions.js';
+import { normalizeBoardStagePromptAction } from './board_stage_prompt_action.js';
 import { createDefaultBoardStages, createDefaultBoardTemplates } from './board_workflow.js';
 import {
   createCardContentProvenance,
@@ -321,8 +326,10 @@ function migrateStageDefinition({ stageId, stageOrder, legacyStage, defaultStage
   const fallbackTransitions = defaultStage?.allowedTransitionStageIds
     ? [...defaultStage.allowedTransitionStageIds]
     : stageOrder.filter((candidateStageId) => candidateStageId !== stageId);
-
-  return {
+  const actionIds = Object.prototype.hasOwnProperty.call(normalizedLegacyStage, 'actionIds')
+    ? normalizeStringArray(normalizedLegacyStage.actionIds).filter(isValidBoardStageActionId)
+    : getDefaultBoardStageActionIds(stageId);
+  const nextStageDefinition = {
     id: stageId,
     title:
       typeof normalizedLegacyStage.title === 'string' && normalizedLegacyStage.title.trim()
@@ -334,10 +341,22 @@ function migrateStageDefinition({ stageId, stageOrder, legacyStage, defaultStage
       fallbackTransitions
     ).filter((targetStageId) => stageOrder.includes(targetStageId)),
     templateIds: normalizeStringArray(normalizedLegacyStage.templateIds),
-    actionIds: Object.prototype.hasOwnProperty.call(normalizedLegacyStage, 'actionIds')
-      ? normalizeStringArray(normalizedLegacyStage.actionIds).filter(isValidBoardStageActionId)
-      : getDefaultBoardStageActionIds(stageId)
+    actionIds
   };
+
+  if (actionIds.includes(BOARD_STAGE_PROMPT_RUN_ACTION_ID)) {
+    try {
+      nextStageDefinition.promptAction = normalizeBoardStagePromptAction(
+        normalizedLegacyStage.promptAction,
+        stageOrder
+      );
+    } catch (error) {
+      // Keep migration tolerant of older/corrupted snapshots; validation later decides whether
+      // the migrated workspace is acceptable for persistence.
+    }
+  }
+
+  return nextStageDefinition;
 }
 
 function migrateBoardTemplates(templates) {

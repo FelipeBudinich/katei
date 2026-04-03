@@ -5,7 +5,11 @@ const KNOWN_ERROR_KEY_BY_CODE = Object.freeze({
   SOURCE_LOCALE_MISSING: 'errors.sourceLocaleMissing',
   LOCALIZATION_HUMAN_AUTHORED_CONFLICT: 'errors.localizationHumanAuthoredConflict',
   LOCALIZATION_ALREADY_PRESENT: 'errors.localizationAlreadyPresent',
-  OPENAI_UPSTREAM_ERROR: 'errors.localizationGenerateFailed'
+  OPENAI_UPSTREAM_ERROR: 'errors.localizationGenerateFailed',
+  STAGE_PROMPT_ACTION_DISABLED: 'errors.stagePromptActionDisabled',
+  STAGE_PROMPT_ACTION_CONFIG_MISSING: 'errors.stagePromptActionConfigMissing',
+  STAGE_PROMPT_RUN_FAILED: 'errors.stagePromptRunFailed',
+  STAGE_PROMPT_OUTPUT_INVALID: 'errors.stagePromptRunFailed'
 });
 
 const KNOWN_ERROR_KEY_BY_MESSAGE = Object.freeze({
@@ -28,6 +32,15 @@ const KNOWN_ERROR_KEY_BY_MESSAGE = Object.freeze({
   'Stage transitions must reference existing stages.': 'errors.boardTransitionsMissingTarget',
   'Stage actions must use known action ids.': 'errors.boardStageActionsInvalid',
   'Stage action ids must be unique.': 'errors.boardStageActionIdsUnique',
+  'Stages with "card.prompt.run" must define a prompt action.': 'errors.boardStagePromptActionRequired',
+  'Stage prompt actions require the "card.prompt.run" action id.': 'errors.boardStagePromptActionRequiresActionId',
+  'Stage prompt action is invalid.': 'errors.boardStagePromptActionInvalid',
+  'Stage prompt action must be enabled when provided.': 'errors.boardStagePromptActionEnabledRequired',
+  'Stage prompt action prompt is required.': 'errors.boardStagePromptActionPromptRequired',
+  'Stage prompt action target stage is required.': 'errors.boardStagePromptActionTargetRequired',
+  'Stage prompt actions must target an existing stage.': 'errors.boardStagePromptActionTargetMissing',
+  'Stage prompt actions must use a JSON object.': 'errors.boardStagePromptActionJsonInvalid',
+  'Stage prompt actions must reference stages in the current draft.': 'errors.boardStagePromptActionStageMissing',
   'Template ids are required.': 'errors.boardTemplateIdRequired',
   'Template ids must be unique.': 'errors.boardTemplateIdsUnique',
   'Template titles are required.': 'errors.boardTemplateTitleRequired',
