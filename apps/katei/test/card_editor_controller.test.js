@@ -57,6 +57,57 @@ test('edit dialog state chooses ui-locale content by default when that locale ex
   assert.equal(state.variant?.title, '手動の日本語タイトル');
 });
 
+test('edit dialog falls back from a regional ui locale to same-language content', () => {
+  const board = createBoardWithOpenAiKey({
+    languagePolicy: {
+      sourceLocale: 'en',
+      defaultLocale: 'en',
+      supportedLocales: ['en', 'es'],
+      requiredLocales: ['en']
+    }
+  });
+  const card = {
+    id: 'card_spanish_fallback',
+    priority: 'important',
+    createdAt: '2026-03-31T09:00:00.000Z',
+    updatedAt: '2026-03-31T10:00:00.000Z',
+    contentByLocale: {
+      en: {
+        title: 'English source',
+        detailsMarkdown: 'English details',
+        provenance: createCardContentProvenance({
+          actor: { type: 'human', id: 'viewer_123' },
+          timestamp: '2026-03-31T09:00:00.000Z',
+          includesHumanInput: true
+        })
+      },
+      es: {
+        title: 'Titulo en español',
+        detailsMarkdown: 'Detalles en español',
+        provenance: createCardContentProvenance({
+          actor: { type: 'agent', id: 'translator_1' },
+          timestamp: '2026-03-31T10:00:00.000Z',
+          includesHumanInput: false
+        })
+      }
+    },
+    localeRequests: {}
+  };
+
+  const state = createLocalizedCardEditorUiState({
+    board,
+    card,
+    uiLocale: 'es-CL',
+    mode: 'edit',
+    canEditLocalizedContent: true,
+    currentActorRole: 'editor'
+  });
+
+  assert.equal(state.selectedLocale, 'es');
+  assert.equal(state.renderedLocale, 'es');
+  assert.equal(state.variant?.title, 'Titulo en español');
+});
+
 test('edit dialog keeps an explicit requested locale sticky over the ui locale', () => {
   const board = createBoardWithOpenAiKey();
   const card = createCardWithHumanJapaneseLocalization();
@@ -487,13 +538,19 @@ function createBoard() {
   };
 }
 
-function createBoardWithOpenAiKey() {
+function createBoardWithOpenAiKey(overrides = {}) {
+  const baseBoard = createBoard();
+  const overrideAiLocalization = overrides.aiLocalization ?? {};
+
   return {
-    ...createBoard(),
+    ...baseBoard,
+    ...overrides,
+    languagePolicy: overrides.languagePolicy ?? baseBoard.languagePolicy,
     aiLocalization: {
       provider: 'openai',
       hasApiKey: true,
-      apiKeyLast4: '1234'
+      apiKeyLast4: '1234',
+      ...overrideAiLocalization
     }
   };
 }

@@ -24,6 +24,16 @@ test('resolveDefaultCardLocale applies explicit, ui-default, board, and first-av
   assert.equal(
     resolveDefaultCardLocale({
       board,
+      requestedLocale: 'es-CL',
+      uiLocale: 'en',
+      candidateLocales: ['en', 'es']
+    }),
+    'es'
+  );
+
+  assert.equal(
+    resolveDefaultCardLocale({
+      board,
       requestedLocale: 'ja',
       uiLocale: 'en',
       candidateLocales: ['en', 'es-CL', 'ja']
@@ -39,6 +49,15 @@ test('resolveDefaultCardLocale applies explicit, ui-default, board, and first-av
       candidateLocales: ['en', 'es-CL']
     }),
     'es-CL'
+  );
+
+  assert.equal(
+    resolveDefaultCardLocale({
+      board,
+      uiLocale: 'es-CL',
+      candidateLocales: ['en', 'es']
+    }),
+    'es'
   );
 
   assert.equal(
@@ -117,6 +136,41 @@ test('getCardContentVariant prefers an exact ui locale before board default when
       { uiLocale: 'en' }
     )?.locale,
     'en'
+  );
+});
+
+test('getCardContentVariant falls back from a regional ui locale to same-language content before board default', () => {
+  const board = {
+    languagePolicy: {
+      sourceLocale: 'en',
+      defaultLocale: 'en',
+      supportedLocales: ['en', 'es'],
+      requiredLocales: ['en']
+    }
+  };
+
+  assert.equal(
+    getCardContentVariant(
+      {
+        id: 'card_ui_language_fallback',
+        contentByLocale: {
+          en: {
+            title: 'English source',
+            detailsMarkdown: 'English details',
+            provenance: null
+          },
+          es: {
+            title: 'Titulo en español',
+            detailsMarkdown: 'Detalles en español',
+            provenance: null
+          }
+        }
+      },
+      null,
+      board,
+      { uiLocale: 'es-CL' }
+    )?.locale,
+    'es'
   );
 });
 

@@ -56,13 +56,23 @@ export function resolveDefaultCardLocale({
   }
 
   const candidateLocaleSet = new Set(orderedCandidateLocales);
+  const matchedRequestedLocale = findPreferredCandidateLocale(
+    normalizedRequestedLocale,
+    orderedCandidateLocales,
+    candidateLocaleSet
+  );
+  const matchedUiLocale = findPreferredCandidateLocale(
+    normalizedUiLocale,
+    orderedCandidateLocales,
+    candidateLocaleSet
+  );
 
-  if (normalizedRequestedLocale && candidateLocaleSet.has(normalizedRequestedLocale)) {
-    return normalizedRequestedLocale;
+  if (matchedRequestedLocale) {
+    return matchedRequestedLocale;
   }
 
-  if (!hasExplicitRequestedLocale && normalizedUiLocale && candidateLocaleSet.has(normalizedUiLocale)) {
-    return normalizedUiLocale;
+  if (!hasExplicitRequestedLocale && matchedUiLocale) {
+    return matchedUiLocale;
   }
 
   if (languagePolicy?.defaultLocale && candidateLocaleSet.has(languagePolicy.defaultLocale)) {
@@ -114,6 +124,29 @@ export function getStoredCardContentVariant(card, locale) {
 
 export function getBoardCardContentVariant(card, board, { requestedLocale = null, uiLocale = null } = {}) {
   return getCardContentVariant(card, requestedLocale, board, { uiLocale });
+}
+
+function findPreferredCandidateLocale(locale, orderedCandidateLocales, candidateLocaleSet) {
+  if (!locale) {
+    return null;
+  }
+
+  if (candidateLocaleSet.has(locale)) {
+    return locale;
+  }
+
+  const preferredLanguage = getLanguageSubtag(locale);
+
+  if (!preferredLanguage) {
+    return null;
+  }
+
+  return orderedCandidateLocales.find((candidateLocale) => getLanguageSubtag(candidateLocale) === preferredLanguage) ?? null;
+}
+
+function getLanguageSubtag(locale) {
+  const [languageSubtag] = String(locale).split('-');
+  return languageSubtag?.toLowerCase() ?? '';
 }
 
 export function listCardLocales(card) {

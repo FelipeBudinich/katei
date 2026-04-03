@@ -110,6 +110,88 @@ test('getBoardCardContentVariant resolves ui locale, then default, then source, 
   assert.equal(
     getBoardCardContentVariant(
       createCardWithContent({
+        es: {
+          title: 'Titulo en español',
+          detailsMarkdown: 'Detalles en español'
+        },
+        en: {
+          title: 'English title',
+          detailsMarkdown: 'English details'
+        }
+      }),
+      {
+        languagePolicy: {
+          sourceLocale: 'en',
+          defaultLocale: 'en',
+          supportedLocales: ['en', 'es'],
+          requiredLocales: ['en']
+        }
+      },
+      { uiLocale: 'es-CL' }
+    )?.locale,
+    'es'
+  );
+
+  assert.equal(
+    getBoardCardContentVariant(
+      createCardWithContent({
+        es: {
+          title: 'Titulo en español',
+          detailsMarkdown: 'Detalles en español'
+        },
+        en: {
+          title: 'English title',
+          detailsMarkdown: 'English details'
+        }
+      }),
+      {
+        languagePolicy: {
+          sourceLocale: 'en',
+          defaultLocale: 'en',
+          supportedLocales: ['en', 'es'],
+          requiredLocales: ['en']
+        }
+      },
+      {
+        requestedLocale: 'es-CL',
+        uiLocale: 'en'
+      }
+    )?.locale,
+    'es'
+  );
+
+  assert.equal(
+    getBoardCardContentVariant(
+      createCardWithContent({
+        es: {
+          title: 'Titulo general',
+          detailsMarkdown: 'Detalles generales'
+        },
+        'es-CL': {
+          title: 'Titulo chileno',
+          detailsMarkdown: 'Detalles chilenos'
+        },
+        en: {
+          title: 'English title',
+          detailsMarkdown: 'English details'
+        }
+      }),
+      {
+        languagePolicy: {
+          sourceLocale: 'en',
+          defaultLocale: 'en',
+          supportedLocales: ['en', 'es', 'es-CL'],
+          requiredLocales: ['en']
+        }
+      },
+      { uiLocale: 'es-CL' }
+    )?.locale,
+    'es-CL'
+  );
+
+  assert.equal(
+    getBoardCardContentVariant(
+      createCardWithContent({
         'es-CL': {
           title: 'Titulo por defecto',
           detailsMarkdown: 'Detalles por defecto'

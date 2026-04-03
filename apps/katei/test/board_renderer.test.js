@@ -92,6 +92,45 @@ test('getCardRenderState chooses UI-locale content when present', () => {
   });
 });
 
+test('getCardRenderState falls back from a regional ui locale to same-language card content', () => {
+  const board = createWorkspaceBoard({
+    id: 'board_regional_locale',
+    title: 'Regional locale board',
+    createdAt: '2026-03-31T10:00:00.000Z',
+    updatedAt: '2026-03-31T10:00:00.000Z'
+  });
+  const card = {
+    id: 'card_spanish',
+    priority: 'important',
+    createdAt: '2026-03-31T10:00:00.000Z',
+    updatedAt: '2026-03-31T10:30:00.000Z',
+    contentByLocale: {
+      en: {
+        title: 'English title',
+        detailsMarkdown: 'English details'
+      },
+      es: {
+        title: 'Titulo en español',
+        detailsMarkdown: '## Detalles en español'
+      }
+    }
+  };
+
+  board.languagePolicy = {
+    sourceLocale: 'en',
+    defaultLocale: 'en',
+    supportedLocales: ['en', 'es'],
+    requiredLocales: ['en']
+  };
+
+  const renderState = withMarkdownEnvironment(() => getCardRenderState(board, card, 'es-CL'));
+
+  assert.deepEqual(renderState, {
+    title: 'Titulo en español',
+    previewText: 'Detalles en español'
+  });
+});
+
 test('renderBoardState clears board columns when the actor cannot read the active board', () => {
   const board = createWorkspaceBoard({
     id: 'board_hidden',

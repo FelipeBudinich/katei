@@ -415,6 +415,66 @@ test('GET /boards?lang=ja renders localized card content in server HTML and keep
   assert.equal(bootstrapPayload.workspace.boards.main.cards[cardId].contentByLocale.ja.detailsMarkdown, '日本語プレビュー');
 });
 
+test('GET /boards?lang=es-CL renders same-language card content when only generic Spanish content exists', async () => {
+  const workspace = createEmptyWorkspace();
+  const board = workspace.boards.main;
+  const cardId = 'card_localized_es';
+
+  board.cards[cardId] = {
+    id: cardId,
+    priority: 'urgent',
+    createdAt: '2026-04-02T10:00:00.000Z',
+    updatedAt: '2026-04-02T11:00:00.000Z',
+    contentByLocale: {
+      en: {
+        title: 'English checklist',
+        detailsMarkdown: 'English preview'
+      },
+      es: {
+        title: 'Lista en español',
+        detailsMarkdown: 'Vista previa en español'
+      }
+    },
+    localeRequests: {}
+  };
+  board.stages.backlog.cardIds = [cardId];
+  board.languagePolicy = {
+    sourceLocale: 'en',
+    defaultLocale: 'en',
+    supportedLocales: ['en', 'es'],
+    requiredLocales: ['en']
+  };
+
+  const record = createUpdatedWorkspaceRecord(
+    createInitialWorkspaceRecord('sub_es_cards', {
+      now: '2026-04-02T10:00:00.000Z'
+    }),
+    {
+      workspace,
+      actor: { id: 'sub_es_cards' },
+      now: '2026-04-02T11:00:00.000Z'
+    }
+  );
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([record]);
+  const app = createTestApp({
+    googleTokenVerifier: async () => ({ sub: 'sub_es_cards' }),
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .get('/boards?lang=es-CL')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_es_cards', name: 'Tester' }));
+  const bootstrapPayload = readWorkspaceBootstrapPayload(response.text);
+
+  assert.equal(response.status, 200);
+  assert.match(response.text, /<html lang="es-CL" data-ui-locale="es-CL">/);
+  assert.match(response.text, /<option value="es-CL" selected>\s*Español \(Chile\)\s*<\/option>/);
+  assert.match(response.text, /<h3 class="card-item-title text-base text-strong" data-card-field="title">Lista en español<\/h3>/);
+  assert.match(response.text, /<p\s+class="text-sm leading-6 text-muted"[\s\S]*>\s*Vista previa en español\s*<\/p>/);
+  assert.equal(bootstrapPayload.workspace.boards.main.cards[cardId].contentByLocale.es.title, 'Lista en español');
+  assert.equal(bootstrapPayload.workspace.boards.main.cards[cardId].contentByLocale.es.detailsMarkdown, 'Vista previa en español');
+});
+
 test('workspace template renders the no-board header with both Options and Profile entry points', () => {
   const workspace = createEmptyWorkspace();
   workspace.ui.activeBoardId = 'missing_board';

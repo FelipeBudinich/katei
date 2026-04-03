@@ -1165,6 +1165,49 @@ test('openView defaults to ui-locale content when that locale exists for the car
   }
 });
 
+test('openView falls back from a regional ui locale to same-language content when present', () => {
+  const restoreDom = installViewDialogDomStubs();
+
+  try {
+    const { controller, card } = createViewDialogController({
+      uiLocale: 'es-CL',
+      contentByLocale: {
+        en: {
+          title: 'English source',
+          detailsMarkdown: 'English details',
+          provenance: null
+        },
+        es: {
+          title: 'Titulo en español',
+          detailsMarkdown: 'Detalles en español',
+          provenance: null
+        }
+      },
+      languagePolicy: {
+        sourceLocale: 'en',
+        defaultLocale: 'en',
+        supportedLocales: ['en', 'es'],
+        requiredLocales: ['en']
+      }
+    });
+
+    WorkspaceController.prototype.openView.call(controller, {
+      currentTarget: createViewTriggerDouble(card.id, 'review')
+    });
+
+    assert.deepEqual(
+      controller.viewLocaleSelectTarget.options.map((option) => option.value),
+      ['en', 'es']
+    );
+    assert.equal(controller.viewLocaleSelectTarget.value, 'es');
+    assert.equal(controller.viewDialogState.selectedLocale, 'es');
+    assert.equal(controller.viewCardTitleTarget.textContent, 'Titulo en español');
+    assert.equal(controller.viewCardBodyTarget.innerHTML, '<p>Detalles en español</p>');
+  } finally {
+    restoreDom();
+  }
+});
+
 test('openView uses the dedicated view dialog and limits locales to present localized variants', () => {
   const restoreDom = installViewDialogDomStubs();
 
