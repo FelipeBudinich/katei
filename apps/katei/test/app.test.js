@@ -592,6 +592,37 @@ test('workspace template renders the no-board header with both Options and Profi
   assert.match(html, /No Boards Viewer/);
 });
 
+test('workspace template nests the column chevron inside the count chip', () => {
+  const workspace = createEmptyWorkspace();
+  const html = renderWorkspacePage(
+    buildWorkspacePageModel(
+      {
+        sub: 'sub_column_chip',
+        name: 'Column Chip Viewer'
+      },
+      createTranslator('en'),
+      workspace,
+      {
+        revision: 1,
+        updatedAt: '2026-04-02T11:00:00.000Z',
+        lastChangedBy: 'sub_column_chip',
+        isPristine: false,
+        workspaceId: 'workspace_column_chip',
+        isHomeWorkspace: true
+      }
+    )
+  );
+
+  assert.match(
+    html,
+    /<span class="count-chip px-3 py-1 text-sm font-medium" aria-label="[^"]*">[\s\S]*<span class="column-header-chevron" aria-hidden="true">▾<\/span>[\s\S]*<\/span>/
+  );
+  assert.doesNotMatch(
+    html,
+    /<button[^>]*class="column-header-toggle"[\s\S]*>\s*<span class="column-header-chevron" aria-hidden="true">▾<\/span>/
+  );
+});
+
 test('workspace template renders edit localization controls and a simplified localized view dialog', () => {
   const workspace = createEmptyWorkspace();
   const html = renderWorkspacePage(
