@@ -1446,8 +1446,8 @@ export default class extends Controller {
 
     panelElement.dataset.collapsed = String(Boolean(isCollapsed));
 
-    const toggleElement = panelElement.querySelector('[data-column-toggle]');
-    if (toggleElement) {
+    const toggleElements = panelElement.querySelectorAll('[data-column-toggle]');
+    for (const toggleElement of toggleElements) {
       toggleElement.setAttribute('aria-expanded', String(!isCollapsed));
     }
 

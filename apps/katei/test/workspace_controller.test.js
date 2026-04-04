@@ -804,10 +804,36 @@ test('toggleColumn keeps collapse state client-local and updates the DOM without
   assert.strictEqual(controller.workspace, workspace);
   assert.equal(service.calls, 0);
   assert.equal(panel.element.dataset.collapsed, 'true');
-  assert.equal(panel.toggleElement.attributes['aria-expanded'], 'false');
+  assert.equal(panel.titleToggleElement.attributes['aria-expanded'], 'false');
+  assert.equal(panel.chipToggleElement.attributes['aria-expanded'], 'false');
   assert.equal(panel.bodyElement.hidden, true);
   assert.equal(controller.getCollapsedColumnsForBoard(workspace.boards.main).backlog, true);
   assert.equal(announcements.length, 1);
+});
+
+test('toggleColumn updates aria-expanded on both header toggle buttons', () => {
+  const viewerActor = createActor('viewer_1', 'viewer@example.com', 'Viewer');
+  const workspace = createViewerWorkspace('workspace_toggle_pair', viewerActor);
+  const controller = Object.create(WorkspaceController.prototype);
+  const panel = createColumnPanelDouble({
+    stageId: 'backlog',
+    columnId: 'backlog',
+    cardCount: 1
+  });
+
+  controller.workspace = workspace;
+  controller.viewerActor = viewerActor;
+  controller.service = { setColumnCollapsed() {} };
+  controller.t = (key, values = {}) => (values.column ? `${key}:${values.column}` : key);
+  controller.announce = () => {};
+
+  WorkspaceController.prototype.toggleColumn.call(controller, {
+    currentTarget: panel.chipToggleElement
+  });
+
+  assert.equal(panel.element.dataset.collapsed, 'true');
+  assert.equal(panel.titleToggleElement.attributes['aria-expanded'], 'false');
+  assert.equal(panel.chipToggleElement.attributes['aria-expanded'], 'false');
 });
 
 test('workspace controller scopes transient collapse state by workspace id and preserves per-column independence', () => {
@@ -2740,29 +2766,7 @@ function createColumnPanelDouble({ stageId, columnId, cardCount = 0 } = {}) {
   const cardsElement = {
     childElementCount: cardCount
   };
-  const element = {
-    dataset: {
-      collapsed: 'false',
-      stageId,
-      columnId
-    },
-    querySelector(selector) {
-      if (selector === '[data-column-toggle]') {
-        return toggleElement;
-      }
-
-      if (selector === '.column-panel-body') {
-        return bodyElement;
-      }
-
-      if (selector === '[data-column-cards]') {
-        return cardsElement;
-      }
-
-      return null;
-    }
-  };
-  const toggleElement = {
+  const titleToggleElement = {
     dataset: {
       stageId,
       columnId
@@ -2775,10 +2779,56 @@ function createColumnPanelDouble({ stageId, columnId, cardCount = 0 } = {}) {
       return selector === '.column-panel' ? element : null;
     }
   };
+  const chipToggleElement = {
+    dataset: {
+      stageId,
+      columnId
+    },
+    attributes: {},
+    setAttribute(name, value) {
+      this.attributes[name] = String(value);
+    },
+    closest(selector) {
+      return selector === '.column-panel' ? element : null;
+    }
+  };
+  const toggleElements = [titleToggleElement, chipToggleElement];
+  const element = {
+    dataset: {
+      collapsed: 'false',
+      stageId,
+      columnId
+    },
+    querySelector(selector) {
+      if (selector === '[data-column-toggle]') {
+        return titleToggleElement;
+      }
+
+      if (selector === '.column-panel-body') {
+        return bodyElement;
+      }
+
+      if (selector === '[data-column-cards]') {
+        return cardsElement;
+      }
+
+      return null;
+    },
+    querySelectorAll(selector) {
+      if (selector === '[data-column-toggle]') {
+        return toggleElements;
+      }
+
+      return [];
+    }
+  };
 
   return {
     element,
-    toggleElement,
+    toggleElement: titleToggleElement,
+    titleToggleElement,
+    chipToggleElement,
+    toggleElements,
     bodyElement,
     cardsElement
   };

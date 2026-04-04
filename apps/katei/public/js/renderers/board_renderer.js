@@ -92,11 +92,11 @@ function createStagePanel({ board, stageId, stage, collapsedColumns, canReadBoar
     countChipElement.setAttribute('aria-label', formatCardCount(stage.cardIds.length, t));
   }
 
-  const toggleElement = columnNode.querySelector('[data-column-toggle]');
+  const toggleElements = Array.from(columnNode.querySelectorAll('[data-column-toggle]'));
   const createButton = columnNode.querySelector('[data-column-create]');
   const bodyElement = columnNode.querySelector('.column-panel-body');
 
-  if (toggleElement) {
+  for (const toggleElement of toggleElements) {
     toggleElement.dataset.stageId = stage.id;
     toggleElement.dataset.columnId = stage.id;
     toggleElement.setAttribute('aria-expanded', String(!isCollapsed));
@@ -116,7 +116,7 @@ function createStagePanel({ board, stageId, stage, collapsedColumns, canReadBoar
     bodyElement.id = `column-panel-body-${stage.id}`;
     bodyElement.hidden = isCollapsed || stage.cardIds.length === 0;
 
-    if (toggleElement) {
+    for (const toggleElement of toggleElements) {
       toggleElement.setAttribute('aria-controls', bodyElement.id);
     }
   }

@@ -1,10 +1,10 @@
 {% set canCreateInStage = boardCanEdit and column.actionIds and ('card.create' in column.actionIds) %}
 <section class="column-panel" data-stage-id="{{ column.id }}" data-column-id="{{ column.id }}" data-collapsed="false">
   <header class="column-panel-header">
-    <div class="grid h-full grid-cols-[minmax(0,1fr)_auto] items-stretch">
+    <div class="column-header-row">
       <button
         type="button"
-        class="column-header-toggle"
+        class="column-header-toggle column-header-toggle-title-button"
         data-column-toggle
         data-stage-id="{{ column.id }}"
         data-column-id="{{ column.id }}"
@@ -15,22 +15,33 @@
         <span class="column-header-toggle-title font-serif text-2xl text-strong" data-column-field="title">
           {{ column.title }}
         </span>
+      </button>
+      <button
+        type="button"
+        class="touch-button-secondary column-header-create text-sm"
+        data-column-create
+        data-stage-id="{{ column.id }}"
+        data-column-id="{{ column.id }}"
+        data-action="workspace#openCreateCard"
+        {% if not canCreateInStage %}hidden disabled aria-disabled="true"{% else %}aria-disabled="false"{% endif %}
+      >
+        {{ t('workspace.addCard') }}
+      </button>
+      <button
+        type="button"
+        class="column-header-toggle column-header-toggle-chip-button"
+        data-column-toggle
+        data-stage-id="{{ column.id }}"
+        data-column-id="{{ column.id }}"
+        data-action="workspace#toggleColumn"
+        aria-expanded="true"
+        aria-controls="column-panel-body-{{ column.id }}"
+      >
         <span class="count-chip px-3 py-1 text-sm font-medium" aria-label="{{ t('workspace.cardCount', { count: column.cardIds.length }) }}">
           <span data-column-field="count">{{ column.cardIds.length }}</span>
           <span class="count-chip-icon" aria-hidden="true"></span>
           <span class="column-header-chevron" aria-hidden="true">▾</span>
         </span>
-      </button>
-      <button
-        type="button"
-        class="touch-button-secondary m-3 text-sm"
-        data-column-create
-        data-stage-id="{{ column.id }}"
-        data-column-id="{{ column.id }}"
-        data-action="workspace#openCreateCard"
-        {% if not canCreateInStage %}hidden disabled aria-disabled="true"{% endif %}
-      >
-        {{ t('workspace.addCard') }}
       </button>
     </div>
   </header>

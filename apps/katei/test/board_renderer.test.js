@@ -243,6 +243,52 @@ test('renderBoardState shows stage-local create buttons only for create-enabled 
   assert.equal(regions.desktopColumns.children[0].createButton.disabled, true);
 });
 
+test('renderBoardState wires both header toggle buttons for each stage panel', () => {
+  const board = createWorkspaceBoard({
+    id: 'board_toggle_wiring',
+    title: 'Toggle wiring board',
+    createdAt: '2026-03-31T10:00:00.000Z',
+    updatedAt: '2026-03-31T10:00:00.000Z'
+  });
+  const regions = {
+    boardTitle: { textContent: '' },
+    desktopColumns: createRegionDouble()
+  };
+  const t = Object.assign(
+    (key, values = {}) => (key === 'workspace.cardCount' ? String(values.count ?? 0) : key),
+    { locale: 'en' }
+  );
+
+  renderBoardState({
+    board,
+    canReadBoard: true,
+    canEditBoard: true,
+    collapsedColumns: { backlog: true },
+    regions,
+    templates: {
+      columnTemplate: createColumnTemplateDouble(),
+      cardTemplate: createCardTemplateDouble()
+    },
+    t
+  });
+
+  const backlogPanel = regions.desktopColumns.children[0];
+
+  assert.equal(backlogPanel.titleToggleElement.dataset.stageId, 'backlog');
+  assert.equal(backlogPanel.titleToggleElement.dataset.columnId, 'backlog');
+  assert.equal(backlogPanel.titleToggleElement.attributes['aria-expanded'], 'false');
+  assert.equal(backlogPanel.titleToggleElement.attributes['aria-controls'], 'column-panel-body-backlog');
+  assert.equal(backlogPanel.titleToggleElement.disabled, false);
+  assert.equal(backlogPanel.titleToggleElement.attributes['aria-disabled'], 'false');
+
+  assert.equal(backlogPanel.chipToggleElement.dataset.stageId, 'backlog');
+  assert.equal(backlogPanel.chipToggleElement.dataset.columnId, 'backlog');
+  assert.equal(backlogPanel.chipToggleElement.attributes['aria-expanded'], 'false');
+  assert.equal(backlogPanel.chipToggleElement.attributes['aria-controls'], 'column-panel-body-backlog');
+  assert.equal(backlogPanel.chipToggleElement.disabled, false);
+  assert.equal(backlogPanel.chipToggleElement.attributes['aria-disabled'], 'false');
+});
+
 test('renderBoardState does not query a board-card prompt-run button', () => {
   const board = createWorkspaceBoard({
     id: 'board_modal_prompt',
@@ -543,7 +589,7 @@ function createColumnPanelDouble() {
       this.attributes[name] = String(value);
     }
   };
-  const toggleElement = {
+  const titleToggleElement = {
     dataset: {},
     disabled: false,
     attributes: {},
@@ -551,6 +597,15 @@ function createColumnPanelDouble() {
       this.attributes[name] = String(value);
     }
   };
+  const chipToggleElement = {
+    dataset: {},
+    disabled: false,
+    attributes: {},
+    setAttribute(name, value) {
+      this.attributes[name] = String(value);
+    }
+  };
+  const toggleElements = [titleToggleElement, chipToggleElement];
   const createButton = {
     dataset: {},
     hidden: true,
@@ -574,6 +629,9 @@ function createColumnPanelDouble() {
 
   return {
     dataset: {},
+    titleToggleElement,
+    chipToggleElement,
+    toggleElements,
     createButton,
     cardsContainer,
     querySelector(selector) {
@@ -585,7 +643,7 @@ function createColumnPanelDouble() {
         case '.count-chip':
           return countChipElement;
         case '[data-column-toggle]':
-          return toggleElement;
+          return titleToggleElement;
         case '[data-column-create]':
           return createButton;
         case '.column-panel-body':
@@ -595,6 +653,13 @@ function createColumnPanelDouble() {
         default:
           return null;
       }
+    },
+    querySelectorAll(selector) {
+      if (selector === '[data-column-toggle]') {
+        return toggleElements;
+      }
+
+      return [];
     }
   };
 }
