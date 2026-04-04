@@ -762,6 +762,7 @@
   }
   .card-item-toolbar {
     display: grid;
+    grid-template-columns: auto;
     align-items: center;
     justify-items: center;
     gap: calc(var(--spacing) * 3);
