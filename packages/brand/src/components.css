@@ -1,12 +1,22 @@
 @layer components {
   .app-shell {
     @apply min-h-screen;
+    position: relative;
+    isolation: isolate;
     background-color: var(--color-bg-surface);
+    color: var(--color-text-strong);
+  }
+
+  .app-shell::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
     background-image: url("/background.webp");
     background-position: center;
     background-repeat: no-repeat;
     background-size: cover;
-    color: var(--color-text-strong);
   }
 
   .paper-panel {
