@@ -95,6 +95,7 @@
     border: 0;
     color: inherit;
     cursor: pointer;
+    transform: translateY(0.06rem);
   }
 
   .column-header-toggle-chip-button {

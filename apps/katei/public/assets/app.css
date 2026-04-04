@@ -719,6 +719,9 @@
   .column-header-toggle-title {
     min-width: 0;
   }
+  .column-header-chip-control {
+    transform: translateY(0.06rem);
+  }
   .column-header-chevron {
     display: inline-grid;
     place-items: center;
