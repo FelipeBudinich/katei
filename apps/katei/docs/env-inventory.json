@@ -316,8 +316,8 @@
           "file": "apps/katei/.env.example",
           "line": 35,
           "scope": "app",
-          "snippet": "KATEI_DEBUG_AUTH_VIEWER_EMAIL=",
-          "comment": "# Optional email for the debug viewer session."
+          "snippet": "KATEI_DEBUG_AUTH_VIEWER_EMAIL=test@example.com",
+          "comment": "# Optional email for the debug viewer session. Defaults to test@example.com when omitted."
         }
       ],
       "usages": [
@@ -340,8 +340,8 @@
           "file": "apps/katei/.env.example",
           "line": 38,
           "scope": "app",
-          "snippet": "KATEI_DEBUG_AUTH_VIEWER_NAME=",
-          "comment": "# Optional display name for the debug viewer session."
+          "snippet": "KATEI_DEBUG_AUTH_VIEWER_NAME=John Doe",
+          "comment": "# Optional display name for the debug viewer session. Defaults to John Doe when omitted."
         }
       ],
       "usages": [
@@ -412,8 +412,8 @@
           "file": "apps/katei/.env.example",
           "line": 44,
           "scope": "app",
-          "snippet": "MONGODB_DB_NAME=",
-          "comment": "# Optional MongoDB database name used for server-owned workspace persistence."
+          "snippet": "MONGODB_DB_NAME=katei_test",
+          "comment": "# Required MongoDB database name used for server-owned workspace persistence."
         }
       ],
       "usages": [
@@ -436,8 +436,8 @@
           "file": "apps/katei/.env.example",
           "line": 41,
           "scope": "app",
-          "snippet": "MONGODB_URI=",
-          "comment": "# Optional MongoDB connection string used for server-owned workspace persistence."
+          "snippet": "MONGODB_URI=mongodb://127.0.0.1:27017",
+          "comment": "# Required MongoDB connection string used for server-owned workspace persistence."
         }
       ],
       "usages": [
