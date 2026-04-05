@@ -20,7 +20,7 @@
   }
 
   .paper-panel {
-    @apply border backdrop-blur shadow-[var(--shadow-paper)];
+    @apply border shadow-[var(--shadow-paper)];
     border-radius: var(--radius-2xl);
     border-color: var(--color-border-subtle);
     background-color: var(--color-bg-elevated);
@@ -42,14 +42,6 @@
     border-bottom-left-radius: var(--radius-column-bottom);
     border-bottom-right-radius: var(--radius-column-bottom);
     background-color: var(--color-bg-column);
-    -webkit-backdrop-filter: blur(10.5px);
-    backdrop-filter: blur(10.5px);
-  }
-
-  .column-panel-header,
-  .card-item-toolbar {
-    -webkit-backdrop-filter: blur(4.5px);
-    backdrop-filter: blur(4.5px);
   }
 
   .column-panel-header {
@@ -485,7 +477,6 @@
 
   .sheet-dialog::backdrop {
     background: var(--color-overlay);
-    backdrop-filter: blur(4px);
   }
 
   .sheet-dialog[open] {
