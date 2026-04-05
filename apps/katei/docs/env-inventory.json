@@ -274,11 +274,11 @@
       ],
       "usages": [
         {
-          "kind": "read",
+          "kind": "default",
           "file": "apps/katei/src/config.js",
           "line": 61,
           "scope": "app",
-          "snippet": "const enabled = parseBooleanEnv(env.KATEI_DEBUG_AUTH_ENABLED);"
+          "snippet": "const enabled = parseBooleanEnv(normalizeOptionalString(env.KATEI_DEBUG_AUTH_ENABLED) || 'false');"
         }
       ]
     },
@@ -322,11 +322,11 @@
       ],
       "usages": [
         {
-          "kind": "read",
+          "kind": "default",
           "file": "apps/katei/src/config.js",
           "line": 64,
           "scope": "app",
-          "snippet": "const viewerEmail = normalizeOptionalEmail(env.KATEI_DEBUG_AUTH_VIEWER_EMAIL);"
+          "snippet": "const viewerEmail = normalizeOptionalEmail(env.KATEI_DEBUG_AUTH_VIEWER_EMAIL) || 'test@example.com';"
         }
       ]
     },
@@ -346,11 +346,11 @@
       ],
       "usages": [
         {
-          "kind": "read",
+          "kind": "default",
           "file": "apps/katei/src/config.js",
           "line": 65,
           "scope": "app",
-          "snippet": "const viewerName = normalizeOptionalString(env.KATEI_DEBUG_AUTH_VIEWER_NAME);"
+          "snippet": "const viewerName = normalizeOptionalString(env.KATEI_DEBUG_AUTH_VIEWER_NAME) || 'John Doe';"
         }
       ]
     },
