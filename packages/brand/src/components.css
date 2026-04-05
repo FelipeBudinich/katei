@@ -77,6 +77,7 @@
   }
 
   .column-header-toggle-title-button {
+    grid-column: 1;
     display: inline-flex;
     align-items: baseline;
     justify-content: flex-start;
@@ -102,10 +103,12 @@
   }
 
   .column-header-toggle-chip-button {
+    grid-column: 3;
     min-height: 100%;
   }
 
   .column-header-create {
+    grid-column: 2;
     margin: 0;
   }
 
