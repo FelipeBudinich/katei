@@ -58,7 +58,7 @@ export function parseSessionTtlSeconds(rawValue) {
 }
 
 function createDebugAuthConfig(env = process.env) {
-  const enabled = parseBooleanEnv(env.KATEI_DEBUG_AUTH_ENABLED);
+  const enabled = parseBooleanEnv(normalizeOptionalString(env.KATEI_DEBUG_AUTH_ENABLED) || 'false');
   const secret = normalizeOptionalString(env.KATEI_DEBUG_AUTH_SECRET);
   const viewerSub = normalizeOptionalString(env.KATEI_DEBUG_AUTH_VIEWER_SUB);
   const viewerEmail = normalizeOptionalEmail(env.KATEI_DEBUG_AUTH_VIEWER_EMAIL);
