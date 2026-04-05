@@ -93,16 +93,18 @@
         {{ t('cardViewDialog.requestHumanVerificationButton') }}
       </button>
 
-      <dl class="space-y-4">
+      <div class="space-y-4">
         <div class="space-y-2">
-          <dd class="markdown-rendered text-sm leading-6 text-muted" data-workspace-target="viewCardBody"></dd>
+          <div class="markdown-rendered text-sm leading-6 text-muted" data-workspace-target="viewCardBody"></div>
         </div>
 
         <div class="space-y-2">
-          <dt class="field-label text-sm font-semibold">{{ t('cardViewDialog.updatedLabel') }}</dt>
-          <dd class="text-sm leading-6 text-muted" data-workspace-target="viewCardUpdated"></dd>
+          <p class="card-item-meta text-xs uppercase tracking-[0.24em] text-subtle">
+            <span class="card-item-meta-icon" aria-hidden="true"></span>
+            <span data-workspace-target="viewCardUpdated"></span>
+          </p>
         </div>
-      </dl>
+      </div>
 
       <div class="flex flex-wrap items-center gap-3 pt-2" hidden data-workspace-target="viewActionRegion">
         <button
