@@ -329,6 +329,114 @@ test('workspace controller sync-board-options payload includes pendingWorkspaceI
   });
 });
 
+test('bootstrap-backed initial load does not trigger a destructive board rerender when the visible board already matches', async () => {
+  const restoreDomStubs = installViewDialogDomStubs();
+  const viewerActor = createActor('viewer_1', 'viewer@example.com', 'Viewer');
+  const workspace = createViewerWorkspace('workspace_home', viewerActor);
+  const controller = Object.create(WorkspaceController.prototype);
+  const dispatchedEvents = [];
+  const t = Object.assign(
+    (key, values = {}) => (key === 'workspace.cardCount' ? String(values.count ?? 0) : key),
+    { locale: 'en' }
+  );
+  const dateTimeFormatter = {
+    format() {
+      return 'Apr 1, 2026, 8:00 AM';
+    }
+  };
+
+  workspace.boards.main.cards.card_bootstrap = {
+    id: 'card_bootstrap',
+    priority: 'important',
+    createdAt: '2026-03-31T10:00:00.000Z',
+    updatedAt: '2026-03-31T10:30:00.000Z',
+    contentByLocale: {
+      en: {
+        title: 'Bootstrap card',
+        detailsMarkdown: ''
+      }
+    }
+  };
+  workspace.boards.main.stages.backlog.cardIds = ['card_bootstrap'];
+  workspace.boards.main.languagePolicy = {
+    sourceLocale: 'en',
+    defaultLocale: 'en',
+    supportedLocales: ['en'],
+    requiredLocales: ['en']
+  };
+
+  const desktopColumnsTarget = createRendererRegionDouble();
+  const preRenderedStageNodes = createServerRenderedBoardNodes(workspace.boards.main, {
+    canEditBoard: false,
+    t,
+    dateTimeFormatter
+  });
+  const initialStageNode = preRenderedStageNodes[0];
+  const initialCardNode = initialStageNode.cardsContainer.children[0];
+
+  for (const stageNode of preRenderedStageNodes) {
+    desktopColumnsTarget.appendChild(stageNode);
+  }
+
+  controller.service = {
+    async load() {
+      return structuredClone(workspace);
+    },
+    getDebugContext() {
+      return {
+        revisionSource: 'bootstrap'
+      };
+    },
+    getActiveWorkspaceId() {
+      return workspace.workspaceId;
+    },
+    getIsHomeWorkspace() {
+      return true;
+    },
+    getPendingWorkspaceInvites() {
+      return [];
+    },
+    getAccessibleWorkspaces() {
+      return [];
+    }
+  };
+  controller.templates = {
+    columnTemplate: createRendererColumnTemplateDouble(),
+    cardTemplate: createRendererCardTemplateDouble()
+  };
+  controller.viewerActor = viewerActor;
+  controller.t = t;
+  controller.dateTimeFormatter = dateTimeFormatter;
+  controller.columnCollapseState = new Map();
+  controller.renderInvocationCount = 0;
+  controller.hasBoardAccessNoticeTarget = true;
+  controller.boardAccessNoticeTarget = {
+    hidden: true,
+    textContent: ''
+  };
+  controller.hasBoardTitleTarget = true;
+  controller.boardTitleTarget = {
+    textContent: workspace.boards.main.title
+  };
+  controller.hasDesktopColumnsTarget = true;
+  controller.desktopColumnsTarget = desktopColumnsTarget;
+  controller.dispatchWorkspaceEvent = (name, detail) => {
+    dispatchedEvents.push({ name, detail });
+  };
+  controller.syncWorkspaceHistory = () => {};
+
+  try {
+    await WorkspaceController.prototype.loadWorkspace.call(controller);
+
+    assert.equal(controller.desktopColumnsTarget.replaceChildrenCalls, 0);
+    assert.equal(controller.desktopColumnsTarget.children[0], initialStageNode);
+    assert.equal(controller.desktopColumnsTarget.children[0].cardsContainer.children[0], initialCardNode);
+    assert.equal(dispatchedEvents[0].name, 'sync-board-options');
+  } finally {
+    restoreDomStubs();
+  }
+});
+
 test('handleBoardSwitch switches workspaces before selecting a board in another workspace', async () => {
   const viewerActor = createActor('viewer_1', 'viewer@example.com', 'Viewer');
   const currentWorkspace = createViewerWorkspace('workspace_home', viewerActor);
@@ -2757,6 +2865,306 @@ function createActor(id, email, displayName) {
     email,
     displayName
   };
+}
+
+function createRendererRegionDouble() {
+  return {
+    dataset: {},
+    hidden: false,
+    children: [],
+    replaceChildrenCalls: 0,
+    appendChild(node) {
+      appendChildToRendererContainer(this, node);
+    },
+    insertBefore(node, referenceNode) {
+      insertBeforeInRendererContainer(this, node, referenceNode);
+    },
+    replaceChildren(...nodes) {
+      this.replaceChildrenCalls += 1;
+      this.children = [];
+
+      for (const node of nodes) {
+        appendChildToRendererContainer(this, node);
+      }
+    }
+  };
+}
+
+function createRendererColumnTemplateDouble() {
+  return {
+    content: {
+      firstElementChild: {
+        cloneNode() {
+          return createRendererColumnPanelDouble();
+        }
+      }
+    }
+  };
+}
+
+function createRendererCardTemplateDouble() {
+  return {
+    content: {
+      firstElementChild: {
+        cloneNode() {
+          return createRendererCardNodeDouble();
+        }
+      }
+    }
+  };
+}
+
+function createServerRenderedBoardNodes(board, { canEditBoard, t, dateTimeFormatter }) {
+  return board.stageOrder.map((stageId) => {
+    const stage = board.stages[stageId];
+    const stageNode = createRendererColumnPanelDouble();
+    const cards = stage.cardIds.map((cardId) => board.cards[cardId]).filter(Boolean);
+    const shouldShowCreateButton = canEditBoard && Array.isArray(stage.actionIds) && stage.actionIds.includes('card.create');
+
+    stageNode.dataset.stageId = stage.id;
+    stageNode.dataset.columnId = stage.id;
+    stageNode.dataset.collapsed = 'false';
+    stageNode.titleElement.textContent = stage.title;
+    stageNode.countElement.textContent = String(stage.cardIds.length);
+    stageNode.countChipElement.attributes['aria-label'] = formatRendererCardCount(stage.cardIds.length, t);
+    stageNode.bodyElement.id = `column-panel-body-${stage.id}`;
+    stageNode.bodyElement.hidden = stage.cardIds.length === 0;
+    stageNode.createButton.hidden = !shouldShowCreateButton;
+    stageNode.createButton.disabled = !shouldShowCreateButton;
+    stageNode.createButton.attributes['aria-disabled'] = String(!shouldShowCreateButton);
+
+    for (const toggleElement of stageNode.toggleElements) {
+      toggleElement.dataset.stageId = stage.id;
+      toggleElement.dataset.columnId = stage.id;
+      toggleElement.attributes['aria-expanded'] = 'true';
+      toggleElement.attributes['aria-controls'] = stageNode.bodyElement.id;
+      toggleElement.attributes['aria-disabled'] = 'false';
+      toggleElement.disabled = false;
+    }
+
+    for (const card of cards) {
+      const cardNode = createRendererCardNodeDouble();
+      cardNode.dataset.cardId = card.id;
+      cardNode.dataset.stageId = stage.id;
+      cardNode.dataset.columnId = stage.id;
+      cardNode.dataset.priority = card.priority;
+      cardNode.titleElement.textContent = card.contentByLocale.en.title;
+      cardNode.previewElement.textContent = '';
+      cardNode.previewElement.hidden = true;
+      cardNode.metaElement.textContent = dateTimeFormatter.format(new Date(card.updatedAt));
+      cardNode.toolbarTrigger.dataset.cardId = card.id;
+      cardNode.toolbarTrigger.dataset.stageId = stage.id;
+      cardNode.toolbarTrigger.dataset.columnId = stage.id;
+      stageNode.cardsContainer.appendChild(cardNode);
+    }
+
+    return stageNode;
+  });
+}
+
+function createRendererColumnPanelDouble() {
+  const titleElement = { textContent: '' };
+  const countElement = { textContent: '' };
+  const countChipElement = {
+    attributes: {},
+    setAttribute(name, value) {
+      this.attributes[name] = String(value);
+    }
+  };
+  const titleToggleElement = createRendererToggleElement();
+  const chipToggleElement = createRendererToggleElement();
+  const toggleElements = [titleToggleElement, chipToggleElement];
+  const createButton = {
+    dataset: {},
+    hidden: true,
+    disabled: true,
+    attributes: {},
+    setAttribute(name, value) {
+      this.attributes[name] = String(value);
+    }
+  };
+  const bodyElement = {
+    id: '',
+    hidden: false
+  };
+  const cardsContainer = createRendererContainerDouble();
+  const stageNode = {
+    dataset: {},
+    parentNode: null,
+    titleElement,
+    countElement,
+    countChipElement,
+    titleToggleElement,
+    chipToggleElement,
+    toggleElements,
+    createButton,
+    bodyElement,
+    cardsContainer,
+    querySelector(selector) {
+      switch (selector) {
+        case '[data-column-field="title"]':
+          return titleElement;
+        case '[data-column-field="count"]':
+          return countElement;
+        case '.count-chip':
+          return countChipElement;
+        case '[data-column-toggle]':
+          return titleToggleElement;
+        case '[data-column-create]':
+          return createButton;
+        case '.column-panel-body':
+          return bodyElement;
+        case '[data-column-cards]':
+          return cardsContainer;
+        default:
+          return null;
+      }
+    },
+    querySelectorAll(selector) {
+      if (selector === '[data-column-toggle]') {
+        return toggleElements;
+      }
+
+      return [];
+    },
+    remove() {
+      removeChildFromRendererContainer(this.parentNode, this);
+    }
+  };
+
+  cardsContainer.parentNode = stageNode;
+
+  return stageNode;
+}
+
+function createRendererCardNodeDouble() {
+  const titleElement = { textContent: '' };
+  const previewElement = {
+    textContent: '',
+    hidden: false,
+    classList: {
+      toggle(className, isHidden) {
+        if (className === 'hidden') {
+          previewElement.hidden = Boolean(isHidden);
+        }
+      }
+    }
+  };
+  const metaElement = { textContent: '' };
+  const toolbarTrigger = { dataset: {} };
+
+  return {
+    dataset: {},
+    parentNode: null,
+    titleElement,
+    previewElement,
+    metaElement,
+    toolbarTrigger,
+    querySelector(selector) {
+      switch (selector) {
+        case '[data-card-field="title"]':
+          return titleElement;
+        case '[data-card-field="preview"]':
+          return previewElement;
+        case '[data-card-field="meta"]':
+          return metaElement;
+        default:
+          return null;
+      }
+    },
+    querySelectorAll(selector) {
+      if (selector === '[data-card-id]') {
+        return [toolbarTrigger];
+      }
+
+      if (selector === '[data-column-id], [data-stage-id]') {
+        return [toolbarTrigger];
+      }
+
+      return [];
+    },
+    remove() {
+      removeChildFromRendererContainer(this.parentNode, this);
+    }
+  };
+}
+
+function createRendererContainerDouble() {
+  return {
+    dataset: {},
+    children: [],
+    parentNode: null,
+    appendChild(node) {
+      appendChildToRendererContainer(this, node);
+    },
+    insertBefore(node, referenceNode) {
+      insertBeforeInRendererContainer(this, node, referenceNode);
+    }
+  };
+}
+
+function createRendererToggleElement() {
+  return {
+    dataset: {},
+    disabled: false,
+    attributes: {},
+    setAttribute(name, value) {
+      this.attributes[name] = String(value);
+    }
+  };
+}
+
+function appendChildToRendererContainer(container, node) {
+  if (!container || node == null) {
+    return;
+  }
+
+  removeChildFromRendererContainer(node?.parentNode ?? null, node);
+  container.children.push(node);
+
+  if (node && typeof node === 'object') {
+    node.parentNode = container;
+  }
+}
+
+function insertBeforeInRendererContainer(container, node, referenceNode) {
+  if (!container || node == null) {
+    return;
+  }
+
+  removeChildFromRendererContainer(node?.parentNode ?? null, node);
+
+  const insertionIndex = referenceNode == null ? -1 : container.children.indexOf(referenceNode);
+
+  if (insertionIndex === -1) {
+    container.children.push(node);
+  } else {
+    container.children.splice(insertionIndex, 0, node);
+  }
+
+  if (node && typeof node === 'object') {
+    node.parentNode = container;
+  }
+}
+
+function removeChildFromRendererContainer(container, node) {
+  if (!container || !Array.isArray(container.children)) {
+    return;
+  }
+
+  const childIndex = container.children.indexOf(node);
+
+  if (childIndex >= 0) {
+    container.children.splice(childIndex, 1);
+  }
+
+  if (node && typeof node === 'object') {
+    node.parentNode = null;
+  }
+}
+
+function formatRendererCardCount(count, t) {
+  return String(t('workspace.cardCount', { count }));
 }
 
 function createColumnPanelDouble({ stageId, columnId, cardCount = 0 } = {}) {

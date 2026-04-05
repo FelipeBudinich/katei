@@ -162,16 +162,17 @@ test('createRuntimeConfig keeps an explicit board secret encryption key when pro
   assert.equal(config.boardSecretEncryptionKey, 'explicit-board-key');
 });
 
-test('createRuntimeConfig falls back to a deterministic board secret encryption key in test', () => {
-  const config = createRuntimeConfig({
-    GOOGLE_CLIENT_ID: REQUIRED_ENV.GOOGLE_CLIENT_ID,
-    KATEI_SESSION_SECRET: REQUIRED_ENV.KATEI_SESSION_SECRET,
-    MONGODB_URI: REQUIRED_ENV.MONGODB_URI,
-    MONGODB_DB_NAME: REQUIRED_ENV.MONGODB_DB_NAME,
-    NODE_ENV: 'test'
-  });
-
-  assert.equal(config.boardSecretEncryptionKey, 'katei-test-board-secret-encryption-key');
+test('createRuntimeConfig requires a board secret encryption key in test', () => {
+  assert.throws(
+    () => createRuntimeConfig({
+      GOOGLE_CLIENT_ID: REQUIRED_ENV.GOOGLE_CLIENT_ID,
+      KATEI_SESSION_SECRET: REQUIRED_ENV.KATEI_SESSION_SECRET,
+      MONGODB_URI: REQUIRED_ENV.MONGODB_URI,
+      MONGODB_DB_NAME: REQUIRED_ENV.MONGODB_DB_NAME,
+      NODE_ENV: 'test'
+    }),
+    /KATEI_BOARD_SECRET_ENCRYPTION_KEY is required\./
+  );
 });
 
 test('createRuntimeConfig requires a board secret encryption key outside test', () => {
@@ -271,7 +272,7 @@ test('createRuntimeConfig rejects missing hosted debug auth secrets when enabled
       KATEI_DEBUG_AUTH_ENABLED: 'true',
       KATEI_DEBUG_AUTH_VIEWER_SUB: 'debug_sub'
     }),
-    /KATEI_DEBUG_AUTH_SECRET is required when KATEI_DEBUG_AUTH_ENABLED is true\./
+    /KATEI_DEBUG_AUTH_SECRET is required\./
   );
 });
 

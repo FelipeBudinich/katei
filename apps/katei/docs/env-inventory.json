@@ -45,7 +45,7 @@
   "summary": {
     "totalVariables": 17,
     "totalDefinitions": 17,
-    "totalUsages": 27,
+    "totalUsages": 28,
     "secretLikeCount": 4,
     "publicLikeCount": 0,
     "dynamicAccessCount": 0
@@ -69,7 +69,7 @@
         {
           "kind": "default",
           "file": "apps/katei/src/config.js",
-          "line": 6,
+          "line": 4,
           "scope": "app",
           "snippet": "const appBaseUrl = normalizeOptionalString(env.APP_BASE_URL) || (nodeEnv === 'development' ? `http://localhost:${Number(env.PORT) || 3000}` : '');"
         }
@@ -93,7 +93,7 @@
         {
           "kind": "default",
           "file": "apps/katei/src/config.js",
-          "line": 19,
+          "line": 17,
           "scope": "app",
           "snippet": "googleAllowlistSubs: parseAllowlistSubs(normalizeOptionalString(env.GOOGLE_ALLOWLIST_SUBS) || ''),"
         }
@@ -117,7 +117,7 @@
         {
           "kind": "requiredHelper",
           "file": "apps/katei/src/config.js",
-          "line": 16,
+          "line": 14,
           "scope": "app",
           "snippet": "googleClientId: requireNonEmptyEnv('GOOGLE_CLIENT_ID', env.GOOGLE_CLIENT_ID),"
         }
@@ -244,17 +244,17 @@
           "file": "apps/katei/.env.example",
           "line": 14,
           "scope": "app",
-          "snippet": "KATEI_BOARD_SECRET_ENCRYPTION_KEY=",
+          "snippet": "KATEI_BOARD_SECRET_ENCRYPTION_KEY=replace-with-a-long-random-string",
           "comment": "# Secret used to encrypt board-scoped AI credentials before persistence."
         }
       ],
       "usages": [
         {
-          "kind": "read",
+          "kind": "requiredHelper",
           "file": "apps/katei/src/config.js",
-          "line": 11,
+          "line": 9,
           "scope": "app",
-          "snippet": "const boardSecretEncryptionKey = resolveBoardSecretEncryptionKey(env.KATEI_BOARD_SECRET_ENCRYPTION_KEY, nodeEnv);"
+          "snippet": "const boardSecretEncryptionKey = requireNonEmptyEnv('KATEI_BOARD_SECRET_ENCRYPTION_KEY', env.KATEI_BOARD_SECRET_ENCRYPTION_KEY);"
         }
       ]
     },
@@ -276,7 +276,7 @@
         {
           "kind": "default",
           "file": "apps/katei/src/config.js",
-          "line": 61,
+          "line": 59,
           "scope": "app",
           "snippet": "const enabled = parseBooleanEnv(normalizeOptionalString(env.KATEI_DEBUG_AUTH_ENABLED) || 'false');"
         }
@@ -292,17 +292,24 @@
           "file": "apps/katei/.env.example",
           "line": 29,
           "scope": "app",
-          "snippet": "KATEI_DEBUG_AUTH_SECRET=",
+          "snippet": "KATEI_DEBUG_AUTH_SECRET=replace-with-a-long-random-string",
           "comment": "# Shared secret required in the x-katei-debug-auth request header when debug auth is enabled."
         }
       ],
       "usages": [
         {
+          "kind": "requiredHelper",
+          "file": "apps/katei/src/config.js",
+          "line": 61,
+          "scope": "app",
+          "snippet": "? requireNonEmptyEnv('KATEI_DEBUG_AUTH_SECRET', env.KATEI_DEBUG_AUTH_SECRET)"
+        },
+        {
           "kind": "read",
           "file": "apps/katei/src/config.js",
           "line": 62,
           "scope": "app",
-          "snippet": "const secret = normalizeOptionalString(env.KATEI_DEBUG_AUTH_SECRET);"
+          "snippet": ": normalizeOptionalString(env.KATEI_DEBUG_AUTH_SECRET);"
         }
       ]
     },
@@ -396,7 +403,7 @@
         {
           "kind": "requiredHelper",
           "file": "apps/katei/src/config.js",
-          "line": 17,
+          "line": 15,
           "scope": "app",
           "snippet": "sessionSecret: requireNonEmptyEnv('KATEI_SESSION_SECRET', env.KATEI_SESSION_SECRET),"
         }
@@ -420,7 +427,7 @@
         {
           "kind": "requiredHelper",
           "file": "apps/katei/src/config.js",
-          "line": 8,
+          "line": 6,
           "scope": "app",
           "snippet": "const mongoDbName = requireNonEmptyEnv('MONGODB_DB_NAME', env.MONGODB_DB_NAME);"
         }
@@ -444,7 +451,7 @@
         {
           "kind": "requiredHelper",
           "file": "apps/katei/src/config.js",
-          "line": 7,
+          "line": 5,
           "scope": "app",
           "snippet": "const mongoUri = requireNonEmptyEnv('MONGODB_URI', env.MONGODB_URI);"
         }
@@ -468,7 +475,7 @@
         {
           "kind": "default",
           "file": "apps/katei/src/config.js",
-          "line": 5,
+          "line": 3,
           "scope": "app",
           "snippet": "const nodeEnv = normalizeOptionalString(env.NODE_ENV) || 'development';"
         }
@@ -492,7 +499,7 @@
         {
           "kind": "default",
           "file": "apps/katei/src/config.js",
-          "line": 6,
+          "line": 4,
           "scope": "app",
           "snippet": "const appBaseUrl = normalizeOptionalString(env.APP_BASE_URL) || (nodeEnv === 'development' ? `http://localhost:${Number(env.PORT) || 3000}` : '');"
         },
@@ -523,7 +530,7 @@
         {
           "kind": "default",
           "file": "apps/katei/src/config.js",
-          "line": 9,
+          "line": 7,
           "scope": "app",
           "snippet": "const sessionTtlSeconds = parseSessionTtlSeconds(normalizeOptionalString(env.SESSION_TTL_SECONDS) || String(DEFAULT_SESSION_TTL_SECONDS));"
         }

@@ -447,13 +447,209 @@ test('renderBoardState does not query a board-card edit button and still wires t
   });
 });
 
-function withMarkdownEnvironment(action) {
+test('renderBoardState preserves unchanged stage panel DOM nodes across unrelated updates', () => {
+  const board = createWorkspaceBoard({
+    id: 'board_identity_stage',
+    title: 'Identity board',
+    createdAt: '2026-03-31T10:00:00.000Z',
+    updatedAt: '2026-03-31T10:00:00.000Z'
+  });
+  const regions = {
+    boardTitle: { textContent: '' },
+    desktopColumns: createRegionDouble()
+  };
+  const t = Object.assign(
+    (key, values = {}) => (key === 'workspace.cardCount' ? String(values.count ?? 0) : key),
+    { locale: 'en' }
+  );
+
+  board.cards.card_backlog = createCardRecord({
+    id: 'card_backlog',
+    title: 'Backlog card',
+    detailsMarkdown: 'Backlog details'
+  });
+  board.stages.backlog.cardIds = ['card_backlog'];
+  board.languagePolicy = {
+    sourceLocale: 'en',
+    defaultLocale: 'en',
+    supportedLocales: ['en'],
+    requiredLocales: ['en']
+  };
+
+  withMarkdownEnvironment(() => {
+    renderBoardState({
+      board,
+      canReadBoard: true,
+      canEditBoard: true,
+      regions,
+      templates: {
+        columnTemplate: createColumnTemplateDouble(),
+        cardTemplate: createCardTemplateDouble()
+      },
+      t,
+      dateTimeFormatter: createDateTimeFormatterDouble()
+    });
+
+    const backlogPanelBefore = regions.desktopColumns.children[0];
+    const initialReplaceChildrenCalls = regions.desktopColumns.replaceChildrenCalls;
+
+    board.title = 'Identity board renamed';
+
+    renderBoardState({
+      board,
+      canReadBoard: true,
+      canEditBoard: true,
+      regions,
+      templates: {
+        columnTemplate: createColumnTemplateDouble(),
+        cardTemplate: createCardTemplateDouble()
+      },
+      t,
+      dateTimeFormatter: createDateTimeFormatterDouble()
+    });
+
+    assert.equal(regions.desktopColumns.children[0], backlogPanelBefore);
+    assert.equal(regions.desktopColumns.replaceChildrenCalls, initialReplaceChildrenCalls);
+  });
+});
+
+test('renderBoardState preserves unchanged card DOM nodes across unrelated updates', () => {
+  const board = createWorkspaceBoard({
+    id: 'board_identity_card',
+    title: 'Identity board',
+    createdAt: '2026-03-31T10:00:00.000Z',
+    updatedAt: '2026-03-31T10:00:00.000Z'
+  });
+  const regions = {
+    boardTitle: { textContent: '' },
+    desktopColumns: createRegionDouble()
+  };
+  const t = Object.assign(
+    (key, values = {}) => (key === 'workspace.cardCount' ? String(values.count ?? 0) : key),
+    { locale: 'en' }
+  );
+
+  board.cards.card_backlog = createCardRecord({
+    id: 'card_backlog',
+    title: 'Backlog card',
+    detailsMarkdown: 'Backlog details'
+  });
+  board.stages.backlog.cardIds = ['card_backlog'];
+  board.languagePolicy = {
+    sourceLocale: 'en',
+    defaultLocale: 'en',
+    supportedLocales: ['en'],
+    requiredLocales: ['en']
+  };
+
+  withMarkdownEnvironment(() => {
+    renderBoardState({
+      board,
+      canReadBoard: true,
+      canEditBoard: true,
+      regions,
+      templates: {
+        columnTemplate: createColumnTemplateDouble(),
+        cardTemplate: createCardTemplateDouble()
+      },
+      t,
+      dateTimeFormatter: createDateTimeFormatterDouble()
+    });
+
+    const backlogCardBefore = regions.desktopColumns.children[0].cardsContainer.children[0];
+
+    board.title = 'Identity board renamed';
+
+    renderBoardState({
+      board,
+      canReadBoard: true,
+      canEditBoard: true,
+      regions,
+      templates: {
+        columnTemplate: createColumnTemplateDouble(),
+        cardTemplate: createCardTemplateDouble()
+      },
+      t,
+      dateTimeFormatter: createDateTimeFormatterDouble()
+    });
+
+    assert.equal(regions.desktopColumns.children[0].cardsContainer.children[0], backlogCardBefore);
+  });
+});
+
+test('renderBoardState skips preview recompute for unchanged cards on rerender', () => {
+  const board = createWorkspaceBoard({
+    id: 'board_preview_cache',
+    title: 'Preview board',
+    createdAt: '2026-03-31T10:00:00.000Z',
+    updatedAt: '2026-03-31T10:00:00.000Z'
+  });
+  const regions = {
+    boardTitle: { textContent: '' },
+    desktopColumns: createRegionDouble()
+  };
+  const t = Object.assign(
+    (key, values = {}) => (key === 'workspace.cardCount' ? String(values.count ?? 0) : key),
+    { locale: 'en' }
+  );
+  const tracker = createMarkdownTracker();
+
+  board.cards.card_backlog = createCardRecord({
+    id: 'card_backlog',
+    title: 'Backlog card',
+    detailsMarkdown: 'Backlog details'
+  });
+  board.stages.backlog.cardIds = ['card_backlog'];
+  board.languagePolicy = {
+    sourceLocale: 'en',
+    defaultLocale: 'en',
+    supportedLocales: ['en'],
+    requiredLocales: ['en']
+  };
+
+  withMarkdownEnvironment(() => {
+    renderBoardState({
+      board,
+      canReadBoard: true,
+      canEditBoard: true,
+      regions,
+      templates: {
+        columnTemplate: createColumnTemplateDouble(),
+        cardTemplate: createCardTemplateDouble()
+      },
+      t,
+      dateTimeFormatter: createDateTimeFormatterDouble()
+    });
+
+    board.title = 'Preview board renamed';
+
+    renderBoardState({
+      board,
+      canReadBoard: true,
+      canEditBoard: true,
+      regions,
+      templates: {
+        columnTemplate: createColumnTemplateDouble(),
+        cardTemplate: createCardTemplateDouble()
+      },
+      t,
+      dateTimeFormatter: createDateTimeFormatterDouble()
+    });
+  }, { tracker });
+
+  assert.equal(tracker.parseCount, 1);
+  assert.equal(tracker.sanitizeCount, 1);
+  assert.equal(tracker.createElementCount, 1);
+});
+
+function withMarkdownEnvironment(action, { tracker = createMarkdownTracker() } = {}) {
   const previousWindow = globalThis.window;
   const previousDocument = globalThis.document;
 
   globalThis.window = {
     marked: {
       parse(markdown) {
+        tracker.parseCount += 1;
         return String(markdown ?? '')
           .replace(/^#{1,6}\s+/gm, '')
           .replace(/\*\*(.*?)\*\*/g, '$1');
@@ -461,12 +657,14 @@ function withMarkdownEnvironment(action) {
     },
     DOMPurify: {
       sanitize(value) {
+        tracker.sanitizeCount += 1;
         return String(value ?? '');
       }
     }
   };
   globalThis.document = {
     createElement() {
+      tracker.createElementCount += 1;
       let textContent = '';
 
       return {
@@ -489,13 +687,32 @@ function withMarkdownEnvironment(action) {
 }
 
 function createRegionDouble(initialChildren = []) {
-  return {
+  const region = {
+    dataset: {},
     hidden: false,
-    children: [...initialChildren],
+    children: [],
+    replaceChildrenCalls: 0,
+    appendChild(node) {
+      appendChildToContainer(this, node);
+    },
+    insertBefore(node, referenceNode) {
+      insertBeforeInContainer(this, node, referenceNode);
+    },
     replaceChildren(...nodes) {
-      this.children = nodes;
+      this.replaceChildrenCalls += 1;
+      this.children = [];
+
+      for (const node of nodes) {
+        appendChildToContainer(this, node);
+      }
     }
   };
+
+  for (const child of initialChildren) {
+    appendChildToContainer(region, child);
+  }
+
+  return region;
 }
 
 function createColumnTemplateDouble() {
@@ -515,7 +732,7 @@ function createCardTemplateDouble() {
     content: {
       firstElementChild: {
         cloneNode() {
-          return {};
+          return createCardNodeDouble();
         }
       }
     }
@@ -535,23 +752,34 @@ function createInspectableCardTemplateDouble() {
 }
 
 function createInspectableCardNodeDouble() {
+  return createCardNodeDouble({ inspectQueries: true });
+}
+
+function createCardNodeDouble({ inspectQueries = false } = {}) {
   const queriedSelectors = [];
   const titleElement = { textContent: '' };
   const previewElement = {
     textContent: '',
+    hidden: false,
     classList: {
-      toggle() {}
+      toggle(className, isHidden) {
+        if (className === 'hidden') {
+          previewElement.hidden = Boolean(isHidden);
+        }
+      }
     }
   };
   const metaElement = { textContent: '' };
   const toolbarTrigger = { dataset: {} };
-
-  return {
+  const cardNode = {
     dataset: {},
+    parentNode: null,
     toolbarTrigger,
     queriedSelectors,
     querySelector(selector) {
-      queriedSelectors.push(selector);
+      if (inspectQueries) {
+        queriedSelectors.push(selector);
+      }
 
       switch (selector) {
         case '[data-card-field="title"]':
@@ -576,8 +804,13 @@ function createInspectableCardNodeDouble() {
       }
 
       return [];
+    },
+    remove() {
+      removeChildFromContainer(this.parentNode, this);
     }
   };
+
+  return cardNode;
 }
 
 function createColumnPanelDouble() {
@@ -619,20 +852,15 @@ function createColumnPanelDouble() {
     id: '',
     hidden: false
   };
-  const cardsContainer = {
-    innerHTML: '',
-    children: [],
-    appendChild(node) {
-      this.children.push(node);
-    }
-  };
-
-  return {
+  const cardsContainer = createContainerDouble();
+  const columnPanel = {
     dataset: {},
+    parentNode: null,
     titleToggleElement,
     chipToggleElement,
     toggleElements,
     createButton,
+    bodyElement,
     cardsContainer,
     querySelector(selector) {
       switch (selector) {
@@ -660,6 +888,107 @@ function createColumnPanelDouble() {
       }
 
       return [];
+    },
+    remove() {
+      removeChildFromContainer(this.parentNode, this);
     }
+  };
+
+  cardsContainer.parentNode = columnPanel;
+
+  return columnPanel;
+}
+
+function createContainerDouble() {
+  return {
+    dataset: {},
+    children: [],
+    parentNode: null,
+    appendChild(node) {
+      appendChildToContainer(this, node);
+    },
+    insertBefore(node, referenceNode) {
+      insertBeforeInContainer(this, node, referenceNode);
+    }
+  };
+}
+
+function appendChildToContainer(container, node) {
+  if (!container || node == null) {
+    return;
+  }
+
+  removeChildFromContainer(node?.parentNode ?? null, node);
+  container.children.push(node);
+
+  if (node && typeof node === 'object') {
+    node.parentNode = container;
+  }
+}
+
+function insertBeforeInContainer(container, node, referenceNode) {
+  if (!container || node == null) {
+    return;
+  }
+
+  removeChildFromContainer(node?.parentNode ?? null, node);
+
+  const insertionIndex = referenceNode == null ? -1 : container.children.indexOf(referenceNode);
+
+  if (insertionIndex === -1) {
+    container.children.push(node);
+  } else {
+    container.children.splice(insertionIndex, 0, node);
+  }
+
+  if (node && typeof node === 'object') {
+    node.parentNode = container;
+  }
+}
+
+function removeChildFromContainer(container, node) {
+  if (!container || !Array.isArray(container.children)) {
+    return;
+  }
+
+  const childIndex = container.children.indexOf(node);
+
+  if (childIndex >= 0) {
+    container.children.splice(childIndex, 1);
+  }
+
+  if (node && typeof node === 'object') {
+    node.parentNode = null;
+  }
+}
+
+function createCardRecord({ id, title, detailsMarkdown }) {
+  return {
+    id,
+    priority: 'important',
+    createdAt: '2026-03-31T10:00:00.000Z',
+    updatedAt: '2026-03-31T10:30:00.000Z',
+    contentByLocale: {
+      en: {
+        title,
+        detailsMarkdown
+      }
+    }
+  };
+}
+
+function createDateTimeFormatterDouble() {
+  return {
+    format() {
+      return 'Apr 1, 2026, 8:00 AM';
+    }
+  };
+}
+
+function createMarkdownTracker() {
+  return {
+    createElementCount: 0,
+    parseCount: 0,
+    sanitizeCount: 0
   };
 }

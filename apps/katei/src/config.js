@@ -1,6 +1,4 @@
 const DEFAULT_SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
-const TEST_BOARD_SECRET_ENCRYPTION_KEY = 'katei-test-board-secret-encryption-key';
-
 export function createRuntimeConfig(env = process.env) {
   const nodeEnv = normalizeOptionalString(env.NODE_ENV) || 'development';
   const appBaseUrl = normalizeOptionalString(env.APP_BASE_URL) || (nodeEnv === 'development' ? `http://localhost:${Number(env.PORT) || 3000}` : '');
@@ -8,7 +6,7 @@ export function createRuntimeConfig(env = process.env) {
   const mongoDbName = requireNonEmptyEnv('MONGODB_DB_NAME', env.MONGODB_DB_NAME);
   const sessionTtlSeconds = parseSessionTtlSeconds(normalizeOptionalString(env.SESSION_TTL_SECONDS) || String(DEFAULT_SESSION_TTL_SECONDS));
   const debugAuth = createDebugAuthConfig(env);
-  const boardSecretEncryptionKey = resolveBoardSecretEncryptionKey(env.KATEI_BOARD_SECRET_ENCRYPTION_KEY, nodeEnv);
+  const boardSecretEncryptionKey = requireNonEmptyEnv('KATEI_BOARD_SECRET_ENCRYPTION_KEY', env.KATEI_BOARD_SECRET_ENCRYPTION_KEY);
 
   return {
     nodeEnv,
@@ -59,14 +57,12 @@ export function parseSessionTtlSeconds(rawValue) {
 
 function createDebugAuthConfig(env = process.env) {
   const enabled = parseBooleanEnv(normalizeOptionalString(env.KATEI_DEBUG_AUTH_ENABLED) || 'false');
-  const secret = normalizeOptionalString(env.KATEI_DEBUG_AUTH_SECRET);
+  const secret = enabled
+    ? requireNonEmptyEnv('KATEI_DEBUG_AUTH_SECRET', env.KATEI_DEBUG_AUTH_SECRET)
+    : normalizeOptionalString(env.KATEI_DEBUG_AUTH_SECRET);
   const viewerSub = normalizeOptionalString(env.KATEI_DEBUG_AUTH_VIEWER_SUB);
   const viewerEmail = normalizeOptionalEmail(env.KATEI_DEBUG_AUTH_VIEWER_EMAIL) || 'test@example.com';
   const viewerName = normalizeOptionalString(env.KATEI_DEBUG_AUTH_VIEWER_NAME) || 'John Doe';
-
-  if (enabled && !secret) {
-    throw new Error('KATEI_DEBUG_AUTH_SECRET is required when KATEI_DEBUG_AUTH_ENABLED is true.');
-  }
 
   if (enabled && !viewerSub) {
     throw new Error('KATEI_DEBUG_AUTH_VIEWER_SUB is required when KATEI_DEBUG_AUTH_ENABLED is true.');
@@ -101,20 +97,6 @@ function parseBooleanEnv(rawValue) {
   }
 
   throw new Error('KATEI_DEBUG_AUTH_ENABLED must be a boolean-like value.');
-}
-
-function resolveBoardSecretEncryptionKey(rawValue, nodeEnv) {
-  const normalizedValue = normalizeOptionalString(rawValue);
-
-  if (normalizedValue) {
-    return normalizedValue;
-  }
-
-  if (nodeEnv === 'test') {
-    return TEST_BOARD_SECRET_ENCRYPTION_KEY;
-  }
-
-  throw new Error('KATEI_BOARD_SECRET_ENCRYPTION_KEY is required.');
 }
 
 function requireNonEmptyEnv(name, value) {
