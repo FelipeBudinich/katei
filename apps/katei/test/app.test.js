@@ -280,8 +280,10 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
     /class="touch-button-secondary touch-button-secondary--icon"[\s\S]*?data-action="workspace#openProfileOptions"[\s\S]*?aria-label="Profile"[\s\S]*?<img src="\/profile\.svg" alt="" aria-hidden="true" class="touch-button-secondary__icon">/
   );
   assert.match(response.text, /id="profile-options-ui-locale-picker"/);
-  assert.match(response.text, /<form method="get" action="\/boards" class="ui-locale-picker">/);
-  assert.match(response.text, /onchange="this\.form\.submit\(\)"/);
+  assert.match(
+    response.text,
+    /<form[\s\S]*?method="get"[\s\S]*?action="\/boards"[\s\S]*?class="ui-locale-picker ui-locale-picker--icon-menu"[\s\S]*?data-controller="ui-locale-picker"/
+  );
   assert.match(response.text, /data-board-options-field="inviteAcceptButton"/);
   assert.match(response.text, /data-board-options-field="inviteDeclineButton"/);
   assert.match(response.text, /board-options:accept-invite->workspace#handleAcceptInvite/);
@@ -289,7 +291,6 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
 
   const boardOptionsDialog = extractDialogHtml(response.text, 'board-options');
   const boardCollaboratorsDialog = extractDialogHtml(response.text, 'board-collaborators');
-  const profileOptionsDialog = extractDialogHtml(response.text, 'profile-options');
 
   assert.doesNotMatch(boardOptionsDialog, /ui-locale-control-row/);
   assert.doesNotMatch(boardOptionsDialog, /session#logout/);
@@ -302,7 +303,7 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
   assert.match(boardOptionsDialog, /data-board-options-field="editButton"/);
   assert.match(
     boardOptionsDialog,
-    /class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--edit"[\s\S]*?aria-label="Edit"[\s\S]*?data-board-options-field="editButton"[\s\S]*?data-action="board-options#editBoard"[\s\S]*?<span class="sr-only">Edit<\/span>/
+    /class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--edit"[\s\S]*?aria-label="Edit Board"[\s\S]*?data-board-options-field="editButton"[\s\S]*?data-action="board-options#editBoard"[\s\S]*?<span class="sr-only">Edit Board<\/span>/
   );
   assert.doesNotMatch(
     boardOptionsDialog,
@@ -338,39 +339,19 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
     /class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--close"[\s\S]*?aria-label="Close"[\s\S]*?data-board-collaborators-initial-focus[\s\S]*?data-action="board-collaborators#close"[\s\S]*?<span class="sr-only">Close<\/span>/
   );
 
-  assert.match(profileOptionsDialog, /viewer-chip/);
-  assert.match(profileOptionsDialog, /ui-locale-control-row/);
-  assert.doesNotMatch(profileOptionsDialog, /ui-locale-badge/);
-  assert.match(
-    profileOptionsDialog,
-    /<div class="mt-4 grid gap-3 sm:grid-cols-\[minmax\(0,1fr\)_auto\] sm:items-center">\s*<div class="min-w-0">\s*<div class="viewer-chip">[\s\S]*?<\/div>\s*<\/div>\s*<div\s+class="dialog-actions"\s+data-controller="session"/
-  );
-  assert.match(profileOptionsDialog, /<form method="get" action="\/boards" class="ui-locale-picker">/);
-  assert.match(profileOptionsDialog, /id="profile-options-ui-locale-picker"/);
-  assert.match(profileOptionsDialog, /<option value="en" selected>\s*English\s*<\/option>/);
-  assert.match(profileOptionsDialog, /onchange="this\.form\.submit\(\)"/);
-  assert.match(profileOptionsDialog, /data-controller="session"/);
-  assert.match(profileOptionsDialog, /data-session-auth-url-value="\/auth\/logout"/);
-  assert.match(profileOptionsDialog, /data-session-redirect-url-value="\/"/);
-  assert.match(profileOptionsDialog, /session#logout/);
-  assert.match(
-    profileOptionsDialog,
-    /class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--close"[\s\S]*?aria-label="Close"[\s\S]*?data-profile-options-initial-focus[\s\S]*?data-action="profile-options#close"[\s\S]*?<span class="sr-only">Close<\/span>/
-  );
-
-  const profileLocaleRowIndex = profileOptionsDialog.indexOf('ui-locale-control-row mt-4');
-  const profileIdentityActionsIndex = profileOptionsDialog.indexOf(
-    'mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center'
-  );
-  const profileViewerChipIndex = profileOptionsDialog.indexOf('viewer-chip');
-  const profileSessionActionsIndex = profileOptionsDialog.indexOf('data-controller="session"');
-  assert.notEqual(profileLocaleRowIndex, -1);
-  assert.notEqual(profileIdentityActionsIndex, -1);
-  assert.notEqual(profileViewerChipIndex, -1);
-  assert.notEqual(profileSessionActionsIndex, -1);
-  assert.ok(profileLocaleRowIndex < profileIdentityActionsIndex);
-  assert.ok(profileIdentityActionsIndex < profileViewerChipIndex);
-  assert.ok(profileViewerChipIndex < profileSessionActionsIndex);
+  assert.match(response.text, /data-controller="profile-options"/);
+  assert.match(response.text, /profile-options-locale-slot/);
+  assert.match(response.text, /viewer-chip/);
+  assert.match(response.text, /data-controller="session"/);
+  assert.match(response.text, /data-session-target="logoutButton"/);
+  assert.match(response.text, /session#openLogoutConfirm/);
+  assert.match(response.text, /class="sheet-dialog confirm-dialog"/);
+  assert.match(response.text, /data-session-target="confirmDialog"/);
+  assert.match(response.text, /click->session#backdropCloseConfirmDialog cancel->session#closeConfirmDialog/);
+  assert.match(response.text, /data-session-target="confirmTitle"/);
+  assert.match(response.text, /data-session-target="confirmMessage"/);
+  assert.match(response.text, /data-session-target="confirmButton"/);
+  assert.match(response.text, /session#confirmLogout/);
 });
 
 test('GET /boards?lang=ja renders localized card content in server HTML and keeps bootstrap content aligned', async () => {
@@ -607,9 +588,12 @@ test('workspace template renders the no-board header with both Options and Profi
   assert.match(html, /id="profile-options-ui-locale-picker"/);
   assert.match(html, /data-controller="profile-options"/);
   assert.doesNotMatch(html, /ui-locale-badge/);
-  assert.match(html, /<form method="get" action="\/boards" class="ui-locale-picker">/);
+  assert.match(
+    html,
+    /<form[\s\S]*?method="get"[\s\S]*?action="\/boards"[\s\S]*?class="ui-locale-picker ui-locale-picker--icon-menu"[\s\S]*?data-controller="ui-locale-picker"/
+  );
   assert.match(html, /<option value="en" selected>\s*English\s*<\/option>/);
-  assert.match(html, /onchange="this\.form\.submit\(\)"/);
+  assert.match(html, /role="menuitemradio"/);
   assert.match(html, /No Boards Viewer/);
 
   const boardOptionsDialog = extractDialogHtml(html, 'board-options');
@@ -1077,7 +1061,7 @@ test('GET /boards localizes server-rendered chrome for ja without changing user-
   assert.match(response.text, /<html lang="ja" data-ui-locale="ja">/);
   assert.match(response.text, /サインイン済み/);
   assert.match(response.text, />\s*オプション\s*</);
-  assert.match(response.text, />\s*カードを追加\s*</);
+  assert.match(response.text, /aria-label="カードを追加"/);
   assert.match(response.text, /data-workspace-target="boardTitle">過程</);
   assert.match(response.text, />Tester</);
   assert.match(response.text, />\s*Backlog\s*</);

@@ -32,6 +32,8 @@ const EN_MESSAGES = freezeCatalog({
     }
   },
   session: {
+    logoutConfirmTitle: 'Log out?',
+    logoutConfirmMessage: 'You will be signed out of Katei on this device.',
     signingOut: 'Signing out...',
     signOutUnavailable: 'Unable to sign out right now.'
   },
@@ -415,6 +417,8 @@ const ES_CL_MESSAGES = freezeCatalog({
     }
   },
   session: {
+    logoutConfirmTitle: '¿Cerrar sesión?',
+    logoutConfirmMessage: 'Se cerrará tu sesión de Katei en este dispositivo.',
     signingOut: 'Cerrando sesión...',
     signOutUnavailable: 'No se pudo cerrar sesión en este momento.'
   },
@@ -799,6 +803,8 @@ const JA_MESSAGES = freezeCatalog({
     }
   },
   session: {
+    logoutConfirmTitle: 'ログアウトしますか？',
+    logoutConfirmMessage: 'この端末で Katei からログアウトします。',
     signingOut: 'ログアウトしています...',
     signOutUnavailable: '現在はログアウトできません。'
   },

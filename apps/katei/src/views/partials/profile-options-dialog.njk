@@ -44,7 +44,48 @@
         data-session-auth-url-value="/auth/logout"
         data-session-redirect-url-value="/"
       >
-        <button type="button" class="touch-button-secondary" data-action="session#logout">{{ t('common.logout') }}</button>
+        <button
+          type="button"
+          class="touch-button-secondary"
+          data-session-target="logoutButton"
+          data-action="session#openLogoutConfirm"
+        >
+          {{ t('common.logout') }}
+        </button>
+        <dialog
+          class="sheet-dialog confirm-dialog"
+          data-session-target="confirmDialog"
+          data-action="click->session#backdropCloseConfirmDialog cancel->session#closeConfirmDialog"
+        >
+          <div class="confirm-panel">
+            <div class="space-y-2">
+              <h2 class="font-serif text-3xl text-strong" data-session-target="confirmTitle">
+                {{ t('session.logoutConfirmTitle') }}
+              </h2>
+              <p class="text-sm leading-6 text-muted" data-session-target="confirmMessage">
+                {{ t('session.logoutConfirmMessage') }}
+              </p>
+            </div>
+
+            <div class="confirm-actions dialog-actions mt-6">
+              <button
+                type="button"
+                class="touch-button-secondary"
+                data-action="session#closeConfirmDialog"
+              >
+                {{ t('common.cancel') }}
+              </button>
+              <button
+                type="button"
+                class="touch-button-danger"
+                data-session-target="confirmButton"
+                data-action="session#confirmLogout"
+              >
+                {{ t('common.logout') }}
+              </button>
+            </div>
+          </div>
+        </dialog>
         <p class="sr-only" aria-live="polite" data-session-target="status"></p>
       </div>
     </div>
