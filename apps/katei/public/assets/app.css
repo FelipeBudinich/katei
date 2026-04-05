@@ -731,6 +731,10 @@
     grid-column: 3;
     min-height: 100%;
   }
+  .column-header-toggle-chip-button > .count-chip {
+    min-height: 100%;
+    align-items: center;
+  }
   .column-header-create {
     grid-column: 2;
     margin: 0;
