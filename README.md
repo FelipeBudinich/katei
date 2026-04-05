@@ -226,3 +226,4 @@ Current generated navigation and inventory artifacts:
 - `apps/katei/docs/env-inventory.json`
 - `apps/katei/docs/filetree.html`
 - `apps/katei/docs/filetree.json`
+☹

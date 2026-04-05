@@ -1,5 +1,3 @@
-import { startRenderDebugTimer } from './render_debug.js';
-
 const PREVIEW_ELLIPSIS = '…';
 
 export function markdownToHtml(markdown) {
@@ -12,9 +10,6 @@ export function renderMarkdownInto(element, markdown) {
 }
 
 export function markdownToPreviewText(markdown, maxLength = 160) {
-  const finishDebugTimer = startRenderDebugTimer('markdownToPreviewText', {
-    maxLength
-  });
   const html = markdownToHtml(markdown);
   const previewContainer = getDetachedContainer();
   previewContainer.innerHTML = html;
@@ -23,37 +18,18 @@ export function markdownToPreviewText(markdown, maxLength = 160) {
   const normalizedMaxLength = normalizeMaxLength(maxLength);
 
   if (previewText.length <= normalizedMaxLength) {
-    finishDebugTimer({
-      previewLength: previewText.length,
-      truncated: false
-    });
     return previewText;
   }
 
   if (normalizedMaxLength === 0) {
-    finishDebugTimer({
-      previewLength: 0,
-      truncated: true
-    });
     return '';
   }
 
   if (normalizedMaxLength <= PREVIEW_ELLIPSIS.length) {
-    finishDebugTimer({
-      previewLength: PREVIEW_ELLIPSIS.length,
-      truncated: true
-    });
     return PREVIEW_ELLIPSIS;
   }
 
-  const nextPreviewText = `${previewText.slice(0, normalizedMaxLength - PREVIEW_ELLIPSIS.length).trimEnd()}${PREVIEW_ELLIPSIS}`;
-
-  finishDebugTimer({
-    previewLength: nextPreviewText.length,
-    truncated: previewText.length > normalizedMaxLength
-  });
-
-  return nextPreviewText;
+  return `${previewText.slice(0, normalizedMaxLength - PREVIEW_ELLIPSIS.length).trimEnd()}${PREVIEW_ELLIPSIS}`;
 }
 
 function getDetachedContainer() {

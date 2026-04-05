@@ -5,7 +5,6 @@ import { localizeErrorMessage } from '../i18n/errors.js';
 import { getPriorityDisplayLabel } from '../i18n/workspace_labels.js';
 import { logInviteAcceptDebug, logInviteDebug } from '../lib/invite_debug.js';
 import { renderMarkdownInto } from '../lib/markdown.js';
-import { recordRenderDebugEvent, startRenderDebugTimer } from '../lib/render_debug.js';
 import { HttpWorkspaceRepository } from '../repositories/http_workspace_repository.js';
 import { renderBoardState } from '../renderers/board_renderer.js';
 import { WorkspaceService } from '../services/workspace_service.js';
@@ -73,7 +72,6 @@ export default class extends Controller {
     this.handlePopState = this.handlePopState.bind(this);
     this.nextWorkspaceHistoryAction = 'replace';
     this.hasSyncedWorkspaceHistory = false;
-    this.renderInvocationCount = 0;
 
     if (!this.hasViewerSubValue || !this.viewerSubValue.trim()) {
       console.error('Workspace viewer sub is missing.');
@@ -232,9 +230,6 @@ export default class extends Controller {
 
   async handleBoardSwitch(event) {
     const detail = event?.detail ?? {};
-    const finishDebugTimer = startRenderDebugTimer('workspaceController.handleBoardSwitch', {
-      detail
-    });
     const boardId = normalizeOptionalWorkspaceId(detail.boardId);
     const targetWorkspaceId = normalizeOptionalWorkspaceId(detail.workspaceId)
       ?? normalizeOptionalWorkspaceId(this.workspace?.workspaceId);
@@ -244,20 +239,11 @@ export default class extends Controller {
       || this.t('workspace.fallbackBoardTitle');
 
     if (!boardId) {
-      finishDebugTimer({
-        ok: false,
-        reason: 'missing-board-id'
-      });
       return;
     }
 
     if (targetWorkspaceId === currentWorkspaceId) {
       if (boardId === this.workspace?.ui?.activeBoardId) {
-        finishDebugTimer({
-          ok: true,
-          mode: 'same-workspace',
-          skipped: true
-        });
         return;
       }
 
@@ -265,9 +251,6 @@ export default class extends Controller {
         () => this.service.setActiveBoard(boardId),
         this.t('workspace.announcements.switchedBoard', { title: boardTitle })
       );
-      finishDebugTimer({
-        mode: 'same-workspace'
-      });
       return;
     }
 
@@ -289,11 +272,6 @@ export default class extends Controller {
       this.queueWorkspaceHistoryAction('push');
       this.render();
       this.announce(this.t('workspace.announcements.switchedBoard', { title: boardTitle }));
-      finishDebugTimer({
-        mode: 'cross-workspace',
-        activeWorkspaceId: this.workspace?.workspaceId ?? null,
-        activeBoardId: this.workspace?.ui?.activeBoardId ?? null
-      });
     } catch (error) {
       if (switchedWorkspace) {
         this.workspace = switchedWorkspace;
@@ -305,10 +283,6 @@ export default class extends Controller {
 
       console.error(error);
       this.announce(localizeErrorMessage(error, this.t));
-      finishDebugTimer({
-        ok: false,
-        error: String(error?.message ?? error)
-      });
     }
   }
 
@@ -938,9 +912,6 @@ export default class extends Controller {
   }
 
   async runAction(action, successMessage = '') {
-    const finishDebugTimer = startRenderDebugTimer('workspaceController.runAction', {
-      successMessage
-    });
     try {
       const nextWorkspace = await action();
       this.workspace = nextWorkspace;
@@ -950,20 +921,10 @@ export default class extends Controller {
         this.announce(successMessage);
       }
 
-      finishDebugTimer({
-        ok: true,
-        workspaceId: nextWorkspace?.workspaceId ?? null,
-        activeBoardId: nextWorkspace?.ui?.activeBoardId ?? null
-      });
-
       return true;
     } catch (error) {
       console.error(error);
       this.announce(localizeErrorMessage(error, this.t));
-      finishDebugTimer({
-        ok: false,
-        error: String(error?.message ?? error)
-      });
       return false;
     }
   }
@@ -1025,24 +986,9 @@ export default class extends Controller {
   }
 
   render() {
-    const debugContext = this.service?.getDebugContext?.() ?? {};
-    const activeBoardRenderKey = this.getActiveBoardRenderKey();
-    const nextRenderCount = Number.isInteger(this.renderInvocationCount) ? this.renderInvocationCount + 1 : 1;
-    const finishDebugTimer = startRenderDebugTimer('workspaceController.render', {
-      renderCount: nextRenderCount,
-      workspaceId: this.workspace?.workspaceId ?? null,
-      activeBoardId: this.activeBoard?.id ?? null,
-      boardRenderKey: activeBoardRenderKey,
-      revisionSource: debugContext.revisionSource ?? null,
-      isBootstrapRender: debugContext.revisionSource === 'bootstrap' && nextRenderCount === 1
-    });
     const activeBoardState = this.activeBoardCollaborationState;
 
     if (!this.workspace) {
-      finishDebugTimer({
-        ok: false,
-        reason: 'missing-workspace'
-      });
       return;
     }
 
@@ -1068,12 +1014,6 @@ export default class extends Controller {
         boardId: null
       });
       this.syncWorkspaceHistory();
-      this.renderInvocationCount = nextRenderCount;
-      finishDebugTimer({
-        ok: true,
-        renderCount: nextRenderCount,
-        renderedBoard: false
-      });
       return;
     }
 
@@ -1084,9 +1024,8 @@ export default class extends Controller {
         : '';
     }
 
-    const renderMetrics = renderBoardState({
+    renderBoardState({
       board: this.activeBoard,
-      boardRenderKey: activeBoardRenderKey,
       collapsedColumns: this.getCollapsedColumnsForBoard(this.activeBoard),
       canReadBoard: activeBoardState.canRead,
       canEditBoard: activeBoardState.canEdit,
@@ -1106,31 +1045,6 @@ export default class extends Controller {
       boardId: this.activeBoard.id
     });
     this.syncWorkspaceHistory();
-    this.renderInvocationCount = nextRenderCount;
-    finishDebugTimer({
-      ok: true,
-      renderCount: nextRenderCount,
-      renderedBoard: true,
-      ...renderMetrics
-    });
-    recordRenderDebugEvent('workspaceController.render:summary', {
-      renderCount: nextRenderCount,
-      workspaceId: this.workspace?.workspaceId ?? null,
-      activeBoardId: this.activeBoard?.id ?? null,
-      revisionSource: debugContext.revisionSource ?? null,
-      ...renderMetrics
-    });
-  }
-
-  getActiveBoardRenderKey() {
-    const workspaceId = normalizeOptionalWorkspaceId(this.workspace?.workspaceId);
-    const boardId = normalizeOptionalWorkspaceId(this.activeBoard?.id);
-
-    if (!workspaceId && !boardId) {
-      return '';
-    }
-
-    return `${workspaceId ?? ''}:${boardId ?? ''}`;
   }
 
   announce(message) {
