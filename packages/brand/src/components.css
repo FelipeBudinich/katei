@@ -42,6 +42,8 @@
     border-bottom-left-radius: var(--radius-column-bottom);
     border-bottom-right-radius: var(--radius-column-bottom);
     background-color: var(--color-bg-column);
+    -webkit-backdrop-filter: blur(10.5px);
+    backdrop-filter: blur(10.5px);
   }
 
   .column-panel-header {
