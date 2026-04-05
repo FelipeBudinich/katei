@@ -61,10 +61,11 @@
   .column-header-row {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto auto;
-    align-items: stretch;
+    align-items: baseline;
     height: 100%;
     gap: calc(var(--spacing) * 3);
     padding-inline: calc(var(--spacing) * 4);
+    padding-block: calc(var(--spacing) * 4);
   }
 
   .column-header-toggle {
@@ -76,26 +77,28 @@
   }
 
   .column-header-toggle-title-button {
-    display: grid;
-    align-items: center;
-    justify-items: start;
+    display: inline-flex;
+    align-items: baseline;
+    justify-content: flex-start;
     min-width: 0;
     text-align: left;
-    padding-block: calc(var(--spacing) * 4);
+    min-height: auto;
+    padding-block: 0;
+    align-self: baseline;
   }
 
   .column-header-chip-control {
-    display: inline-grid;
-    align-items: center;
-    justify-items: end;
-    min-height: 100%;
-    padding-block: calc(var(--spacing) * 4);
+    display: inline-flex;
+    align-items: baseline;
+    justify-content: flex-end;
+    min-height: auto;
+    padding-block: 0;
     padding-inline: 0;
     background: none;
     border: 0;
     color: inherit;
     cursor: pointer;
-    transform: translateY(0.06rem);
+    align-self: baseline;
   }
 
   .column-header-toggle-chip-button {
