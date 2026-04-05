@@ -76,12 +76,12 @@
     
       <article class="paper-panel env-inventory-status-card env-inventory-status-card--warning">
         <div class="env-inventory-status-label">No fallback observed</div>
-        <div class="env-inventory-status-value">6</div>
+        <div class="env-inventory-status-value">3</div>
       </article>
     
       <article class="paper-panel env-inventory-status-card env-inventory-status-card--good">
         <div class="env-inventory-status-label">Fallbacks observed</div>
-        <div class="env-inventory-status-value">7</div>
+        <div class="env-inventory-status-value">10</div>
       </article>
     
       <article class="paper-panel env-inventory-status-card env-inventory-status-card--good">
@@ -340,8 +340,8 @@
           </div>
           
               <div class="env-inventory-snippet">
-                <div class="text-sm leading-6 text-muted"># Optional MongoDB database name used for server-owned workspace persistence.</div>
-                <code class="env-inventory-inline-code">MONGODB_DB_NAME=</code>
+                <div class="text-sm leading-6 text-muted"># Required MongoDB database name used for server-owned workspace persistence.</div>
+                <code class="env-inventory-inline-code">MONGODB_DB_NAME=katei_test</code>
               </div>
             
         </li>
@@ -419,8 +419,8 @@
           </div>
           
               <div class="env-inventory-snippet">
-                <div class="text-sm leading-6 text-muted"># Optional MongoDB connection string used for server-owned workspace persistence.</div>
-                <code class="env-inventory-inline-code">MONGODB_URI=</code>
+                <div class="text-sm leading-6 text-muted"># Required MongoDB connection string used for server-owned workspace persistence.</div>
+                <code class="env-inventory-inline-code">MONGODB_URI=mongodb://127.0.0.1:27017</code>
               </div>
             
         </li>
@@ -613,243 +613,6 @@
               <div class="env-inventory-snippet">
                 
                 <code class="env-inventory-inline-code">const secret = normalizeOptionalString(env.KATEI_DEBUG_AUTH_SECRET);</code>
-              </div>
-            
-        </li>
-      
-    </ul>
-  
-          </section>
-        </div>
-      </div>
-    </details>
-  
-    <details class="paper-panel env-inventory-variable-card" data-env-variable-card="KATEI_DEBUG_AUTH_ENABLED" data-variable-status="required">
-      <summary>
-        <div class="env-inventory-variable-summary">
-          <div class="env-inventory-variable-heading">
-            <h3 class="font-serif text-2xl text-strong env-inventory-variable-name">KATEI_DEBUG_AUTH_ENABLED</h3>
-            <div class="env-inventory-chip-row mt-3"><span class="count-chip env-inventory-chip env-inventory-chip--warning">No fallback observed</span><span class="count-chip env-inventory-chip">App</span></div>
-          </div>
-          <div class="env-inventory-variable-counts">
-            <span class="count-chip env-inventory-chip"><strong>1</strong>&nbsp;defs</span>
-            <span class="count-chip env-inventory-chip"><strong>1</strong>&nbsp;uses</span>
-          </div>
-        </div>
-      </summary>
-      <div class="env-inventory-variable-body">
-        <div class="env-inventory-variable-meta">
-          <div class="space-y-2">
-            <p class="field-label text-sm font-semibold">Definition kinds</p>
-            <p class="text-sm leading-6 text-muted">EnvFile</p>
-          </div>
-          <div class="space-y-2">
-            <p class="field-label text-sm font-semibold">Usage kinds</p>
-            <p class="text-sm leading-6 text-muted">Read</p>
-          </div>
-          <div class="space-y-2">
-            <p class="field-label text-sm font-semibold">Primary usage</p>
-            <div><code class="env-inventory-inline-code">apps/katei/src/config.js:61</code></div>
-          </div>
-        </div>
-        <div class="env-inventory-split-grid">
-          <section>
-            <div class="env-inventory-section-header">
-              <h4 class="font-serif text-2xl text-strong">Definitions</h4>
-            </div>
-            
-    <ul class="env-inventory-occurrence-list">
-      
-        <li class="env-inventory-occurrence-item">
-          <div class="env-inventory-occurrence-top">
-            <code class="env-inventory-inline-code">apps/katei/.env.example:26</code>
-            <span class="text-sm leading-6 text-muted">EnvFile · App</span>
-          </div>
-          
-              <div class="env-inventory-snippet">
-                <div class="text-sm leading-6 text-muted"># Optional guarded hosted debug login toggle. When true, POST /__debug/login can mint a Katei session for the configured debug viewer.</div>
-                <code class="env-inventory-inline-code">KATEI_DEBUG_AUTH_ENABLED=false</code>
-              </div>
-            
-        </li>
-      
-    </ul>
-  
-          </section>
-          <section>
-            <div class="env-inventory-section-header">
-              <h4 class="font-serif text-2xl text-strong">Usages</h4>
-            </div>
-            
-    <ul class="env-inventory-occurrence-list">
-      
-        <li class="env-inventory-occurrence-item">
-          <div class="env-inventory-occurrence-top">
-            <code class="env-inventory-inline-code">apps/katei/src/config.js:61</code>
-            <span class="text-sm leading-6 text-muted">Read · App</span>
-          </div>
-          
-              <div class="env-inventory-snippet">
-                
-                <code class="env-inventory-inline-code">const enabled = parseBooleanEnv(env.KATEI_DEBUG_AUTH_ENABLED);</code>
-              </div>
-            
-        </li>
-      
-    </ul>
-  
-          </section>
-        </div>
-      </div>
-    </details>
-  
-    <details class="paper-panel env-inventory-variable-card" data-env-variable-card="KATEI_DEBUG_AUTH_VIEWER_EMAIL" data-variable-status="required">
-      <summary>
-        <div class="env-inventory-variable-summary">
-          <div class="env-inventory-variable-heading">
-            <h3 class="font-serif text-2xl text-strong env-inventory-variable-name">KATEI_DEBUG_AUTH_VIEWER_EMAIL</h3>
-            <div class="env-inventory-chip-row mt-3"><span class="count-chip env-inventory-chip env-inventory-chip--warning">No fallback observed</span><span class="count-chip env-inventory-chip">App</span></div>
-          </div>
-          <div class="env-inventory-variable-counts">
-            <span class="count-chip env-inventory-chip"><strong>1</strong>&nbsp;defs</span>
-            <span class="count-chip env-inventory-chip"><strong>1</strong>&nbsp;uses</span>
-          </div>
-        </div>
-      </summary>
-      <div class="env-inventory-variable-body">
-        <div class="env-inventory-variable-meta">
-          <div class="space-y-2">
-            <p class="field-label text-sm font-semibold">Definition kinds</p>
-            <p class="text-sm leading-6 text-muted">EnvFile</p>
-          </div>
-          <div class="space-y-2">
-            <p class="field-label text-sm font-semibold">Usage kinds</p>
-            <p class="text-sm leading-6 text-muted">Read</p>
-          </div>
-          <div class="space-y-2">
-            <p class="field-label text-sm font-semibold">Primary usage</p>
-            <div><code class="env-inventory-inline-code">apps/katei/src/config.js:64</code></div>
-          </div>
-        </div>
-        <div class="env-inventory-split-grid">
-          <section>
-            <div class="env-inventory-section-header">
-              <h4 class="font-serif text-2xl text-strong">Definitions</h4>
-            </div>
-            
-    <ul class="env-inventory-occurrence-list">
-      
-        <li class="env-inventory-occurrence-item">
-          <div class="env-inventory-occurrence-top">
-            <code class="env-inventory-inline-code">apps/katei/.env.example:35</code>
-            <span class="text-sm leading-6 text-muted">EnvFile · App</span>
-          </div>
-          
-              <div class="env-inventory-snippet">
-                <div class="text-sm leading-6 text-muted"># Optional email for the debug viewer session.</div>
-                <code class="env-inventory-inline-code">KATEI_DEBUG_AUTH_VIEWER_EMAIL=</code>
-              </div>
-            
-        </li>
-      
-    </ul>
-  
-          </section>
-          <section>
-            <div class="env-inventory-section-header">
-              <h4 class="font-serif text-2xl text-strong">Usages</h4>
-            </div>
-            
-    <ul class="env-inventory-occurrence-list">
-      
-        <li class="env-inventory-occurrence-item">
-          <div class="env-inventory-occurrence-top">
-            <code class="env-inventory-inline-code">apps/katei/src/config.js:64</code>
-            <span class="text-sm leading-6 text-muted">Read · App</span>
-          </div>
-          
-              <div class="env-inventory-snippet">
-                
-                <code class="env-inventory-inline-code">const viewerEmail = normalizeOptionalEmail(env.KATEI_DEBUG_AUTH_VIEWER_EMAIL);</code>
-              </div>
-            
-        </li>
-      
-    </ul>
-  
-          </section>
-        </div>
-      </div>
-    </details>
-  
-    <details class="paper-panel env-inventory-variable-card" data-env-variable-card="KATEI_DEBUG_AUTH_VIEWER_NAME" data-variable-status="required">
-      <summary>
-        <div class="env-inventory-variable-summary">
-          <div class="env-inventory-variable-heading">
-            <h3 class="font-serif text-2xl text-strong env-inventory-variable-name">KATEI_DEBUG_AUTH_VIEWER_NAME</h3>
-            <div class="env-inventory-chip-row mt-3"><span class="count-chip env-inventory-chip env-inventory-chip--warning">No fallback observed</span><span class="count-chip env-inventory-chip">App</span></div>
-          </div>
-          <div class="env-inventory-variable-counts">
-            <span class="count-chip env-inventory-chip"><strong>1</strong>&nbsp;defs</span>
-            <span class="count-chip env-inventory-chip"><strong>1</strong>&nbsp;uses</span>
-          </div>
-        </div>
-      </summary>
-      <div class="env-inventory-variable-body">
-        <div class="env-inventory-variable-meta">
-          <div class="space-y-2">
-            <p class="field-label text-sm font-semibold">Definition kinds</p>
-            <p class="text-sm leading-6 text-muted">EnvFile</p>
-          </div>
-          <div class="space-y-2">
-            <p class="field-label text-sm font-semibold">Usage kinds</p>
-            <p class="text-sm leading-6 text-muted">Read</p>
-          </div>
-          <div class="space-y-2">
-            <p class="field-label text-sm font-semibold">Primary usage</p>
-            <div><code class="env-inventory-inline-code">apps/katei/src/config.js:65</code></div>
-          </div>
-        </div>
-        <div class="env-inventory-split-grid">
-          <section>
-            <div class="env-inventory-section-header">
-              <h4 class="font-serif text-2xl text-strong">Definitions</h4>
-            </div>
-            
-    <ul class="env-inventory-occurrence-list">
-      
-        <li class="env-inventory-occurrence-item">
-          <div class="env-inventory-occurrence-top">
-            <code class="env-inventory-inline-code">apps/katei/.env.example:38</code>
-            <span class="text-sm leading-6 text-muted">EnvFile · App</span>
-          </div>
-          
-              <div class="env-inventory-snippet">
-                <div class="text-sm leading-6 text-muted"># Optional display name for the debug viewer session.</div>
-                <code class="env-inventory-inline-code">KATEI_DEBUG_AUTH_VIEWER_NAME=</code>
-              </div>
-            
-        </li>
-      
-    </ul>
-  
-          </section>
-          <section>
-            <div class="env-inventory-section-header">
-              <h4 class="font-serif text-2xl text-strong">Usages</h4>
-            </div>
-            
-    <ul class="env-inventory-occurrence-list">
-      
-        <li class="env-inventory-occurrence-item">
-          <div class="env-inventory-occurrence-top">
-            <code class="env-inventory-inline-code">apps/katei/src/config.js:65</code>
-            <span class="text-sm leading-6 text-muted">Read · App</span>
-          </div>
-          
-              <div class="env-inventory-snippet">
-                
-                <code class="env-inventory-inline-code">const viewerName = normalizeOptionalString(env.KATEI_DEBUG_AUTH_VIEWER_NAME);</code>
               </div>
             
         </li>
@@ -1476,6 +1239,243 @@
       </div>
     </details>
   
+    <details class="paper-panel env-inventory-variable-card" data-env-variable-card="KATEI_DEBUG_AUTH_ENABLED" data-variable-status="optional">
+      <summary>
+        <div class="env-inventory-variable-summary">
+          <div class="env-inventory-variable-heading">
+            <h3 class="font-serif text-2xl text-strong env-inventory-variable-name">KATEI_DEBUG_AUTH_ENABLED</h3>
+            <div class="env-inventory-chip-row mt-3"><span class="count-chip env-inventory-chip env-inventory-chip--good">Fallback observed</span><span class="count-chip env-inventory-chip">App</span></div>
+          </div>
+          <div class="env-inventory-variable-counts">
+            <span class="count-chip env-inventory-chip"><strong>1</strong>&nbsp;defs</span>
+            <span class="count-chip env-inventory-chip"><strong>1</strong>&nbsp;uses</span>
+          </div>
+        </div>
+      </summary>
+      <div class="env-inventory-variable-body">
+        <div class="env-inventory-variable-meta">
+          <div class="space-y-2">
+            <p class="field-label text-sm font-semibold">Definition kinds</p>
+            <p class="text-sm leading-6 text-muted">EnvFile</p>
+          </div>
+          <div class="space-y-2">
+            <p class="field-label text-sm font-semibold">Usage kinds</p>
+            <p class="text-sm leading-6 text-muted">Default</p>
+          </div>
+          <div class="space-y-2">
+            <p class="field-label text-sm font-semibold">Primary usage</p>
+            <div><code class="env-inventory-inline-code">apps/katei/src/config.js:61</code></div>
+          </div>
+        </div>
+        <div class="env-inventory-split-grid">
+          <section>
+            <div class="env-inventory-section-header">
+              <h4 class="font-serif text-2xl text-strong">Definitions</h4>
+            </div>
+            
+    <ul class="env-inventory-occurrence-list">
+      
+        <li class="env-inventory-occurrence-item">
+          <div class="env-inventory-occurrence-top">
+            <code class="env-inventory-inline-code">apps/katei/.env.example:26</code>
+            <span class="text-sm leading-6 text-muted">EnvFile · App</span>
+          </div>
+          
+              <div class="env-inventory-snippet">
+                <div class="text-sm leading-6 text-muted"># Optional guarded hosted debug login toggle. When true, POST /__debug/login can mint a Katei session for the configured debug viewer.</div>
+                <code class="env-inventory-inline-code">KATEI_DEBUG_AUTH_ENABLED=false</code>
+              </div>
+            
+        </li>
+      
+    </ul>
+  
+          </section>
+          <section>
+            <div class="env-inventory-section-header">
+              <h4 class="font-serif text-2xl text-strong">Usages</h4>
+            </div>
+            
+    <ul class="env-inventory-occurrence-list">
+      
+        <li class="env-inventory-occurrence-item">
+          <div class="env-inventory-occurrence-top">
+            <code class="env-inventory-inline-code">apps/katei/src/config.js:61</code>
+            <span class="text-sm leading-6 text-muted">Default · App</span>
+          </div>
+          
+              <div class="env-inventory-snippet">
+                
+                <code class="env-inventory-inline-code">const enabled = parseBooleanEnv(normalizeOptionalString(env.KATEI_DEBUG_AUTH_ENABLED) || &#39;false&#39;);</code>
+              </div>
+            
+        </li>
+      
+    </ul>
+  
+          </section>
+        </div>
+      </div>
+    </details>
+  
+    <details class="paper-panel env-inventory-variable-card" data-env-variable-card="KATEI_DEBUG_AUTH_VIEWER_EMAIL" data-variable-status="optional">
+      <summary>
+        <div class="env-inventory-variable-summary">
+          <div class="env-inventory-variable-heading">
+            <h3 class="font-serif text-2xl text-strong env-inventory-variable-name">KATEI_DEBUG_AUTH_VIEWER_EMAIL</h3>
+            <div class="env-inventory-chip-row mt-3"><span class="count-chip env-inventory-chip env-inventory-chip--good">Fallback observed</span><span class="count-chip env-inventory-chip">App</span></div>
+          </div>
+          <div class="env-inventory-variable-counts">
+            <span class="count-chip env-inventory-chip"><strong>1</strong>&nbsp;defs</span>
+            <span class="count-chip env-inventory-chip"><strong>1</strong>&nbsp;uses</span>
+          </div>
+        </div>
+      </summary>
+      <div class="env-inventory-variable-body">
+        <div class="env-inventory-variable-meta">
+          <div class="space-y-2">
+            <p class="field-label text-sm font-semibold">Definition kinds</p>
+            <p class="text-sm leading-6 text-muted">EnvFile</p>
+          </div>
+          <div class="space-y-2">
+            <p class="field-label text-sm font-semibold">Usage kinds</p>
+            <p class="text-sm leading-6 text-muted">Default</p>
+          </div>
+          <div class="space-y-2">
+            <p class="field-label text-sm font-semibold">Primary usage</p>
+            <div><code class="env-inventory-inline-code">apps/katei/src/config.js:64</code></div>
+          </div>
+        </div>
+        <div class="env-inventory-split-grid">
+          <section>
+            <div class="env-inventory-section-header">
+              <h4 class="font-serif text-2xl text-strong">Definitions</h4>
+            </div>
+            
+    <ul class="env-inventory-occurrence-list">
+      
+        <li class="env-inventory-occurrence-item">
+          <div class="env-inventory-occurrence-top">
+            <code class="env-inventory-inline-code">apps/katei/.env.example:35</code>
+            <span class="text-sm leading-6 text-muted">EnvFile · App</span>
+          </div>
+          
+              <div class="env-inventory-snippet">
+                <div class="text-sm leading-6 text-muted"># Optional email for the debug viewer session. Defaults to test@example.com when omitted.</div>
+                <code class="env-inventory-inline-code">KATEI_DEBUG_AUTH_VIEWER_EMAIL=test@example.com</code>
+              </div>
+            
+        </li>
+      
+    </ul>
+  
+          </section>
+          <section>
+            <div class="env-inventory-section-header">
+              <h4 class="font-serif text-2xl text-strong">Usages</h4>
+            </div>
+            
+    <ul class="env-inventory-occurrence-list">
+      
+        <li class="env-inventory-occurrence-item">
+          <div class="env-inventory-occurrence-top">
+            <code class="env-inventory-inline-code">apps/katei/src/config.js:64</code>
+            <span class="text-sm leading-6 text-muted">Default · App</span>
+          </div>
+          
+              <div class="env-inventory-snippet">
+                
+                <code class="env-inventory-inline-code">const viewerEmail = normalizeOptionalEmail(env.KATEI_DEBUG_AUTH_VIEWER_EMAIL) || &#39;test@example.com&#39;;</code>
+              </div>
+            
+        </li>
+      
+    </ul>
+  
+          </section>
+        </div>
+      </div>
+    </details>
+  
+    <details class="paper-panel env-inventory-variable-card" data-env-variable-card="KATEI_DEBUG_AUTH_VIEWER_NAME" data-variable-status="optional">
+      <summary>
+        <div class="env-inventory-variable-summary">
+          <div class="env-inventory-variable-heading">
+            <h3 class="font-serif text-2xl text-strong env-inventory-variable-name">KATEI_DEBUG_AUTH_VIEWER_NAME</h3>
+            <div class="env-inventory-chip-row mt-3"><span class="count-chip env-inventory-chip env-inventory-chip--good">Fallback observed</span><span class="count-chip env-inventory-chip">App</span></div>
+          </div>
+          <div class="env-inventory-variable-counts">
+            <span class="count-chip env-inventory-chip"><strong>1</strong>&nbsp;defs</span>
+            <span class="count-chip env-inventory-chip"><strong>1</strong>&nbsp;uses</span>
+          </div>
+        </div>
+      </summary>
+      <div class="env-inventory-variable-body">
+        <div class="env-inventory-variable-meta">
+          <div class="space-y-2">
+            <p class="field-label text-sm font-semibold">Definition kinds</p>
+            <p class="text-sm leading-6 text-muted">EnvFile</p>
+          </div>
+          <div class="space-y-2">
+            <p class="field-label text-sm font-semibold">Usage kinds</p>
+            <p class="text-sm leading-6 text-muted">Default</p>
+          </div>
+          <div class="space-y-2">
+            <p class="field-label text-sm font-semibold">Primary usage</p>
+            <div><code class="env-inventory-inline-code">apps/katei/src/config.js:65</code></div>
+          </div>
+        </div>
+        <div class="env-inventory-split-grid">
+          <section>
+            <div class="env-inventory-section-header">
+              <h4 class="font-serif text-2xl text-strong">Definitions</h4>
+            </div>
+            
+    <ul class="env-inventory-occurrence-list">
+      
+        <li class="env-inventory-occurrence-item">
+          <div class="env-inventory-occurrence-top">
+            <code class="env-inventory-inline-code">apps/katei/.env.example:38</code>
+            <span class="text-sm leading-6 text-muted">EnvFile · App</span>
+          </div>
+          
+              <div class="env-inventory-snippet">
+                <div class="text-sm leading-6 text-muted"># Optional display name for the debug viewer session. Defaults to John Doe when omitted.</div>
+                <code class="env-inventory-inline-code">KATEI_DEBUG_AUTH_VIEWER_NAME=John Doe</code>
+              </div>
+            
+        </li>
+      
+    </ul>
+  
+          </section>
+          <section>
+            <div class="env-inventory-section-header">
+              <h4 class="font-serif text-2xl text-strong">Usages</h4>
+            </div>
+            
+    <ul class="env-inventory-occurrence-list">
+      
+        <li class="env-inventory-occurrence-item">
+          <div class="env-inventory-occurrence-top">
+            <code class="env-inventory-inline-code">apps/katei/src/config.js:65</code>
+            <span class="text-sm leading-6 text-muted">Default · App</span>
+          </div>
+          
+              <div class="env-inventory-snippet">
+                
+                <code class="env-inventory-inline-code">const viewerName = normalizeOptionalString(env.KATEI_DEBUG_AUTH_VIEWER_NAME) || &#39;John Doe&#39;;</code>
+              </div>
+            
+        </li>
+      
+    </ul>
+  
+          </section>
+        </div>
+      </div>
+    </details>
+  
     <details class="paper-panel env-inventory-variable-card" data-env-variable-card="NODE_ENV" data-variable-status="optional">
       <summary>
         <div class="env-inventory-variable-summary">
@@ -1751,7 +1751,7 @@
               
                 <tr>
                   <td><code class="env-inventory-inline-code">KATEI_DEBUG_AUTH_ENABLED</code></td>
-                  <td>No fallback observed</td>
+                  <td>Fallback observed</td>
                   <td>1</td>
                   <td>1</td>
                   <td>app</td>
@@ -1769,7 +1769,7 @@
               
                 <tr>
                   <td><code class="env-inventory-inline-code">KATEI_DEBUG_AUTH_VIEWER_EMAIL</code></td>
-                  <td>No fallback observed</td>
+                  <td>Fallback observed</td>
                   <td>1</td>
                   <td>1</td>
                   <td>app</td>
@@ -1778,7 +1778,7 @@
               
                 <tr>
                   <td><code class="env-inventory-inline-code">KATEI_DEBUG_AUTH_VIEWER_NAME</code></td>
-                  <td>No fallback observed</td>
+                  <td>Fallback observed</td>
                   <td>1</td>
                   <td>1</td>
                   <td>app</td>
@@ -2171,11 +2171,11 @@
       ],
       &quot;usages&quot;: [
         {
-          &quot;kind&quot;: &quot;read&quot;,
+          &quot;kind&quot;: &quot;default&quot;,
           &quot;file&quot;: &quot;apps/katei/src/config.js&quot;,
           &quot;line&quot;: 61,
           &quot;scope&quot;: &quot;app&quot;,
-          &quot;snippet&quot;: &quot;const enabled = parseBooleanEnv(env.KATEI_DEBUG_AUTH_ENABLED);&quot;
+          &quot;snippet&quot;: &quot;const enabled = parseBooleanEnv(normalizeOptionalString(env.KATEI_DEBUG_AUTH_ENABLED) || &#39;false&#39;);&quot;
         }
       ]
     },
@@ -2213,17 +2213,17 @@
           &quot;file&quot;: &quot;apps/katei/.env.example&quot;,
           &quot;line&quot;: 35,
           &quot;scope&quot;: &quot;app&quot;,
-          &quot;snippet&quot;: &quot;KATEI_DEBUG_AUTH_VIEWER_EMAIL=&quot;,
-          &quot;comment&quot;: &quot;# Optional email for the debug viewer session.&quot;
+          &quot;snippet&quot;: &quot;KATEI_DEBUG_AUTH_VIEWER_EMAIL=test@example.com&quot;,
+          &quot;comment&quot;: &quot;# Optional email for the debug viewer session. Defaults to test@example.com when omitted.&quot;
         }
       ],
       &quot;usages&quot;: [
         {
-          &quot;kind&quot;: &quot;read&quot;,
+          &quot;kind&quot;: &quot;default&quot;,
           &quot;file&quot;: &quot;apps/katei/src/config.js&quot;,
           &quot;line&quot;: 64,
           &quot;scope&quot;: &quot;app&quot;,
-          &quot;snippet&quot;: &quot;const viewerEmail = normalizeOptionalEmail(env.KATEI_DEBUG_AUTH_VIEWER_EMAIL);&quot;
+          &quot;snippet&quot;: &quot;const viewerEmail = normalizeOptionalEmail(env.KATEI_DEBUG_AUTH_VIEWER_EMAIL) || &#39;test@example.com&#39;;&quot;
         }
       ]
     },
@@ -2237,17 +2237,17 @@
           &quot;file&quot;: &quot;apps/katei/.env.example&quot;,
           &quot;line&quot;: 38,
           &quot;scope&quot;: &quot;app&quot;,
-          &quot;snippet&quot;: &quot;KATEI_DEBUG_AUTH_VIEWER_NAME=&quot;,
-          &quot;comment&quot;: &quot;# Optional display name for the debug viewer session.&quot;
+          &quot;snippet&quot;: &quot;KATEI_DEBUG_AUTH_VIEWER_NAME=John Doe&quot;,
+          &quot;comment&quot;: &quot;# Optional display name for the debug viewer session. Defaults to John Doe when omitted.&quot;
         }
       ],
       &quot;usages&quot;: [
         {
-          &quot;kind&quot;: &quot;read&quot;,
+          &quot;kind&quot;: &quot;default&quot;,
           &quot;file&quot;: &quot;apps/katei/src/config.js&quot;,
           &quot;line&quot;: 65,
           &quot;scope&quot;: &quot;app&quot;,
-          &quot;snippet&quot;: &quot;const viewerName = normalizeOptionalString(env.KATEI_DEBUG_AUTH_VIEWER_NAME);&quot;
+          &quot;snippet&quot;: &quot;const viewerName = normalizeOptionalString(env.KATEI_DEBUG_AUTH_VIEWER_NAME) || &#39;John Doe&#39;;&quot;
         }
       ]
     },
@@ -2309,8 +2309,8 @@
           &quot;file&quot;: &quot;apps/katei/.env.example&quot;,
           &quot;line&quot;: 44,
           &quot;scope&quot;: &quot;app&quot;,
-          &quot;snippet&quot;: &quot;MONGODB_DB_NAME=&quot;,
-          &quot;comment&quot;: &quot;# Optional MongoDB database name used for server-owned workspace persistence.&quot;
+          &quot;snippet&quot;: &quot;MONGODB_DB_NAME=katei_test&quot;,
+          &quot;comment&quot;: &quot;# Required MongoDB database name used for server-owned workspace persistence.&quot;
         }
       ],
       &quot;usages&quot;: [
@@ -2333,8 +2333,8 @@
           &quot;file&quot;: &quot;apps/katei/.env.example&quot;,
           &quot;line&quot;: 41,
           &quot;scope&quot;: &quot;app&quot;,
-          &quot;snippet&quot;: &quot;MONGODB_URI=&quot;,
-          &quot;comment&quot;: &quot;# Optional MongoDB connection string used for server-owned workspace persistence.&quot;
+          &quot;snippet&quot;: &quot;MONGODB_URI=mongodb://127.0.0.1:27017&quot;,
+          &quot;comment&quot;: &quot;# Required MongoDB connection string used for server-owned workspace persistence.&quot;
         }
       ],
       &quot;usages&quot;: [
@@ -2437,7 +2437,7 @@
   
     </main>
     
-    <script id="env-inventory-report-data" type="application/json">{"schemaVersion":"1.1","app":{"name":"katei","path":"apps/katei","outputPath":"apps/katei/docs/env-inventory.json"},"scan":{"config":{"path":".agents/env-inventory.config.json","exists":true},"roots":{"app":["apps/katei","apps/katei/src","apps/katei/src/ai","apps/katei/src/auth","apps/katei/src/data","apps/katei/src/i18n","apps/katei/src/lib","apps/katei/src/middleware","apps/katei/src/routes","apps/katei/src/security","apps/katei/src/workspaces"],"package":[],"root":[".github/workflows"]},"ignoredGlobs":["**/.agents/**","**/.generated/**","**/.github/**","**/build/**","**/coverage/**","**/dist/**","**/doc/*.json","**/node_modules/**","**/public/**","**/src/public/**"]},"summary":{"totalVariables":17,"totalDefinitions":17,"totalUsages":27,"secretLikeCount":4,"publicLikeCount":0,"dynamicAccessCount":0},"variables":[{"name":"APP_BASE_URL","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":23,"scope":"app","snippet":"APP_BASE_URL=http://localhost:3000","comment":"# Optional canonical app URL used to validate sign-in request origins in production. Local development defaults to http://localhost:3000; set this explicitly outside development when origin validation matters."}],"usages":[{"kind":"default","file":"apps/katei/src/config.js","line":6,"scope":"app","snippet":"const appBaseUrl = normalizeOptionalString(env.APP_BASE_URL) || (nodeEnv === 'development' ? `http://localhost:${Number(env.PORT) || 3000}` : '');"}]},{"name":"GOOGLE_ALLOWLIST_SUBS","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":17,"scope":"app","snippet":"GOOGLE_ALLOWLIST_SUBS=","comment":"# Optional comma-separated allowlist of Google `sub` identifiers. Leave blank to allow any verified account."}],"usages":[{"kind":"default","file":"apps/katei/src/config.js","line":19,"scope":"app","snippet":"googleAllowlistSubs: parseAllowlistSubs(normalizeOptionalString(env.GOOGLE_ALLOWLIST_SUBS) || ''),"}]},{"name":"GOOGLE_CLIENT_ID","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":8,"scope":"app","snippet":"GOOGLE_CLIENT_ID=YOUR_GOOGLE_CLIENT_ID","comment":"# Google Identity Services OAuth client ID used by the landing page sign-in flow."}],"usages":[{"kind":"requiredHelper","file":"apps/katei/src/config.js","line":16,"scope":"app","snippet":"googleClientId: requireNonEmptyEnv('GOOGLE_CLIENT_ID', env.GOOGLE_CLIENT_ID),"}]},{"name":"HEROKU_API_KEY","secretLike":true,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":50,"scope":"app","snippet":"HEROKU_API_KEY=YOUR_HEROKU_API_KEY","comment":"# Replace YOUR_HEROKU_API_KEY with a real Heroku API key as a Github Repository secret"}],"usages":[{"kind":"default","file":".github/workflows/deploy-katei-heroku.yml","line":55,"scope":"root","snippet":"echo \"HEROKU_API_KEY=${heroku_api_key:-YOUR_HEROKU_API_KEY}\" \u003e\u003e \"$GITHUB_ENV\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":61,"scope":"root","snippet":"test -n \"$HEROKU_API_KEY\" || { echo \"Missing HEROKU_API_KEY\"; exit 1; }"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":62,"scope":"root","snippet":"test \"$HEROKU_API_KEY\" != \"YOUR_HEROKU_API_KEY\" || { echo \"Replace YOUR_HEROKU_API_KEY with a real Heroku API key as a Github Repository secret\"; exit 1; }"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":94,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":107,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""}]},{"name":"HEROKU_APP_NAME","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":47,"scope":"app","snippet":"HEROKU_APP_NAME=HEROKU_KATEI_APP_PROD","comment":"# set HEROKU_KATEI_APP_PROD as a GitHub repository secret, it should be the name of the app you created in Heroku"}],"usages":[{"kind":"default","file":".github/workflows/deploy-katei-heroku.yml","line":50,"scope":"root","snippet":"echo \"HEROKU_APP_NAME=${heroku_app_name:-YOUR_HEROKU_APP_NAME}\" \u003e\u003e \"$GITHUB_ENV\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":59,"scope":"root","snippet":"test -n \"$HEROKU_APP_NAME\" || { echo \"Missing HEROKU_APP_NAME\"; exit 1; }"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":60,"scope":"root","snippet":"test \"$HEROKU_APP_NAME\" != \"YOUR_HEROKU_APP_NAME\" || { echo \"Replace YOUR_HEROKU_APP_NAME with the real Heroku app slug or set HEROKU_KATEI_APP_PROD as a GitHub repository secret\"; exit 1; }"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":63,"scope":"root","snippet":"echo \"Deploying branch '${GITHUB_REF_NAME}' to app '${HEROKU_APP_NAME}'\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":94,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":107,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""}]},{"name":"KATEI_BOARD_SECRET_ENCRYPTION_KEY","secretLike":true,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":14,"scope":"app","snippet":"KATEI_BOARD_SECRET_ENCRYPTION_KEY=","comment":"# Secret used to encrypt board-scoped AI credentials before persistence."}],"usages":[{"kind":"read","file":"apps/katei/src/config.js","line":11,"scope":"app","snippet":"const boardSecretEncryptionKey = resolveBoardSecretEncryptionKey(env.KATEI_BOARD_SECRET_ENCRYPTION_KEY, nodeEnv);"}]},{"name":"KATEI_DEBUG_AUTH_ENABLED","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":26,"scope":"app","snippet":"KATEI_DEBUG_AUTH_ENABLED=false","comment":"# Optional guarded hosted debug login toggle. When true, POST /__debug/login can mint a Katei session for the configured debug viewer."}],"usages":[{"kind":"read","file":"apps/katei/src/config.js","line":61,"scope":"app","snippet":"const enabled = parseBooleanEnv(env.KATEI_DEBUG_AUTH_ENABLED);"}]},{"name":"KATEI_DEBUG_AUTH_SECRET","secretLike":true,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":29,"scope":"app","snippet":"KATEI_DEBUG_AUTH_SECRET=","comment":"# Shared secret required in the x-katei-debug-auth request header when debug auth is enabled."}],"usages":[{"kind":"read","file":"apps/katei/src/config.js","line":62,"scope":"app","snippet":"const secret = normalizeOptionalString(env.KATEI_DEBUG_AUTH_SECRET);"}]},{"name":"KATEI_DEBUG_AUTH_VIEWER_EMAIL","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":35,"scope":"app","snippet":"KATEI_DEBUG_AUTH_VIEWER_EMAIL=","comment":"# Optional email for the debug viewer session."}],"usages":[{"kind":"read","file":"apps/katei/src/config.js","line":64,"scope":"app","snippet":"const viewerEmail = normalizeOptionalEmail(env.KATEI_DEBUG_AUTH_VIEWER_EMAIL);"}]},{"name":"KATEI_DEBUG_AUTH_VIEWER_NAME","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":38,"scope":"app","snippet":"KATEI_DEBUG_AUTH_VIEWER_NAME=","comment":"# Optional display name for the debug viewer session."}],"usages":[{"kind":"read","file":"apps/katei/src/config.js","line":65,"scope":"app","snippet":"const viewerName = normalizeOptionalString(env.KATEI_DEBUG_AUTH_VIEWER_NAME);"}]},{"name":"KATEI_DEBUG_AUTH_VIEWER_SUB","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":32,"scope":"app","snippet":"KATEI_DEBUG_AUTH_VIEWER_SUB=","comment":"# Required Google sub for the debug viewer when hosted debug auth is enabled."}],"usages":[{"kind":"read","file":"apps/katei/src/config.js","line":63,"scope":"app","snippet":"const viewerSub = normalizeOptionalString(env.KATEI_DEBUG_AUTH_VIEWER_SUB);"}]},{"name":"KATEI_SESSION_SECRET","secretLike":true,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":11,"scope":"app","snippet":"KATEI_SESSION_SECRET=replace-with-a-long-random-string","comment":"# Secret used to sign the Katei session cookie."}],"usages":[{"kind":"requiredHelper","file":"apps/katei/src/config.js","line":17,"scope":"app","snippet":"sessionSecret: requireNonEmptyEnv('KATEI_SESSION_SECRET', env.KATEI_SESSION_SECRET),"}]},{"name":"MONGODB_DB_NAME","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":44,"scope":"app","snippet":"MONGODB_DB_NAME=","comment":"# Optional MongoDB database name used for server-owned workspace persistence."}],"usages":[{"kind":"requiredHelper","file":"apps/katei/src/config.js","line":8,"scope":"app","snippet":"const mongoDbName = requireNonEmptyEnv('MONGODB_DB_NAME', env.MONGODB_DB_NAME);"}]},{"name":"MONGODB_URI","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":41,"scope":"app","snippet":"MONGODB_URI=","comment":"# Optional MongoDB connection string used for server-owned workspace persistence."}],"usages":[{"kind":"requiredHelper","file":"apps/katei/src/config.js","line":7,"scope":"app","snippet":"const mongoUri = requireNonEmptyEnv('MONGODB_URI', env.MONGODB_URI);"}]},{"name":"NODE_ENV","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":2,"scope":"app","snippet":"NODE_ENV=development","comment":"# Let the server know if you are in 'development' or 'production' you should set this as an environment variable in the Heroku dashboard of your app."}],"usages":[{"kind":"default","file":"apps/katei/src/config.js","line":5,"scope":"app","snippet":"const nodeEnv = normalizeOptionalString(env.NODE_ENV) || 'development';"}]},{"name":"PORT","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":5,"scope":"app","snippet":"PORT=3000","comment":"# Server port, you must not set it manually when deploying to Heroku, as it provides process.env.PORT so it must only be used for local testing"}],"usages":[{"kind":"default","file":"apps/katei/src/config.js","line":6,"scope":"app","snippet":"const appBaseUrl = normalizeOptionalString(env.APP_BASE_URL) || (nodeEnv === 'development' ? `http://localhost:${Number(env.PORT) || 3000}` : '');"},{"kind":"default","file":"apps/katei/src/server.js","line":5,"scope":"app","snippet":"const port = Number(process.env.PORT) || 3000;"}]},{"name":"SESSION_TTL_SECONDS","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":20,"scope":"app","snippet":"SESSION_TTL_SECONDS=604800","comment":"# Optional session duration for the Katei session cookie. Defaults to 7 days."}],"usages":[{"kind":"default","file":"apps/katei/src/config.js","line":9,"scope":"app","snippet":"const sessionTtlSeconds = parseSessionTtlSeconds(normalizeOptionalString(env.SESSION_TTL_SECONDS) || String(DEFAULT_SESSION_TTL_SECONDS));"}]}],"dynamicAccesses":[],"scanWarnings":[]}</script>
+    <script id="env-inventory-report-data" type="application/json">{"schemaVersion":"1.1","app":{"name":"katei","path":"apps/katei","outputPath":"apps/katei/docs/env-inventory.json"},"scan":{"config":{"path":".agents/env-inventory.config.json","exists":true},"roots":{"app":["apps/katei","apps/katei/src","apps/katei/src/ai","apps/katei/src/auth","apps/katei/src/data","apps/katei/src/i18n","apps/katei/src/lib","apps/katei/src/middleware","apps/katei/src/routes","apps/katei/src/security","apps/katei/src/workspaces"],"package":[],"root":[".github/workflows"]},"ignoredGlobs":["**/.agents/**","**/.generated/**","**/.github/**","**/build/**","**/coverage/**","**/dist/**","**/doc/*.json","**/node_modules/**","**/public/**","**/src/public/**"]},"summary":{"totalVariables":17,"totalDefinitions":17,"totalUsages":27,"secretLikeCount":4,"publicLikeCount":0,"dynamicAccessCount":0},"variables":[{"name":"APP_BASE_URL","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":23,"scope":"app","snippet":"APP_BASE_URL=http://localhost:3000","comment":"# Optional canonical app URL used to validate sign-in request origins in production. Local development defaults to http://localhost:3000; set this explicitly outside development when origin validation matters."}],"usages":[{"kind":"default","file":"apps/katei/src/config.js","line":6,"scope":"app","snippet":"const appBaseUrl = normalizeOptionalString(env.APP_BASE_URL) || (nodeEnv === 'development' ? `http://localhost:${Number(env.PORT) || 3000}` : '');"}]},{"name":"GOOGLE_ALLOWLIST_SUBS","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":17,"scope":"app","snippet":"GOOGLE_ALLOWLIST_SUBS=","comment":"# Optional comma-separated allowlist of Google `sub` identifiers. Leave blank to allow any verified account."}],"usages":[{"kind":"default","file":"apps/katei/src/config.js","line":19,"scope":"app","snippet":"googleAllowlistSubs: parseAllowlistSubs(normalizeOptionalString(env.GOOGLE_ALLOWLIST_SUBS) || ''),"}]},{"name":"GOOGLE_CLIENT_ID","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":8,"scope":"app","snippet":"GOOGLE_CLIENT_ID=YOUR_GOOGLE_CLIENT_ID","comment":"# Google Identity Services OAuth client ID used by the landing page sign-in flow."}],"usages":[{"kind":"requiredHelper","file":"apps/katei/src/config.js","line":16,"scope":"app","snippet":"googleClientId: requireNonEmptyEnv('GOOGLE_CLIENT_ID', env.GOOGLE_CLIENT_ID),"}]},{"name":"HEROKU_API_KEY","secretLike":true,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":50,"scope":"app","snippet":"HEROKU_API_KEY=YOUR_HEROKU_API_KEY","comment":"# Replace YOUR_HEROKU_API_KEY with a real Heroku API key as a Github Repository secret"}],"usages":[{"kind":"default","file":".github/workflows/deploy-katei-heroku.yml","line":55,"scope":"root","snippet":"echo \"HEROKU_API_KEY=${heroku_api_key:-YOUR_HEROKU_API_KEY}\" \u003e\u003e \"$GITHUB_ENV\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":61,"scope":"root","snippet":"test -n \"$HEROKU_API_KEY\" || { echo \"Missing HEROKU_API_KEY\"; exit 1; }"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":62,"scope":"root","snippet":"test \"$HEROKU_API_KEY\" != \"YOUR_HEROKU_API_KEY\" || { echo \"Replace YOUR_HEROKU_API_KEY with a real Heroku API key as a Github Repository secret\"; exit 1; }"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":94,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":107,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""}]},{"name":"HEROKU_APP_NAME","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":47,"scope":"app","snippet":"HEROKU_APP_NAME=HEROKU_KATEI_APP_PROD","comment":"# set HEROKU_KATEI_APP_PROD as a GitHub repository secret, it should be the name of the app you created in Heroku"}],"usages":[{"kind":"default","file":".github/workflows/deploy-katei-heroku.yml","line":50,"scope":"root","snippet":"echo \"HEROKU_APP_NAME=${heroku_app_name:-YOUR_HEROKU_APP_NAME}\" \u003e\u003e \"$GITHUB_ENV\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":59,"scope":"root","snippet":"test -n \"$HEROKU_APP_NAME\" || { echo \"Missing HEROKU_APP_NAME\"; exit 1; }"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":60,"scope":"root","snippet":"test \"$HEROKU_APP_NAME\" != \"YOUR_HEROKU_APP_NAME\" || { echo \"Replace YOUR_HEROKU_APP_NAME with the real Heroku app slug or set HEROKU_KATEI_APP_PROD as a GitHub repository secret\"; exit 1; }"},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":63,"scope":"root","snippet":"echo \"Deploying branch '${GITHUB_REF_NAME}' to app '${HEROKU_APP_NAME}'\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":94,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""},{"kind":"ci","file":".github/workflows/deploy-katei-heroku.yml","line":107,"scope":"root","snippet":"git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""}]},{"name":"KATEI_BOARD_SECRET_ENCRYPTION_KEY","secretLike":true,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":14,"scope":"app","snippet":"KATEI_BOARD_SECRET_ENCRYPTION_KEY=","comment":"# Secret used to encrypt board-scoped AI credentials before persistence."}],"usages":[{"kind":"read","file":"apps/katei/src/config.js","line":11,"scope":"app","snippet":"const boardSecretEncryptionKey = resolveBoardSecretEncryptionKey(env.KATEI_BOARD_SECRET_ENCRYPTION_KEY, nodeEnv);"}]},{"name":"KATEI_DEBUG_AUTH_ENABLED","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":26,"scope":"app","snippet":"KATEI_DEBUG_AUTH_ENABLED=false","comment":"# Optional guarded hosted debug login toggle. When true, POST /__debug/login can mint a Katei session for the configured debug viewer."}],"usages":[{"kind":"default","file":"apps/katei/src/config.js","line":61,"scope":"app","snippet":"const enabled = parseBooleanEnv(normalizeOptionalString(env.KATEI_DEBUG_AUTH_ENABLED) || 'false');"}]},{"name":"KATEI_DEBUG_AUTH_SECRET","secretLike":true,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":29,"scope":"app","snippet":"KATEI_DEBUG_AUTH_SECRET=","comment":"# Shared secret required in the x-katei-debug-auth request header when debug auth is enabled."}],"usages":[{"kind":"read","file":"apps/katei/src/config.js","line":62,"scope":"app","snippet":"const secret = normalizeOptionalString(env.KATEI_DEBUG_AUTH_SECRET);"}]},{"name":"KATEI_DEBUG_AUTH_VIEWER_EMAIL","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":35,"scope":"app","snippet":"KATEI_DEBUG_AUTH_VIEWER_EMAIL=test@example.com","comment":"# Optional email for the debug viewer session. Defaults to test@example.com when omitted."}],"usages":[{"kind":"default","file":"apps/katei/src/config.js","line":64,"scope":"app","snippet":"const viewerEmail = normalizeOptionalEmail(env.KATEI_DEBUG_AUTH_VIEWER_EMAIL) || 'test@example.com';"}]},{"name":"KATEI_DEBUG_AUTH_VIEWER_NAME","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":38,"scope":"app","snippet":"KATEI_DEBUG_AUTH_VIEWER_NAME=John Doe","comment":"# Optional display name for the debug viewer session. Defaults to John Doe when omitted."}],"usages":[{"kind":"default","file":"apps/katei/src/config.js","line":65,"scope":"app","snippet":"const viewerName = normalizeOptionalString(env.KATEI_DEBUG_AUTH_VIEWER_NAME) || 'John Doe';"}]},{"name":"KATEI_DEBUG_AUTH_VIEWER_SUB","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":32,"scope":"app","snippet":"KATEI_DEBUG_AUTH_VIEWER_SUB=","comment":"# Required Google sub for the debug viewer when hosted debug auth is enabled."}],"usages":[{"kind":"read","file":"apps/katei/src/config.js","line":63,"scope":"app","snippet":"const viewerSub = normalizeOptionalString(env.KATEI_DEBUG_AUTH_VIEWER_SUB);"}]},{"name":"KATEI_SESSION_SECRET","secretLike":true,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":11,"scope":"app","snippet":"KATEI_SESSION_SECRET=replace-with-a-long-random-string","comment":"# Secret used to sign the Katei session cookie."}],"usages":[{"kind":"requiredHelper","file":"apps/katei/src/config.js","line":17,"scope":"app","snippet":"sessionSecret: requireNonEmptyEnv('KATEI_SESSION_SECRET', env.KATEI_SESSION_SECRET),"}]},{"name":"MONGODB_DB_NAME","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":44,"scope":"app","snippet":"MONGODB_DB_NAME=katei_test","comment":"# Required MongoDB database name used for server-owned workspace persistence."}],"usages":[{"kind":"requiredHelper","file":"apps/katei/src/config.js","line":8,"scope":"app","snippet":"const mongoDbName = requireNonEmptyEnv('MONGODB_DB_NAME', env.MONGODB_DB_NAME);"}]},{"name":"MONGODB_URI","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":41,"scope":"app","snippet":"MONGODB_URI=mongodb://127.0.0.1:27017","comment":"# Required MongoDB connection string used for server-owned workspace persistence."}],"usages":[{"kind":"requiredHelper","file":"apps/katei/src/config.js","line":7,"scope":"app","snippet":"const mongoUri = requireNonEmptyEnv('MONGODB_URI', env.MONGODB_URI);"}]},{"name":"NODE_ENV","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":2,"scope":"app","snippet":"NODE_ENV=development","comment":"# Let the server know if you are in 'development' or 'production' you should set this as an environment variable in the Heroku dashboard of your app."}],"usages":[{"kind":"default","file":"apps/katei/src/config.js","line":5,"scope":"app","snippet":"const nodeEnv = normalizeOptionalString(env.NODE_ENV) || 'development';"}]},{"name":"PORT","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":5,"scope":"app","snippet":"PORT=3000","comment":"# Server port, you must not set it manually when deploying to Heroku, as it provides process.env.PORT so it must only be used for local testing"}],"usages":[{"kind":"default","file":"apps/katei/src/config.js","line":6,"scope":"app","snippet":"const appBaseUrl = normalizeOptionalString(env.APP_BASE_URL) || (nodeEnv === 'development' ? `http://localhost:${Number(env.PORT) || 3000}` : '');"},{"kind":"default","file":"apps/katei/src/server.js","line":5,"scope":"app","snippet":"const port = Number(process.env.PORT) || 3000;"}]},{"name":"SESSION_TTL_SECONDS","secretLike":false,"publicLike":false,"definitions":[{"kind":"envFile","file":"apps/katei/.env.example","line":20,"scope":"app","snippet":"SESSION_TTL_SECONDS=604800","comment":"# Optional session duration for the Katei session cookie. Defaults to 7 days."}],"usages":[{"kind":"default","file":"apps/katei/src/config.js","line":9,"scope":"app","snippet":"const sessionTtlSeconds = parseSessionTtlSeconds(normalizeOptionalString(env.SESSION_TTL_SECONDS) || String(DEFAULT_SESSION_TTL_SECONDS));"}]}],"dynamicAccesses":[],"scanWarnings":[]}</script>
     <script>
       (() => {
         const report = JSON.parse(document.getElementById("env-inventory-report-data").textContent);
