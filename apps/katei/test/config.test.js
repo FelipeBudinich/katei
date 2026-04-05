@@ -222,6 +222,25 @@ test('createRuntimeConfig defaults hosted debug auth to disabled when KATEI_DEBU
   });
 });
 
+test('createRuntimeConfig defaults hosted debug auth viewer email when enabled and unset', () => {
+  const config = createRuntimeConfig({
+    ...REQUIRED_ENV,
+    NODE_ENV: 'test',
+    KATEI_DEBUG_AUTH_ENABLED: 'true',
+    KATEI_DEBUG_AUTH_SECRET: 'debug-secret',
+    KATEI_DEBUG_AUTH_VIEWER_SUB: 'debug_sub'
+  });
+
+  assert.deepEqual(config.debugAuth, {
+    enabled: true,
+    secret: 'debug-secret',
+    viewer: {
+      sub: 'debug_sub',
+      email: 'test@example.com'
+    }
+  });
+});
+
 test('createRuntimeConfig rejects missing hosted debug auth secrets when enabled', () => {
   assert.throws(
     () => createRuntimeConfig({
