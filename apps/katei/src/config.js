@@ -62,7 +62,7 @@ function createDebugAuthConfig(env = process.env) {
   const secret = normalizeOptionalString(env.KATEI_DEBUG_AUTH_SECRET);
   const viewerSub = normalizeOptionalString(env.KATEI_DEBUG_AUTH_VIEWER_SUB);
   const viewerEmail = normalizeOptionalEmail(env.KATEI_DEBUG_AUTH_VIEWER_EMAIL) || 'test@example.com';
-  const viewerName = normalizeOptionalString(env.KATEI_DEBUG_AUTH_VIEWER_NAME);
+  const viewerName = normalizeOptionalString(env.KATEI_DEBUG_AUTH_VIEWER_NAME) || 'John Doe';
 
   if (enabled && !secret) {
     throw new Error('KATEI_DEBUG_AUTH_SECRET is required when KATEI_DEBUG_AUTH_ENABLED is true.');

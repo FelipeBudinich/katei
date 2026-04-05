@@ -236,7 +236,29 @@ test('createRuntimeConfig defaults hosted debug auth viewer email when enabled a
     secret: 'debug-secret',
     viewer: {
       sub: 'debug_sub',
-      email: 'test@example.com'
+      email: 'test@example.com',
+      name: 'John Doe'
+    }
+  });
+});
+
+test('createRuntimeConfig defaults hosted debug auth viewer name when enabled and unset', () => {
+  const config = createRuntimeConfig({
+    ...REQUIRED_ENV,
+    NODE_ENV: 'test',
+    KATEI_DEBUG_AUTH_ENABLED: 'true',
+    KATEI_DEBUG_AUTH_SECRET: 'debug-secret',
+    KATEI_DEBUG_AUTH_VIEWER_SUB: 'debug_sub',
+    KATEI_DEBUG_AUTH_VIEWER_EMAIL: 'debug@example.com'
+  });
+
+  assert.deepEqual(config.debugAuth, {
+    enabled: true,
+    secret: 'debug-secret',
+    viewer: {
+      sub: 'debug_sub',
+      email: 'debug@example.com',
+      name: 'John Doe'
     }
   });
 });
