@@ -17,6 +17,44 @@
       </div>
 
       <div class="flex items-center gap-2">
+        <div hidden data-workspace-target="viewLocaleSection">
+          <div class="view-locale-picker">
+            <button
+              type="button"
+              id="card-view-locale-trigger"
+              class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--language"
+              aria-label="{{ t('cardEditor.localeLabel') }}"
+              aria-haspopup="menu"
+              aria-expanded="false"
+              aria-controls="card-view-locale-menu"
+              data-workspace-target="viewLocaleButton"
+              data-action="click->workspace#toggleViewLocaleMenu keydown->workspace#handleViewLocaleTriggerKeydown"
+            >
+              <span class="sr-only">{{ t('cardEditor.localeLabel') }}</span>
+            </button>
+
+            <div
+              id="card-view-locale-menu"
+              class="view-locale-menu"
+              role="menu"
+              hidden
+              data-workspace-target="viewLocaleMenu"
+              data-action="keydown->workspace#handleViewLocaleMenuKeydown"
+            ></div>
+
+            <label class="sr-only" for="card-view-locale-select">{{ t('cardEditor.localeLabel') }}</label>
+            <select
+              id="card-view-locale-select"
+              class="sr-only"
+              hidden
+              tabindex="-1"
+              aria-hidden="true"
+              data-action="change->workspace#changeViewLocale"
+              data-workspace-target="viewLocaleSelect"
+            ></select>
+          </div>
+        </div>
+
         <button
           type="button"
           class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--edit"
@@ -43,46 +81,6 @@
     </div>
 
     <div class="mt-6 space-y-4">
-      <div class="block space-y-2" hidden data-workspace-target="viewLocaleSection">
-        <span class="sr-only">{{ t('cardEditor.localeLabel') }}</span>
-
-        <div class="view-locale-picker">
-          <button
-            type="button"
-            id="card-view-locale-trigger"
-            class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--language"
-            aria-label="{{ t('cardEditor.localeLabel') }}"
-            aria-haspopup="menu"
-            aria-expanded="false"
-            aria-controls="card-view-locale-menu"
-            data-workspace-target="viewLocaleButton"
-            data-action="click->workspace#toggleViewLocaleMenu keydown->workspace#handleViewLocaleTriggerKeydown"
-          >
-            <span class="sr-only">{{ t('cardEditor.localeLabel') }}</span>
-          </button>
-
-          <div
-            id="card-view-locale-menu"
-            class="view-locale-menu"
-            role="menu"
-            hidden
-            data-workspace-target="viewLocaleMenu"
-            data-action="keydown->workspace#handleViewLocaleMenuKeydown"
-          ></div>
-
-          <label class="sr-only" for="card-view-locale-select">{{ t('cardEditor.localeLabel') }}</label>
-          <select
-            id="card-view-locale-select"
-            class="sr-only"
-            hidden
-            tabindex="-1"
-            aria-hidden="true"
-            data-action="change->workspace#changeViewLocale"
-            data-workspace-target="viewLocaleSelect"
-          ></select>
-        </div>
-      </div>
-
       <p class="text-sm leading-6 text-strong" hidden data-workspace-target="viewReviewState"></p>
 
       <button
