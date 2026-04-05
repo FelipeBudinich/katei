@@ -19,14 +19,15 @@
       <div class="flex items-center gap-2">
         <button
           type="button"
-          class="touch-button-secondary"
+          class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--edit"
           hidden
           disabled
           aria-disabled="true"
+          aria-label="{{ t('cardViewDialog.editButton') }}"
           data-workspace-target="viewEditButton"
           data-action="workspace#openEditFromView"
         >
-          {{ t('cardViewDialog.editButton') }}
+          <span class="sr-only">{{ t('cardViewDialog.editButton') }}</span>
         </button>
 
         <button

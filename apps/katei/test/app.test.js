@@ -300,7 +300,10 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
   assert.match(boardOptionsDialog, /data-board-options-field="collaboratorsButton"[\s\S]*?board-options#openCollaborators/);
   assert.match(boardOptionsDialog, /data-board-options-field="collaboratorBadge"/);
   assert.match(boardOptionsDialog, /data-board-options-field="editButton"/);
-  assert.match(boardOptionsDialog, /data-board-options-field="editButton"[\s\S]*?board-options#editBoard/);
+  assert.match(
+    boardOptionsDialog,
+    /class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--edit"[\s\S]*?aria-label="Edit"[\s\S]*?data-board-options-field="editButton"[\s\S]*?data-action="board-options#editBoard"[\s\S]*?<span class="sr-only">Edit<\/span>/
+  );
   assert.doesNotMatch(
     boardOptionsDialog,
     /class="dialog-actions board-options-actions mt-6"[\s\S]*?data-board-options-target="editButton"/
@@ -706,6 +709,10 @@ test('workspace template renders edit localization controls and a simplified loc
   assert.doesNotMatch(cardViewDialog, /data-card-editor-target="localeFallbackNotice"/);
   assert.doesNotMatch(cardViewDialog, /data-card-editor-target="localeEditSummary"/);
   assert.doesNotMatch(cardViewDialog, /data-card-editor-target="localeReadOnlyNotice"/);
+  assert.match(
+    cardViewDialog,
+    /class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--edit"[\s\S]*?hidden[\s\S]*?disabled[\s\S]*?aria-disabled="true"[\s\S]*?aria-label="Edit"[\s\S]*?data-workspace-target="viewEditButton"[\s\S]*?data-action="workspace#openEditFromView"[\s\S]*?<span class="sr-only">Edit<\/span>/
+  );
   assert.match(
     cardViewDialog,
     /class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--close"[\s\S]*?aria-label="Close"[\s\S]*?data-view-dialog-initial-focus[\s\S]*?data-action="workspace#closeViewDialog"[\s\S]*?<span class="sr-only">Close<\/span>/
