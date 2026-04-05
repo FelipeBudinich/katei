@@ -645,9 +645,6 @@
     border-width: 1px;
     --tw-shadow: var(--shadow-paper);
     box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
-    --tw-backdrop-blur: blur(8px);
-    -webkit-backdrop-filter: var(--tw-backdrop-blur,) var(--tw-backdrop-brightness,) var(--tw-backdrop-contrast,) var(--tw-backdrop-grayscale,) var(--tw-backdrop-hue-rotate,) var(--tw-backdrop-invert,) var(--tw-backdrop-opacity,) var(--tw-backdrop-saturate,) var(--tw-backdrop-sepia,);
-    backdrop-filter: var(--tw-backdrop-blur,) var(--tw-backdrop-brightness,) var(--tw-backdrop-contrast,) var(--tw-backdrop-grayscale,) var(--tw-backdrop-hue-rotate,) var(--tw-backdrop-invert,) var(--tw-backdrop-opacity,) var(--tw-backdrop-saturate,) var(--tw-backdrop-sepia,);
     border-radius: var(--radius-2xl);
     border-color: var(--color-border-subtle);
     background-color: var(--color-bg-elevated);
@@ -684,10 +681,6 @@
     background-color: var(--color-bg-column);
     -webkit-backdrop-filter: blur(10.5px);
     backdrop-filter: blur(10.5px);
-  }
-  .column-panel-header, .card-item-toolbar {
-    -webkit-backdrop-filter: blur(4.5px);
-    backdrop-filter: blur(4.5px);
   }
   .column-panel-header {
     background-color: var(--color-bg-header-glass);
@@ -1044,6 +1037,15 @@
     outline: 2px solid transparent;
     box-shadow: 0 0 0 4px var(--color-focus-ring);
   }
+  .touch-button-secondary--icon {
+    min-width: 2.75rem;
+    padding-inline: 0.75rem;
+  }
+  .touch-button-secondary__icon {
+    display: block;
+    width: 1.25rem;
+    height: 1.25rem;
+  }
   .touch-button-danger {
     display: inline-grid;
     min-height: calc(var(--spacing) * 11);
@@ -1144,7 +1146,6 @@
   }
   .sheet-dialog::backdrop {
     background: var(--color-overlay);
-    backdrop-filter: blur(4px);
   }
   .sheet-dialog[open] {
     display: grid;
@@ -2270,42 +2271,6 @@
   syntax: "*";
   inherits: false;
 }
-@property --tw-backdrop-blur {
-  syntax: "*";
-  inherits: false;
-}
-@property --tw-backdrop-brightness {
-  syntax: "*";
-  inherits: false;
-}
-@property --tw-backdrop-contrast {
-  syntax: "*";
-  inherits: false;
-}
-@property --tw-backdrop-grayscale {
-  syntax: "*";
-  inherits: false;
-}
-@property --tw-backdrop-hue-rotate {
-  syntax: "*";
-  inherits: false;
-}
-@property --tw-backdrop-invert {
-  syntax: "*";
-  inherits: false;
-}
-@property --tw-backdrop-opacity {
-  syntax: "*";
-  inherits: false;
-}
-@property --tw-backdrop-saturate {
-  syntax: "*";
-  inherits: false;
-}
-@property --tw-backdrop-sepia {
-  syntax: "*";
-  inherits: false;
-}
 @layer properties {
   @supports ((-webkit-hyphens: none) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color:rgb(from red r g b)))) {
     *, ::before, ::after, ::backdrop {
@@ -2347,15 +2312,6 @@
       --tw-drop-shadow-color: initial;
       --tw-drop-shadow-alpha: 100%;
       --tw-drop-shadow-size: initial;
-      --tw-backdrop-blur: initial;
-      --tw-backdrop-brightness: initial;
-      --tw-backdrop-contrast: initial;
-      --tw-backdrop-grayscale: initial;
-      --tw-backdrop-hue-rotate: initial;
-      --tw-backdrop-invert: initial;
-      --tw-backdrop-opacity: initial;
-      --tw-backdrop-saturate: initial;
-      --tw-backdrop-sepia: initial;
     }
   }
 }

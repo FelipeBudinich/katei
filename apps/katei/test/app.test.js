@@ -275,7 +275,10 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
   assert.match(response.text, /data-action="workspace#openBoardOptions"/);
   assert.match(response.text, /data-action="workspace#openProfileOptions"/);
   assert.match(response.text, />\s*Options\s*</);
-  assert.match(response.text, />\s*Profile\s*</);
+  assert.match(
+    response.text,
+    /class="touch-button-secondary touch-button-secondary--icon"[\s\S]*?data-action="workspace#openProfileOptions"[\s\S]*?aria-label="Profile"[\s\S]*?<img src="\/profile\.svg" alt="" aria-hidden="true" class="touch-button-secondary__icon">/
+  );
   assert.match(response.text, /id="profile-options-ui-locale-picker"/);
   assert.match(response.text, /<form method="get" action="\/boards" class="ui-locale-picker">/);
   assert.match(response.text, /onchange="this\.form\.submit\(\)"/);
@@ -582,7 +585,10 @@ test('workspace template renders the no-board header with both Options and Profi
   assert.match(html, /data-action="workspace#openBoardOptions"/);
   assert.match(html, /data-action="workspace#openProfileOptions"/);
   assert.match(html, />\s*Options\s*</);
-  assert.match(html, />\s*Profile\s*</);
+  assert.match(
+    html,
+    /class="touch-button-secondary touch-button-secondary--icon"[\s\S]*?data-action="workspace#openProfileOptions"[\s\S]*?aria-label="Profile"[\s\S]*?<img src="\/profile\.svg" alt="" aria-hidden="true" class="touch-button-secondary__icon">/
+  );
   assert.match(html, /id="profile-options-ui-locale-picker"/);
   assert.match(html, /data-controller="profile-options"/);
   assert.doesNotMatch(html, /ui-locale-badge/);

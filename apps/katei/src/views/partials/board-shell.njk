@@ -24,8 +24,13 @@
     <button type="button" class="touch-button-secondary" data-action="workspace#openBoardOptions">
       {{ t('workspace.boardOptions') }}
     </button>
-    <button type="button" class="touch-button-secondary" data-action="workspace#openProfileOptions">
-      {{ t('workspace.profileOptions') }}
+    <button
+      type="button"
+      class="touch-button-secondary touch-button-secondary--icon"
+      data-action="workspace#openProfileOptions"
+      aria-label="{{ t('workspace.profileOptions') }}"
+    >
+      <img src="/profile.svg" alt="" aria-hidden="true" class="touch-button-secondary__icon">
     </button>
   </div>
 </header>
