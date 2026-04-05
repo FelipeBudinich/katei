@@ -216,6 +216,21 @@
     display: none;
   }
 
+  .profile-options-identity-row {
+    display: grid;
+    gap: 0.75rem;
+    align-items: center;
+  }
+
+  .profile-options-locale-slot {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .profile-options-locale-slot .ui-locale-picker--icon-menu {
+    min-width: auto;
+  }
+
   .view-locale-menu--ui {
     min-width: 12rem;
   }
@@ -249,6 +264,12 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  @media (min-width: 40rem) {
+    .profile-options-identity-row {
+      grid-template-columns: minmax(0, 1fr) auto auto;
+    }
   }
 
   .viewer-chip {

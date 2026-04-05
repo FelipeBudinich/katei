@@ -28,15 +28,15 @@
       </button>
     </div>
 
-    <div class="ui-locale-control-row mt-4">
-      {% set uiLocalePickerId = 'profile-options-ui-locale-picker' %}
-      {% set uiLocalePickerVariant = 'icon-menu' %}
-      {% include "partials/ui-locale-picker.njk" %}
-    </div>
-
-    <div class="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+    <div class="profile-options-identity-row mt-4">
       <div class="min-w-0">
         {% include "partials/viewer-chip.njk" %}
+      </div>
+
+      <div class="profile-options-locale-slot">
+        {% set uiLocalePickerId = 'profile-options-ui-locale-picker' %}
+        {% set uiLocalePickerVariant = 'icon-menu' %}
+        {% include "partials/ui-locale-picker.njk" %}
       </div>
 
       <div
