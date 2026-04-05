@@ -716,16 +716,16 @@
   }
   .column-header-chip-control {
     display: inline-flex;
-    align-items: baseline;
+    align-items: center;
     justify-content: flex-end;
-    min-height: auto;
+    min-height: 100%;
     padding-block: 0;
     padding-inline: 0;
     background: none;
     border: 0;
     color: inherit;
     cursor: pointer;
-    align-self: baseline;
+    align-self: stretch;
   }
   .column-header-toggle-chip-button {
     grid-column: 3;
@@ -1248,8 +1248,10 @@
     border-radius: var(--radius-xl);
   }
   .count-chip--add-card {
-    min-width: 2rem;
+    min-width: 2.5rem;
+    min-height: 100%;
     justify-content: center;
+    align-items: center;
   }
   .count-chip-icon {
     display: inline-block;
