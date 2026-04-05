@@ -23,10 +23,11 @@
         data-stage-id="{{ column.id }}"
         data-column-id="{{ column.id }}"
         data-action="workspace#openCreateCard"
+        aria-label="{{ t('workspace.addCard') }}"
         {% if not canCreateInStage %}hidden disabled aria-disabled="true"{% else %}aria-disabled="false"{% endif %}
       >
-        <span class="count-chip px-3 py-1 text-sm font-medium">
-          <span>{{ t('workspace.addCard') }}</span>
+        <span class="count-chip count-chip--add-card px-3 py-1 text-sm font-medium" aria-hidden="true">
+          <span class="count-chip-add-card-icon"></span>
         </span>
       </button>
       <button

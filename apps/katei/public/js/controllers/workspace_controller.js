@@ -46,6 +46,8 @@ export default class extends Controller {
     'announcer',
     'viewDialog',
     'viewLocaleSection',
+    'viewLocaleButton',
+    'viewLocaleMenu',
     'viewLocaleSelect',
     'viewReviewState',
     'viewRequestVerificationButton',
@@ -582,6 +584,17 @@ export default class extends Controller {
     scheduleBrowserFrame(() => {
       if (
         this.hasViewLocaleSectionTarget &&
+        this.hasViewLocaleButtonTarget &&
+        !this.viewLocaleSectionTarget.hidden &&
+        this.viewLocaleButtonTarget.hidden !== true &&
+        this.viewLocaleButtonTarget.disabled !== true
+      ) {
+        this.viewLocaleButtonTarget.focus();
+        return;
+      }
+
+      if (
+        this.hasViewLocaleSectionTarget &&
         this.hasViewLocaleSelectTarget &&
         !this.viewLocaleSectionTarget.hidden &&
         this.viewLocaleSelectTarget.options.length > 0
@@ -624,11 +637,187 @@ export default class extends Controller {
       return;
     }
 
+    const nextLocale = normalizeOptionalLocale(
+      event?.currentTarget?.dataset?.locale
+      ?? event?.currentTarget?.value
+      ?? null
+    );
+
     this.viewDialogState = {
       ...this.viewDialogState,
-      selectedLocale: event.currentTarget.value || null
+      selectedLocale: nextLocale
     };
+
+    if (this.hasViewLocaleSelectTarget) {
+      this.viewLocaleSelectTarget.value = nextLocale ?? '';
+    }
+
     this.syncViewDialog();
+
+    if (event?.currentTarget?.dataset?.locale) {
+      this.closeViewLocaleMenu({ restoreFocus: true });
+    }
+  }
+
+  toggleViewLocaleMenu(event) {
+    event.preventDefault();
+
+    if (this.isViewLocaleMenuOpen()) {
+      this.closeViewLocaleMenu();
+      return;
+    }
+
+    this.openViewLocaleMenu();
+  }
+
+  openViewLocaleMenu() {
+    if (
+      !this.hasViewLocaleButtonTarget ||
+      !this.hasViewLocaleMenuTarget ||
+      this.viewLocaleButtonTarget.disabled === true
+    ) {
+      return;
+    }
+
+    if (this.getViewLocaleMenuOptions().length < 1) {
+      return;
+    }
+
+    this.viewLocaleMenuTarget.hidden = false;
+    this.viewLocaleButtonTarget.setAttribute('aria-expanded', 'true');
+  }
+
+  closeViewLocaleMenu({ restoreFocus = false } = {}) {
+    if (this.hasViewLocaleMenuTarget) {
+      this.viewLocaleMenuTarget.hidden = true;
+    }
+
+    if (this.hasViewLocaleButtonTarget) {
+      this.viewLocaleButtonTarget.setAttribute('aria-expanded', 'false');
+
+      if (restoreFocus) {
+        this.viewLocaleButtonTarget.focus?.();
+      }
+    }
+  }
+
+  handleViewLocaleTriggerKeydown(event) {
+    if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') {
+      event.preventDefault();
+      this.openViewLocaleMenu();
+      this.focusSelectedViewLocaleMenuOption();
+      return;
+    }
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      this.openViewLocaleMenu();
+      this.focusSelectedViewLocaleMenuOption();
+      return;
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      this.openViewLocaleMenu();
+      this.focusSelectedViewLocaleMenuOption();
+    }
+  }
+
+  handleViewLocaleMenuKeydown(event) {
+    const options = this.getViewLocaleMenuOptions();
+
+    if (options.length < 1) {
+      return;
+    }
+
+    const activeIndex = options.findIndex((option) => option === event.target);
+
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      this.closeViewLocaleMenu({ restoreFocus: true });
+      return;
+    }
+
+    if (event.key === 'Tab') {
+      this.closeViewLocaleMenu();
+      return;
+    }
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      this.focusViewLocaleMenuOption(activeIndex >= 0 ? activeIndex + 1 : 0);
+      return;
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      this.focusViewLocaleMenuOption(activeIndex >= 0 ? activeIndex - 1 : options.length - 1);
+      return;
+    }
+
+    if (event.key === 'Home') {
+      event.preventDefault();
+      this.focusViewLocaleMenuOption(0);
+      return;
+    }
+
+    if (event.key === 'End') {
+      event.preventDefault();
+      this.focusViewLocaleMenuOption(options.length - 1);
+    }
+  }
+
+  handleViewDialogClick(event) {
+    if (!this.isViewLocaleMenuOpen()) {
+      return;
+    }
+
+    const target = event?.target ?? null;
+    const clickedMenu = this.hasViewLocaleMenuTarget && this.viewLocaleMenuTarget.contains?.(target);
+    const clickedTrigger = this.hasViewLocaleButtonTarget && this.viewLocaleButtonTarget.contains?.(target);
+
+    if (clickedMenu || clickedTrigger) {
+      return;
+    }
+
+    this.closeViewLocaleMenu();
+  }
+
+  isViewLocaleMenuOpen() {
+    return this.hasViewLocaleMenuTarget && this.viewLocaleMenuTarget.hidden !== true;
+  }
+
+  getViewLocaleMenuOptions() {
+    if (!this.hasViewLocaleMenuTarget) {
+      return [];
+    }
+
+    if (typeof this.viewLocaleMenuTarget.querySelectorAll === 'function') {
+      return Array.from(this.viewLocaleMenuTarget.querySelectorAll('.view-locale-menu-option'));
+    }
+
+    if (Array.isArray(this.viewLocaleMenuTarget.children)) {
+      return this.viewLocaleMenuTarget.children;
+    }
+
+    return [];
+  }
+
+  focusViewLocaleMenuOption(index) {
+    const options = this.getViewLocaleMenuOptions();
+
+    if (options.length < 1) {
+      return;
+    }
+
+    const boundedIndex = ((index % options.length) + options.length) % options.length;
+    options[boundedIndex]?.focus?.();
+  }
+
+  focusSelectedViewLocaleMenuOption() {
+    const options = this.getViewLocaleMenuOptions();
+    const selectedIndex = options.findIndex((option) => option?.attributes?.['aria-checked'] === 'true');
+    this.focusViewLocaleMenuOption(selectedIndex >= 0 ? selectedIndex : 0);
   }
 
   async requestViewLocaleReview(event) {
@@ -1066,6 +1255,8 @@ export default class extends Controller {
   }
 
   dismissViewDialog({ restoreFocus = true } = {}) {
+    this.closeViewLocaleMenu({ restoreFocus: false });
+
     if (this.viewDialogTarget.open) {
       this.viewDialogTarget.close();
     }
@@ -1143,6 +1334,9 @@ export default class extends Controller {
     const shouldShowPriority = shouldShowPriorityForStage(resolvedStageId);
     const content = localizedView.variant;
     const localeOptions = localizedView.availableLocales.map((locale) => createLocaleOption(locale));
+    const localeMenuOptions = localizedView.availableLocales.map((locale) =>
+      createLocaleMenuOption(locale, localizedView.selectedLocale)
+    );
     const promptRunRequestKey = createStagePromptRunRequestKey({
       boardId: board?.id,
       cardId: card?.id
@@ -1174,6 +1368,18 @@ export default class extends Controller {
       this.viewLocaleSelectTarget.value = localizedView.selectedLocale ?? '';
       this.viewLocaleSelectTarget.disabled = !shouldShowLocaleSection;
       this.viewLocaleSelectTarget.setAttribute('aria-disabled', String(!shouldShowLocaleSection));
+
+      if (this.hasViewLocaleButtonTarget) {
+        this.viewLocaleButtonTarget.hidden = !shouldShowLocaleSection;
+        this.viewLocaleButtonTarget.disabled = !shouldShowLocaleSection;
+        this.viewLocaleButtonTarget.setAttribute('aria-disabled', String(!shouldShowLocaleSection));
+        this.viewLocaleButtonTarget.setAttribute('aria-expanded', 'false');
+      }
+
+      if (this.hasViewLocaleMenuTarget) {
+        this.viewLocaleMenuTarget.hidden = true;
+        this.viewLocaleMenuTarget.replaceChildren(...localeMenuOptions);
+      }
     }
 
     if (this.hasViewReviewStateTarget) {
@@ -1576,6 +1782,24 @@ function createLocaleOption(locale) {
   option.value = locale;
   option.textContent = locale;
   return option;
+}
+
+function createLocaleMenuOption(locale, selectedLocale) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'view-locale-menu-option';
+  button.value = locale;
+  button.dataset.locale = locale;
+  button.textContent = locale;
+  button.tabIndex = -1;
+  button.setAttribute('role', 'menuitemradio');
+  button.setAttribute('aria-checked', String(locale === selectedLocale));
+  button.setAttribute('data-action', 'workspace#changeViewLocale');
+  return button;
+}
+
+function normalizeOptionalLocale(value) {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
 function createLocalizationGenerationRequestKey({ boardId, cardId, locale } = {}) {

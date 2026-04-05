@@ -1323,6 +1323,10 @@ test('openView defaults to ui-locale content when that locale exists for the car
       controller.viewLocaleSelectTarget.options.map((option) => option.value),
       ['en', 'ja']
     );
+    assert.deepEqual(
+      controller.viewLocaleMenuTarget.children.map((option) => option.dataset.locale),
+      ['en', 'ja']
+    );
     assert.equal(controller.viewLocaleSelectTarget.value, 'ja');
     assert.equal(controller.viewDialogState.selectedLocale, 'ja');
     assert.equal(controller.viewCardTitleTarget.textContent, '日本語タイトル');
@@ -1364,6 +1368,10 @@ test('openView falls back from a regional ui locale to same-language content whe
 
     assert.deepEqual(
       controller.viewLocaleSelectTarget.options.map((option) => option.value),
+      ['en', 'es']
+    );
+    assert.deepEqual(
+      controller.viewLocaleMenuTarget.children.map((option) => option.dataset.locale),
       ['en', 'es']
     );
     assert.equal(controller.viewLocaleSelectTarget.value, 'es');
@@ -1432,6 +1440,10 @@ test('openView uses the dedicated view dialog and limits locales to present loca
       ['en', 'es-CL']
     );
     assert.equal(controller.viewLocaleSelectTarget.value, 'es-CL');
+    assert.equal(controller.viewLocaleButtonTarget.hidden, false);
+    assert.equal(controller.viewLocaleButtonTarget.disabled, false);
+    assert.equal(controller.viewLocaleButtonTarget.attributes['aria-expanded'], 'false');
+    assert.equal(controller.viewLocaleMenuTarget.hidden, true);
     assert.equal(controller.viewDialogState.selectedLocale, 'es-CL');
     assert.equal(controller.viewCardTitleTarget.textContent, 'Titulo por defecto');
     assert.equal(controller.viewCardBodyTarget.innerHTML, '<p>Detalles por defecto</p>');
@@ -1466,6 +1478,7 @@ test('openViewFromToolbar opens view mode for the correct card when the toolbar 
     assert.equal(controller.viewDialogState.card, card);
     assert.equal(controller.viewDialogState.stageId, 'review');
     assert.equal(controller.viewLocaleSelectTarget.value, 'es-CL');
+    assert.equal(controller.viewLocaleButtonTarget.focused, true);
   } finally {
     restoreDom();
   }
@@ -1738,6 +1751,127 @@ test('changeViewLocale rerenders the localized reader content', () => {
   }
 });
 
+test('changeViewLocale works from a locale menu button and restores trigger focus', () => {
+  const restoreDom = installViewDialogDomStubs();
+
+  try {
+    const { controller, card } = createViewDialogController();
+
+    WorkspaceController.prototype.openView.call(controller, {
+      currentTarget: createViewTriggerDouble(card.id, 'review', { requestedLocale: 'es-CL' })
+    });
+    WorkspaceController.prototype.openViewLocaleMenu.call(controller);
+
+    WorkspaceController.prototype.changeViewLocale.call(controller, {
+      preventDefault() {},
+      currentTarget: {
+        dataset: { locale: 'en' }
+      }
+    });
+
+    assert.equal(controller.viewDialogState.selectedLocale, 'en');
+    assert.equal(controller.viewLocaleSelectTarget.value, 'en');
+    assert.equal(controller.viewLocaleMenuTarget.hidden, true);
+    assert.equal(controller.viewLocaleButtonTarget.attributes['aria-expanded'], 'false');
+    assert.equal(controller.viewLocaleButtonTarget.focused, true);
+  } finally {
+    restoreDom();
+  }
+});
+
+test('toggleViewLocaleMenu opens and closes the locale menu', () => {
+  const restoreDom = installViewDialogDomStubs();
+
+  try {
+    const { controller, card } = createViewDialogController();
+
+    WorkspaceController.prototype.openView.call(controller, {
+      currentTarget: createViewTriggerDouble(card.id, 'review')
+    });
+
+    WorkspaceController.prototype.toggleViewLocaleMenu.call(controller, {
+      preventDefault() {}
+    });
+    assert.equal(controller.viewLocaleMenuTarget.hidden, false);
+    assert.equal(controller.viewLocaleButtonTarget.attributes['aria-expanded'], 'true');
+
+    WorkspaceController.prototype.toggleViewLocaleMenu.call(controller, {
+      preventDefault() {}
+    });
+    assert.equal(controller.viewLocaleMenuTarget.hidden, true);
+    assert.equal(controller.viewLocaleButtonTarget.attributes['aria-expanded'], 'false');
+  } finally {
+    restoreDom();
+  }
+});
+
+test('handleViewLocaleMenuKeydown closes the locale menu on Escape', () => {
+  const restoreDom = installViewDialogDomStubs();
+
+  try {
+    const { controller, card } = createViewDialogController();
+
+    WorkspaceController.prototype.openView.call(controller, {
+      currentTarget: createViewTriggerDouble(card.id, 'review')
+    });
+    WorkspaceController.prototype.openViewLocaleMenu.call(controller);
+
+    WorkspaceController.prototype.handleViewLocaleMenuKeydown.call(controller, {
+      key: 'Escape',
+      preventDefault() {},
+      target: controller.viewLocaleMenuTarget.children[0]
+    });
+
+    assert.equal(controller.viewLocaleMenuTarget.hidden, true);
+    assert.equal(controller.viewLocaleButtonTarget.attributes['aria-expanded'], 'false');
+    assert.equal(controller.viewLocaleButtonTarget.focused, true);
+  } finally {
+    restoreDom();
+  }
+});
+
+test('handleViewDialogClick closes the locale menu when clicking outside', () => {
+  const restoreDom = installViewDialogDomStubs();
+
+  try {
+    const { controller, card } = createViewDialogController();
+
+    WorkspaceController.prototype.openView.call(controller, {
+      currentTarget: createViewTriggerDouble(card.id, 'review')
+    });
+    WorkspaceController.prototype.openViewLocaleMenu.call(controller);
+
+    WorkspaceController.prototype.handleViewDialogClick.call(controller, {
+      target: { id: 'outside-click' }
+    });
+
+    assert.equal(controller.viewLocaleMenuTarget.hidden, true);
+    assert.equal(controller.viewLocaleButtonTarget.attributes['aria-expanded'], 'false');
+  } finally {
+    restoreDom();
+  }
+});
+
+test('dismissViewDialog closes the locale menu before clearing state', () => {
+  const restoreDom = installViewDialogDomStubs();
+
+  try {
+    const { controller, card } = createViewDialogController();
+
+    WorkspaceController.prototype.openView.call(controller, {
+      currentTarget: createViewTriggerDouble(card.id, 'review')
+    });
+    WorkspaceController.prototype.openViewLocaleMenu.call(controller);
+    WorkspaceController.prototype.dismissViewDialog.call(controller, { restoreFocus: false });
+
+    assert.equal(controller.viewLocaleMenuTarget.hidden, true);
+    assert.equal(controller.viewLocaleButtonTarget.attributes['aria-expanded'], 'false');
+    assert.equal(controller.viewDialogState, null);
+  } finally {
+    restoreDom();
+  }
+});
+
 test('syncViewDialog uses the empty-details fallback when the selected locale has no markdown body', () => {
   const restoreDom = installViewDialogDomStubs();
 
@@ -1769,6 +1903,10 @@ test('syncViewDialog uses the empty-details fallback when the selected locale ha
     assert.equal(controller.viewLocaleSectionTarget.hidden, false);
     assert.deepEqual(
       controller.viewLocaleSelectTarget.options.map((option) => option.value),
+      ['en']
+    );
+    assert.deepEqual(
+      controller.viewLocaleMenuTarget.children.map((option) => option.dataset.locale),
       ['en']
     );
     assert.equal(controller.viewCardTitleTarget.textContent, 'English source');
@@ -2918,6 +3056,10 @@ function createViewDialogController({
   controller.viewDialogTarget = createDialogDouble();
   controller.hasViewLocaleSectionTarget = true;
   controller.viewLocaleSectionTarget = { hidden: true };
+  controller.hasViewLocaleButtonTarget = true;
+  controller.viewLocaleButtonTarget = createButtonDouble();
+  controller.hasViewLocaleMenuTarget = true;
+  controller.viewLocaleMenuTarget = createMenuDouble();
   controller.hasViewLocaleSelectTarget = true;
   controller.viewLocaleSelectTarget = createSelectDouble();
   controller.hasViewReviewStateTarget = true;
@@ -3035,8 +3177,35 @@ function createButtonDouble() {
     disabled: false,
     dataset: {},
     attributes: {},
+    isConnected: true,
+    contains(target) {
+      return target === this;
+    },
     setAttribute(name, value) {
       this.attributes[name] = String(value);
+    },
+    focus() {
+      this.focused = true;
+    }
+  };
+}
+
+function createMenuDouble() {
+  return {
+    hidden: true,
+    children: [],
+    contains(target) {
+      return this.children.includes(target);
+    },
+    replaceChildren(...children) {
+      this.children = children;
+    },
+    querySelectorAll(selector) {
+      if (selector === '.view-locale-menu-option') {
+        return this.children;
+      }
+
+      return [];
     }
   };
 }
@@ -3089,6 +3258,10 @@ function installViewDialogDomStubs() {
         };
       }
 
+      if (tagName === 'button') {
+        return createMenuButtonDouble();
+      }
+
       return createContentRegionDouble();
     }
   };
@@ -3104,6 +3277,24 @@ function installViewDialogDomStubs() {
       delete globalThis.document;
     } else {
       globalThis.document = originalDocument;
+    }
+  };
+}
+
+function createMenuButtonDouble() {
+  return {
+    type: 'button',
+    className: '',
+    value: '',
+    dataset: {},
+    textContent: '',
+    tabIndex: 0,
+    attributes: {},
+    setAttribute(name, value) {
+      this.attributes[name] = String(value);
+    },
+    focus() {
+      this.focused = true;
     }
   };
 }
