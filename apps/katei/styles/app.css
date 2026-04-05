@@ -199,6 +199,31 @@
     outline-offset: 2px;
   }
 
+  .ui-locale-picker--icon-menu {
+    display: inline-grid;
+    gap: 0;
+    min-width: auto;
+  }
+
+  .ui-locale-picker--icon-menu .view-locale-picker {
+    position: relative;
+    display: inline-grid;
+  }
+
+  .ui-locale-picker--icon-menu .ui-locale-picker-label,
+  .ui-locale-picker--icon-menu .ui-locale-picker-select-wrap,
+  .ui-locale-picker--icon-menu .ui-locale-picker-select {
+    display: none;
+  }
+
+  .view-locale-menu--ui {
+    min-width: 12rem;
+  }
+
+  .view-locale-menu-option--ui {
+    white-space: nowrap;
+  }
+
   .top-bar-actions {
     display: grid;
     grid-auto-flow: column;

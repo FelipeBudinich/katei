@@ -8,6 +8,7 @@ import BoardStageConfigController from '/js/controllers/board_stage_config_contr
 import CardEditorController from '/js/controllers/card_editor_controller.js';
 import LandingController from '/js/controllers/landing_controller.js';
 import SessionController from '/js/controllers/session_controller.js';
+import UiLocalePickerController from '/js/controllers/ui_locale_picker_controller.js';
 
 const application = Application.start();
 
@@ -20,5 +21,6 @@ application.register('board-stage-config', BoardStageConfigController);
 application.register('card-editor', CardEditorController);
 application.register('landing', LandingController);
 application.register('session', SessionController);
+application.register('ui-locale-picker', UiLocalePickerController);
 
 window.Stimulus = application;

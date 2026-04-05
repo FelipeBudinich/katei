@@ -1,18 +1,89 @@
-<form method="get" action="{{ uiLocalePickerAction or '/' }}" class="ui-locale-picker">
-  <label class="ui-locale-picker-label" for="{{ uiLocalePickerId or 'ui-locale-picker' }}">{{ t('uiLocale.label') }}</label>
-  <div class="ui-locale-picker-select-wrap">
-    <select
-      id="{{ uiLocalePickerId or 'ui-locale-picker' }}"
-      name="lang"
-      class="ui-locale-picker-select"
-      aria-label="{{ t('uiLocale.label') }}"
-      onchange="this.form.submit()"
-    >
-      {% for uiLocaleOption in uiLocaleOptions %}
-        <option value="{{ uiLocaleOption.value }}"{% if uiLocaleOption.selected %} selected{% endif %}>
-          {{ uiLocaleOption.label }}
-        </option>
-      {% endfor %}
-    </select>
-  </div>
-</form>
+{% if uiLocalePickerVariant == 'icon-menu' %}
+  <form
+    method="get"
+    action="{{ uiLocalePickerAction or '/' }}"
+    class="ui-locale-picker ui-locale-picker--icon-menu"
+    data-controller="ui-locale-picker"
+    data-action="click@window->ui-locale-picker#handleWindowClick"
+  >
+    <label class="sr-only" for="{{ uiLocalePickerId or 'ui-locale-picker' }}">
+      {{ t('uiLocale.label') }}
+    </label>
+
+    <div class="view-locale-picker">
+      <button
+        type="button"
+        id="{{ (uiLocalePickerId or 'ui-locale-picker') }}-trigger"
+        class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--language"
+        aria-label="{{ t('uiLocale.label') }}"
+        aria-haspopup="menu"
+        aria-expanded="false"
+        aria-controls="{{ (uiLocalePickerId or 'ui-locale-picker') }}-menu"
+        data-ui-locale-picker-target="trigger"
+        data-action="click->ui-locale-picker#toggleMenu keydown->ui-locale-picker#handleTriggerKeydown"
+      >
+        <span class="sr-only">{{ t('uiLocale.label') }}</span>
+      </button>
+
+      <div
+        id="{{ (uiLocalePickerId or 'ui-locale-picker') }}-menu"
+        class="view-locale-menu view-locale-menu--ui"
+        role="menu"
+        hidden
+        data-ui-locale-picker-target="menu"
+        data-action="keydown->ui-locale-picker#handleMenuKeydown"
+      >
+        {% for uiLocaleOption in uiLocaleOptions %}
+          <button
+            type="button"
+            class="view-locale-menu-option view-locale-menu-option--ui"
+            value="{{ uiLocaleOption.value }}"
+            data-locale="{{ uiLocaleOption.value }}"
+            role="menuitemradio"
+            aria-checked="{{ 'true' if uiLocaleOption.selected else 'false' }}"
+            tabindex="-1"
+            data-ui-locale-picker-target="option"
+            data-action="ui-locale-picker#selectLocale"
+          >
+            {{ uiLocaleOption.label }}
+          </button>
+        {% endfor %}
+      </div>
+
+      <select
+        id="{{ uiLocalePickerId or 'ui-locale-picker' }}"
+        name="lang"
+        class="sr-only"
+        hidden
+        tabindex="-1"
+        aria-hidden="true"
+        data-ui-locale-picker-target="select"
+      >
+        {% for uiLocaleOption in uiLocaleOptions %}
+          <option value="{{ uiLocaleOption.value }}"{% if uiLocaleOption.selected %} selected{% endif %}>
+            {{ uiLocaleOption.label }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+  </form>
+{% else %}
+  <form method="get" action="{{ uiLocalePickerAction or '/' }}" class="ui-locale-picker">
+    <label class="ui-locale-picker-label" for="{{ uiLocalePickerId or 'ui-locale-picker' }}">{{ t('uiLocale.label') }}</label>
+    <div class="ui-locale-picker-select-wrap">
+      <select
+        id="{{ uiLocalePickerId or 'ui-locale-picker' }}"
+        name="lang"
+        class="ui-locale-picker-select"
+        aria-label="{{ t('uiLocale.label') }}"
+        onchange="this.form.submit()"
+      >
+        {% for uiLocaleOption in uiLocaleOptions %}
+          <option value="{{ uiLocaleOption.value }}"{% if uiLocaleOption.selected %} selected{% endif %}>
+            {{ uiLocaleOption.label }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+  </form>
+{% endif %}
