@@ -19,8 +19,13 @@
           </button>
         </div>
 
-        <button type="button" class="touch-button-secondary" data-action="card-editor#close">
-          {{ t('common.close') }}
+        <button
+          type="button"
+          class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--close"
+          aria-label="{{ t('common.close') }}"
+          data-action="card-editor#close"
+        >
+          <span class="sr-only">{{ t('common.close') }}</span>
         </button>
       </div>
     </div>

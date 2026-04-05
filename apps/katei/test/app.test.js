@@ -320,11 +320,19 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
     boardOptionsDialog,
     /class="dialog-actions board-options-actions mt-6"[\s\S]*?board-options#deleteBoard/
   );
+  assert.match(
+    boardOptionsDialog,
+    /class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--close"[\s\S]*?aria-label="Close"[\s\S]*?data-board-options-initial-focus[\s\S]*?data-action="board-options#close"[\s\S]*?<span class="sr-only">Close<\/span>/
+  );
   assert.doesNotMatch(response.text, /board-options:delete-board->workspace#confirmDeleteBoard/);
   assert.match(boardCollaboratorsDialog, /type="email"[\s\S]*?name="email"[\s\S]*?autocomplete="email"/);
   assert.match(
     boardCollaboratorsDialog,
     /<select[\s\S]*?name="role"[\s\S]*?data-board-collaborators-field="memberRoleSelect"/
+  );
+  assert.match(
+    boardCollaboratorsDialog,
+    /class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--close"[\s\S]*?aria-label="Close"[\s\S]*?data-board-collaborators-initial-focus[\s\S]*?data-action="board-collaborators#close"[\s\S]*?<span class="sr-only">Close<\/span>/
   );
 
   assert.match(profileOptionsDialog, /viewer-chip/);
@@ -342,6 +350,10 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
   assert.match(profileOptionsDialog, /data-session-auth-url-value="\/auth\/logout"/);
   assert.match(profileOptionsDialog, /data-session-redirect-url-value="\/"/);
   assert.match(profileOptionsDialog, /session#logout/);
+  assert.match(
+    profileOptionsDialog,
+    /class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--close"[\s\S]*?aria-label="Close"[\s\S]*?data-profile-options-initial-focus[\s\S]*?data-action="profile-options#close"[\s\S]*?<span class="sr-only">Close<\/span>/
+  );
 
   const profileLocaleRowIndex = profileOptionsDialog.indexOf('ui-locale-control-row mt-4');
   const profileIdentityActionsIndex = profileOptionsDialog.indexOf(
@@ -596,6 +608,23 @@ test('workspace template renders the no-board header with both Options and Profi
   assert.match(html, /<option value="en" selected>\s*English\s*<\/option>/);
   assert.match(html, /onchange="this\.form\.submit\(\)"/);
   assert.match(html, /No Boards Viewer/);
+
+  const boardOptionsDialog = extractDialogHtml(html, 'board-options');
+  const boardCollaboratorsDialog = extractDialogHtml(html, 'board-collaborators');
+  const profileOptionsDialog = extractDialogHtml(html, 'profile-options');
+
+  assert.match(
+    boardOptionsDialog,
+    /class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--close"[\s\S]*?aria-label="Close"[\s\S]*?data-board-options-initial-focus[\s\S]*?data-action="board-options#close"[\s\S]*?<span class="sr-only">Close<\/span>/
+  );
+  assert.match(
+    boardCollaboratorsDialog,
+    /class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--close"[\s\S]*?aria-label="Close"[\s\S]*?data-board-collaborators-initial-focus[\s\S]*?data-action="board-collaborators#close"[\s\S]*?<span class="sr-only">Close<\/span>/
+  );
+  assert.match(
+    profileOptionsDialog,
+    /class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--close"[\s\S]*?aria-label="Close"[\s\S]*?data-profile-options-initial-focus[\s\S]*?data-action="profile-options#close"[\s\S]*?<span class="sr-only">Close<\/span>/
+  );
 });
 
 test('workspace template nests the column chevron inside the count chip', () => {
@@ -662,6 +691,10 @@ test('workspace template renders edit localization controls and a simplified loc
   assert.doesNotMatch(cardEditorDialog, /Available localizations/);
   assert.doesNotMatch(cardEditorDialog, /data-card-editor-target="localeStatusRegion"/);
   assert.doesNotMatch(cardEditorDialog, /data-card-editor-target="localeStatusTemplate"/);
+  assert.match(
+    cardEditorDialog,
+    /class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--close"[\s\S]*?aria-label="Close"[\s\S]*?data-action="card-editor#close"[\s\S]*?<span class="sr-only">Close<\/span>/
+  );
 
   assert.match(
     cardViewDialog,
@@ -673,6 +706,10 @@ test('workspace template renders edit localization controls and a simplified loc
   assert.doesNotMatch(cardViewDialog, /data-card-editor-target="localeFallbackNotice"/);
   assert.doesNotMatch(cardViewDialog, /data-card-editor-target="localeEditSummary"/);
   assert.doesNotMatch(cardViewDialog, /data-card-editor-target="localeReadOnlyNotice"/);
+  assert.match(
+    cardViewDialog,
+    /class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--close"[\s\S]*?aria-label="Close"[\s\S]*?data-view-dialog-initial-focus[\s\S]*?data-action="workspace#closeViewDialog"[\s\S]*?<span class="sr-only">Close<\/span>/
+  );
   assert.doesNotMatch(html, /data-card-field="editButton"/);
   assert.doesNotMatch(html, /data-card-field="promptRunButton"/);
 });
@@ -721,12 +758,24 @@ test('workspace template renders the board editor without a templates field', ()
   assert.match(boardEditorDialog, /board-stage-config:apply@window->board-editor#applyStageConfig/);
   assert.match(boardEditorDialog, /board-editor#openStageConfig/);
   assert.match(boardEditorDialog, /board-editor#closeForAction workspace#confirmDeleteBoard/);
+  assert.match(
+    boardEditorDialog,
+    /class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--close"[\s\S]*?aria-label="Close"[\s\S]*?data-action="board-editor#close"[\s\S]*?<span class="sr-only">Close<\/span>/
+  );
   assert.doesNotMatch(boardEditorDialog, /name="templates"/);
   assert.doesNotMatch(boardEditorDialog, /data-board-editor-target="templatesInput"/);
   assert.doesNotMatch(boardEditorDialog, />\s*Templates\s*</);
   assert.match(boardStageConfigDialog, /workspace:open-board-stage-config@window->board-stage-config#openFromEvent/);
   assert.match(boardStageConfigDialog, /data-board-stage-config-target="definitionsInput"/);
   assert.match(boardStageConfigDialog, /data-board-stage-config-target="error"/);
+  assert.match(
+    boardStageConfigDialog,
+    /class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--close"[\s\S]*?aria-label="Close"[\s\S]*?data-action="board-stage-config#close"[\s\S]*?<span class="sr-only">Close<\/span>/
+  );
+  assert.match(
+    boardStageConfigDialog,
+    /<div class="dialog-actions pt-2">[\s\S]*?<button type="button" class="touch-button-secondary" data-action="board-stage-config#close">\s*Cancel\s*<\/button>/
+  );
 });
 
 test('GET /boards bootstraps only safe board AI metadata and never serialized secrets', async () => {

@@ -31,11 +31,12 @@
 
         <button
           type="button"
-          class="touch-button-secondary"
+          class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--close"
+          aria-label="{{ t('common.close') }}"
           data-view-dialog-initial-focus
           data-action="workspace#closeViewDialog"
         >
-          {{ t('common.close') }}
+          <span class="sr-only">{{ t('common.close') }}</span>
         </button>
       </div>
     </div>

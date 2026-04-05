@@ -19,11 +19,12 @@
 
       <button
         type="button"
-        class="touch-button-secondary"
+        class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--close"
+        aria-label="{{ t('common.close') }}"
         data-profile-options-initial-focus
         data-action="profile-options#close"
       >
-        {{ t('common.close') }}
+        <span class="sr-only">{{ t('common.close') }}</span>
       </button>
     </div>
 

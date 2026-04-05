@@ -17,8 +17,13 @@
         <h2 class="font-serif text-3xl text-strong">{{ t('boardStageConfigDialog.heading') }}</h2>
       </div>
 
-      <button type="button" class="touch-button-secondary" data-action="board-stage-config#close">
-        {{ t('common.close') }}
+      <button
+        type="button"
+        class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--close"
+        aria-label="{{ t('common.close') }}"
+        data-action="board-stage-config#close"
+      >
+        <span class="sr-only">{{ t('common.close') }}</span>
       </button>
     </div>
 
