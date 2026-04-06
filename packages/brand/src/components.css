@@ -416,6 +416,13 @@
     gap: 0;
   }
 
+  .touch-button-secondary--icon-with-badge {
+    grid-auto-flow: column;
+    grid-auto-columns: max-content;
+    gap: 0.5rem;
+    padding-inline: 0.75rem;
+  }
+
   .touch-button-secondary__icon {
     display: block;
     width: 1.25rem;
@@ -465,6 +472,21 @@
     mask-size: contain;
     -webkit-mask-image: url("/svg/language.svg");
     mask-image: url("/svg/language.svg");
+  }
+
+  .touch-button-secondary--team::before {
+    content: "";
+    width: 1rem;
+    height: 1rem;
+    background-color: currentColor;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    -webkit-mask-image: url("/svg/team.svg");
+    mask-image: url("/svg/team.svg");
   }
 
   .touch-button-danger {

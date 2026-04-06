@@ -80,12 +80,13 @@
             </button>
             <button
               type="button"
-              class="touch-button-secondary"
+              class="touch-button-secondary touch-button-secondary--icon-with-badge touch-button-secondary--team"
               hidden
+              aria-label="{{ t('boardOptionsDialog.collaboratorsButton') }}"
               data-board-options-field="collaboratorsButton"
               data-action="board-options#openCollaborators"
             >
-              {{ t('boardOptionsDialog.collaboratorsButton') }}
+              <span class="sr-only">{{ t('boardOptionsDialog.collaboratorsButton') }}</span>
               <span class="count-chip ml-2 px-2 py-0.5 text-xs" hidden data-board-options-field="collaboratorBadge">0</span>
             </button>
             <button

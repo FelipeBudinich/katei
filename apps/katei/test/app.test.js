@@ -304,6 +304,10 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
   assert.match(boardOptionsDialog, /board-options#openCollaborators/);
   assert.match(boardOptionsDialog, /data-board-options-field="collaboratorsButton"/);
   assert.match(boardOptionsDialog, /data-board-options-field="collaboratorsButton"[\s\S]*?board-options#openCollaborators/);
+  assert.match(
+    boardOptionsDialog,
+    /class="touch-button-secondary touch-button-secondary--icon-with-badge touch-button-secondary--team"[\s\S]*?aria-label="Collaborators"[\s\S]*?<span class="sr-only">Collaborators<\/span>/
+  );
   assert.match(boardOptionsDialog, /data-board-options-field="collaboratorBadge"/);
   assert.match(boardOptionsDialog, /data-board-options-field="editButton"/);
   assert.match(
