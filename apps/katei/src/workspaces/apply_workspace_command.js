@@ -1163,11 +1163,20 @@ function applyCardLocaleReviewVerify(workspace, command, context) {
 function applyCardDelete(workspace, command, context) {
   const currentBoard = getBoard(workspace, command.payload.boardId);
   assertActorCanEditBoard(currentBoard, context.actor);
-  getCard(currentBoard, command.payload.cardId);
+  const currentCard = getCard(currentBoard, command.payload.cardId);
+  const sourceColumnId = findColumnIdByCardId(currentBoard, currentCard.id);
+
+  if (!sourceColumnId) {
+    throw new Error('Card is not in the source column.');
+  }
+
+  if (!stageSupportsAction(currentBoard, sourceColumnId, 'card.delete')) {
+    throw new WorkspaceCommandPermissionError('Cards can only be deleted in delete-enabled stages.');
+  }
+
   const nextWorkspace = cloneWorkspace(workspace);
   const board = getBoard(nextWorkspace, command.payload.boardId);
   const card = getCard(board, command.payload.cardId);
-  const sourceColumnId = findColumnIdByCardId(board, card.id);
 
   delete board.cards[card.id];
 

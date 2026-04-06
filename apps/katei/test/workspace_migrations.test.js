@@ -81,9 +81,13 @@ test('migrateWorkspaceToV6 upgrades a legacy v7 workspace to the current shared-
     supportedLocales: ['en'],
     requiredLocales: ['en']
   });
+  assert.deepEqual(migratedBoard.stages.backlog.actions, ['card.create']);
   assert.deepEqual(migratedBoard.stages.backlog.actionIds, ['card.create']);
+  assert.deepEqual(migratedBoard.stages.doing.actions, ['card.create']);
   assert.deepEqual(migratedBoard.stages.doing.actionIds, ['card.create']);
+  assert.deepEqual(migratedBoard.stages.done.actions, []);
   assert.deepEqual(migratedBoard.stages.done.actionIds, []);
+  assert.deepEqual(migratedBoard.stages.archived.actions, ['card.delete']);
   assert.deepEqual(migratedBoard.stages.archived.actionIds, ['card.delete']);
   assert.equal(migratedCard.title, undefined);
   assert.equal(migratedCard.detailsMarkdown, undefined);

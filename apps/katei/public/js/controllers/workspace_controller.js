@@ -137,6 +137,36 @@ export default class extends Controller {
     return Boolean(this.activeBoardCollaborationState?.canAdmin);
   }
 
+  findBoard(boardId) {
+    const normalizedBoardId = normalizeOptionalWorkspaceId(boardId);
+    return normalizedBoardId ? this.workspace?.boards?.[normalizedBoardId] ?? null : null;
+  }
+
+  findStage(boardId, stageId) {
+    const board = this.findBoard(boardId);
+    const normalizedStageId = normalizeOptionalWorkspaceId(stageId);
+
+    if (
+      !board ||
+      !normalizedStageId ||
+      !Array.isArray(board.stageOrder) ||
+      !board.stageOrder.includes(normalizedStageId)
+    ) {
+      return null;
+    }
+
+    return board.stages?.[normalizedStageId] ?? null;
+  }
+
+  stageAllows(boardId, stageId, actionName) {
+    const stage = this.findStage(boardId, stageId);
+    const actions = Array.isArray(stage?.actions)
+      ? stage.actions
+      : (Array.isArray(stage?.actionIds) ? stage.actionIds : []);
+
+    return typeof actionName === 'string' && actionName.trim().length > 0 && actions.includes(actionName);
+  }
+
   async loadWorkspace() {
     await this.runAction(() => this.service.load());
   }
@@ -1048,10 +1078,19 @@ export default class extends Controller {
   deleteCard(event) {
     const boardId = event.currentTarget.dataset.boardId || this.activeBoard?.id;
     const cardId = event.currentTarget.dataset.cardId;
-    const board = boardId ? this.workspace?.boards?.[boardId] : null;
+    const board = boardId ? this.findBoard(boardId) : null;
     const card = board?.cards?.[cardId];
+    const stageId = board
+      ? resolveBoardStageId(board, {
+          stageId:
+            this.viewDialogState?.board?.id === boardId && this.viewDialogState?.card?.id === cardId
+              ? this.viewDialogState?.stageId
+              : event.currentTarget.dataset.stageId,
+          cardId
+        })
+      : null;
 
-    if (!card || !board) {
+    if (!card || !board || !stageId || !this.stageAllows(boardId, stageId, 'card.delete')) {
       return;
     }
 
@@ -1203,6 +1242,7 @@ export default class extends Controller {
         viewerActor: this.viewerActor,
         boardId: null
       });
+      this.syncOpenViewDialogState();
       this.syncWorkspaceHistory();
       return;
     }
@@ -1234,6 +1274,7 @@ export default class extends Controller {
       viewerActor: this.viewerActor,
       boardId: this.activeBoard.id
     });
+    this.syncOpenViewDialogState();
     this.syncWorkspaceHistory();
   }
 
@@ -1266,6 +1307,7 @@ export default class extends Controller {
       this.viewTriggerElement.focus();
     }
 
+    this.resetViewDeleteButtonState();
     this.viewDialogState = null;
     this.viewTriggerElement = null;
   }
@@ -1332,6 +1374,7 @@ export default class extends Controller {
           cardId: card.id
         })
       : null;
+    const boardId = normalizeOptionalWorkspaceId(board?.id);
     const shouldShowPriority = shouldShowPriorityForStage(resolvedStageId);
     const content = localizedView.variant;
     const localeOptions = localizedView.availableLocales.map((locale) => createLocaleOption(locale));
@@ -1351,8 +1394,10 @@ export default class extends Controller {
     );
     const shouldShowDeleteButton = Boolean(
       canEditBoard
-      && board
+      && boardId
       && card
+      && resolvedStageId
+      && this.stageAllows(boardId, resolvedStageId, 'card.delete')
     );
     const shouldShowEditButton = Boolean(
       canEditBoard
@@ -1412,25 +1457,11 @@ export default class extends Controller {
       this.viewActionRegionTarget.hidden = true;
     }
 
-    if (this.hasViewDeleteButtonTarget) {
-      this.viewDeleteButtonTarget.hidden = !shouldShowDeleteButton;
-      this.viewDeleteButtonTarget.disabled = !shouldShowDeleteButton;
-      this.viewDeleteButtonTarget.setAttribute(
-        'aria-disabled',
-        String(!shouldShowDeleteButton)
-      );
-
-      setOptionalDatasetValue(
-        this.viewDeleteButtonTarget,
-        'boardId',
-        shouldShowDeleteButton ? board.id : null
-      );
-      setOptionalDatasetValue(
-        this.viewDeleteButtonTarget,
-        'cardId',
-        shouldShowDeleteButton ? card.id : null
-      );
-    }
+    this.syncViewDeleteButtonState({
+      canDelete: shouldShowDeleteButton,
+      boardId: shouldShowDeleteButton ? boardId : null,
+      cardId: shouldShowDeleteButton ? card.id : null
+    });
 
     if (this.hasViewEditButtonTarget) {
       this.viewEditButtonTarget.hidden = !shouldShowEditButton;
@@ -1730,7 +1761,7 @@ export default class extends Controller {
   }
 
   refreshViewDialog({ boardId, cardId, locale = null } = {}) {
-    const board = boardId ? this.workspace?.boards?.[boardId] : null;
+    const board = boardId ? this.findBoard(boardId) : null;
     const card = board?.cards?.[cardId] ?? null;
 
     if (!board || !card) {
@@ -1805,6 +1836,54 @@ export default class extends Controller {
         this.syncViewDialog();
       }
     }
+  }
+
+  syncViewDeleteButtonState({ canDelete = false, boardId = null, cardId = null } = {}) {
+    if (!this.hasViewDeleteButtonTarget) {
+      return;
+    }
+
+    this.viewDeleteButtonTarget.hidden = !canDelete;
+    this.viewDeleteButtonTarget.disabled = !canDelete;
+    this.viewDeleteButtonTarget.setAttribute('aria-disabled', String(!canDelete));
+    setOptionalDatasetValue(this.viewDeleteButtonTarget, 'boardId', canDelete ? boardId : null);
+    setOptionalDatasetValue(this.viewDeleteButtonTarget, 'cardId', canDelete ? cardId : null);
+  }
+
+  resetViewDeleteButtonState() {
+    this.syncViewDeleteButtonState({
+      canDelete: false,
+      boardId: null,
+      cardId: null
+    });
+  }
+
+  syncOpenViewDialogState() {
+    if (!this.viewDialogTarget?.open) {
+      return;
+    }
+
+    const boardId = normalizeOptionalWorkspaceId(this.viewDialogState?.board?.id);
+    const cardId = normalizeOptionalWorkspaceId(this.viewDialogState?.card?.id);
+
+    if (!boardId || !cardId) {
+      this.dismissViewDialog({ restoreFocus: false });
+      return;
+    }
+
+    const board = this.findBoard(boardId);
+    const card = board?.cards?.[cardId] ?? null;
+
+    if (!board || !card) {
+      this.dismissViewDialog({ restoreFocus: false });
+      return;
+    }
+
+    this.refreshViewDialog({
+      boardId,
+      cardId,
+      locale: this.viewDialogState?.selectedLocale ?? null
+    });
   }
 }
 

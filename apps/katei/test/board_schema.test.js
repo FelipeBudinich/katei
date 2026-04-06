@@ -60,6 +60,7 @@ test('normalizeBoardSchemaInput canonicalizes valid schema edits', () => {
     }
   ]);
   assert.deepEqual(normalizedSchema.stages.backlog.templateIds, ['starter']);
+  assert.deepEqual(normalizedSchema.stages.backlog.actions, ['card.create']);
   assert.deepEqual(normalizedSchema.stages.backlog.actionIds, ['card.create']);
 });
 

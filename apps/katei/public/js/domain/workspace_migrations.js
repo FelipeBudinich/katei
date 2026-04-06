@@ -9,6 +9,7 @@ import {
 import { normalizeBoardLocalizationGlossary } from './board_localization_glossary.js';
 import {
   BOARD_STAGE_PROMPT_RUN_ACTION_ID,
+  createBoardStageActions,
   getDefaultBoardStageActionIds,
   isValidBoardStageActionId
 } from './board_stage_actions.js';
@@ -328,7 +329,9 @@ function migrateStageDefinition({ stageId, stageOrder, legacyStage, defaultStage
     : stageOrder.filter((candidateStageId) => candidateStageId !== stageId);
   const actionIds = Object.prototype.hasOwnProperty.call(normalizedLegacyStage, 'actionIds')
     ? normalizeStringArray(normalizedLegacyStage.actionIds).filter(isValidBoardStageActionId)
-    : getDefaultBoardStageActionIds(stageId);
+    : Object.prototype.hasOwnProperty.call(normalizedLegacyStage, 'actions')
+      ? normalizeStringArray(normalizedLegacyStage.actions).filter(isValidBoardStageActionId)
+      : getDefaultBoardStageActionIds(stageId);
   const nextStageDefinition = {
     id: stageId,
     title:
@@ -341,6 +344,7 @@ function migrateStageDefinition({ stageId, stageOrder, legacyStage, defaultStage
       fallbackTransitions
     ).filter((targetStageId) => stageOrder.includes(targetStageId)),
     templateIds: normalizeStringArray(normalizedLegacyStage.templateIds),
+    actions: createBoardStageActions(actionIds),
     actionIds
   };
 

@@ -255,6 +255,39 @@ test('POST /api/workspace/commands redacts board OpenAI secrets from mutation re
   assert.equal(response.body.result.noOp, false);
 });
 
+test('POST /api/workspace/commands rejects deleting a card outside a delete-enabled stage', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_api_delete_rejected', {
+    memberRole: 'editor',
+    includeInvite: false
+  });
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord]);
+  const app = createTestApp({ workspaceRecordRepository });
+  const memberBoard = sharedRecord.workspace.boards.member;
+  const cardId = Object.keys(memberBoard.cards)[0];
+
+  const response = await request(app)
+    .post('/api/workspace/commands')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_member', email: 'member@example.com', name: 'Member' }))
+    .send({
+      workspaceId: 'workspace_shared_api_delete_rejected',
+      command: {
+        clientMutationId: 'member_card_delete_rejected',
+        type: 'card.delete',
+        payload: {
+          boardId: 'member',
+          cardId
+        }
+      },
+      expectedRevision: 1
+    });
+
+  assert.equal(response.status, 403);
+  assert.deepEqual(response.body, {
+    ok: false,
+    error: 'Cards can only be deleted in delete-enabled stages.'
+  });
+});
+
 test('POST /api/workspace/localizations/generate writes localized content, clears requests, and redacts board OpenAI secrets', async () => {
   const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_api_localize_success', {
     memberRole: 'editor',
@@ -1094,6 +1127,7 @@ function configureBoardForStagePrompt(board, {
   }
 
   board.stages[sourceStageId].cardIds.push(cardId);
+  board.stages[sourceStageId].actions = includePromptRunAction ? ['card.prompt.run'] : [];
   board.stages[sourceStageId].actionIds = includePromptRunAction ? ['card.prompt.run'] : [];
 
   if (includePromptAction) {

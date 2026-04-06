@@ -1568,9 +1568,13 @@ test('card.delete removes card references from columns and cards map', () => {
     expectedRevision: 0,
     context: createContext()
   }).workspace;
+  const archivedWorkspace = structuredClone(createdWorkspace);
+
+  archivedWorkspace.boards.main.stages.backlog.cardIds = [];
+  archivedWorkspace.boards.main.stages.archived.cardIds = ['card_srv001'];
 
   const { workspace } = applyWorkspaceCommand({
-    record: createRecord(createdWorkspace, 1),
+    record: createRecord(archivedWorkspace, 1),
     command: {
       clientMutationId: 'm8',
       type: 'card.delete',
@@ -1584,7 +1588,7 @@ test('card.delete removes card references from columns and cards map', () => {
   });
 
   assert.equal(workspace.boards.main.cards.card_srv001, undefined);
-  assert.deepEqual(workspace.boards.main.stages.backlog.cardIds, []);
+  assert.deepEqual(workspace.boards.main.stages.archived.cardIds, []);
 });
 
 test('no-op command behavior is surfaced without creating an activity event', () => {

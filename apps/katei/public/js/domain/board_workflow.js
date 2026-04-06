@@ -1,5 +1,6 @@
 import {
   BOARD_STAGE_PROMPT_RUN_ACTION_ID,
+  createBoardStageActions,
   getDefaultBoardStageActionIds,
   isValidBoardStageActionId
 } from './board_stage_actions.js';
@@ -11,6 +12,7 @@ const DEFAULT_BOARD_STAGES = Object.freeze([
     title: 'Backlog',
     allowedTransitionStageIds: Object.freeze(['doing', 'done']),
     templateIds: Object.freeze([]),
+    actions: Object.freeze(createBoardStageActions(getDefaultBoardStageActionIds('backlog'))),
     actionIds: Object.freeze(getDefaultBoardStageActionIds('backlog'))
   }),
   Object.freeze({
@@ -18,6 +20,7 @@ const DEFAULT_BOARD_STAGES = Object.freeze([
     title: 'Doing',
     allowedTransitionStageIds: Object.freeze(['backlog', 'done']),
     templateIds: Object.freeze([]),
+    actions: Object.freeze(createBoardStageActions(getDefaultBoardStageActionIds('doing'))),
     actionIds: Object.freeze(getDefaultBoardStageActionIds('doing'))
   }),
   Object.freeze({
@@ -25,6 +28,7 @@ const DEFAULT_BOARD_STAGES = Object.freeze([
     title: 'Done',
     allowedTransitionStageIds: Object.freeze(['backlog', 'doing', 'archived']),
     templateIds: Object.freeze([]),
+    actions: Object.freeze(createBoardStageActions(getDefaultBoardStageActionIds('done'))),
     actionIds: Object.freeze(getDefaultBoardStageActionIds('done'))
   }),
   Object.freeze({
@@ -32,6 +36,7 @@ const DEFAULT_BOARD_STAGES = Object.freeze([
     title: 'Archived',
     allowedTransitionStageIds: Object.freeze(['backlog', 'doing', 'done']),
     templateIds: Object.freeze([]),
+    actions: Object.freeze(createBoardStageActions(getDefaultBoardStageActionIds('archived'))),
     actionIds: Object.freeze(getDefaultBoardStageActionIds('archived'))
   })
 ]);
@@ -40,12 +45,13 @@ export const BOARD_STAGE_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 export function createDefaultBoardStages() {
   return DEFAULT_BOARD_STAGES.map(
-    ({ id, title, allowedTransitionStageIds, templateIds, actionIds }) => ({
+    ({ id, title, allowedTransitionStageIds, templateIds, actions, actionIds }) => ({
       id,
       title,
       cardIds: [],
       allowedTransitionStageIds: [...allowedTransitionStageIds],
       templateIds: [...templateIds],
+      actions: [...actions],
       actionIds: [...actionIds]
     })
   );

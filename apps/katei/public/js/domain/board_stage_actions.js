@@ -52,7 +52,11 @@ export function normalizeBoardStageActionIds(value) {
   return actionIds;
 }
 
-export function getStageActionIds(board, stageId) {
+export function createBoardStageActions(value) {
+  return normalizeBoardStageActionIds(value);
+}
+
+export function getStageActions(board, stageId) {
   if (
     typeof stageId !== 'string' ||
     !Array.isArray(board?.stageOrder) ||
@@ -64,14 +68,24 @@ export function getStageActionIds(board, stageId) {
   }
 
   try {
-    return normalizeBoardStageActionIds(board.stages[stageId].actionIds);
+    const stage = board.stages[stageId];
+
+    if (Array.isArray(stage.actions)) {
+      return createBoardStageActions(stage.actions);
+    }
+
+    return createBoardStageActions(stage.actionIds);
   } catch (error) {
     return [];
   }
 }
 
+export function getStageActionIds(board, stageId) {
+  return getStageActions(board, stageId);
+}
+
 export function stageSupportsAction(board, stageId, actionId) {
-  return getStageActionIds(board, stageId).includes(actionId);
+  return getStageActions(board, stageId).includes(actionId);
 }
 
 function isPlainObject(value) {

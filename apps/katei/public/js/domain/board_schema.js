@@ -1,7 +1,9 @@
 import { normalizeBoardLanguagePolicy } from './board_language_policy.js';
 import {
   BOARD_STAGE_PROMPT_RUN_ACTION_ID,
+  createBoardStageActions,
   getDefaultBoardStageActionIds,
+  getStageActions,
   normalizeBoardStageActionIds
 } from './board_stage_actions.js';
 import {
@@ -30,6 +32,7 @@ export function normalizeBoardSchemaInput(input) {
         cardIds: [],
         allowedTransitionStageIds: [...stage.allowedTransitionStageIds],
         templateIds: [],
+        actions: createBoardStageActions(stage.actionIds),
         actionIds: [...stage.actionIds],
         ...(stage.promptAction ? { promptAction: serializeBoardStagePromptAction(stage.promptAction, stageIds) } : {})
       }
@@ -64,7 +67,7 @@ export function serializeBoardSchemaInput(board) {
           id: stageId,
           title: board.stages?.[stageId]?.title ?? '',
           allowedTransitionStageIds: [...(board.stages?.[stageId]?.allowedTransitionStageIds ?? [])],
-          actionIds: [...(board.stages?.[stageId]?.actionIds ?? [])],
+          actionIds: getStageActions(board, stageId),
           ...(board.stages?.[stageId]?.promptAction
             ? {
                 promptAction: serializeBoardStagePromptAction(

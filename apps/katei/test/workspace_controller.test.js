@@ -1596,13 +1596,10 @@ test('openView shows the prompt-run button in the modal for editable prompt-enab
 
     assert.equal(controller.viewDialogState.canEditBoard, true);
     assert.equal(controller.viewActionRegionTarget.hidden, true);
-    assert.equal(controller.viewDeleteButtonTarget.hidden, false);
-    assert.equal(controller.viewDeleteButtonTarget.disabled, false);
-    assert.equal(controller.viewDeleteButtonTarget.attributes['aria-disabled'], 'false');
-    assert.deepEqual(controller.viewDeleteButtonTarget.dataset, {
-      boardId: board.id,
-      cardId: card.id
-    });
+    assert.equal(controller.viewDeleteButtonTarget.hidden, true);
+    assert.equal(controller.viewDeleteButtonTarget.disabled, true);
+    assert.equal(controller.viewDeleteButtonTarget.attributes['aria-disabled'], 'true');
+    assert.deepEqual(controller.viewDeleteButtonTarget.dataset, {});
     assert.equal(controller.viewEditButtonTarget.hidden, false);
     assert.equal(controller.viewEditButtonTarget.disabled, false);
     assert.equal(controller.viewEditButtonTarget.attributes['aria-disabled'], 'false');
@@ -1873,10 +1870,15 @@ test('dismissViewDialog closes the locale menu before clearing state', () => {
   const restoreDom = installViewDialogDomStubs();
 
   try {
-    const { controller, card } = createViewDialogController();
+    const defaultBoard = createEmptyWorkspace().boards.main;
+    const { controller, card } = createViewDialogController({
+      board: defaultBoard,
+      viewerRole: 'editor',
+      cardStageId: 'archived'
+    });
 
     WorkspaceController.prototype.openView.call(controller, {
-      currentTarget: createViewTriggerDouble(card.id, 'review')
+      currentTarget: createViewTriggerDouble(card.id, 'archived')
     });
     WorkspaceController.prototype.openViewLocaleMenu.call(controller);
     WorkspaceController.prototype.dismissViewDialog.call(controller, { restoreFocus: false });
@@ -1884,6 +1886,10 @@ test('dismissViewDialog closes the locale menu before clearing state', () => {
     assert.equal(controller.viewLocaleMenuTarget.hidden, true);
     assert.equal(controller.viewLocaleButtonTarget.attributes['aria-expanded'], 'false');
     assert.equal(controller.viewDialogState, null);
+    assert.equal(controller.viewDeleteButtonTarget.hidden, true);
+    assert.equal(controller.viewDeleteButtonTarget.disabled, true);
+    assert.equal(controller.viewDeleteButtonTarget.attributes['aria-disabled'], 'true');
+    assert.deepEqual(controller.viewDeleteButtonTarget.dataset, {});
   } finally {
     restoreDom();
   }
@@ -1958,13 +1964,10 @@ test('syncViewDialog hides the prompt-run button and clears datasets for ineligi
     WorkspaceController.prototype.syncViewDialog.call(controller);
 
     assert.equal(controller.viewActionRegionTarget.hidden, true);
-    assert.equal(controller.viewDeleteButtonTarget.hidden, false);
-    assert.equal(controller.viewDeleteButtonTarget.disabled, false);
-    assert.equal(controller.viewDeleteButtonTarget.attributes['aria-disabled'], 'false');
-    assert.deepEqual(controller.viewDeleteButtonTarget.dataset, {
-      boardId: board.id,
-      cardId: card.id
-    });
+    assert.equal(controller.viewDeleteButtonTarget.hidden, true);
+    assert.equal(controller.viewDeleteButtonTarget.disabled, true);
+    assert.equal(controller.viewDeleteButtonTarget.attributes['aria-disabled'], 'true');
+    assert.deepEqual(controller.viewDeleteButtonTarget.dataset, {});
     assert.equal(controller.viewPromptRunButtonTarget.hidden, true);
     assert.equal(controller.viewPromptRunButtonTarget.disabled, true);
     assert.equal(controller.viewPromptRunButtonTarget.attributes['aria-disabled'], 'true');
@@ -1974,14 +1977,47 @@ test('syncViewDialog hides the prompt-run button and clears datasets for ineligi
   }
 });
 
-test('openView shows the delete button and action region when delete is available without prompt-run', () => {
+test('openView hides the delete button for backlog, doing, and done cards', () => {
   const restoreDom = installViewDialogDomStubs();
 
   try {
-    const { controller, board, card } = createViewDialogController({ viewerRole: 'editor' });
+    for (const stageId of ['backlog', 'doing', 'done']) {
+      const defaultBoard = createEmptyWorkspace().boards.main;
+      const { controller, card } = createViewDialogController({
+        board: defaultBoard,
+        viewerRole: 'editor',
+        cardStageId: stageId
+      });
+
+      WorkspaceController.prototype.openView.call(controller, {
+        currentTarget: createViewTriggerDouble(card.id, stageId, { requestedLocale: 'es-CL' })
+      });
+
+      assert.equal(controller.viewActionRegionTarget.hidden, true);
+      assert.equal(controller.viewDeleteButtonTarget.hidden, true);
+      assert.equal(controller.viewDeleteButtonTarget.disabled, true);
+      assert.equal(controller.viewDeleteButtonTarget.attributes['aria-disabled'], 'true');
+      assert.deepEqual(controller.viewDeleteButtonTarget.dataset, {});
+      assert.equal(controller.viewPromptRunButtonTarget.hidden, true);
+    }
+  } finally {
+    restoreDom();
+  }
+});
+
+test('openView shows the delete button for archived cards', () => {
+  const restoreDom = installViewDialogDomStubs();
+
+  try {
+    const defaultBoard = createEmptyWorkspace().boards.main;
+    const { controller, board, card } = createViewDialogController({
+      board: defaultBoard,
+      viewerRole: 'editor',
+      cardStageId: 'archived'
+    });
 
     WorkspaceController.prototype.openView.call(controller, {
-      currentTarget: createViewTriggerDouble(card.id, 'review', { requestedLocale: 'es-CL' })
+      currentTarget: createViewTriggerDouble(card.id, 'archived', { requestedLocale: 'es-CL' })
     });
 
     assert.equal(controller.viewActionRegionTarget.hidden, true);
@@ -1992,7 +2028,50 @@ test('openView shows the delete button and action region when delete is availabl
       boardId: board.id,
       cardId: card.id
     });
-    assert.equal(controller.viewPromptRunButtonTarget.hidden, true);
+  } finally {
+    restoreDom();
+  }
+});
+
+test('opening an archived card before a doing card hides the delete button again', () => {
+  const restoreDom = installViewDialogDomStubs();
+
+  try {
+    const defaultBoard = createEmptyWorkspace().boards.main;
+    const { controller, board, card } = createViewDialogController({
+      board: defaultBoard,
+      viewerRole: 'editor',
+      cardStageId: 'archived'
+    });
+    const doingCard = {
+      ...structuredClone(card),
+      id: 'card_doing',
+      updatedAt: '2026-03-31T12:00:00.000Z'
+    };
+
+    board.cards[doingCard.id] = doingCard;
+    board.stages.doing.cardIds = [doingCard.id];
+
+    WorkspaceController.prototype.openView.call(controller, {
+      currentTarget: createViewTriggerDouble(card.id, 'archived')
+    });
+
+    assert.equal(controller.viewDeleteButtonTarget.hidden, false);
+    assert.equal(controller.viewDeleteButtonTarget.disabled, false);
+    assert.equal(controller.viewDeleteButtonTarget.attributes['aria-disabled'], 'false');
+    assert.deepEqual(controller.viewDeleteButtonTarget.dataset, {
+      boardId: board.id,
+      cardId: card.id
+    });
+
+    WorkspaceController.prototype.openView.call(controller, {
+      currentTarget: createViewTriggerDouble(doingCard.id, 'doing')
+    });
+
+    assert.equal(controller.viewDeleteButtonTarget.hidden, true);
+    assert.equal(controller.viewDeleteButtonTarget.disabled, true);
+    assert.equal(controller.viewDeleteButtonTarget.attributes['aria-disabled'], 'true');
+    assert.deepEqual(controller.viewDeleteButtonTarget.dataset, {});
   } finally {
     restoreDom();
   }
@@ -2436,7 +2515,27 @@ test('handleGenerateCardLocalization reports localized failures and skips refres
         boardId: 'main',
         cardId: 'card_1',
         locale: 'ja'
+      }
+    });
+  } finally {
+    console.error = originalConsoleError;
   }
+
+  assert.deepEqual(announcements, [
+    'Cannot overwrite human-authored localization with AI-generated content.'
+  ]);
+  assert.deepEqual(refreshCalls, []);
+  assert.deepEqual(dispatchedEvents, [
+    {
+      name: 'card-localization-generation-finished',
+      detail: {
+        boardId: 'main',
+        cardId: 'card_1',
+        locale: 'ja',
+        success: false
+      }
+    }
+  ]);
 });
 
 test('handleRunStagePrompt calls the service, applies workspace state, and announces success', async () => {
@@ -2704,26 +2803,6 @@ test('handleRunStagePrompt reports localized failures without changing workspace
 
   assert.deepEqual(announcements, ['Unable to run the stage prompt right now.']);
 });
-  } finally {
-    console.error = originalConsoleError;
-  }
-
-  assert.deepEqual(announcements, [
-    'Cannot overwrite human-authored localization with AI-generated content.'
-  ]);
-  assert.deepEqual(refreshCalls, []);
-  assert.deepEqual(dispatchedEvents, [
-    {
-      name: 'card-localization-generation-finished',
-      detail: {
-        boardId: 'main',
-        cardId: 'card_1',
-        locale: 'ja',
-        success: false
-      }
-    }
-  ]);
-});
 
 test('confirmPendingAction discards localized content and refreshes the editor on the same locale', async () => {
   const controller = Object.create(WorkspaceController.prototype);
@@ -2873,6 +2952,7 @@ function createBoardWithCustomStages() {
       cardIds: [],
       allowedTransitionStageIds: ['qa', 'published'],
       templateIds: [],
+      actions: [],
       actionIds: []
     },
     qa: {
@@ -2881,6 +2961,7 @@ function createBoardWithCustomStages() {
       cardIds: [],
       allowedTransitionStageIds: ['review', 'published'],
       templateIds: [],
+      actions: [],
       actionIds: []
     },
     published: {
@@ -2889,6 +2970,7 @@ function createBoardWithCustomStages() {
       cardIds: [],
       allowedTransitionStageIds: ['review'],
       templateIds: [],
+      actions: [],
       actionIds: []
     }
   };
@@ -2896,8 +2978,13 @@ function createBoardWithCustomStages() {
   return board;
 }
 
+function setStageActions(board, stageId, actionIds) {
+  board.stages[stageId].actions = [...actionIds];
+  board.stages[stageId].actionIds = [...actionIds];
+}
+
 function enableStagePromptRun(board, stageId, promptActionOverrides = {}) {
-  board.stages[stageId].actionIds = ['card.prompt.run'];
+  setStageActions(board, stageId, ['card.prompt.run']);
   board.stages[stageId].promptAction = {
     enabled: true,
     prompt: 'Turn this card into a new implementation task.',
@@ -3108,6 +3195,8 @@ function createColumnPanelDouble({ stageId, columnId, cardCount = 0 } = {}) {
 function createViewDialogController({
   uiLocale = 'en',
   viewerRole = 'viewer',
+  board = createBoardWithCustomStages(),
+  cardStageId = 'review',
   contentByLocale = {
     en: {
       title: 'English source',
@@ -3136,7 +3225,7 @@ function createViewDialogController({
   }
 } = {}) {
   const workspace = createEmptyWorkspace();
-  const board = createBoardWithCustomStages();
+  const runtimeBoard = board;
   const viewerActor = createActor('viewer_123', 'viewer@example.com', 'Viewer');
   const card = {
     id: 'card_localized',
@@ -3154,8 +3243,8 @@ function createViewDialogController({
     }
   };
 
-  board.languagePolicy = languagePolicy;
-  board.collaboration = {
+  runtimeBoard.languagePolicy = languagePolicy;
+  runtimeBoard.collaboration = {
     memberships: [
       {
         actor: viewerActor,
@@ -3164,13 +3253,18 @@ function createViewDialogController({
     ],
     invites: []
   };
-  board.cards[card.id] = card;
-  board.stages.review.cardIds = [card.id];
+
+  for (const stageId of runtimeBoard.stageOrder) {
+    runtimeBoard.stages[stageId].cardIds = [];
+  }
+
+  runtimeBoard.cards[card.id] = card;
+  runtimeBoard.stages[cardStageId].cardIds = [card.id];
   workspace.boards = {
-    [board.id]: board
+    [runtimeBoard.id]: runtimeBoard
   };
-  workspace.boardOrder = [board.id];
-  workspace.ui.activeBoardId = board.id;
+  workspace.boardOrder = [runtimeBoard.id];
+  workspace.ui.activeBoardId = runtimeBoard.id;
 
   const controller = Object.create(WorkspaceController.prototype);
   controller.workspace = workspace;
@@ -3218,7 +3312,7 @@ function createViewDialogController({
   return {
     controller,
     workspace,
-    board,
+    board: runtimeBoard,
     card
   };
 }
