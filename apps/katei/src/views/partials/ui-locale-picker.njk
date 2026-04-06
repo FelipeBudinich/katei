@@ -1,4 +1,95 @@
-{% if uiLocalePickerVariant == 'icon-menu' %}
+{% if uiLocalePickerVariant == 'icon-modal' %}
+  <form
+    method="get"
+    action="{{ uiLocalePickerAction or '/' }}"
+    class="ui-locale-picker ui-locale-picker--icon-menu"
+    data-controller="ui-locale-picker"
+  >
+    <label class="sr-only" for="{{ uiLocalePickerId or 'ui-locale-picker' }}">
+      {{ t('uiLocale.label') }}
+    </label>
+
+    <div class="view-locale-picker">
+      <button
+        type="button"
+        id="{{ (uiLocalePickerId or 'ui-locale-picker') }}-trigger"
+        class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--language"
+        aria-label="{{ t('uiLocale.label') }}"
+        aria-haspopup="dialog"
+        aria-expanded="false"
+        aria-controls="{{ (uiLocalePickerId or 'ui-locale-picker') }}-dialog"
+        data-ui-locale-picker-target="trigger"
+        data-action="click->ui-locale-picker#openDialog keydown->ui-locale-picker#handleTriggerKeydown"
+      >
+        <span class="sr-only">{{ t('uiLocale.label') }}</span>
+      </button>
+
+      <dialog
+        id="{{ (uiLocalePickerId or 'ui-locale-picker') }}-dialog"
+        class="sheet-dialog confirm-dialog"
+        data-ui-locale-picker-target="dialog"
+        data-action="click->ui-locale-picker#backdropCloseDialog cancel->ui-locale-picker#closeDialog"
+      >
+        <div class="confirm-panel">
+          <div class="space-y-2">
+            <h2 class="font-serif text-3xl text-strong">
+              {{ t('uiLocale.label') }}
+            </h2>
+          </div>
+
+          <div
+            class="ui-locale-modal-options mt-6"
+            role="menu"
+            data-ui-locale-picker-target="menu"
+            data-action="keydown->ui-locale-picker#handleMenuKeydown"
+          >
+            {% for uiLocaleOption in uiLocaleOptions %}
+              <button
+                type="button"
+                class="view-locale-menu-option view-locale-menu-option--ui"
+                value="{{ uiLocaleOption.value }}"
+                data-locale="{{ uiLocaleOption.value }}"
+                role="menuitemradio"
+                aria-checked="{{ 'true' if uiLocaleOption.selected else 'false' }}"
+                tabindex="-1"
+                data-ui-locale-picker-target="option"
+                data-action="ui-locale-picker#selectLocale"
+              >
+                {{ uiLocaleOption.label }}
+              </button>
+            {% endfor %}
+          </div>
+
+          <div class="confirm-actions dialog-actions mt-6">
+            <button
+              type="button"
+              class="touch-button-secondary"
+              data-action="ui-locale-picker#closeDialog"
+            >
+              {{ t('common.cancel') }}
+            </button>
+          </div>
+        </div>
+      </dialog>
+
+      <select
+        id="{{ uiLocalePickerId or 'ui-locale-picker' }}"
+        name="lang"
+        class="sr-only"
+        hidden
+        tabindex="-1"
+        aria-hidden="true"
+        data-ui-locale-picker-target="select"
+      >
+        {% for uiLocaleOption in uiLocaleOptions %}
+          <option value="{{ uiLocaleOption.value }}"{% if uiLocaleOption.selected %} selected{% endif %}>
+            {{ uiLocaleOption.label }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+  </form>
+{% elif uiLocalePickerVariant == 'icon-menu' %}
   <form
     method="get"
     action="{{ uiLocalePickerAction or '/' }}"

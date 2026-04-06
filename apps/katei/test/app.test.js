@@ -284,6 +284,11 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
     response.text,
     /<form[\s\S]*?method="get"[\s\S]*?action="\/boards"[\s\S]*?class="ui-locale-picker ui-locale-picker--icon-menu"[\s\S]*?data-controller="ui-locale-picker"/
   );
+  assert.match(response.text, /aria-haspopup="dialog"/);
+  assert.match(response.text, /data-action="click->ui-locale-picker#openDialog keydown->ui-locale-picker#handleTriggerKeydown"/);
+  assert.match(response.text, /class="sheet-dialog confirm-dialog"[\s\S]*?data-ui-locale-picker-target="dialog"/);
+  assert.match(response.text, /click->ui-locale-picker#backdropCloseDialog cancel->ui-locale-picker#closeDialog/);
+  assert.match(response.text, /class="ui-locale-modal-options mt-6"/);
   assert.match(response.text, /data-board-options-field="inviteAcceptButton"/);
   assert.match(response.text, /data-board-options-field="inviteDeclineButton"/);
   assert.match(response.text, /board-options:accept-invite->workspace#handleAcceptInvite/);
@@ -592,6 +597,9 @@ test('workspace template renders the no-board header with both Options and Profi
     html,
     /<form[\s\S]*?method="get"[\s\S]*?action="\/boards"[\s\S]*?class="ui-locale-picker ui-locale-picker--icon-menu"[\s\S]*?data-controller="ui-locale-picker"/
   );
+  assert.match(html, /aria-haspopup="dialog"/);
+  assert.match(html, /data-ui-locale-picker-target="dialog"/);
+  assert.match(html, /class="ui-locale-modal-options mt-6"/);
   assert.match(html, /<option value="en" selected>\s*English\s*<\/option>/);
   assert.match(html, /role="menuitemradio"/);
   assert.match(html, /No Boards Viewer/);

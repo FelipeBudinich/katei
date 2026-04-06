@@ -1,10 +1,19 @@
 import { Controller } from '../../vendor/stimulus/stimulus.js';
 
 export default class extends Controller {
-  static targets = ['trigger', 'menu', 'select', 'option'];
+  static targets = ['trigger', 'menu', 'select', 'option', 'dialog'];
+
+  isDialogMode() {
+    return this.hasDialogTarget;
+  }
 
   toggleMenu(event) {
     event.preventDefault();
+
+    if (this.isDialogMode()) {
+      this.openDialog(event);
+      return;
+    }
 
     if (this.menuTarget.hidden) {
       this.openMenu();
@@ -15,6 +24,11 @@ export default class extends Controller {
   }
 
   openMenu() {
+    if (this.isDialogMode()) {
+      this.openDialog();
+      return;
+    }
+
     if (!this.hasTriggerTarget || !this.hasMenuTarget || !this.hasOptionTarget || this.optionTargets.length < 1) {
       return;
     }
@@ -41,7 +55,64 @@ export default class extends Controller {
     }
   }
 
+  openDialog(event) {
+    event?.preventDefault?.();
+
+    if (!this.isDialogMode() || !this.hasTriggerTarget || !this.hasDialogTarget) {
+      return;
+    }
+
+    if (this.triggerTarget.disabled === true) {
+      return;
+    }
+
+    if (!this.dialogTarget.open) {
+      this.dialogTarget.showModal();
+    }
+
+    this.triggerTarget.setAttribute('aria-expanded', 'true');
+    requestAnimationFrame(() => this.focusSelectedOption());
+  }
+
+  closeDialog(event, { restoreFocus = true } = {}) {
+    if (event) {
+      event.preventDefault();
+    }
+
+    if (this.hasDialogTarget && this.dialogTarget.open) {
+      this.dialogTarget.close();
+    }
+
+    if (this.hasTriggerTarget) {
+      this.triggerTarget.setAttribute('aria-expanded', 'false');
+
+      if (restoreFocus) {
+        this.triggerTarget.focus?.();
+      }
+    }
+  }
+
+  backdropCloseDialog(event) {
+    if (event.target === this.dialogTarget) {
+      this.closeDialog();
+    }
+  }
+
   handleTriggerKeydown(event) {
+    if (this.isDialogMode()) {
+      if (
+        event.key === 'Enter'
+        || event.key === ' '
+        || event.key === 'Spacebar'
+        || event.key === 'ArrowDown'
+        || event.key === 'ArrowUp'
+      ) {
+        event.preventDefault();
+        this.openDialog();
+      }
+      return;
+    }
+
     if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') {
       event.preventDefault();
       this.openMenu();
@@ -74,11 +145,19 @@ export default class extends Controller {
 
     if (event.key === 'Escape') {
       event.preventDefault();
-      this.closeMenu({ restoreFocus: true });
+      if (this.isDialogMode()) {
+        this.closeDialog(undefined, { restoreFocus: true });
+      } else {
+        this.closeMenu({ restoreFocus: true });
+      }
       return;
     }
 
     if (event.key === 'Tab') {
+      if (this.isDialogMode()) {
+        return;
+      }
+
       this.closeMenu();
       return;
     }
@@ -124,7 +203,11 @@ export default class extends Controller {
       option.setAttribute('aria-checked', isSelected ? 'true' : 'false');
     }
 
-    this.closeMenu({ restoreFocus: false });
+    if (this.isDialogMode()) {
+      this.closeDialog(undefined, { restoreFocus: false });
+    } else {
+      this.closeMenu({ restoreFocus: false });
+    }
 
     if (typeof this.element.requestSubmit === 'function') {
       this.element.requestSubmit();
@@ -135,6 +218,10 @@ export default class extends Controller {
   }
 
   handleWindowClick(event) {
+    if (this.isDialogMode()) {
+      return;
+    }
+
     if (this.menuTarget.hidden) {
       return;
     }
