@@ -1793,6 +1793,162 @@ test('changeViewLocale works from a locale menu button and restores trigger focu
   }
 });
 
+test('openView shows the copy button and dismissViewDialog resets it', () => {
+  const restoreDom = installViewDialogDomStubs();
+
+  try {
+    const { controller, card } = createViewDialogController();
+
+    WorkspaceController.prototype.openView.call(controller, {
+      currentTarget: createViewTriggerDouble(card.id, 'review')
+    });
+
+    assert.equal(controller.viewCopyButtonTarget.hidden, false);
+    assert.equal(controller.viewCopyButtonTarget.disabled, false);
+    assert.equal(controller.viewCopyButtonTarget.attributes['aria-disabled'], 'false');
+
+    WorkspaceController.prototype.dismissViewDialog.call(controller, { restoreFocus: false });
+
+    assert.equal(controller.viewCopyButtonTarget.hidden, true);
+    assert.equal(controller.viewCopyButtonTarget.disabled, true);
+    assert.equal(controller.viewCopyButtonTarget.attributes['aria-disabled'], 'true');
+  } finally {
+    restoreDom();
+  }
+});
+
+test('copyViewCardDetails uses the active locale and omits empty metadata fields', async () => {
+  const restoreDom = installViewDialogDomStubs();
+  const restoreNavigator = installNavigatorStub({
+    clipboard: {
+      async writeText(text) {
+        copiedText = text;
+      }
+    }
+  });
+  let copiedText = '';
+
+  try {
+    const defaultBoard = createEmptyWorkspace().boards.main;
+    const { controller, card } = createViewDialogController({
+      board: defaultBoard,
+      cardStageId: 'done'
+    });
+    const announcements = [];
+
+    controller.announce = (message) => {
+      announcements.push(message);
+    };
+
+    WorkspaceController.prototype.openView.call(controller, {
+      currentTarget: createViewTriggerDouble(card.id, 'done', { requestedLocale: 'es-CL' })
+    });
+    WorkspaceController.prototype.changeViewLocale.call(controller, {
+      preventDefault() {},
+      currentTarget: {
+        value: 'en'
+      }
+    });
+
+    const copied = await WorkspaceController.prototype.copyViewCardDetails.call(controller, {
+      preventDefault() {},
+      currentTarget: controller.viewCopyButtonTarget
+    });
+
+    assert.equal(copied, true);
+    assert.equal(controller.viewDialogState.selectedLocale, 'en');
+    assert.equal(controller.viewCopyButtonTarget.focused, true);
+    assert.equal(
+      copiedText,
+      'Title: English source\nLocale: en\nStage: Done\nCard ID: card_localized\n\nEnglish details'
+    );
+    assert.equal(announcements.at(-1), 'Card details copied');
+    assert.doesNotMatch(copiedText, /Priority:/);
+  } finally {
+    restoreNavigator();
+    restoreDom();
+  }
+});
+
+test('copyViewCardDetails falls back to execCommand when navigator.clipboard is unavailable', async () => {
+  const restoreDom = installViewDialogDomStubs();
+  const restoreNavigator = installNavigatorStub({});
+
+  try {
+    let copiedText = '';
+    const execCommands = [];
+    const announcements = [];
+    const { controller, card } = createViewDialogController();
+
+    controller.announce = (message) => {
+      announcements.push(message);
+    };
+    globalThis.document.execCommand = (command) => {
+      execCommands.push(command);
+      copiedText = globalThis.document.body.children[0]?.value ?? '';
+      return true;
+    };
+
+    WorkspaceController.prototype.openView.call(controller, {
+      currentTarget: createViewTriggerDouble(card.id, 'review', { requestedLocale: 'es-CL' })
+    });
+
+    const copied = await WorkspaceController.prototype.copyViewCardDetails.call(controller, {
+      preventDefault() {},
+      currentTarget: controller.viewCopyButtonTarget
+    });
+
+    assert.equal(copied, true);
+    assert.deepEqual(execCommands, ['copy']);
+    assert.equal(controller.viewCopyButtonTarget.focused, true);
+    assert.equal(globalThis.document.body.children.length, 0);
+    assert.match(copiedText, /^Title: Titulo por defecto\nLocale: es-CL\nStage: Ready for Review\nPriority: Important\nCard ID: card_localized\n\nDetalles por defecto$/);
+    assert.equal(announcements.at(-1), 'Card details copied');
+  } finally {
+    restoreNavigator();
+    restoreDom();
+  }
+});
+
+test('copyViewCardDetails announces failure when clipboard copy is unavailable', async () => {
+  const restoreDom = installViewDialogDomStubs();
+  const restoreNavigator = installNavigatorStub({
+    clipboard: {
+      async writeText() {
+        throw new Error('clipboard denied');
+      }
+    }
+  });
+
+  try {
+    const announcements = [];
+    const { controller, card } = createViewDialogController();
+
+    controller.announce = (message) => {
+      announcements.push(message);
+    };
+    globalThis.document.execCommand = () => false;
+
+    WorkspaceController.prototype.openView.call(controller, {
+      currentTarget: createViewTriggerDouble(card.id, 'review')
+    });
+
+    const copied = await WorkspaceController.prototype.copyViewCardDetails.call(controller, {
+      preventDefault() {},
+      currentTarget: controller.viewCopyButtonTarget
+    });
+
+    assert.equal(copied, false);
+    assert.equal(controller.viewDialogTarget.open, true);
+    assert.equal(controller.viewDialogState.card.id, card.id);
+    assert.equal(controller.viewCopyButtonTarget.focused, true);
+    assert.equal(announcements.at(-1), 'Could not copy card details');
+  } finally {
+    restoreNavigator();
+    restoreDom();
+  }
+});
+
 test('toggleViewLocaleMenu opens and closes the locale menu', () => {
   const restoreDom = installViewDialogDomStubs();
 
@@ -3269,10 +3425,7 @@ function createViewDialogController({
   const controller = Object.create(WorkspaceController.prototype);
   controller.workspace = workspace;
   controller.viewerActor = viewerActor;
-  controller.t = Object.assign(
-    (key) => (key === 'workspace.view.noDetails' ? 'No details added.' : key),
-    { locale: uiLocale }
-  );
+  controller.t = createViewDialogTranslator(uiLocale);
   controller.announce = () => {};
   controller.dispatchWorkspaceEvent = () => {};
   controller.dateTimeFormatter = {
@@ -3297,6 +3450,8 @@ function createViewDialogController({
   controller.viewActionRegionTarget = { hidden: true };
   controller.hasViewDeleteButtonTarget = true;
   controller.viewDeleteButtonTarget = createButtonDouble();
+  controller.hasViewCopyButtonTarget = true;
+  controller.viewCopyButtonTarget = createButtonDouble();
   controller.hasViewEditButtonTarget = true;
   controller.viewEditButtonTarget = createButtonDouble();
   controller.hasViewPromptRunButtonTarget = true;
@@ -3478,7 +3633,12 @@ function installViewDialogDomStubs() {
     }
   };
 
+  const body = createBodyDouble();
   globalThis.document = {
+    body,
+    execCommand() {
+      return false;
+    },
     createElement(tagName) {
       if (tagName === 'option') {
         return {
@@ -3489,6 +3649,10 @@ function installViewDialogDomStubs() {
 
       if (tagName === 'button') {
         return createMenuButtonDouble();
+      }
+
+      if (tagName === 'textarea') {
+        return createTextareaDouble();
       }
 
       return createContentRegionDouble();
@@ -3525,5 +3689,88 @@ function createMenuButtonDouble() {
     focus() {
       this.focused = true;
     }
+  };
+}
+
+function createBodyDouble() {
+  return {
+    children: [],
+    appendChild(node) {
+      this.children.push(node);
+      return node;
+    },
+    removeChild(node) {
+      this.children = this.children.filter((child) => child !== node);
+      return node;
+    }
+  };
+}
+
+function createTextareaDouble() {
+  return {
+    value: '',
+    readOnly: false,
+    style: {},
+    attributes: {},
+    setAttribute(name, value) {
+      this.attributes[name] = String(value);
+    },
+    focus() {
+      this.focused = true;
+    },
+    select() {
+      this.selected = true;
+    },
+    setSelectionRange(start, end) {
+      this.selectionRange = [start, end];
+    }
+  };
+}
+
+function createViewDialogTranslator(locale) {
+  const messages = {
+    'workspace.view.noDetails': 'No details added.',
+    'workspace.announcements.cardDetailsCopied': 'Card details copied',
+    'workspace.status.copyCardDetailsUnavailable': 'Could not copy card details',
+    'cardViewDialog.copyFields.title': 'Title',
+    'cardViewDialog.copyFields.locale': 'Locale',
+    'cardViewDialog.copyFields.stage': 'Stage',
+    'cardViewDialog.copyFields.priority': 'Priority',
+    'cardViewDialog.copyFields.cardId': 'Card ID',
+    'workspace.columns.backlog': 'Backlog',
+    'workspace.columns.doing': 'Doing',
+    'workspace.columns.done': 'Done',
+    'workspace.columns.archived': 'Archived',
+    'workspace.priorities.urgent': 'Urgent',
+    'workspace.priorities.important': 'Important',
+    'workspace.priorities.normal': 'Normal'
+  };
+
+  return Object.assign(
+    (key) => messages[key] ?? key,
+    { locale }
+  );
+}
+
+function installNavigatorStub(navigatorValue) {
+  const originalDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+
+  if (typeof navigatorValue === 'undefined') {
+    delete globalThis.navigator;
+  } else {
+    Object.defineProperty(globalThis, 'navigator', {
+      configurable: true,
+      writable: true,
+      value: navigatorValue
+    });
+  }
+
+  return function restoreNavigatorStub() {
+    if (originalDescriptor) {
+      Object.defineProperty(globalThis, 'navigator', originalDescriptor);
+      return;
+    }
+
+    delete globalThis.navigator;
   };
 }

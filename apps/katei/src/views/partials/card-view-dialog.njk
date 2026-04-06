@@ -77,6 +77,19 @@
 
         <button
           type="button"
+          class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--copy"
+          hidden
+          disabled
+          aria-label="{{ t('cardViewDialog.copyButton') }}"
+          data-workspace-target="viewCopyButton"
+          data-action="workspace#copyViewCardDetails"
+          aria-disabled="true"
+        >
+          <span class="sr-only">{{ t('cardViewDialog.copyButton') }}</span>
+        </button>
+
+        <button
+          type="button"
           class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--edit"
           hidden
           disabled

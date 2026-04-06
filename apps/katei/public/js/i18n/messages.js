@@ -54,7 +54,8 @@ const EN_MESSAGES = freezeCatalog({
     boardInvitePendingNotice: 'This board is shared with you. Open Collaborators to accept or decline the invite.',
     status: {
       loadUnavailable: 'Unable to load this workspace.',
-      moveUnavailable: 'Unable to move card.'
+      moveUnavailable: 'Unable to move card.',
+      copyCardDetailsUnavailable: 'Could not copy card details'
     },
     view: {
       noDetails: 'No details added.'
@@ -82,6 +83,7 @@ const EN_MESSAGES = freezeCatalog({
       localeRequestCleared: 'Locale request cleared.',
       humanVerificationRequested: 'Human verification requested.',
       localeVerified: 'Localization verified.',
+      cardDetailsCopied: 'Card details copied',
       stagePromptRunSucceeded: 'Prompt run completed.',
       movedCard: 'Moved card to {column}.',
       cardDeleted: 'Card deleted.',
@@ -252,10 +254,18 @@ const EN_MESSAGES = freezeCatalog({
   },
   cardViewDialog: {
     titlePlaceholder: 'Card title',
+    copyButton: 'Copy card details',
     editButton: 'Edit',
     detailsLabel: 'Details',
     updatedLabel: 'Updated',
     requestHumanVerificationButton: 'Request human verification',
+    copyFields: {
+      title: 'Title',
+      locale: 'Locale',
+      stage: 'Stage',
+      priority: 'Priority',
+      cardId: 'Card ID'
+    },
     reviewState: {
       ai: 'AI',
       'needs-human-verification': 'Needs human verification',
@@ -440,7 +450,8 @@ const ES_CL_MESSAGES = freezeCatalog({
     boardInvitePendingNotice: 'Este tablero fue compartido contigo. Abre Colaboradores para aceptar o rechazar la invitación.',
     status: {
       loadUnavailable: 'No se pudo cargar este espacio de trabajo.',
-      moveUnavailable: 'No se pudo mover la tarjeta.'
+      moveUnavailable: 'No se pudo mover la tarjeta.',
+      copyCardDetailsUnavailable: 'No se pudieron copiar los detalles de la tarjeta'
     },
     view: {
       noDetails: 'No se agregaron detalles.'
@@ -468,6 +479,7 @@ const ES_CL_MESSAGES = freezeCatalog({
       localeRequestCleared: 'Solicitud de locale eliminada.',
       humanVerificationRequested: 'Se solicitó verificación humana.',
       localeVerified: 'Localización verificada.',
+      cardDetailsCopied: 'Detalles de la tarjeta copiados',
       stagePromptRunSucceeded: 'La ejecución del prompt terminó.',
       movedCard: 'Tarjeta movida a {column}.',
       cardDeleted: 'Tarjeta eliminada.',
@@ -638,10 +650,18 @@ const ES_CL_MESSAGES = freezeCatalog({
   },
   cardViewDialog: {
     titlePlaceholder: 'Título de la tarjeta',
+    copyButton: 'Copiar detalles de la tarjeta',
     editButton: 'Editar',
     detailsLabel: 'Detalles',
     updatedLabel: 'Actualizado',
     requestHumanVerificationButton: 'Solicitar verificación humana',
+    copyFields: {
+      title: 'Título',
+      locale: 'Locale',
+      stage: 'Etapa',
+      priority: 'Prioridad',
+      cardId: 'ID de tarjeta'
+    },
     reviewState: {
       ai: 'IA',
       'needs-human-verification': 'Necesita verificación humana',
@@ -827,7 +847,8 @@ const JA_MESSAGES = freezeCatalog({
     boardInvitePendingNotice: 'このボードはあなたに共有されています。共同編集を開いて、招待を承認または辞退してください。',
     status: {
       loadUnavailable: 'このワークスペースを読み込めません。',
-      moveUnavailable: 'カードを移動できません。'
+      moveUnavailable: 'カードを移動できません。',
+      copyCardDetailsUnavailable: 'カード詳細をコピーできませんでした。'
     },
     view: {
       noDetails: '詳細はありません。'
@@ -855,6 +876,7 @@ const JA_MESSAGES = freezeCatalog({
       localeRequestCleared: 'ロケールリクエストを解除しました。',
       humanVerificationRequested: '人による確認を依頼しました。',
       localeVerified: 'ローカライズを確認済みにしました。',
+      cardDetailsCopied: 'カード詳細をコピーしました。',
       stagePromptRunSucceeded: 'プロンプト実行が完了しました。',
       movedCard: 'カードを {column} に移動しました。',
       cardDeleted: 'カードを削除しました。',
@@ -1025,10 +1047,18 @@ const JA_MESSAGES = freezeCatalog({
   },
   cardViewDialog: {
     titlePlaceholder: 'カード名',
+    copyButton: 'カード詳細をコピー',
     editButton: '編集',
     detailsLabel: '詳細',
     updatedLabel: '更新日時',
     requestHumanVerificationButton: '人による確認を依頼',
+    copyFields: {
+      title: 'タイトル',
+      locale: 'ロケール',
+      stage: 'ステージ',
+      priority: '優先度',
+      cardId: 'カード ID'
+    },
     reviewState: {
       ai: 'AI',
       'needs-human-verification': '人による確認が必要',

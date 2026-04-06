@@ -699,7 +699,7 @@ test('workspace template renders edit localization controls and a simplified loc
 
   assert.match(
     cardViewDialog,
-    /data-workspace-target="viewCardPrioritySection"[\s\S]*data-workspace-target="viewDeleteButton"[\s\S]*data-workspace-target="viewPromptRunButton"[\s\S]*data-workspace-target="viewLocaleSection"[\s\S]*id="card-view-locale-trigger"[\s\S]*data-workspace-target="viewLocaleButton"[\s\S]*id="card-view-locale-menu"[\s\S]*data-workspace-target="viewLocaleMenu"[\s\S]*id="card-view-locale-select"[\s\S]*data-workspace-target="viewLocaleSelect"[\s\S]*data-workspace-target="viewEditButton"[\s\S]*data-workspace-target="viewCardTitle"[\s\S]*data-workspace-target="viewCardBody"[\s\S]*data-workspace-target="viewActionRegion"/
+    /data-workspace-target="viewCardPrioritySection"[\s\S]*data-workspace-target="viewDeleteButton"[\s\S]*data-workspace-target="viewPromptRunButton"[\s\S]*data-workspace-target="viewLocaleSection"[\s\S]*id="card-view-locale-trigger"[\s\S]*data-workspace-target="viewLocaleButton"[\s\S]*id="card-view-locale-menu"[\s\S]*data-workspace-target="viewLocaleMenu"[\s\S]*id="card-view-locale-select"[\s\S]*data-workspace-target="viewLocaleSelect"[\s\S]*data-workspace-target="viewCopyButton"[\s\S]*data-workspace-target="viewEditButton"[\s\S]*data-workspace-target="viewCardTitle"[\s\S]*data-workspace-target="viewCardBody"[\s\S]*data-workspace-target="viewActionRegion"/
   );
   assert.doesNotMatch(cardViewDialog, /data-card-editor-target="titleInput"/);
   assert.doesNotMatch(cardViewDialog, /data-card-editor-target="markdownInput"/);
@@ -707,6 +707,10 @@ test('workspace template renders edit localization controls and a simplified loc
   assert.doesNotMatch(cardViewDialog, /data-card-editor-target="localeFallbackNotice"/);
   assert.doesNotMatch(cardViewDialog, /data-card-editor-target="localeEditSummary"/);
   assert.doesNotMatch(cardViewDialog, /data-card-editor-target="localeReadOnlyNotice"/);
+  assert.match(
+    cardViewDialog,
+    /class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--copy"[\s\S]*?hidden[\s\S]*?disabled[\s\S]*?aria-label="Copy card details"[\s\S]*?data-workspace-target="viewCopyButton"[\s\S]*?data-action="workspace#copyViewCardDetails"[\s\S]*?aria-disabled="true"[\s\S]*?<span class="sr-only">Copy card details<\/span>/
+  );
   assert.match(
     cardViewDialog,
     /class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--edit"[\s\S]*?hidden[\s\S]*?disabled[\s\S]*?aria-disabled="true"[\s\S]*?aria-label="Edit"[\s\S]*?data-workspace-target="viewEditButton"[\s\S]*?data-action="workspace#openEditFromView"[\s\S]*?<span class="sr-only">Edit<\/span>/

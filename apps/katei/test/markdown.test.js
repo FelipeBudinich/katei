@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   markdownToHtml,
+  markdownToPlainText,
   markdownToPreviewText,
   renderMarkdownInto
 } from '../public/js/lib/markdown.js';
@@ -71,6 +72,28 @@ test('markdownToPreviewText returns an empty string when maxLength is zero', () 
   const result = markdownToPreviewText('Hello brave new world', 0);
 
   assert.equal(result, '');
+});
+
+test('markdownToPlainText preserves paragraph breaks from sanitized markdown HTML', () => {
+  installMarkdownGlobals({
+    renderedHtml: '<h2>Launch</h2><p>First paragraph.</p><p>Second paragraph.</p>',
+    sanitizedHtml: '<h2>Launch</h2><p>First paragraph.</p><p>Second paragraph.</p>'
+  });
+
+  const result = markdownToPlainText('## Launch');
+
+  assert.equal(result, 'Launch\n\nFirst paragraph.\n\nSecond paragraph.');
+});
+
+test('markdownToPlainText produces readable list text', () => {
+  installMarkdownGlobals({
+    renderedHtml: '<ul><li>Confirm copy</li><li>Verify locale</li></ul>',
+    sanitizedHtml: '<ul><li>Confirm copy</li><li>Verify locale</li></ul>'
+  });
+
+  const result = markdownToPlainText('- Confirm copy');
+
+  assert.equal(result, '- Confirm copy\n- Verify locale');
 });
 
 function installMarkdownGlobals({ renderedHtml, sanitizedHtml }) {

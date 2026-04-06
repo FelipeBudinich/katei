@@ -459,6 +459,21 @@
     mask-image: url("/svg/edit.svg");
   }
 
+  .touch-button-secondary--copy::before {
+    content: "";
+    width: 1rem;
+    height: 1rem;
+    background-color: currentColor;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    -webkit-mask-image: url("/svg/copy.svg");
+    mask-image: url("/svg/copy.svg");
+  }
+
   .touch-button-secondary--language::before {
     content: "";
     width: 1rem;

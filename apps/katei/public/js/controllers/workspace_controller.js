@@ -4,7 +4,7 @@ import { createBrowserDateTimeFormatter, getBrowserTranslator } from '../i18n/br
 import { localizeErrorMessage } from '../i18n/errors.js';
 import { getPriorityDisplayLabel } from '../i18n/workspace_labels.js';
 import { logInviteAcceptDebug, logInviteDebug } from '../lib/invite_debug.js';
-import { renderMarkdownInto } from '../lib/markdown.js';
+import { markdownToPlainText, renderMarkdownInto } from '../lib/markdown.js';
 import { HttpWorkspaceRepository } from '../repositories/http_workspace_repository.js';
 import { renderBoardState } from '../renderers/board_renderer.js';
 import { WorkspaceService } from '../services/workspace_service.js';
@@ -53,6 +53,7 @@ export default class extends Controller {
     'viewRequestVerificationButton',
     'viewActionRegion',
     'viewDeleteButton',
+    'viewCopyButton',
     'viewEditButton',
     'viewPromptRunButton',
     'viewCardTitle',
@@ -1308,8 +1309,92 @@ export default class extends Controller {
     }
 
     this.resetViewDeleteButtonState();
+    this.resetViewCopyButtonState();
     this.viewDialogState = null;
     this.viewTriggerElement = null;
+  }
+
+  async copyViewCardDetails(event) {
+    event?.preventDefault?.();
+
+    const triggerButton = event?.currentTarget ?? this.viewCopyButtonTarget ?? null;
+    const copyText = this.buildViewCardDetailsCopyText();
+
+    try {
+      const copied = await copyTextToClipboard(copyText, {
+        navigatorRef: this.browserWindow?.navigator ?? globalThis.navigator ?? null,
+        documentRef: this.browserWindow?.document ?? globalThis.document ?? null
+      });
+
+      this.announce(
+        this.t(copied ? 'workspace.announcements.cardDetailsCopied' : 'workspace.status.copyCardDetailsUnavailable')
+      );
+
+      return copied;
+    } catch (error) {
+      console.error(error);
+      this.announce(this.t('workspace.status.copyCardDetailsUnavailable'));
+      return false;
+    } finally {
+      triggerButton?.focus?.();
+    }
+  }
+
+  buildViewCardDetailsCopyText() {
+    const viewCardState = this.getCurrentViewCardCopyState();
+
+    if (!viewCardState) {
+      return '';
+    }
+
+    const { board, card, stageId, localizedView, shouldShowPriority } = viewCardState;
+    const bodyMarkdown = normalizeOptionalString(localizedView?.variant?.detailsMarkdown);
+    const resolvedLocale = normalizeOptionalWorkspaceId(
+      localizedView?.selectedLocale ?? localizedView?.renderedLocale ?? this.viewDialogState?.selectedLocale ?? null
+    );
+
+    return formatCardDetailsCopyText({
+      t: this.t,
+      title: normalizeOptionalString(localizedView?.variant?.title),
+      locale: resolvedLocale,
+      stageTitle: normalizeOptionalString(stageId ? getBoardStageTitle(board, stageId) : ''),
+      priority: shouldShowPriority ? normalizeOptionalString(getPriorityDisplayLabel(card?.priority, this.t)) : '',
+      cardId: normalizeOptionalWorkspaceId(card?.id),
+      body: bodyMarkdown ? markdownToPlainText(bodyMarkdown) : this.t('workspace.view.noDetails')
+    });
+  }
+
+  getCurrentViewCardCopyState() {
+    const boardId = normalizeOptionalWorkspaceId(this.viewDialogState?.board?.id);
+    const cardId = normalizeOptionalWorkspaceId(this.viewDialogState?.card?.id);
+    const board = boardId
+      ? (this.findBoard(boardId) ?? this.viewDialogState?.board ?? null)
+      : (this.viewDialogState?.board ?? null);
+    const card = board?.cards?.[cardId] ?? this.viewDialogState?.card ?? null;
+
+    if (!board || !card) {
+      return null;
+    }
+
+    const stageId = resolveBoardStageId(board, {
+      stageId: this.viewDialogState?.stageId ?? null,
+      cardId
+    });
+    const localizedView = createLocalizedCardViewState({
+      board,
+      card,
+      selectedLocale: this.viewDialogState?.selectedLocale ?? null,
+      uiLocale: this.t.locale,
+      localeSelection: 'available'
+    });
+
+    return {
+      board,
+      card,
+      stageId,
+      localizedView,
+      shouldShowPriority: shouldShowPriorityForStage(stageId)
+    };
   }
 
   openConfirmDialog({ triggerElement, confirmation }) {
@@ -1462,6 +1547,7 @@ export default class extends Controller {
       boardId: shouldShowDeleteButton ? boardId : null,
       cardId: shouldShowDeleteButton ? card.id : null
     });
+    this.syncViewCopyButtonState({ canCopy: Boolean(board && card) });
 
     if (this.hasViewEditButtonTarget) {
       this.viewEditButtonTarget.hidden = !shouldShowEditButton;
@@ -1858,6 +1944,20 @@ export default class extends Controller {
     });
   }
 
+  syncViewCopyButtonState({ canCopy = false } = {}) {
+    if (!this.hasViewCopyButtonTarget) {
+      return;
+    }
+
+    this.viewCopyButtonTarget.hidden = !canCopy;
+    this.viewCopyButtonTarget.disabled = !canCopy;
+    this.viewCopyButtonTarget.setAttribute('aria-disabled', String(!canCopy));
+  }
+
+  resetViewCopyButtonState() {
+    this.syncViewCopyButtonState({ canCopy: false });
+  }
+
   syncOpenViewDialogState() {
     if (!this.viewDialogTarget?.open) {
       return;
@@ -1939,6 +2039,103 @@ function createStagePromptRunRequestKey({ boardId, cardId } = {}) {
   }
 
   return `${normalizedBoardId}::${normalizedCardId}`;
+}
+
+function formatCardDetailsCopyText({ t, title, locale, stageTitle, priority, cardId, body } = {}) {
+  const lines = [];
+
+  appendCopyFieldLine(lines, t?.('cardViewDialog.copyFields.title'), title);
+  appendCopyFieldLine(lines, t?.('cardViewDialog.copyFields.locale'), locale);
+  appendCopyFieldLine(lines, t?.('cardViewDialog.copyFields.stage'), stageTitle);
+  appendCopyFieldLine(lines, t?.('cardViewDialog.copyFields.priority'), priority);
+  appendCopyFieldLine(lines, t?.('cardViewDialog.copyFields.cardId'), cardId);
+
+  const normalizedBody = normalizeOptionalCopyText(body);
+
+  if (normalizedBody) {
+    if (lines.length > 0) {
+      lines.push('');
+    }
+
+    lines.push(normalizedBody);
+  }
+
+  return lines.join('\n');
+}
+
+function appendCopyFieldLine(lines, label, value) {
+  const normalizedLabel = normalizeOptionalCopyText(label);
+  const normalizedValue = normalizeOptionalCopyText(value);
+
+  if (!normalizedLabel || !normalizedValue) {
+    return;
+  }
+
+  lines.push(`${normalizedLabel}: ${normalizedValue}`);
+}
+
+async function copyTextToClipboard(text, { navigatorRef = null, documentRef = null } = {}) {
+  const normalizedText = normalizeOptionalCopyText(text);
+
+  if (!normalizedText) {
+    return false;
+  }
+
+  if (typeof navigatorRef?.clipboard?.writeText === 'function') {
+    try {
+      await navigatorRef.clipboard.writeText(normalizedText);
+      return true;
+    } catch (error) {
+      // Fall through to the legacy copy path when async clipboard access is unavailable.
+    }
+  }
+
+  return fallbackCopyTextToClipboard(normalizedText, documentRef);
+}
+
+function fallbackCopyTextToClipboard(text, documentRef = globalThis.document) {
+  const textarea = documentRef?.createElement?.('textarea');
+  let isMounted = false;
+
+  if (
+    !textarea ||
+    typeof documentRef?.body?.appendChild !== 'function' ||
+    typeof documentRef?.body?.removeChild !== 'function' ||
+    typeof documentRef?.execCommand !== 'function'
+  ) {
+    return false;
+  }
+
+  try {
+    textarea.value = text;
+    textarea.readOnly = true;
+    textarea.setAttribute?.('readonly', '');
+
+    if (textarea.style) {
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      textarea.style.pointerEvents = 'none';
+    }
+
+    documentRef.body.appendChild(textarea);
+    isMounted = true;
+    textarea.focus?.();
+    textarea.select?.();
+    textarea.setSelectionRange?.(0, text.length);
+    return documentRef.execCommand('copy') === true;
+  } catch (error) {
+    return false;
+  } finally {
+    if (isMounted) {
+      documentRef.body.removeChild(textarea);
+    }
+  }
+}
+
+function normalizeOptionalCopyText(value) {
+  return String(value ?? '')
+    .replace(/\r\n?/g, '\n')
+    .trim();
 }
 
 function setOptionalDatasetValue(element, name, value) {
