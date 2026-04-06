@@ -25,12 +25,10 @@ export function parseStageDefinitions(rawValue) {
     const stageDefinition = {
       id: segments[0],
       title: segments[1],
-      allowedTransitionStageIds: splitInlineList(segments[2] ?? '')
+      allowedTransitionStageIds: splitInlineList(segments[2] ?? ''),
+      // Omitted action segments are an explicit "no actions" signal for the editor flow.
+      actionIds: segments.length === 4 ? splitInlineList(segments[3] ?? '') : []
     };
-
-    if (segments.length === 4) {
-      stageDefinition.actionIds = splitInlineList(segments[3] ?? '');
-    }
 
     return stageDefinition;
   });

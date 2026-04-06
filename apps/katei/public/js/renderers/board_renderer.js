@@ -1,4 +1,5 @@
 import { markdownToPreviewText } from '../lib/markdown.js';
+import { stageSupportsAction } from '../domain/board_stage_actions.js';
 import { getBoardCardContentVariant } from '../domain/card_localization.js';
 import { sortCardIdsForColumn } from '../domain/workspace_selectors.js';
 import { createBrowserDateTimeFormatter, getBrowserTranslator } from '../i18n/browser.js';
@@ -72,7 +73,7 @@ export function renderBoardState({
 function createStagePanel({ board, stageId, stage, collapsedColumns, canReadBoard, canEditBoard, templates, t, uiLocale, dateTimeFormatter }) {
   const columnNode = cloneTemplate(templates.columnTemplate);
   const isCollapsed = Boolean(collapsedColumns[stageId]);
-  const shouldShowCreateButton = canEditBoard && Array.isArray(stage?.actionIds) && stage.actionIds.includes('card.create');
+  const shouldShowCreateButton = canEditBoard && stageSupportsAction(board, stageId, 'card.create');
   columnNode.dataset.stageId = stage.id;
   columnNode.dataset.columnId = stage.id;
   columnNode.dataset.collapsed = String(isCollapsed);

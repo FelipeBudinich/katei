@@ -79,6 +79,37 @@ test('createBoardEditorFormState serializes a fourth stage segment only when act
   assert.match(formState.stageDefinitions, /archive-bin \| Archive Bin \|  \| card\.delete/);
 });
 
+test('createBoardEditorFormState serializes canonical stage actions instead of stale actionIds', () => {
+  const board = createEmptyWorkspace().boards.main;
+
+  board.stageOrder = ['doing', 'done'];
+  board.stages = {
+    doing: {
+      id: 'doing',
+      title: 'Doing',
+      cardIds: [],
+      allowedTransitionStageIds: ['done'],
+      templateIds: [],
+      actions: [],
+      actionIds: ['card.create']
+    },
+    done: {
+      id: 'done',
+      title: 'Done',
+      cardIds: [],
+      allowedTransitionStageIds: ['doing'],
+      templateIds: [],
+      actions: [],
+      actionIds: []
+    }
+  };
+
+  const formState = createBoardEditorFormState(board);
+
+  assert.match(formState.stageDefinitions, /doing \| Doing \| done/);
+  assert.doesNotMatch(formState.stageDefinitions, /doing \| Doing \| done \| card\.create/);
+});
+
 test('createBoardEditorFormState serializes prompt action drafts alongside stage definitions', () => {
   const board = createEmptyWorkspace().boards.main;
 
@@ -164,6 +195,35 @@ test('parseBoardEditorFormInput parses valid schema edits and clears templates f
   assert.equal(Object.prototype.hasOwnProperty.call(parsedInput, 'openAiApiKey'), false);
 });
 
+test('parseBoardEditorFormInput treats omitted action segments as explicit empty action lists', () => {
+  const parsedInput = parseBoardEditorFormInput({
+    title: 'Editorial board',
+    sourceLocale: 'en',
+    defaultLocale: 'en',
+    supportedLocales: 'en',
+    requiredLocales: 'en',
+    stageDefinitions: [
+      'backlog | Backlog | doing | card.create',
+      'doing | Doing | backlog'
+    ].join('\n')
+  });
+
+  assert.deepEqual(parsedInput.stageDefinitions, [
+    {
+      id: 'backlog',
+      title: 'Backlog',
+      allowedTransitionStageIds: ['doing'],
+      actionIds: ['card.create']
+    },
+    {
+      id: 'doing',
+      title: 'Doing',
+      allowedTransitionStageIds: ['backlog'],
+      actionIds: []
+    }
+  ]);
+});
+
 test('parseBoardEditorFormInput merges stage prompt actions into the saved stage definitions', () => {
   const parsedInput = parseBoardEditorFormInput({
     title: 'Editorial board',
@@ -204,7 +264,7 @@ test('parseBoardEditorFormInput merges stage prompt actions into the saved stage
       id: 'doing',
       title: 'Doing',
       allowedTransitionStageIds: ['backlog'],
-      actionIds: ['card.create']
+      actionIds: []
     }
   ]);
 });
@@ -264,7 +324,7 @@ test('parseBoardEditorFormInput accepts 2-, 3-, and 4-segment stage lines and pr
       id: 'archived',
       title: 'Archived',
       allowedTransitionStageIds: ['backlog'],
-      actionIds: ['card.delete']
+      actionIds: []
     },
     {
       id: 'archive-bin',
@@ -345,7 +405,7 @@ test('parseBoardEditorFormInput clears legacy templates when editing an existing
       id: 'backlog',
       title: 'Backlog',
       allowedTransitionStageIds: ['review'],
-      actionIds: ['card.create']
+      actionIds: []
     },
     {
       id: 'review',

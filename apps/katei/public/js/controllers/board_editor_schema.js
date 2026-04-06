@@ -5,6 +5,7 @@ import {
 } from '../domain/board_ai_localization.js';
 import { createDefaultBoardLanguagePolicy } from '../domain/board_language_policy.js';
 import { normalizeBoardLocalizationGlossary } from '../domain/board_localization_glossary.js';
+import { getStageActions } from '../domain/board_stage_actions.js';
 import { serializeBoardStagePromptAction } from '../domain/board_stage_prompt_action.js';
 import { normalizeBoardSchemaInput, assertBoardSchemaCompatibleWithBoard } from '../domain/board_schema.js';
 import { createDefaultBoardStages } from '../domain/board_workflow.js';
@@ -24,7 +25,7 @@ export function createBoardEditorFormState(board = null) {
         id: stageId,
         title: board.stages?.[stageId]?.title ?? '',
         allowedTransitionStageIds: [...(board.stages?.[stageId]?.allowedTransitionStageIds ?? [])],
-        actionIds: [...(board.stages?.[stageId]?.actionIds ?? [])],
+        actionIds: getStageActions(board, stageId),
         ...(board.stages?.[stageId]?.promptAction
           ? {
               promptAction: serializeBoardStagePromptAction(

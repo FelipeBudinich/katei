@@ -243,6 +243,42 @@ test('renderBoardState shows stage-local create buttons only for create-enabled 
   assert.equal(regions.desktopColumns.children[0].createButton.disabled, true);
 });
 
+test('renderBoardState hides the empty-stage add-card control when canonical stage actions omit card.create', () => {
+  const board = createWorkspaceBoard({
+    id: 'board_empty_stage',
+    title: 'Empty stage board',
+    createdAt: '2026-03-31T10:00:00.000Z',
+    updatedAt: '2026-03-31T10:00:00.000Z'
+  });
+  const regions = {
+    boardTitle: { textContent: '' },
+    desktopColumns: createRegionDouble()
+  };
+  const t = Object.assign(
+    (key, values = {}) => (key === 'workspace.cardCount' ? String(values.count ?? 0) : key),
+    { locale: 'en' }
+  );
+
+  board.stages.backlog.actions = [];
+  board.stages.backlog.actionIds = ['card.create'];
+
+  renderBoardState({
+    board,
+    canReadBoard: true,
+    canEditBoard: true,
+    regions,
+    templates: {
+      columnTemplate: createColumnTemplateDouble(),
+      cardTemplate: createCardTemplateDouble()
+    },
+    t
+  });
+
+  assert.equal(regions.desktopColumns.children[0].createButton.hidden, true);
+  assert.equal(regions.desktopColumns.children[0].createButton.disabled, true);
+  assert.equal(regions.desktopColumns.children[0].countElement.textContent, '0');
+});
+
 test('renderBoardState wires both header toggle buttons for each stage panel', () => {
   const board = createWorkspaceBoard({
     id: 'board_toggle_wiring',
@@ -629,6 +665,7 @@ function createColumnPanelDouble() {
 
   return {
     dataset: {},
+    countElement,
     titleToggleElement,
     chipToggleElement,
     toggleElements,
