@@ -66,8 +66,7 @@ katei/
 │   │       ├── scripts/
 │   │       │   └── …
 │   │       └── SKILL.md
-│   ├── env-inventory.config.json
-│   └── katei-auth-debug.config.json
+│   └── env-inventory.config.json
 ├── .github/
 │   └── workflows/
 │       └── deploy-katei-heroku.yml
@@ -86,7 +85,8 @@ katei/
 │       │   ├── svg/
 │       │   │   └── …
 │       │   ├── background.webp
-│       │   └── favicon.svg
+│       │   ├── favicon.svg
+│       │   └── profile.svg
 │       ├── src/
 │       │   ├── ai/
 │       │   │   └── …
@@ -128,6 +128,7 @@ katei/
 │       │   ├── board_permissions.test.js
 │       │   ├── board_renderer.test.js
 │       │   ├── board_schema.test.js
+│       │   ├── board_stage_config_controller.test.js
 │       │   ├── board_workflow.test.js
 │       │   ├── card_editor_controller.test.js
 │       │   ├── card_localization.test.js
@@ -135,6 +136,7 @@ katei/
 │       │   ├── card_localization_runtime.test.js
 │       │   ├── config.test.js
 │       │   ├── debug_auth.test.js
+│       │   ├── dialog_initial_focus.test.js
 │       │   ├── google_identity.test.js
 │       │   ├── http_workspace_repository.test.js
 │       │   ├── i18n.test.js
@@ -147,8 +149,11 @@ katei/
 │       │   ├── mongo_workspace_record_repository.test.js
 │       │   ├── mutation_context.test.js
 │       │   ├── openai_localizer.test.js
+│       │   ├── openai_stage_prompt_runner.test.js
+│       │   ├── session_controller.test.js
 │       │   ├── session_cookie.test.js
 │       │   ├── stage_ui.test.js
+│       │   ├── ui_locale_picker_controller.test.js
 │       │   ├── verify_google_id_token.test.js
 │       │   ├── workspace.test.js
 │       │   ├── workspace_access.test.js

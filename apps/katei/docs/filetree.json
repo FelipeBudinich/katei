@@ -13,999 +13,6 @@
     "Diff identity uses stable repo-relative paths"
   ],
   "previousSnapshot": {
-    "generatedAt": "2026-04-02T17:10:47Z",
-    "rootPath": "apps/katei",
-    "summary": {
-      "directoryCount": 28,
-      "fileCount": 151,
-      "maxDepth": 6,
-      "topLevelEntryCount": 8
-    },
-    "tree": {
-      "label": "apps/katei/",
-      "text": "apps/katei/\n\u251c\u2500\u2500 docs/\n\u2502   \u251c\u2500\u2500 env-inventory.html\n\u2502   \u251c\u2500\u2500 env-inventory.json\n\u2502   \u251c\u2500\u2500 filetree.html\n\u2502   \u2514\u2500\u2500 filetree.json\n\u251c\u2500\u2500 public/\n\u2502   \u251c\u2500\u2500 assets/\n\u2502   \u2502   \u2514\u2500\u2500 app.css\n\u2502   \u251c\u2500\u2500 js/\n\u2502   \u2502   \u251c\u2500\u2500 controllers/\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 board_collaboration_state.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 board_collaborators_actions.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 board_collaborators_controller.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 board_editor_controller.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 board_editor_schema.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 board_options_controller.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 card_editor_controller.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 card_editor_locale_view.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 landing_controller.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 landing_controller_connection.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 profile_options_controller.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 session_controller.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 stage_ui.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 workspace_card_dialog.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 workspace_collaboration_actions.js\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 workspace_controller.js\n\u2502   \u2502   \u251c\u2500\u2500 domain/\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 board_collaboration.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 board_language_policy.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 board_permissions.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 board_schema.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 board_stage_actions.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 board_workflow.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 card_localization.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 card_localization_requests.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 localized_content_guard.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 workspace.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 workspace_commands.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 workspace_migrations.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 workspace_mutations.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 workspace_read_model.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 workspace_selectors.js\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 workspace_validation.js\n\u2502   \u2502   \u251c\u2500\u2500 i18n/\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 browser.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 errors.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 locales.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 messages.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 translate.js\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 workspace_labels.js\n\u2502   \u2502   \u251c\u2500\u2500 lib/\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 invite_debug.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 markdown.js\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 workspace_import.js\n\u2502   \u2502   \u251c\u2500\u2500 renderers/\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 board_renderer.js\n\u2502   \u2502   \u251c\u2500\u2500 repositories/\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 http_workspace_repository.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 local_workspace_repository.js\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 workspace_repository.js\n\u2502   \u2502   \u251c\u2500\u2500 services/\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 workspace_service.js\n\u2502   \u2502   \u251c\u2500\u2500 utils/\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 google_identity.js\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 id.js\n\u2502   \u2502   \u2514\u2500\u2500 app.js\n\u2502   \u251c\u2500\u2500 svg/\n\u2502   \u2502   \u251c\u2500\u2500 cards.svg\n\u2502   \u2502   \u251c\u2500\u2500 clock.svg\n\u2502   \u2502   \u251c\u2500\u2500 edit.svg\n\u2502   \u2502   \u2514\u2500\u2500 look.svg\n\u2502   \u251c\u2500\u2500 background.webp\n\u2502   \u2514\u2500\u2500 favicon.svg\n\u251c\u2500\u2500 src/\n\u2502   \u251c\u2500\u2500 auth/\n\u2502   \u2502   \u251c\u2500\u2500 allowlist.js\n\u2502   \u2502   \u251c\u2500\u2500 session_cookie.js\n\u2502   \u2502   \u2514\u2500\u2500 verify_google_id_token.js\n\u2502   \u251c\u2500\u2500 data/\n\u2502   \u2502   \u2514\u2500\u2500 mongo_client.js\n\u2502   \u251c\u2500\u2500 i18n/\n\u2502   \u2502   \u2514\u2500\u2500 request_ui_locale.js\n\u2502   \u251c\u2500\u2500 lib/\n\u2502   \u2502   \u2514\u2500\u2500 invite_debug.js\n\u2502   \u251c\u2500\u2500 middleware/\n\u2502   \u2502   \u251c\u2500\u2500 attach_session.js\n\u2502   \u2502   \u251c\u2500\u2500 attach_ui_locale.js\n\u2502   \u2502   \u2514\u2500\u2500 require_session.js\n\u2502   \u251c\u2500\u2500 routes/\n\u2502   \u2502   \u251c\u2500\u2500 auth.js\n\u2502   \u2502   \u251c\u2500\u2500 boards.js\n\u2502   \u2502   \u251c\u2500\u2500 debug_auth.js\n\u2502   \u2502   \u251c\u2500\u2500 public.js\n\u2502   \u2502   \u251c\u2500\u2500 web.js\n\u2502   \u2502   \u2514\u2500\u2500 workspace_api.js\n\u2502   \u251c\u2500\u2500 views/\n\u2502   \u2502   \u251c\u2500\u2500 layouts/\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 base.njk\n\u2502   \u2502   \u251c\u2500\u2500 macros/\n\u2502   \u2502   \u251c\u2500\u2500 pages/\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 landing.njk\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 workspace.njk\n\u2502   \u2502   \u2514\u2500\u2500 partials/\n\u2502   \u2502       \u251c\u2500\u2500 board-collaborators-sheet.njk\n\u2502   \u2502       \u251c\u2500\u2500 board-editor-sheet.njk\n\u2502   \u2502       \u251c\u2500\u2500 board-options-dialog.njk\n\u2502   \u2502       \u251c\u2500\u2500 board-shell.njk\n\u2502   \u2502       \u251c\u2500\u2500 board-templates.njk\n\u2502   \u2502       \u251c\u2500\u2500 card-editor-sheet.njk\n\u2502   \u2502       \u251c\u2500\u2500 card-item.njk\n\u2502   \u2502       \u251c\u2500\u2500 card-view-dialog.njk\n\u2502   \u2502       \u251c\u2500\u2500 column-panel.njk\n\u2502   \u2502       \u251c\u2500\u2500 confirm-dialog.njk\n\u2502   \u2502       \u251c\u2500\u2500 desktop-board.njk\n\u2502   \u2502       \u251c\u2500\u2500 profile-options-dialog.njk\n\u2502   \u2502       \u251c\u2500\u2500 ui-locale-badge.njk\n\u2502   \u2502       \u251c\u2500\u2500 ui-locale-picker.njk\n\u2502   \u2502       \u251c\u2500\u2500 viewer-chip.njk\n\u2502   \u2502       \u2514\u2500\u2500 workspace-shell.njk\n\u2502   \u251c\u2500\u2500 workspaces/\n\u2502   \u2502   \u251c\u2500\u2500 apply_workspace_command.js\n\u2502   \u2502   \u251c\u2500\u2500 mongo_workspace_record_repository.js\n\u2502   \u2502   \u251c\u2500\u2500 mutation_context.js\n\u2502   \u2502   \u251c\u2500\u2500 workspace_access.js\n\u2502   \u2502   \u251c\u2500\u2500 workspace_record.js\n\u2502   \u2502   \u2514\u2500\u2500 workspace_record_repository.js\n\u2502   \u251c\u2500\u2500 app.js\n\u2502   \u251c\u2500\u2500 config.js\n\u2502   \u2514\u2500\u2500 server.js\n\u251c\u2500\u2500 styles/\n\u2502   \u2514\u2500\u2500 app.css\n\u251c\u2500\u2500 test/\n\u2502   \u251c\u2500\u2500 allowlist.test.js\n\u2502   \u251c\u2500\u2500 app.test.js\n\u2502   \u251c\u2500\u2500 apply_workspace_command.test.js\n\u2502   \u251c\u2500\u2500 attach_session.test.js\n\u2502   \u251c\u2500\u2500 attach_ui_locale.test.js\n\u2502   \u251c\u2500\u2500 board_collaboration.test.js\n\u2502   \u251c\u2500\u2500 board_collaborators_controller.test.js\n\u2502   \u251c\u2500\u2500 board_editor_controller.test.js\n\u2502   \u251c\u2500\u2500 board_language_policy.test.js\n\u2502   \u251c\u2500\u2500 board_options_controller.test.js\n\u2502   \u251c\u2500\u2500 board_permissions.test.js\n\u2502   \u251c\u2500\u2500 board_renderer.test.js\n\u2502   \u251c\u2500\u2500 board_schema.test.js\n\u2502   \u251c\u2500\u2500 board_workflow.test.js\n\u2502   \u251c\u2500\u2500 card_editor_controller.test.js\n\u2502   \u251c\u2500\u2500 card_localization.test.js\n\u2502   \u251c\u2500\u2500 card_localization_requests.test.js\n\u2502   \u251c\u2500\u2500 card_localization_runtime.test.js\n\u2502   \u251c\u2500\u2500 config.test.js\n\u2502   \u251c\u2500\u2500 debug_auth.test.js\n\u2502   \u251c\u2500\u2500 google_identity.test.js\n\u2502   \u251c\u2500\u2500 http_workspace_repository.test.js\n\u2502   \u251c\u2500\u2500 i18n.test.js\n\u2502   \u251c\u2500\u2500 invite_debug.test.js\n\u2502   \u251c\u2500\u2500 landing_controller_connection.test.js\n\u2502   \u251c\u2500\u2500 local_workspace_repository.test.js\n\u2502   \u251c\u2500\u2500 localized_content_guard.test.js\n\u2502   \u251c\u2500\u2500 markdown.test.js\n\u2502   \u251c\u2500\u2500 mongo_client.test.js\n\u2502   \u251c\u2500\u2500 mongo_workspace_record_repository.test.js\n\u2502   \u251c\u2500\u2500 mutation_context.test.js\n\u2502   \u251c\u2500\u2500 session_cookie.test.js\n\u2502   \u251c\u2500\u2500 stage_ui.test.js\n\u2502   \u251c\u2500\u2500 verify_google_id_token.test.js\n\u2502   \u251c\u2500\u2500 workspace.test.js\n\u2502   \u251c\u2500\u2500 workspace_access.test.js\n\u2502   \u251c\u2500\u2500 workspace_api.test.js\n\u2502   \u251c\u2500\u2500 workspace_board_schema.test.js\n\u2502   \u251c\u2500\u2500 workspace_commands.test.js\n\u2502   \u251c\u2500\u2500 workspace_controller.test.js\n\u2502   \u251c\u2500\u2500 workspace_migrations.test.js\n\u2502   \u251c\u2500\u2500 workspace_permissions.test.js\n\u2502   \u251c\u2500\u2500 workspace_record.test.js\n\u2502   \u2514\u2500\u2500 workspace_service.test.js\n\u251c\u2500\u2500 .env.example\n\u251c\u2500\u2500 package.json\n\u2514\u2500\u2500 Procfile",
-      "nodes": [
-        {
-          "name": "docs",
-          "kind": "directory",
-          "relativePath": "docs",
-          "children": [
-            {
-              "name": "env-inventory.html",
-              "kind": "file",
-              "relativePath": "docs/env-inventory.html"
-            },
-            {
-              "name": "env-inventory.json",
-              "kind": "file",
-              "relativePath": "docs/env-inventory.json"
-            },
-            {
-              "name": "filetree.html",
-              "kind": "file",
-              "relativePath": "docs/filetree.html"
-            },
-            {
-              "name": "filetree.json",
-              "kind": "file",
-              "relativePath": "docs/filetree.json"
-            }
-          ],
-          "childCount": 4
-        },
-        {
-          "name": "public",
-          "kind": "directory",
-          "relativePath": "public",
-          "children": [
-            {
-              "name": "assets",
-              "kind": "directory",
-              "relativePath": "public/assets",
-              "children": [
-                {
-                  "name": "app.css",
-                  "kind": "file",
-                  "relativePath": "public/assets/app.css"
-                }
-              ],
-              "childCount": 1
-            },
-            {
-              "name": "js",
-              "kind": "directory",
-              "relativePath": "public/js",
-              "children": [
-                {
-                  "name": "controllers",
-                  "kind": "directory",
-                  "relativePath": "public/js/controllers",
-                  "children": [
-                    {
-                      "name": "board_collaboration_state.js",
-                      "kind": "file",
-                      "relativePath": "public/js/controllers/board_collaboration_state.js"
-                    },
-                    {
-                      "name": "board_collaborators_actions.js",
-                      "kind": "file",
-                      "relativePath": "public/js/controllers/board_collaborators_actions.js"
-                    },
-                    {
-                      "name": "board_collaborators_controller.js",
-                      "kind": "file",
-                      "relativePath": "public/js/controllers/board_collaborators_controller.js"
-                    },
-                    {
-                      "name": "board_editor_controller.js",
-                      "kind": "file",
-                      "relativePath": "public/js/controllers/board_editor_controller.js"
-                    },
-                    {
-                      "name": "board_editor_schema.js",
-                      "kind": "file",
-                      "relativePath": "public/js/controllers/board_editor_schema.js"
-                    },
-                    {
-                      "name": "board_options_controller.js",
-                      "kind": "file",
-                      "relativePath": "public/js/controllers/board_options_controller.js"
-                    },
-                    {
-                      "name": "card_editor_controller.js",
-                      "kind": "file",
-                      "relativePath": "public/js/controllers/card_editor_controller.js"
-                    },
-                    {
-                      "name": "card_editor_locale_view.js",
-                      "kind": "file",
-                      "relativePath": "public/js/controllers/card_editor_locale_view.js"
-                    },
-                    {
-                      "name": "landing_controller.js",
-                      "kind": "file",
-                      "relativePath": "public/js/controllers/landing_controller.js"
-                    },
-                    {
-                      "name": "landing_controller_connection.js",
-                      "kind": "file",
-                      "relativePath": "public/js/controllers/landing_controller_connection.js"
-                    },
-                    {
-                      "name": "profile_options_controller.js",
-                      "kind": "file",
-                      "relativePath": "public/js/controllers/profile_options_controller.js"
-                    },
-                    {
-                      "name": "session_controller.js",
-                      "kind": "file",
-                      "relativePath": "public/js/controllers/session_controller.js"
-                    },
-                    {
-                      "name": "stage_ui.js",
-                      "kind": "file",
-                      "relativePath": "public/js/controllers/stage_ui.js"
-                    },
-                    {
-                      "name": "workspace_card_dialog.js",
-                      "kind": "file",
-                      "relativePath": "public/js/controllers/workspace_card_dialog.js"
-                    },
-                    {
-                      "name": "workspace_collaboration_actions.js",
-                      "kind": "file",
-                      "relativePath": "public/js/controllers/workspace_collaboration_actions.js"
-                    },
-                    {
-                      "name": "workspace_controller.js",
-                      "kind": "file",
-                      "relativePath": "public/js/controllers/workspace_controller.js"
-                    }
-                  ],
-                  "childCount": 16
-                },
-                {
-                  "name": "domain",
-                  "kind": "directory",
-                  "relativePath": "public/js/domain",
-                  "children": [
-                    {
-                      "name": "board_collaboration.js",
-                      "kind": "file",
-                      "relativePath": "public/js/domain/board_collaboration.js"
-                    },
-                    {
-                      "name": "board_language_policy.js",
-                      "kind": "file",
-                      "relativePath": "public/js/domain/board_language_policy.js"
-                    },
-                    {
-                      "name": "board_permissions.js",
-                      "kind": "file",
-                      "relativePath": "public/js/domain/board_permissions.js"
-                    },
-                    {
-                      "name": "board_schema.js",
-                      "kind": "file",
-                      "relativePath": "public/js/domain/board_schema.js"
-                    },
-                    {
-                      "name": "board_stage_actions.js",
-                      "kind": "file",
-                      "relativePath": "public/js/domain/board_stage_actions.js"
-                    },
-                    {
-                      "name": "board_workflow.js",
-                      "kind": "file",
-                      "relativePath": "public/js/domain/board_workflow.js"
-                    },
-                    {
-                      "name": "card_localization.js",
-                      "kind": "file",
-                      "relativePath": "public/js/domain/card_localization.js"
-                    },
-                    {
-                      "name": "card_localization_requests.js",
-                      "kind": "file",
-                      "relativePath": "public/js/domain/card_localization_requests.js"
-                    },
-                    {
-                      "name": "localized_content_guard.js",
-                      "kind": "file",
-                      "relativePath": "public/js/domain/localized_content_guard.js"
-                    },
-                    {
-                      "name": "workspace.js",
-                      "kind": "file",
-                      "relativePath": "public/js/domain/workspace.js"
-                    },
-                    {
-                      "name": "workspace_commands.js",
-                      "kind": "file",
-                      "relativePath": "public/js/domain/workspace_commands.js"
-                    },
-                    {
-                      "name": "workspace_migrations.js",
-                      "kind": "file",
-                      "relativePath": "public/js/domain/workspace_migrations.js"
-                    },
-                    {
-                      "name": "workspace_mutations.js",
-                      "kind": "file",
-                      "relativePath": "public/js/domain/workspace_mutations.js"
-                    },
-                    {
-                      "name": "workspace_read_model.js",
-                      "kind": "file",
-                      "relativePath": "public/js/domain/workspace_read_model.js"
-                    },
-                    {
-                      "name": "workspace_selectors.js",
-                      "kind": "file",
-                      "relativePath": "public/js/domain/workspace_selectors.js"
-                    },
-                    {
-                      "name": "workspace_validation.js",
-                      "kind": "file",
-                      "relativePath": "public/js/domain/workspace_validation.js"
-                    }
-                  ],
-                  "childCount": 16
-                },
-                {
-                  "name": "i18n",
-                  "kind": "directory",
-                  "relativePath": "public/js/i18n",
-                  "children": [
-                    {
-                      "name": "browser.js",
-                      "kind": "file",
-                      "relativePath": "public/js/i18n/browser.js"
-                    },
-                    {
-                      "name": "errors.js",
-                      "kind": "file",
-                      "relativePath": "public/js/i18n/errors.js"
-                    },
-                    {
-                      "name": "locales.js",
-                      "kind": "file",
-                      "relativePath": "public/js/i18n/locales.js"
-                    },
-                    {
-                      "name": "messages.js",
-                      "kind": "file",
-                      "relativePath": "public/js/i18n/messages.js"
-                    },
-                    {
-                      "name": "translate.js",
-                      "kind": "file",
-                      "relativePath": "public/js/i18n/translate.js"
-                    },
-                    {
-                      "name": "workspace_labels.js",
-                      "kind": "file",
-                      "relativePath": "public/js/i18n/workspace_labels.js"
-                    }
-                  ],
-                  "childCount": 6
-                },
-                {
-                  "name": "lib",
-                  "kind": "directory",
-                  "relativePath": "public/js/lib",
-                  "children": [
-                    {
-                      "name": "invite_debug.js",
-                      "kind": "file",
-                      "relativePath": "public/js/lib/invite_debug.js"
-                    },
-                    {
-                      "name": "markdown.js",
-                      "kind": "file",
-                      "relativePath": "public/js/lib/markdown.js"
-                    },
-                    {
-                      "name": "workspace_import.js",
-                      "kind": "file",
-                      "relativePath": "public/js/lib/workspace_import.js"
-                    }
-                  ],
-                  "childCount": 3
-                },
-                {
-                  "name": "renderers",
-                  "kind": "directory",
-                  "relativePath": "public/js/renderers",
-                  "children": [
-                    {
-                      "name": "board_renderer.js",
-                      "kind": "file",
-                      "relativePath": "public/js/renderers/board_renderer.js"
-                    }
-                  ],
-                  "childCount": 1
-                },
-                {
-                  "name": "repositories",
-                  "kind": "directory",
-                  "relativePath": "public/js/repositories",
-                  "children": [
-                    {
-                      "name": "http_workspace_repository.js",
-                      "kind": "file",
-                      "relativePath": "public/js/repositories/http_workspace_repository.js"
-                    },
-                    {
-                      "name": "local_workspace_repository.js",
-                      "kind": "file",
-                      "relativePath": "public/js/repositories/local_workspace_repository.js"
-                    },
-                    {
-                      "name": "workspace_repository.js",
-                      "kind": "file",
-                      "relativePath": "public/js/repositories/workspace_repository.js"
-                    }
-                  ],
-                  "childCount": 3
-                },
-                {
-                  "name": "services",
-                  "kind": "directory",
-                  "relativePath": "public/js/services",
-                  "children": [
-                    {
-                      "name": "workspace_service.js",
-                      "kind": "file",
-                      "relativePath": "public/js/services/workspace_service.js"
-                    }
-                  ],
-                  "childCount": 1
-                },
-                {
-                  "name": "utils",
-                  "kind": "directory",
-                  "relativePath": "public/js/utils",
-                  "children": [
-                    {
-                      "name": "google_identity.js",
-                      "kind": "file",
-                      "relativePath": "public/js/utils/google_identity.js"
-                    },
-                    {
-                      "name": "id.js",
-                      "kind": "file",
-                      "relativePath": "public/js/utils/id.js"
-                    }
-                  ],
-                  "childCount": 2
-                },
-                {
-                  "name": "app.js",
-                  "kind": "file",
-                  "relativePath": "public/js/app.js"
-                }
-              ],
-              "childCount": 9
-            },
-            {
-              "name": "svg",
-              "kind": "directory",
-              "relativePath": "public/svg",
-              "children": [
-                {
-                  "name": "cards.svg",
-                  "kind": "file",
-                  "relativePath": "public/svg/cards.svg"
-                },
-                {
-                  "name": "clock.svg",
-                  "kind": "file",
-                  "relativePath": "public/svg/clock.svg"
-                },
-                {
-                  "name": "edit.svg",
-                  "kind": "file",
-                  "relativePath": "public/svg/edit.svg"
-                },
-                {
-                  "name": "look.svg",
-                  "kind": "file",
-                  "relativePath": "public/svg/look.svg"
-                }
-              ],
-              "childCount": 4
-            },
-            {
-              "name": "background.webp",
-              "kind": "file",
-              "relativePath": "public/background.webp"
-            },
-            {
-              "name": "favicon.svg",
-              "kind": "file",
-              "relativePath": "public/favicon.svg"
-            }
-          ],
-          "childCount": 5
-        },
-        {
-          "name": "src",
-          "kind": "directory",
-          "relativePath": "src",
-          "children": [
-            {
-              "name": "auth",
-              "kind": "directory",
-              "relativePath": "src/auth",
-              "children": [
-                {
-                  "name": "allowlist.js",
-                  "kind": "file",
-                  "relativePath": "src/auth/allowlist.js"
-                },
-                {
-                  "name": "session_cookie.js",
-                  "kind": "file",
-                  "relativePath": "src/auth/session_cookie.js"
-                },
-                {
-                  "name": "verify_google_id_token.js",
-                  "kind": "file",
-                  "relativePath": "src/auth/verify_google_id_token.js"
-                }
-              ],
-              "childCount": 3
-            },
-            {
-              "name": "data",
-              "kind": "directory",
-              "relativePath": "src/data",
-              "children": [
-                {
-                  "name": "mongo_client.js",
-                  "kind": "file",
-                  "relativePath": "src/data/mongo_client.js"
-                }
-              ],
-              "childCount": 1
-            },
-            {
-              "name": "i18n",
-              "kind": "directory",
-              "relativePath": "src/i18n",
-              "children": [
-                {
-                  "name": "request_ui_locale.js",
-                  "kind": "file",
-                  "relativePath": "src/i18n/request_ui_locale.js"
-                }
-              ],
-              "childCount": 1
-            },
-            {
-              "name": "lib",
-              "kind": "directory",
-              "relativePath": "src/lib",
-              "children": [
-                {
-                  "name": "invite_debug.js",
-                  "kind": "file",
-                  "relativePath": "src/lib/invite_debug.js"
-                }
-              ],
-              "childCount": 1
-            },
-            {
-              "name": "middleware",
-              "kind": "directory",
-              "relativePath": "src/middleware",
-              "children": [
-                {
-                  "name": "attach_session.js",
-                  "kind": "file",
-                  "relativePath": "src/middleware/attach_session.js"
-                },
-                {
-                  "name": "attach_ui_locale.js",
-                  "kind": "file",
-                  "relativePath": "src/middleware/attach_ui_locale.js"
-                },
-                {
-                  "name": "require_session.js",
-                  "kind": "file",
-                  "relativePath": "src/middleware/require_session.js"
-                }
-              ],
-              "childCount": 3
-            },
-            {
-              "name": "routes",
-              "kind": "directory",
-              "relativePath": "src/routes",
-              "children": [
-                {
-                  "name": "auth.js",
-                  "kind": "file",
-                  "relativePath": "src/routes/auth.js"
-                },
-                {
-                  "name": "boards.js",
-                  "kind": "file",
-                  "relativePath": "src/routes/boards.js"
-                },
-                {
-                  "name": "debug_auth.js",
-                  "kind": "file",
-                  "relativePath": "src/routes/debug_auth.js"
-                },
-                {
-                  "name": "public.js",
-                  "kind": "file",
-                  "relativePath": "src/routes/public.js"
-                },
-                {
-                  "name": "web.js",
-                  "kind": "file",
-                  "relativePath": "src/routes/web.js"
-                },
-                {
-                  "name": "workspace_api.js",
-                  "kind": "file",
-                  "relativePath": "src/routes/workspace_api.js"
-                }
-              ],
-              "childCount": 6
-            },
-            {
-              "name": "views",
-              "kind": "directory",
-              "relativePath": "src/views",
-              "children": [
-                {
-                  "name": "layouts",
-                  "kind": "directory",
-                  "relativePath": "src/views/layouts",
-                  "children": [
-                    {
-                      "name": "base.njk",
-                      "kind": "file",
-                      "relativePath": "src/views/layouts/base.njk"
-                    }
-                  ],
-                  "childCount": 1
-                },
-                {
-                  "name": "macros",
-                  "kind": "directory",
-                  "relativePath": "src/views/macros",
-                  "children": []
-                },
-                {
-                  "name": "pages",
-                  "kind": "directory",
-                  "relativePath": "src/views/pages",
-                  "children": [
-                    {
-                      "name": "landing.njk",
-                      "kind": "file",
-                      "relativePath": "src/views/pages/landing.njk"
-                    },
-                    {
-                      "name": "workspace.njk",
-                      "kind": "file",
-                      "relativePath": "src/views/pages/workspace.njk"
-                    }
-                  ],
-                  "childCount": 2
-                },
-                {
-                  "name": "partials",
-                  "kind": "directory",
-                  "relativePath": "src/views/partials",
-                  "children": [
-                    {
-                      "name": "board-collaborators-sheet.njk",
-                      "kind": "file",
-                      "relativePath": "src/views/partials/board-collaborators-sheet.njk"
-                    },
-                    {
-                      "name": "board-editor-sheet.njk",
-                      "kind": "file",
-                      "relativePath": "src/views/partials/board-editor-sheet.njk"
-                    },
-                    {
-                      "name": "board-options-dialog.njk",
-                      "kind": "file",
-                      "relativePath": "src/views/partials/board-options-dialog.njk"
-                    },
-                    {
-                      "name": "board-shell.njk",
-                      "kind": "file",
-                      "relativePath": "src/views/partials/board-shell.njk"
-                    },
-                    {
-                      "name": "board-templates.njk",
-                      "kind": "file",
-                      "relativePath": "src/views/partials/board-templates.njk"
-                    },
-                    {
-                      "name": "card-editor-sheet.njk",
-                      "kind": "file",
-                      "relativePath": "src/views/partials/card-editor-sheet.njk"
-                    },
-                    {
-                      "name": "card-item.njk",
-                      "kind": "file",
-                      "relativePath": "src/views/partials/card-item.njk"
-                    },
-                    {
-                      "name": "card-view-dialog.njk",
-                      "kind": "file",
-                      "relativePath": "src/views/partials/card-view-dialog.njk"
-                    },
-                    {
-                      "name": "column-panel.njk",
-                      "kind": "file",
-                      "relativePath": "src/views/partials/column-panel.njk"
-                    },
-                    {
-                      "name": "confirm-dialog.njk",
-                      "kind": "file",
-                      "relativePath": "src/views/partials/confirm-dialog.njk"
-                    },
-                    {
-                      "name": "desktop-board.njk",
-                      "kind": "file",
-                      "relativePath": "src/views/partials/desktop-board.njk"
-                    },
-                    {
-                      "name": "profile-options-dialog.njk",
-                      "kind": "file",
-                      "relativePath": "src/views/partials/profile-options-dialog.njk"
-                    },
-                    {
-                      "name": "ui-locale-badge.njk",
-                      "kind": "file",
-                      "relativePath": "src/views/partials/ui-locale-badge.njk"
-                    },
-                    {
-                      "name": "ui-locale-picker.njk",
-                      "kind": "file",
-                      "relativePath": "src/views/partials/ui-locale-picker.njk"
-                    },
-                    {
-                      "name": "viewer-chip.njk",
-                      "kind": "file",
-                      "relativePath": "src/views/partials/viewer-chip.njk"
-                    },
-                    {
-                      "name": "workspace-shell.njk",
-                      "kind": "file",
-                      "relativePath": "src/views/partials/workspace-shell.njk"
-                    }
-                  ],
-                  "childCount": 16
-                }
-              ],
-              "childCount": 4
-            },
-            {
-              "name": "workspaces",
-              "kind": "directory",
-              "relativePath": "src/workspaces",
-              "children": [
-                {
-                  "name": "apply_workspace_command.js",
-                  "kind": "file",
-                  "relativePath": "src/workspaces/apply_workspace_command.js"
-                },
-                {
-                  "name": "mongo_workspace_record_repository.js",
-                  "kind": "file",
-                  "relativePath": "src/workspaces/mongo_workspace_record_repository.js"
-                },
-                {
-                  "name": "mutation_context.js",
-                  "kind": "file",
-                  "relativePath": "src/workspaces/mutation_context.js"
-                },
-                {
-                  "name": "workspace_access.js",
-                  "kind": "file",
-                  "relativePath": "src/workspaces/workspace_access.js"
-                },
-                {
-                  "name": "workspace_record.js",
-                  "kind": "file",
-                  "relativePath": "src/workspaces/workspace_record.js"
-                },
-                {
-                  "name": "workspace_record_repository.js",
-                  "kind": "file",
-                  "relativePath": "src/workspaces/workspace_record_repository.js"
-                }
-              ],
-              "childCount": 6
-            },
-            {
-              "name": "app.js",
-              "kind": "file",
-              "relativePath": "src/app.js"
-            },
-            {
-              "name": "config.js",
-              "kind": "file",
-              "relativePath": "src/config.js"
-            },
-            {
-              "name": "server.js",
-              "kind": "file",
-              "relativePath": "src/server.js"
-            }
-          ],
-          "childCount": 11
-        },
-        {
-          "name": "styles",
-          "kind": "directory",
-          "relativePath": "styles",
-          "children": [
-            {
-              "name": "app.css",
-              "kind": "file",
-              "relativePath": "styles/app.css"
-            }
-          ],
-          "childCount": 1
-        },
-        {
-          "name": "test",
-          "kind": "directory",
-          "relativePath": "test",
-          "children": [
-            {
-              "name": "allowlist.test.js",
-              "kind": "file",
-              "relativePath": "test/allowlist.test.js"
-            },
-            {
-              "name": "app.test.js",
-              "kind": "file",
-              "relativePath": "test/app.test.js"
-            },
-            {
-              "name": "apply_workspace_command.test.js",
-              "kind": "file",
-              "relativePath": "test/apply_workspace_command.test.js"
-            },
-            {
-              "name": "attach_session.test.js",
-              "kind": "file",
-              "relativePath": "test/attach_session.test.js"
-            },
-            {
-              "name": "attach_ui_locale.test.js",
-              "kind": "file",
-              "relativePath": "test/attach_ui_locale.test.js"
-            },
-            {
-              "name": "board_collaboration.test.js",
-              "kind": "file",
-              "relativePath": "test/board_collaboration.test.js"
-            },
-            {
-              "name": "board_collaborators_controller.test.js",
-              "kind": "file",
-              "relativePath": "test/board_collaborators_controller.test.js"
-            },
-            {
-              "name": "board_editor_controller.test.js",
-              "kind": "file",
-              "relativePath": "test/board_editor_controller.test.js"
-            },
-            {
-              "name": "board_language_policy.test.js",
-              "kind": "file",
-              "relativePath": "test/board_language_policy.test.js"
-            },
-            {
-              "name": "board_options_controller.test.js",
-              "kind": "file",
-              "relativePath": "test/board_options_controller.test.js"
-            },
-            {
-              "name": "board_permissions.test.js",
-              "kind": "file",
-              "relativePath": "test/board_permissions.test.js"
-            },
-            {
-              "name": "board_renderer.test.js",
-              "kind": "file",
-              "relativePath": "test/board_renderer.test.js"
-            },
-            {
-              "name": "board_schema.test.js",
-              "kind": "file",
-              "relativePath": "test/board_schema.test.js"
-            },
-            {
-              "name": "board_workflow.test.js",
-              "kind": "file",
-              "relativePath": "test/board_workflow.test.js"
-            },
-            {
-              "name": "card_editor_controller.test.js",
-              "kind": "file",
-              "relativePath": "test/card_editor_controller.test.js"
-            },
-            {
-              "name": "card_localization.test.js",
-              "kind": "file",
-              "relativePath": "test/card_localization.test.js"
-            },
-            {
-              "name": "card_localization_requests.test.js",
-              "kind": "file",
-              "relativePath": "test/card_localization_requests.test.js"
-            },
-            {
-              "name": "card_localization_runtime.test.js",
-              "kind": "file",
-              "relativePath": "test/card_localization_runtime.test.js"
-            },
-            {
-              "name": "config.test.js",
-              "kind": "file",
-              "relativePath": "test/config.test.js"
-            },
-            {
-              "name": "debug_auth.test.js",
-              "kind": "file",
-              "relativePath": "test/debug_auth.test.js"
-            },
-            {
-              "name": "google_identity.test.js",
-              "kind": "file",
-              "relativePath": "test/google_identity.test.js"
-            },
-            {
-              "name": "http_workspace_repository.test.js",
-              "kind": "file",
-              "relativePath": "test/http_workspace_repository.test.js"
-            },
-            {
-              "name": "i18n.test.js",
-              "kind": "file",
-              "relativePath": "test/i18n.test.js"
-            },
-            {
-              "name": "invite_debug.test.js",
-              "kind": "file",
-              "relativePath": "test/invite_debug.test.js"
-            },
-            {
-              "name": "landing_controller_connection.test.js",
-              "kind": "file",
-              "relativePath": "test/landing_controller_connection.test.js"
-            },
-            {
-              "name": "local_workspace_repository.test.js",
-              "kind": "file",
-              "relativePath": "test/local_workspace_repository.test.js"
-            },
-            {
-              "name": "localized_content_guard.test.js",
-              "kind": "file",
-              "relativePath": "test/localized_content_guard.test.js"
-            },
-            {
-              "name": "markdown.test.js",
-              "kind": "file",
-              "relativePath": "test/markdown.test.js"
-            },
-            {
-              "name": "mongo_client.test.js",
-              "kind": "file",
-              "relativePath": "test/mongo_client.test.js"
-            },
-            {
-              "name": "mongo_workspace_record_repository.test.js",
-              "kind": "file",
-              "relativePath": "test/mongo_workspace_record_repository.test.js"
-            },
-            {
-              "name": "mutation_context.test.js",
-              "kind": "file",
-              "relativePath": "test/mutation_context.test.js"
-            },
-            {
-              "name": "session_cookie.test.js",
-              "kind": "file",
-              "relativePath": "test/session_cookie.test.js"
-            },
-            {
-              "name": "stage_ui.test.js",
-              "kind": "file",
-              "relativePath": "test/stage_ui.test.js"
-            },
-            {
-              "name": "verify_google_id_token.test.js",
-              "kind": "file",
-              "relativePath": "test/verify_google_id_token.test.js"
-            },
-            {
-              "name": "workspace.test.js",
-              "kind": "file",
-              "relativePath": "test/workspace.test.js"
-            },
-            {
-              "name": "workspace_access.test.js",
-              "kind": "file",
-              "relativePath": "test/workspace_access.test.js"
-            },
-            {
-              "name": "workspace_api.test.js",
-              "kind": "file",
-              "relativePath": "test/workspace_api.test.js"
-            },
-            {
-              "name": "workspace_board_schema.test.js",
-              "kind": "file",
-              "relativePath": "test/workspace_board_schema.test.js"
-            },
-            {
-              "name": "workspace_commands.test.js",
-              "kind": "file",
-              "relativePath": "test/workspace_commands.test.js"
-            },
-            {
-              "name": "workspace_controller.test.js",
-              "kind": "file",
-              "relativePath": "test/workspace_controller.test.js"
-            },
-            {
-              "name": "workspace_migrations.test.js",
-              "kind": "file",
-              "relativePath": "test/workspace_migrations.test.js"
-            },
-            {
-              "name": "workspace_permissions.test.js",
-              "kind": "file",
-              "relativePath": "test/workspace_permissions.test.js"
-            },
-            {
-              "name": "workspace_record.test.js",
-              "kind": "file",
-              "relativePath": "test/workspace_record.test.js"
-            },
-            {
-              "name": "workspace_service.test.js",
-              "kind": "file",
-              "relativePath": "test/workspace_service.test.js"
-            }
-          ],
-          "childCount": 44
-        },
-        {
-          "name": ".env.example",
-          "kind": "file",
-          "relativePath": ".env.example"
-        },
-        {
-          "name": "package.json",
-          "kind": "file",
-          "relativePath": "package.json"
-        },
-        {
-          "name": "Procfile",
-          "kind": "file",
-          "relativePath": "Procfile"
-        }
-      ]
-    }
-  },
-  "currentSnapshot": {
     "generatedAt": "2026-04-03T13:23:08Z",
     "rootPath": "apps/katei",
     "summary": {
@@ -2038,26 +1045,1161 @@
       ]
     }
   },
+  "currentSnapshot": {
+    "generatedAt": "2026-04-06T13:59:09Z",
+    "rootPath": "apps/katei",
+    "summary": {
+      "directoryCount": 29,
+      "fileCount": 175,
+      "maxDepth": 6,
+      "topLevelEntryCount": 8
+    },
+    "tree": {
+      "label": "apps/katei/",
+      "text": "apps/katei/\n\u251c\u2500\u2500 docs/\n\u2502   \u251c\u2500\u2500 env-inventory.html\n\u2502   \u251c\u2500\u2500 env-inventory.json\n\u2502   \u251c\u2500\u2500 filetree.html\n\u2502   \u2514\u2500\u2500 filetree.json\n\u251c\u2500\u2500 public/\n\u2502   \u251c\u2500\u2500 assets/\n\u2502   \u2502   \u2514\u2500\u2500 app.css\n\u2502   \u251c\u2500\u2500 js/\n\u2502   \u2502   \u251c\u2500\u2500 controllers/\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 board_collaboration_state.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 board_collaborators_actions.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 board_collaborators_controller.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 board_editor_controller.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 board_editor_schema.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 board_options_controller.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 board_stage_config_controller.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 board_stage_config_schema.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 card_editor_controller.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 card_editor_locale_view.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 dialog_initial_focus.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 landing_controller.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 landing_controller_connection.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 profile_options_controller.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 session_controller.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 stage_ui.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 ui_locale_picker_controller.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 workspace_card_dialog.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 workspace_collaboration_actions.js\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 workspace_controller.js\n\u2502   \u2502   \u251c\u2500\u2500 domain/\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 board_ai_localization.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 board_collaboration.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 board_language_policy.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 board_localization_glossary.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 board_permissions.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 board_schema.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 board_stage_actions.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 board_stage_prompt_action.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 board_workflow.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 card_localization.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 card_localization_requests.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 localized_content_guard.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 workspace.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 workspace_commands.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 workspace_migrations.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 workspace_mutations.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 workspace_read_model.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 workspace_selectors.js\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 workspace_validation.js\n\u2502   \u2502   \u251c\u2500\u2500 i18n/\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 browser.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 errors.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 locales.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 messages.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 translate.js\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 workspace_labels.js\n\u2502   \u2502   \u251c\u2500\u2500 lib/\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 invite_debug.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 markdown.js\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 workspace_import.js\n\u2502   \u2502   \u251c\u2500\u2500 renderers/\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 board_renderer.js\n\u2502   \u2502   \u251c\u2500\u2500 repositories/\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 http_workspace_repository.js\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 local_workspace_repository.js\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 workspace_repository.js\n\u2502   \u2502   \u251c\u2500\u2500 services/\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 workspace_service.js\n\u2502   \u2502   \u251c\u2500\u2500 utils/\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 google_identity.js\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 id.js\n\u2502   \u2502   \u2514\u2500\u2500 app.js\n\u2502   \u251c\u2500\u2500 svg/\n\u2502   \u2502   \u251c\u2500\u2500 add-card.svg\n\u2502   \u2502   \u251c\u2500\u2500 cards.svg\n\u2502   \u2502   \u251c\u2500\u2500 clock.svg\n\u2502   \u2502   \u251c\u2500\u2500 close.svg\n\u2502   \u2502   \u251c\u2500\u2500 edit.svg\n\u2502   \u2502   \u251c\u2500\u2500 language.svg\n\u2502   \u2502   \u251c\u2500\u2500 look.svg\n\u2502   \u2502   \u251c\u2500\u2500 prompt.svg\n\u2502   \u2502   \u2514\u2500\u2500 team.svg\n\u2502   \u251c\u2500\u2500 background.webp\n\u2502   \u251c\u2500\u2500 favicon.svg\n\u2502   \u2514\u2500\u2500 profile.svg\n\u251c\u2500\u2500 src/\n\u2502   \u251c\u2500\u2500 ai/\n\u2502   \u2502   \u251c\u2500\u2500 openai_localizer.js\n\u2502   \u2502   \u2514\u2500\u2500 openai_stage_prompt_runner.js\n\u2502   \u251c\u2500\u2500 auth/\n\u2502   \u2502   \u251c\u2500\u2500 allowlist.js\n\u2502   \u2502   \u251c\u2500\u2500 session_cookie.js\n\u2502   \u2502   \u2514\u2500\u2500 verify_google_id_token.js\n\u2502   \u251c\u2500\u2500 data/\n\u2502   \u2502   \u2514\u2500\u2500 mongo_client.js\n\u2502   \u251c\u2500\u2500 i18n/\n\u2502   \u2502   \u2514\u2500\u2500 request_ui_locale.js\n\u2502   \u251c\u2500\u2500 lib/\n\u2502   \u2502   \u2514\u2500\u2500 invite_debug.js\n\u2502   \u251c\u2500\u2500 middleware/\n\u2502   \u2502   \u251c\u2500\u2500 attach_session.js\n\u2502   \u2502   \u251c\u2500\u2500 attach_ui_locale.js\n\u2502   \u2502   \u2514\u2500\u2500 require_session.js\n\u2502   \u251c\u2500\u2500 routes/\n\u2502   \u2502   \u251c\u2500\u2500 auth.js\n\u2502   \u2502   \u251c\u2500\u2500 boards.js\n\u2502   \u2502   \u251c\u2500\u2500 debug_auth.js\n\u2502   \u2502   \u251c\u2500\u2500 public.js\n\u2502   \u2502   \u251c\u2500\u2500 web.js\n\u2502   \u2502   \u2514\u2500\u2500 workspace_api.js\n\u2502   \u251c\u2500\u2500 security/\n\u2502   \u2502   \u2514\u2500\u2500 board_secret_crypto.js\n\u2502   \u251c\u2500\u2500 views/\n\u2502   \u2502   \u251c\u2500\u2500 layouts/\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 base.njk\n\u2502   \u2502   \u251c\u2500\u2500 pages/\n\u2502   \u2502   \u2502   \u251c\u2500\u2500 landing.njk\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 workspace.njk\n\u2502   \u2502   \u2514\u2500\u2500 partials/\n\u2502   \u2502       \u251c\u2500\u2500 board-collaborators-sheet.njk\n\u2502   \u2502       \u251c\u2500\u2500 board-editor-sheet.njk\n\u2502   \u2502       \u251c\u2500\u2500 board-options-dialog.njk\n\u2502   \u2502       \u251c\u2500\u2500 board-shell.njk\n\u2502   \u2502       \u251c\u2500\u2500 board-stage-config-dialog.njk\n\u2502   \u2502       \u251c\u2500\u2500 board-templates.njk\n\u2502   \u2502       \u251c\u2500\u2500 card-editor-sheet.njk\n\u2502   \u2502       \u251c\u2500\u2500 card-item.njk\n\u2502   \u2502       \u251c\u2500\u2500 card-view-dialog.njk\n\u2502   \u2502       \u251c\u2500\u2500 column-panel.njk\n\u2502   \u2502       \u251c\u2500\u2500 confirm-dialog.njk\n\u2502   \u2502       \u251c\u2500\u2500 desktop-board.njk\n\u2502   \u2502       \u251c\u2500\u2500 profile-options-dialog.njk\n\u2502   \u2502       \u251c\u2500\u2500 ui-locale-badge.njk\n\u2502   \u2502       \u251c\u2500\u2500 ui-locale-picker.njk\n\u2502   \u2502       \u251c\u2500\u2500 viewer-chip.njk\n\u2502   \u2502       \u2514\u2500\u2500 workspace-shell.njk\n\u2502   \u251c\u2500\u2500 workspaces/\n\u2502   \u2502   \u251c\u2500\u2500 apply_workspace_command.js\n\u2502   \u2502   \u251c\u2500\u2500 mongo_workspace_record_repository.js\n\u2502   \u2502   \u251c\u2500\u2500 mutation_context.js\n\u2502   \u2502   \u251c\u2500\u2500 workspace_access.js\n\u2502   \u2502   \u251c\u2500\u2500 workspace_record.js\n\u2502   \u2502   \u2514\u2500\u2500 workspace_record_repository.js\n\u2502   \u251c\u2500\u2500 app.js\n\u2502   \u251c\u2500\u2500 config.js\n\u2502   \u2514\u2500\u2500 server.js\n\u251c\u2500\u2500 styles/\n\u2502   \u2514\u2500\u2500 app.css\n\u251c\u2500\u2500 test/\n\u2502   \u251c\u2500\u2500 allowlist.test.js\n\u2502   \u251c\u2500\u2500 app.test.js\n\u2502   \u251c\u2500\u2500 apply_workspace_command.test.js\n\u2502   \u251c\u2500\u2500 attach_session.test.js\n\u2502   \u251c\u2500\u2500 attach_ui_locale.test.js\n\u2502   \u251c\u2500\u2500 board_collaboration.test.js\n\u2502   \u251c\u2500\u2500 board_collaborators_controller.test.js\n\u2502   \u251c\u2500\u2500 board_editor_controller.test.js\n\u2502   \u251c\u2500\u2500 board_language_policy.test.js\n\u2502   \u251c\u2500\u2500 board_localization_glossary.test.js\n\u2502   \u251c\u2500\u2500 board_options_controller.test.js\n\u2502   \u251c\u2500\u2500 board_permissions.test.js\n\u2502   \u251c\u2500\u2500 board_renderer.test.js\n\u2502   \u251c\u2500\u2500 board_schema.test.js\n\u2502   \u251c\u2500\u2500 board_stage_config_controller.test.js\n\u2502   \u251c\u2500\u2500 board_workflow.test.js\n\u2502   \u251c\u2500\u2500 card_editor_controller.test.js\n\u2502   \u251c\u2500\u2500 card_localization.test.js\n\u2502   \u251c\u2500\u2500 card_localization_requests.test.js\n\u2502   \u251c\u2500\u2500 card_localization_runtime.test.js\n\u2502   \u251c\u2500\u2500 config.test.js\n\u2502   \u251c\u2500\u2500 debug_auth.test.js\n\u2502   \u251c\u2500\u2500 dialog_initial_focus.test.js\n\u2502   \u251c\u2500\u2500 google_identity.test.js\n\u2502   \u251c\u2500\u2500 http_workspace_repository.test.js\n\u2502   \u251c\u2500\u2500 i18n.test.js\n\u2502   \u251c\u2500\u2500 invite_debug.test.js\n\u2502   \u251c\u2500\u2500 landing_controller_connection.test.js\n\u2502   \u251c\u2500\u2500 local_workspace_repository.test.js\n\u2502   \u251c\u2500\u2500 localized_content_guard.test.js\n\u2502   \u251c\u2500\u2500 markdown.test.js\n\u2502   \u251c\u2500\u2500 mongo_client.test.js\n\u2502   \u251c\u2500\u2500 mongo_workspace_record_repository.test.js\n\u2502   \u251c\u2500\u2500 mutation_context.test.js\n\u2502   \u251c\u2500\u2500 openai_localizer.test.js\n\u2502   \u251c\u2500\u2500 openai_stage_prompt_runner.test.js\n\u2502   \u251c\u2500\u2500 session_controller.test.js\n\u2502   \u251c\u2500\u2500 session_cookie.test.js\n\u2502   \u251c\u2500\u2500 stage_ui.test.js\n\u2502   \u251c\u2500\u2500 ui_locale_picker_controller.test.js\n\u2502   \u251c\u2500\u2500 verify_google_id_token.test.js\n\u2502   \u251c\u2500\u2500 workspace.test.js\n\u2502   \u251c\u2500\u2500 workspace_access.test.js\n\u2502   \u251c\u2500\u2500 workspace_api.test.js\n\u2502   \u251c\u2500\u2500 workspace_board_schema.test.js\n\u2502   \u251c\u2500\u2500 workspace_commands.test.js\n\u2502   \u251c\u2500\u2500 workspace_controller.test.js\n\u2502   \u251c\u2500\u2500 workspace_migrations.test.js\n\u2502   \u251c\u2500\u2500 workspace_permissions.test.js\n\u2502   \u251c\u2500\u2500 workspace_record.test.js\n\u2502   \u2514\u2500\u2500 workspace_service.test.js\n\u251c\u2500\u2500 .env.example\n\u251c\u2500\u2500 package.json\n\u2514\u2500\u2500 Procfile",
+      "nodes": [
+        {
+          "name": "docs",
+          "kind": "directory",
+          "relativePath": "docs",
+          "children": [
+            {
+              "name": "env-inventory.html",
+              "kind": "file",
+              "relativePath": "docs/env-inventory.html"
+            },
+            {
+              "name": "env-inventory.json",
+              "kind": "file",
+              "relativePath": "docs/env-inventory.json"
+            },
+            {
+              "name": "filetree.html",
+              "kind": "file",
+              "relativePath": "docs/filetree.html"
+            },
+            {
+              "name": "filetree.json",
+              "kind": "file",
+              "relativePath": "docs/filetree.json"
+            }
+          ],
+          "childCount": 4
+        },
+        {
+          "name": "public",
+          "kind": "directory",
+          "relativePath": "public",
+          "children": [
+            {
+              "name": "assets",
+              "kind": "directory",
+              "relativePath": "public/assets",
+              "children": [
+                {
+                  "name": "app.css",
+                  "kind": "file",
+                  "relativePath": "public/assets/app.css"
+                }
+              ],
+              "childCount": 1
+            },
+            {
+              "name": "js",
+              "kind": "directory",
+              "relativePath": "public/js",
+              "children": [
+                {
+                  "name": "controllers",
+                  "kind": "directory",
+                  "relativePath": "public/js/controllers",
+                  "children": [
+                    {
+                      "name": "board_collaboration_state.js",
+                      "kind": "file",
+                      "relativePath": "public/js/controllers/board_collaboration_state.js"
+                    },
+                    {
+                      "name": "board_collaborators_actions.js",
+                      "kind": "file",
+                      "relativePath": "public/js/controllers/board_collaborators_actions.js"
+                    },
+                    {
+                      "name": "board_collaborators_controller.js",
+                      "kind": "file",
+                      "relativePath": "public/js/controllers/board_collaborators_controller.js"
+                    },
+                    {
+                      "name": "board_editor_controller.js",
+                      "kind": "file",
+                      "relativePath": "public/js/controllers/board_editor_controller.js"
+                    },
+                    {
+                      "name": "board_editor_schema.js",
+                      "kind": "file",
+                      "relativePath": "public/js/controllers/board_editor_schema.js"
+                    },
+                    {
+                      "name": "board_options_controller.js",
+                      "kind": "file",
+                      "relativePath": "public/js/controllers/board_options_controller.js"
+                    },
+                    {
+                      "name": "board_stage_config_controller.js",
+                      "kind": "file",
+                      "relativePath": "public/js/controllers/board_stage_config_controller.js"
+                    },
+                    {
+                      "name": "board_stage_config_schema.js",
+                      "kind": "file",
+                      "relativePath": "public/js/controllers/board_stage_config_schema.js"
+                    },
+                    {
+                      "name": "card_editor_controller.js",
+                      "kind": "file",
+                      "relativePath": "public/js/controllers/card_editor_controller.js"
+                    },
+                    {
+                      "name": "card_editor_locale_view.js",
+                      "kind": "file",
+                      "relativePath": "public/js/controllers/card_editor_locale_view.js"
+                    },
+                    {
+                      "name": "dialog_initial_focus.js",
+                      "kind": "file",
+                      "relativePath": "public/js/controllers/dialog_initial_focus.js"
+                    },
+                    {
+                      "name": "landing_controller.js",
+                      "kind": "file",
+                      "relativePath": "public/js/controllers/landing_controller.js"
+                    },
+                    {
+                      "name": "landing_controller_connection.js",
+                      "kind": "file",
+                      "relativePath": "public/js/controllers/landing_controller_connection.js"
+                    },
+                    {
+                      "name": "profile_options_controller.js",
+                      "kind": "file",
+                      "relativePath": "public/js/controllers/profile_options_controller.js"
+                    },
+                    {
+                      "name": "session_controller.js",
+                      "kind": "file",
+                      "relativePath": "public/js/controllers/session_controller.js"
+                    },
+                    {
+                      "name": "stage_ui.js",
+                      "kind": "file",
+                      "relativePath": "public/js/controllers/stage_ui.js"
+                    },
+                    {
+                      "name": "ui_locale_picker_controller.js",
+                      "kind": "file",
+                      "relativePath": "public/js/controllers/ui_locale_picker_controller.js"
+                    },
+                    {
+                      "name": "workspace_card_dialog.js",
+                      "kind": "file",
+                      "relativePath": "public/js/controllers/workspace_card_dialog.js"
+                    },
+                    {
+                      "name": "workspace_collaboration_actions.js",
+                      "kind": "file",
+                      "relativePath": "public/js/controllers/workspace_collaboration_actions.js"
+                    },
+                    {
+                      "name": "workspace_controller.js",
+                      "kind": "file",
+                      "relativePath": "public/js/controllers/workspace_controller.js"
+                    }
+                  ],
+                  "childCount": 20
+                },
+                {
+                  "name": "domain",
+                  "kind": "directory",
+                  "relativePath": "public/js/domain",
+                  "children": [
+                    {
+                      "name": "board_ai_localization.js",
+                      "kind": "file",
+                      "relativePath": "public/js/domain/board_ai_localization.js"
+                    },
+                    {
+                      "name": "board_collaboration.js",
+                      "kind": "file",
+                      "relativePath": "public/js/domain/board_collaboration.js"
+                    },
+                    {
+                      "name": "board_language_policy.js",
+                      "kind": "file",
+                      "relativePath": "public/js/domain/board_language_policy.js"
+                    },
+                    {
+                      "name": "board_localization_glossary.js",
+                      "kind": "file",
+                      "relativePath": "public/js/domain/board_localization_glossary.js"
+                    },
+                    {
+                      "name": "board_permissions.js",
+                      "kind": "file",
+                      "relativePath": "public/js/domain/board_permissions.js"
+                    },
+                    {
+                      "name": "board_schema.js",
+                      "kind": "file",
+                      "relativePath": "public/js/domain/board_schema.js"
+                    },
+                    {
+                      "name": "board_stage_actions.js",
+                      "kind": "file",
+                      "relativePath": "public/js/domain/board_stage_actions.js"
+                    },
+                    {
+                      "name": "board_stage_prompt_action.js",
+                      "kind": "file",
+                      "relativePath": "public/js/domain/board_stage_prompt_action.js"
+                    },
+                    {
+                      "name": "board_workflow.js",
+                      "kind": "file",
+                      "relativePath": "public/js/domain/board_workflow.js"
+                    },
+                    {
+                      "name": "card_localization.js",
+                      "kind": "file",
+                      "relativePath": "public/js/domain/card_localization.js"
+                    },
+                    {
+                      "name": "card_localization_requests.js",
+                      "kind": "file",
+                      "relativePath": "public/js/domain/card_localization_requests.js"
+                    },
+                    {
+                      "name": "localized_content_guard.js",
+                      "kind": "file",
+                      "relativePath": "public/js/domain/localized_content_guard.js"
+                    },
+                    {
+                      "name": "workspace.js",
+                      "kind": "file",
+                      "relativePath": "public/js/domain/workspace.js"
+                    },
+                    {
+                      "name": "workspace_commands.js",
+                      "kind": "file",
+                      "relativePath": "public/js/domain/workspace_commands.js"
+                    },
+                    {
+                      "name": "workspace_migrations.js",
+                      "kind": "file",
+                      "relativePath": "public/js/domain/workspace_migrations.js"
+                    },
+                    {
+                      "name": "workspace_mutations.js",
+                      "kind": "file",
+                      "relativePath": "public/js/domain/workspace_mutations.js"
+                    },
+                    {
+                      "name": "workspace_read_model.js",
+                      "kind": "file",
+                      "relativePath": "public/js/domain/workspace_read_model.js"
+                    },
+                    {
+                      "name": "workspace_selectors.js",
+                      "kind": "file",
+                      "relativePath": "public/js/domain/workspace_selectors.js"
+                    },
+                    {
+                      "name": "workspace_validation.js",
+                      "kind": "file",
+                      "relativePath": "public/js/domain/workspace_validation.js"
+                    }
+                  ],
+                  "childCount": 19
+                },
+                {
+                  "name": "i18n",
+                  "kind": "directory",
+                  "relativePath": "public/js/i18n",
+                  "children": [
+                    {
+                      "name": "browser.js",
+                      "kind": "file",
+                      "relativePath": "public/js/i18n/browser.js"
+                    },
+                    {
+                      "name": "errors.js",
+                      "kind": "file",
+                      "relativePath": "public/js/i18n/errors.js"
+                    },
+                    {
+                      "name": "locales.js",
+                      "kind": "file",
+                      "relativePath": "public/js/i18n/locales.js"
+                    },
+                    {
+                      "name": "messages.js",
+                      "kind": "file",
+                      "relativePath": "public/js/i18n/messages.js"
+                    },
+                    {
+                      "name": "translate.js",
+                      "kind": "file",
+                      "relativePath": "public/js/i18n/translate.js"
+                    },
+                    {
+                      "name": "workspace_labels.js",
+                      "kind": "file",
+                      "relativePath": "public/js/i18n/workspace_labels.js"
+                    }
+                  ],
+                  "childCount": 6
+                },
+                {
+                  "name": "lib",
+                  "kind": "directory",
+                  "relativePath": "public/js/lib",
+                  "children": [
+                    {
+                      "name": "invite_debug.js",
+                      "kind": "file",
+                      "relativePath": "public/js/lib/invite_debug.js"
+                    },
+                    {
+                      "name": "markdown.js",
+                      "kind": "file",
+                      "relativePath": "public/js/lib/markdown.js"
+                    },
+                    {
+                      "name": "workspace_import.js",
+                      "kind": "file",
+                      "relativePath": "public/js/lib/workspace_import.js"
+                    }
+                  ],
+                  "childCount": 3
+                },
+                {
+                  "name": "renderers",
+                  "kind": "directory",
+                  "relativePath": "public/js/renderers",
+                  "children": [
+                    {
+                      "name": "board_renderer.js",
+                      "kind": "file",
+                      "relativePath": "public/js/renderers/board_renderer.js"
+                    }
+                  ],
+                  "childCount": 1
+                },
+                {
+                  "name": "repositories",
+                  "kind": "directory",
+                  "relativePath": "public/js/repositories",
+                  "children": [
+                    {
+                      "name": "http_workspace_repository.js",
+                      "kind": "file",
+                      "relativePath": "public/js/repositories/http_workspace_repository.js"
+                    },
+                    {
+                      "name": "local_workspace_repository.js",
+                      "kind": "file",
+                      "relativePath": "public/js/repositories/local_workspace_repository.js"
+                    },
+                    {
+                      "name": "workspace_repository.js",
+                      "kind": "file",
+                      "relativePath": "public/js/repositories/workspace_repository.js"
+                    }
+                  ],
+                  "childCount": 3
+                },
+                {
+                  "name": "services",
+                  "kind": "directory",
+                  "relativePath": "public/js/services",
+                  "children": [
+                    {
+                      "name": "workspace_service.js",
+                      "kind": "file",
+                      "relativePath": "public/js/services/workspace_service.js"
+                    }
+                  ],
+                  "childCount": 1
+                },
+                {
+                  "name": "utils",
+                  "kind": "directory",
+                  "relativePath": "public/js/utils",
+                  "children": [
+                    {
+                      "name": "google_identity.js",
+                      "kind": "file",
+                      "relativePath": "public/js/utils/google_identity.js"
+                    },
+                    {
+                      "name": "id.js",
+                      "kind": "file",
+                      "relativePath": "public/js/utils/id.js"
+                    }
+                  ],
+                  "childCount": 2
+                },
+                {
+                  "name": "app.js",
+                  "kind": "file",
+                  "relativePath": "public/js/app.js"
+                }
+              ],
+              "childCount": 9
+            },
+            {
+              "name": "svg",
+              "kind": "directory",
+              "relativePath": "public/svg",
+              "children": [
+                {
+                  "name": "add-card.svg",
+                  "kind": "file",
+                  "relativePath": "public/svg/add-card.svg"
+                },
+                {
+                  "name": "cards.svg",
+                  "kind": "file",
+                  "relativePath": "public/svg/cards.svg"
+                },
+                {
+                  "name": "clock.svg",
+                  "kind": "file",
+                  "relativePath": "public/svg/clock.svg"
+                },
+                {
+                  "name": "close.svg",
+                  "kind": "file",
+                  "relativePath": "public/svg/close.svg"
+                },
+                {
+                  "name": "edit.svg",
+                  "kind": "file",
+                  "relativePath": "public/svg/edit.svg"
+                },
+                {
+                  "name": "language.svg",
+                  "kind": "file",
+                  "relativePath": "public/svg/language.svg"
+                },
+                {
+                  "name": "look.svg",
+                  "kind": "file",
+                  "relativePath": "public/svg/look.svg"
+                },
+                {
+                  "name": "prompt.svg",
+                  "kind": "file",
+                  "relativePath": "public/svg/prompt.svg"
+                },
+                {
+                  "name": "team.svg",
+                  "kind": "file",
+                  "relativePath": "public/svg/team.svg"
+                }
+              ],
+              "childCount": 9
+            },
+            {
+              "name": "background.webp",
+              "kind": "file",
+              "relativePath": "public/background.webp"
+            },
+            {
+              "name": "favicon.svg",
+              "kind": "file",
+              "relativePath": "public/favicon.svg"
+            },
+            {
+              "name": "profile.svg",
+              "kind": "file",
+              "relativePath": "public/profile.svg"
+            }
+          ],
+          "childCount": 6
+        },
+        {
+          "name": "src",
+          "kind": "directory",
+          "relativePath": "src",
+          "children": [
+            {
+              "name": "ai",
+              "kind": "directory",
+              "relativePath": "src/ai",
+              "children": [
+                {
+                  "name": "openai_localizer.js",
+                  "kind": "file",
+                  "relativePath": "src/ai/openai_localizer.js"
+                },
+                {
+                  "name": "openai_stage_prompt_runner.js",
+                  "kind": "file",
+                  "relativePath": "src/ai/openai_stage_prompt_runner.js"
+                }
+              ],
+              "childCount": 2
+            },
+            {
+              "name": "auth",
+              "kind": "directory",
+              "relativePath": "src/auth",
+              "children": [
+                {
+                  "name": "allowlist.js",
+                  "kind": "file",
+                  "relativePath": "src/auth/allowlist.js"
+                },
+                {
+                  "name": "session_cookie.js",
+                  "kind": "file",
+                  "relativePath": "src/auth/session_cookie.js"
+                },
+                {
+                  "name": "verify_google_id_token.js",
+                  "kind": "file",
+                  "relativePath": "src/auth/verify_google_id_token.js"
+                }
+              ],
+              "childCount": 3
+            },
+            {
+              "name": "data",
+              "kind": "directory",
+              "relativePath": "src/data",
+              "children": [
+                {
+                  "name": "mongo_client.js",
+                  "kind": "file",
+                  "relativePath": "src/data/mongo_client.js"
+                }
+              ],
+              "childCount": 1
+            },
+            {
+              "name": "i18n",
+              "kind": "directory",
+              "relativePath": "src/i18n",
+              "children": [
+                {
+                  "name": "request_ui_locale.js",
+                  "kind": "file",
+                  "relativePath": "src/i18n/request_ui_locale.js"
+                }
+              ],
+              "childCount": 1
+            },
+            {
+              "name": "lib",
+              "kind": "directory",
+              "relativePath": "src/lib",
+              "children": [
+                {
+                  "name": "invite_debug.js",
+                  "kind": "file",
+                  "relativePath": "src/lib/invite_debug.js"
+                }
+              ],
+              "childCount": 1
+            },
+            {
+              "name": "middleware",
+              "kind": "directory",
+              "relativePath": "src/middleware",
+              "children": [
+                {
+                  "name": "attach_session.js",
+                  "kind": "file",
+                  "relativePath": "src/middleware/attach_session.js"
+                },
+                {
+                  "name": "attach_ui_locale.js",
+                  "kind": "file",
+                  "relativePath": "src/middleware/attach_ui_locale.js"
+                },
+                {
+                  "name": "require_session.js",
+                  "kind": "file",
+                  "relativePath": "src/middleware/require_session.js"
+                }
+              ],
+              "childCount": 3
+            },
+            {
+              "name": "routes",
+              "kind": "directory",
+              "relativePath": "src/routes",
+              "children": [
+                {
+                  "name": "auth.js",
+                  "kind": "file",
+                  "relativePath": "src/routes/auth.js"
+                },
+                {
+                  "name": "boards.js",
+                  "kind": "file",
+                  "relativePath": "src/routes/boards.js"
+                },
+                {
+                  "name": "debug_auth.js",
+                  "kind": "file",
+                  "relativePath": "src/routes/debug_auth.js"
+                },
+                {
+                  "name": "public.js",
+                  "kind": "file",
+                  "relativePath": "src/routes/public.js"
+                },
+                {
+                  "name": "web.js",
+                  "kind": "file",
+                  "relativePath": "src/routes/web.js"
+                },
+                {
+                  "name": "workspace_api.js",
+                  "kind": "file",
+                  "relativePath": "src/routes/workspace_api.js"
+                }
+              ],
+              "childCount": 6
+            },
+            {
+              "name": "security",
+              "kind": "directory",
+              "relativePath": "src/security",
+              "children": [
+                {
+                  "name": "board_secret_crypto.js",
+                  "kind": "file",
+                  "relativePath": "src/security/board_secret_crypto.js"
+                }
+              ],
+              "childCount": 1
+            },
+            {
+              "name": "views",
+              "kind": "directory",
+              "relativePath": "src/views",
+              "children": [
+                {
+                  "name": "layouts",
+                  "kind": "directory",
+                  "relativePath": "src/views/layouts",
+                  "children": [
+                    {
+                      "name": "base.njk",
+                      "kind": "file",
+                      "relativePath": "src/views/layouts/base.njk"
+                    }
+                  ],
+                  "childCount": 1
+                },
+                {
+                  "name": "pages",
+                  "kind": "directory",
+                  "relativePath": "src/views/pages",
+                  "children": [
+                    {
+                      "name": "landing.njk",
+                      "kind": "file",
+                      "relativePath": "src/views/pages/landing.njk"
+                    },
+                    {
+                      "name": "workspace.njk",
+                      "kind": "file",
+                      "relativePath": "src/views/pages/workspace.njk"
+                    }
+                  ],
+                  "childCount": 2
+                },
+                {
+                  "name": "partials",
+                  "kind": "directory",
+                  "relativePath": "src/views/partials",
+                  "children": [
+                    {
+                      "name": "board-collaborators-sheet.njk",
+                      "kind": "file",
+                      "relativePath": "src/views/partials/board-collaborators-sheet.njk"
+                    },
+                    {
+                      "name": "board-editor-sheet.njk",
+                      "kind": "file",
+                      "relativePath": "src/views/partials/board-editor-sheet.njk"
+                    },
+                    {
+                      "name": "board-options-dialog.njk",
+                      "kind": "file",
+                      "relativePath": "src/views/partials/board-options-dialog.njk"
+                    },
+                    {
+                      "name": "board-shell.njk",
+                      "kind": "file",
+                      "relativePath": "src/views/partials/board-shell.njk"
+                    },
+                    {
+                      "name": "board-stage-config-dialog.njk",
+                      "kind": "file",
+                      "relativePath": "src/views/partials/board-stage-config-dialog.njk"
+                    },
+                    {
+                      "name": "board-templates.njk",
+                      "kind": "file",
+                      "relativePath": "src/views/partials/board-templates.njk"
+                    },
+                    {
+                      "name": "card-editor-sheet.njk",
+                      "kind": "file",
+                      "relativePath": "src/views/partials/card-editor-sheet.njk"
+                    },
+                    {
+                      "name": "card-item.njk",
+                      "kind": "file",
+                      "relativePath": "src/views/partials/card-item.njk"
+                    },
+                    {
+                      "name": "card-view-dialog.njk",
+                      "kind": "file",
+                      "relativePath": "src/views/partials/card-view-dialog.njk"
+                    },
+                    {
+                      "name": "column-panel.njk",
+                      "kind": "file",
+                      "relativePath": "src/views/partials/column-panel.njk"
+                    },
+                    {
+                      "name": "confirm-dialog.njk",
+                      "kind": "file",
+                      "relativePath": "src/views/partials/confirm-dialog.njk"
+                    },
+                    {
+                      "name": "desktop-board.njk",
+                      "kind": "file",
+                      "relativePath": "src/views/partials/desktop-board.njk"
+                    },
+                    {
+                      "name": "profile-options-dialog.njk",
+                      "kind": "file",
+                      "relativePath": "src/views/partials/profile-options-dialog.njk"
+                    },
+                    {
+                      "name": "ui-locale-badge.njk",
+                      "kind": "file",
+                      "relativePath": "src/views/partials/ui-locale-badge.njk"
+                    },
+                    {
+                      "name": "ui-locale-picker.njk",
+                      "kind": "file",
+                      "relativePath": "src/views/partials/ui-locale-picker.njk"
+                    },
+                    {
+                      "name": "viewer-chip.njk",
+                      "kind": "file",
+                      "relativePath": "src/views/partials/viewer-chip.njk"
+                    },
+                    {
+                      "name": "workspace-shell.njk",
+                      "kind": "file",
+                      "relativePath": "src/views/partials/workspace-shell.njk"
+                    }
+                  ],
+                  "childCount": 17
+                }
+              ],
+              "childCount": 3
+            },
+            {
+              "name": "workspaces",
+              "kind": "directory",
+              "relativePath": "src/workspaces",
+              "children": [
+                {
+                  "name": "apply_workspace_command.js",
+                  "kind": "file",
+                  "relativePath": "src/workspaces/apply_workspace_command.js"
+                },
+                {
+                  "name": "mongo_workspace_record_repository.js",
+                  "kind": "file",
+                  "relativePath": "src/workspaces/mongo_workspace_record_repository.js"
+                },
+                {
+                  "name": "mutation_context.js",
+                  "kind": "file",
+                  "relativePath": "src/workspaces/mutation_context.js"
+                },
+                {
+                  "name": "workspace_access.js",
+                  "kind": "file",
+                  "relativePath": "src/workspaces/workspace_access.js"
+                },
+                {
+                  "name": "workspace_record.js",
+                  "kind": "file",
+                  "relativePath": "src/workspaces/workspace_record.js"
+                },
+                {
+                  "name": "workspace_record_repository.js",
+                  "kind": "file",
+                  "relativePath": "src/workspaces/workspace_record_repository.js"
+                }
+              ],
+              "childCount": 6
+            },
+            {
+              "name": "app.js",
+              "kind": "file",
+              "relativePath": "src/app.js"
+            },
+            {
+              "name": "config.js",
+              "kind": "file",
+              "relativePath": "src/config.js"
+            },
+            {
+              "name": "server.js",
+              "kind": "file",
+              "relativePath": "src/server.js"
+            }
+          ],
+          "childCount": 13
+        },
+        {
+          "name": "styles",
+          "kind": "directory",
+          "relativePath": "styles",
+          "children": [
+            {
+              "name": "app.css",
+              "kind": "file",
+              "relativePath": "styles/app.css"
+            }
+          ],
+          "childCount": 1
+        },
+        {
+          "name": "test",
+          "kind": "directory",
+          "relativePath": "test",
+          "children": [
+            {
+              "name": "allowlist.test.js",
+              "kind": "file",
+              "relativePath": "test/allowlist.test.js"
+            },
+            {
+              "name": "app.test.js",
+              "kind": "file",
+              "relativePath": "test/app.test.js"
+            },
+            {
+              "name": "apply_workspace_command.test.js",
+              "kind": "file",
+              "relativePath": "test/apply_workspace_command.test.js"
+            },
+            {
+              "name": "attach_session.test.js",
+              "kind": "file",
+              "relativePath": "test/attach_session.test.js"
+            },
+            {
+              "name": "attach_ui_locale.test.js",
+              "kind": "file",
+              "relativePath": "test/attach_ui_locale.test.js"
+            },
+            {
+              "name": "board_collaboration.test.js",
+              "kind": "file",
+              "relativePath": "test/board_collaboration.test.js"
+            },
+            {
+              "name": "board_collaborators_controller.test.js",
+              "kind": "file",
+              "relativePath": "test/board_collaborators_controller.test.js"
+            },
+            {
+              "name": "board_editor_controller.test.js",
+              "kind": "file",
+              "relativePath": "test/board_editor_controller.test.js"
+            },
+            {
+              "name": "board_language_policy.test.js",
+              "kind": "file",
+              "relativePath": "test/board_language_policy.test.js"
+            },
+            {
+              "name": "board_localization_glossary.test.js",
+              "kind": "file",
+              "relativePath": "test/board_localization_glossary.test.js"
+            },
+            {
+              "name": "board_options_controller.test.js",
+              "kind": "file",
+              "relativePath": "test/board_options_controller.test.js"
+            },
+            {
+              "name": "board_permissions.test.js",
+              "kind": "file",
+              "relativePath": "test/board_permissions.test.js"
+            },
+            {
+              "name": "board_renderer.test.js",
+              "kind": "file",
+              "relativePath": "test/board_renderer.test.js"
+            },
+            {
+              "name": "board_schema.test.js",
+              "kind": "file",
+              "relativePath": "test/board_schema.test.js"
+            },
+            {
+              "name": "board_stage_config_controller.test.js",
+              "kind": "file",
+              "relativePath": "test/board_stage_config_controller.test.js"
+            },
+            {
+              "name": "board_workflow.test.js",
+              "kind": "file",
+              "relativePath": "test/board_workflow.test.js"
+            },
+            {
+              "name": "card_editor_controller.test.js",
+              "kind": "file",
+              "relativePath": "test/card_editor_controller.test.js"
+            },
+            {
+              "name": "card_localization.test.js",
+              "kind": "file",
+              "relativePath": "test/card_localization.test.js"
+            },
+            {
+              "name": "card_localization_requests.test.js",
+              "kind": "file",
+              "relativePath": "test/card_localization_requests.test.js"
+            },
+            {
+              "name": "card_localization_runtime.test.js",
+              "kind": "file",
+              "relativePath": "test/card_localization_runtime.test.js"
+            },
+            {
+              "name": "config.test.js",
+              "kind": "file",
+              "relativePath": "test/config.test.js"
+            },
+            {
+              "name": "debug_auth.test.js",
+              "kind": "file",
+              "relativePath": "test/debug_auth.test.js"
+            },
+            {
+              "name": "dialog_initial_focus.test.js",
+              "kind": "file",
+              "relativePath": "test/dialog_initial_focus.test.js"
+            },
+            {
+              "name": "google_identity.test.js",
+              "kind": "file",
+              "relativePath": "test/google_identity.test.js"
+            },
+            {
+              "name": "http_workspace_repository.test.js",
+              "kind": "file",
+              "relativePath": "test/http_workspace_repository.test.js"
+            },
+            {
+              "name": "i18n.test.js",
+              "kind": "file",
+              "relativePath": "test/i18n.test.js"
+            },
+            {
+              "name": "invite_debug.test.js",
+              "kind": "file",
+              "relativePath": "test/invite_debug.test.js"
+            },
+            {
+              "name": "landing_controller_connection.test.js",
+              "kind": "file",
+              "relativePath": "test/landing_controller_connection.test.js"
+            },
+            {
+              "name": "local_workspace_repository.test.js",
+              "kind": "file",
+              "relativePath": "test/local_workspace_repository.test.js"
+            },
+            {
+              "name": "localized_content_guard.test.js",
+              "kind": "file",
+              "relativePath": "test/localized_content_guard.test.js"
+            },
+            {
+              "name": "markdown.test.js",
+              "kind": "file",
+              "relativePath": "test/markdown.test.js"
+            },
+            {
+              "name": "mongo_client.test.js",
+              "kind": "file",
+              "relativePath": "test/mongo_client.test.js"
+            },
+            {
+              "name": "mongo_workspace_record_repository.test.js",
+              "kind": "file",
+              "relativePath": "test/mongo_workspace_record_repository.test.js"
+            },
+            {
+              "name": "mutation_context.test.js",
+              "kind": "file",
+              "relativePath": "test/mutation_context.test.js"
+            },
+            {
+              "name": "openai_localizer.test.js",
+              "kind": "file",
+              "relativePath": "test/openai_localizer.test.js"
+            },
+            {
+              "name": "openai_stage_prompt_runner.test.js",
+              "kind": "file",
+              "relativePath": "test/openai_stage_prompt_runner.test.js"
+            },
+            {
+              "name": "session_controller.test.js",
+              "kind": "file",
+              "relativePath": "test/session_controller.test.js"
+            },
+            {
+              "name": "session_cookie.test.js",
+              "kind": "file",
+              "relativePath": "test/session_cookie.test.js"
+            },
+            {
+              "name": "stage_ui.test.js",
+              "kind": "file",
+              "relativePath": "test/stage_ui.test.js"
+            },
+            {
+              "name": "ui_locale_picker_controller.test.js",
+              "kind": "file",
+              "relativePath": "test/ui_locale_picker_controller.test.js"
+            },
+            {
+              "name": "verify_google_id_token.test.js",
+              "kind": "file",
+              "relativePath": "test/verify_google_id_token.test.js"
+            },
+            {
+              "name": "workspace.test.js",
+              "kind": "file",
+              "relativePath": "test/workspace.test.js"
+            },
+            {
+              "name": "workspace_access.test.js",
+              "kind": "file",
+              "relativePath": "test/workspace_access.test.js"
+            },
+            {
+              "name": "workspace_api.test.js",
+              "kind": "file",
+              "relativePath": "test/workspace_api.test.js"
+            },
+            {
+              "name": "workspace_board_schema.test.js",
+              "kind": "file",
+              "relativePath": "test/workspace_board_schema.test.js"
+            },
+            {
+              "name": "workspace_commands.test.js",
+              "kind": "file",
+              "relativePath": "test/workspace_commands.test.js"
+            },
+            {
+              "name": "workspace_controller.test.js",
+              "kind": "file",
+              "relativePath": "test/workspace_controller.test.js"
+            },
+            {
+              "name": "workspace_migrations.test.js",
+              "kind": "file",
+              "relativePath": "test/workspace_migrations.test.js"
+            },
+            {
+              "name": "workspace_permissions.test.js",
+              "kind": "file",
+              "relativePath": "test/workspace_permissions.test.js"
+            },
+            {
+              "name": "workspace_record.test.js",
+              "kind": "file",
+              "relativePath": "test/workspace_record.test.js"
+            },
+            {
+              "name": "workspace_service.test.js",
+              "kind": "file",
+              "relativePath": "test/workspace_service.test.js"
+            }
+          ],
+          "childCount": 51
+        },
+        {
+          "name": ".env.example",
+          "kind": "file",
+          "relativePath": ".env.example"
+        },
+        {
+          "name": "package.json",
+          "kind": "file",
+          "relativePath": "package.json"
+        },
+        {
+          "name": "Procfile",
+          "kind": "file",
+          "relativePath": "Procfile"
+        }
+      ]
+    }
+  },
   "diff": {
     "addedPaths": [
-      "public/js/domain/board_ai_localization.js",
-      "public/js/domain/board_localization_glossary.js",
-      "src/ai",
-      "src/ai/openai_localizer.js",
-      "src/security",
-      "src/security/board_secret_crypto.js",
-      "test/board_localization_glossary.test.js",
-      "test/openai_localizer.test.js"
+      "public/js/controllers/board_stage_config_controller.js",
+      "public/js/controllers/board_stage_config_schema.js",
+      "public/js/controllers/dialog_initial_focus.js",
+      "public/js/controllers/ui_locale_picker_controller.js",
+      "public/js/domain/board_stage_prompt_action.js",
+      "public/profile.svg",
+      "public/svg/add-card.svg",
+      "public/svg/close.svg",
+      "public/svg/language.svg",
+      "public/svg/prompt.svg",
+      "public/svg/team.svg",
+      "src/ai/openai_stage_prompt_runner.js",
+      "src/views/partials/board-stage-config-dialog.njk",
+      "test/board_stage_config_controller.test.js",
+      "test/dialog_initial_focus.test.js",
+      "test/openai_stage_prompt_runner.test.js",
+      "test/session_controller.test.js",
+      "test/ui_locale_picker_controller.test.js"
     ],
-    "removedPaths": [
-      "src/views/macros"
-    ],
+    "removedPaths": [],
     "changedPaths": [
       "public",
       "public/js",
+      "public/js/controllers",
       "public/js/domain",
+      "public/svg",
       "src",
+      "src/ai",
       "src/views",
+      "src/views/partials",
       "test"
     ]
   }
