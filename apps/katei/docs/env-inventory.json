@@ -43,9 +43,9 @@
     ]
   },
   "summary": {
-    "totalVariables": 17,
-    "totalDefinitions": 17,
-    "totalUsages": 28,
+    "totalVariables": 18,
+    "totalDefinitions": 18,
+    "totalUsages": 29,
     "secretLikeCount": 4,
     "publicLikeCount": 0,
     "dynamicAccessCount": 0
@@ -59,7 +59,7 @@
         {
           "kind": "envFile",
           "file": "apps/katei/.env.example",
-          "line": 23,
+          "line": 26,
           "scope": "app",
           "snippet": "APP_BASE_URL=http://localhost:3000",
           "comment": "# Optional canonical app URL used to validate sign-in request origins in production. Local development defaults to http://localhost:3000; set this explicitly outside development when origin validation matters."
@@ -93,7 +93,7 @@
         {
           "kind": "default",
           "file": "apps/katei/src/config.js",
-          "line": 17,
+          "line": 18,
           "scope": "app",
           "snippet": "googleAllowlistSubs: parseAllowlistSubs(normalizeOptionalString(env.GOOGLE_ALLOWLIST_SUBS) || ''),"
         }
@@ -117,7 +117,7 @@
         {
           "kind": "requiredHelper",
           "file": "apps/katei/src/config.js",
-          "line": 14,
+          "line": 15,
           "scope": "app",
           "snippet": "googleClientId: requireNonEmptyEnv('GOOGLE_CLIENT_ID', env.GOOGLE_CLIENT_ID),"
         }
@@ -131,7 +131,7 @@
         {
           "kind": "envFile",
           "file": "apps/katei/.env.example",
-          "line": 50,
+          "line": 53,
           "scope": "app",
           "snippet": "HEROKU_API_KEY=YOUR_HEROKU_API_KEY",
           "comment": "# Replace YOUR_HEROKU_API_KEY with a real Heroku API key as a Github Repository secret"
@@ -183,7 +183,7 @@
         {
           "kind": "envFile",
           "file": "apps/katei/.env.example",
-          "line": 47,
+          "line": 50,
           "scope": "app",
           "snippet": "HEROKU_APP_NAME=HEROKU_KATEI_APP_PROD",
           "comment": "# set HEROKU_KATEI_APP_PROD as a GitHub repository secret, it should be the name of the app you created in Heroku"
@@ -252,7 +252,7 @@
         {
           "kind": "requiredHelper",
           "file": "apps/katei/src/config.js",
-          "line": 9,
+          "line": 10,
           "scope": "app",
           "snippet": "const boardSecretEncryptionKey = requireNonEmptyEnv('KATEI_BOARD_SECRET_ENCRYPTION_KEY', env.KATEI_BOARD_SECRET_ENCRYPTION_KEY);"
         }
@@ -266,7 +266,7 @@
         {
           "kind": "envFile",
           "file": "apps/katei/.env.example",
-          "line": 26,
+          "line": 29,
           "scope": "app",
           "snippet": "KATEI_DEBUG_AUTH_ENABLED=false",
           "comment": "# Optional guarded hosted debug login toggle. When true, POST /__debug/login can mint a Katei session for the configured debug viewer."
@@ -276,7 +276,7 @@
         {
           "kind": "default",
           "file": "apps/katei/src/config.js",
-          "line": 59,
+          "line": 76,
           "scope": "app",
           "snippet": "const enabled = parseBooleanEnv(normalizeOptionalString(env.KATEI_DEBUG_AUTH_ENABLED) || 'false');"
         }
@@ -290,7 +290,7 @@
         {
           "kind": "envFile",
           "file": "apps/katei/.env.example",
-          "line": 29,
+          "line": 32,
           "scope": "app",
           "snippet": "KATEI_DEBUG_AUTH_SECRET=replace-with-a-long-random-string",
           "comment": "# Shared secret required in the x-katei-debug-auth request header when debug auth is enabled."
@@ -300,14 +300,14 @@
         {
           "kind": "requiredHelper",
           "file": "apps/katei/src/config.js",
-          "line": 61,
+          "line": 78,
           "scope": "app",
           "snippet": "? requireNonEmptyEnv('KATEI_DEBUG_AUTH_SECRET', env.KATEI_DEBUG_AUTH_SECRET)"
         },
         {
           "kind": "read",
           "file": "apps/katei/src/config.js",
-          "line": 62,
+          "line": 79,
           "scope": "app",
           "snippet": ": normalizeOptionalString(env.KATEI_DEBUG_AUTH_SECRET);"
         }
@@ -321,7 +321,7 @@
         {
           "kind": "envFile",
           "file": "apps/katei/.env.example",
-          "line": 35,
+          "line": 38,
           "scope": "app",
           "snippet": "KATEI_DEBUG_AUTH_VIEWER_EMAIL=test@example.com",
           "comment": "# Optional email for the debug viewer session. Defaults to test@example.com when omitted."
@@ -331,7 +331,7 @@
         {
           "kind": "default",
           "file": "apps/katei/src/config.js",
-          "line": 64,
+          "line": 81,
           "scope": "app",
           "snippet": "const viewerEmail = normalizeOptionalEmail(env.KATEI_DEBUG_AUTH_VIEWER_EMAIL) || 'test@example.com';"
         }
@@ -345,7 +345,7 @@
         {
           "kind": "envFile",
           "file": "apps/katei/.env.example",
-          "line": 38,
+          "line": 41,
           "scope": "app",
           "snippet": "KATEI_DEBUG_AUTH_VIEWER_NAME=John Doe",
           "comment": "# Optional display name for the debug viewer session. Defaults to John Doe when omitted."
@@ -355,7 +355,7 @@
         {
           "kind": "default",
           "file": "apps/katei/src/config.js",
-          "line": 65,
+          "line": 82,
           "scope": "app",
           "snippet": "const viewerName = normalizeOptionalString(env.KATEI_DEBUG_AUTH_VIEWER_NAME) || 'John Doe';"
         }
@@ -369,7 +369,7 @@
         {
           "kind": "envFile",
           "file": "apps/katei/.env.example",
-          "line": 32,
+          "line": 35,
           "scope": "app",
           "snippet": "KATEI_DEBUG_AUTH_VIEWER_SUB=",
           "comment": "# Required Google sub for the debug viewer when hosted debug auth is enabled."
@@ -379,7 +379,7 @@
         {
           "kind": "read",
           "file": "apps/katei/src/config.js",
-          "line": 63,
+          "line": 80,
           "scope": "app",
           "snippet": "const viewerSub = normalizeOptionalString(env.KATEI_DEBUG_AUTH_VIEWER_SUB);"
         }
@@ -403,7 +403,7 @@
         {
           "kind": "requiredHelper",
           "file": "apps/katei/src/config.js",
-          "line": 15,
+          "line": 16,
           "scope": "app",
           "snippet": "sessionSecret: requireNonEmptyEnv('KATEI_SESSION_SECRET', env.KATEI_SESSION_SECRET),"
         }
@@ -417,7 +417,7 @@
         {
           "kind": "envFile",
           "file": "apps/katei/.env.example",
-          "line": 44,
+          "line": 47,
           "scope": "app",
           "snippet": "MONGODB_DB_NAME=katei_test",
           "comment": "# Required MongoDB database name used for server-owned workspace persistence."
@@ -441,7 +441,7 @@
         {
           "kind": "envFile",
           "file": "apps/katei/.env.example",
-          "line": 41,
+          "line": 44,
           "scope": "app",
           "snippet": "MONGODB_URI=mongodb://127.0.0.1:27017",
           "comment": "# Required MongoDB connection string used for server-owned workspace persistence."
@@ -520,7 +520,7 @@
         {
           "kind": "envFile",
           "file": "apps/katei/.env.example",
-          "line": 20,
+          "line": 23,
           "scope": "app",
           "snippet": "SESSION_TTL_SECONDS=604800",
           "comment": "# Optional session duration for the Katei session cookie. Defaults to 7 days."
@@ -533,6 +533,30 @@
           "line": 7,
           "scope": "app",
           "snippet": "const sessionTtlSeconds = parseSessionTtlSeconds(normalizeOptionalString(env.SESSION_TTL_SECONDS) || String(DEFAULT_SESSION_TTL_SECONDS));"
+        }
+      ]
+    },
+    {
+      "name": "SUPER_ADMINS",
+      "secretLike": false,
+      "publicLike": false,
+      "definitions": [
+        {
+          "kind": "envFile",
+          "file": "apps/katei/.env.example",
+          "line": 20,
+          "scope": "app",
+          "snippet": "SUPER_ADMINS=",
+          "comment": "# Optional comma-separated list of email addresses allowed to access the Portfolio view."
+        }
+      ],
+      "usages": [
+        {
+          "kind": "default",
+          "file": "apps/katei/src/config.js",
+          "line": 8,
+          "scope": "app",
+          "snippet": "const superAdmins = parseSuperAdminEmails(normalizeOptionalString(env.SUPER_ADMINS) || '');"
         }
       ]
     }

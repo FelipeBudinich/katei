@@ -5,6 +5,7 @@ export function createRuntimeConfig(env = process.env) {
   const mongoUri = requireNonEmptyEnv('MONGODB_URI', env.MONGODB_URI);
   const mongoDbName = requireNonEmptyEnv('MONGODB_DB_NAME', env.MONGODB_DB_NAME);
   const sessionTtlSeconds = parseSessionTtlSeconds(normalizeOptionalString(env.SESSION_TTL_SECONDS) || String(DEFAULT_SESSION_TTL_SECONDS));
+  const superAdmins = parseSuperAdminEmails(normalizeOptionalString(env.SUPER_ADMINS) || '');
   const debugAuth = createDebugAuthConfig(env);
   const boardSecretEncryptionKey = requireNonEmptyEnv('KATEI_BOARD_SECRET_ENCRYPTION_KEY', env.KATEI_BOARD_SECRET_ENCRYPTION_KEY);
 
@@ -15,6 +16,7 @@ export function createRuntimeConfig(env = process.env) {
     sessionSecret: requireNonEmptyEnv('KATEI_SESSION_SECRET', env.KATEI_SESSION_SECRET),
     boardSecretEncryptionKey,
     googleAllowlistSubs: parseAllowlistSubs(normalizeOptionalString(env.GOOGLE_ALLOWLIST_SUBS) || ''),
+    superAdmins,
     sessionTtlSeconds,
     appBaseUrl,
     appOrigin: appBaseUrl ? new URL(appBaseUrl).origin : null,
@@ -35,6 +37,21 @@ export function parseAllowlistSubs(rawValue) {
     normalizedValue
       .split(',')
       .map((value) => value.trim())
+      .filter(Boolean)
+  );
+}
+
+export function parseSuperAdminEmails(rawValue) {
+  const normalizedValue = normalizeOptionalString(rawValue);
+
+  if (!normalizedValue) {
+    return new Set();
+  }
+
+  return new Set(
+    normalizedValue
+      .split(',')
+      .map((value) => normalizeOptionalComparableEmail(value))
       .filter(Boolean)
   );
 }
@@ -119,5 +136,10 @@ function normalizeOptionalString(value) {
 
 function normalizeOptionalEmail(value) {
   const normalizedValue = normalizeOptionalString(value);
+  return normalizedValue.includes('@') ? normalizedValue : '';
+}
+
+function normalizeOptionalComparableEmail(value) {
+  const normalizedValue = normalizeOptionalString(value).toLowerCase();
   return normalizedValue.includes('@') ? normalizedValue : '';
 }

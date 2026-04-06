@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createRuntimeConfig, parseSessionTtlSeconds } from '../src/config.js';
+import { createRuntimeConfig, parseSessionTtlSeconds, parseSuperAdminEmails } from '../src/config.js';
 
 const REQUIRED_ENV = Object.freeze({
   GOOGLE_CLIENT_ID: 'test-google-client-id',
@@ -127,6 +127,16 @@ test('createRuntimeConfig defaults session TTL to 7 days when SESSION_TTL_SECOND
 
   assert.equal(blankConfig.sessionTtlSeconds, 604800);
   assert.equal(whitespaceConfig.sessionTtlSeconds, 604800);
+});
+
+test('createRuntimeConfig parses SUPER_ADMINS into a normalized deduplicated email set', () => {
+  const config = createRuntimeConfig({
+    ...REQUIRED_ENV,
+    NODE_ENV: 'test',
+    SUPER_ADMINS: ' Admin@Example.com , , second@example.com, admin@example.com, not-an-email '
+  });
+
+  assert.deepEqual([...config.superAdmins], ['admin@example.com', 'second@example.com']);
 });
 
 test('createRuntimeConfig parses positive SESSION_TTL_SECONDS overrides', () => {
@@ -296,4 +306,8 @@ test('parseSessionTtlSeconds rejects invalid values', () => {
   assert.throws(() => parseSessionTtlSeconds('0'), /SESSION_TTL_SECONDS must be a positive integer\./);
   assert.throws(() => parseSessionTtlSeconds('-1'), /SESSION_TTL_SECONDS must be a positive integer\./);
   assert.throws(() => parseSessionTtlSeconds('nope'), /SESSION_TTL_SECONDS must be a positive integer\./);
+});
+
+test('parseSuperAdminEmails keeps an empty set for blank input', () => {
+  assert.deepEqual([...parseSuperAdminEmails('   ')], []);
 });

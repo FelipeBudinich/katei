@@ -31,6 +31,20 @@ test('verifySignedSessionCookieValue returns the viewer payload for a valid sign
   });
 });
 
+test('createSessionPayload does not persist request-scoped role flags', () => {
+  const payload = createSessionPayload(
+    {
+      sub: 'sub_123',
+      email: 'tester@example.com',
+      isSuperAdmin: true
+    },
+    300,
+    new Date('2026-03-28T12:00:00Z')
+  );
+
+  assert.equal(Object.hasOwn(payload, 'isSuperAdmin'), false);
+});
+
 test('verifySignedSessionCookieValue rejects tampered signed cookies', () => {
   const payload = createSessionPayload({ sub: 'sub_123' }, 300, new Date('2026-03-28T12:00:00Z'));
   const signedValue = createSignedSessionCookieValue(payload, secret);
