@@ -110,12 +110,13 @@
       <div class="flex flex-wrap items-center gap-3 pt-2" hidden data-workspace-target="viewActionRegion">
         <button
           type="button"
-          class="touch-button-secondary"
+          class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--prompt"
           hidden
+          aria-label="{{ t('workspace.cardPromptRunButton') }}"
           data-workspace-target="viewPromptRunButton"
           data-action="workspace#handleRunStagePromptFromView"
         >
-          {{ t('workspace.cardPromptRunButton') }}
+          <span class="sr-only">{{ t('workspace.cardPromptRunButton') }}</span>
         </button>
       </div>
     </div>

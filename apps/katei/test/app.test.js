@@ -711,6 +711,10 @@ test('workspace template renders edit localization controls and a simplified loc
   );
   assert.match(
     cardViewDialog,
+    /class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--prompt"[\s\S]*?aria-label="Run prompt"[\s\S]*?data-workspace-target="viewPromptRunButton"[\s\S]*?data-action="workspace#handleRunStagePromptFromView"[\s\S]*?<span class="sr-only">Run prompt<\/span>/
+  );
+  assert.match(
+    cardViewDialog,
     /class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--close"[\s\S]*?aria-label="Close"[\s\S]*?data-view-dialog-initial-focus[\s\S]*?data-action="workspace#closeViewDialog"[\s\S]*?<span class="sr-only">Close<\/span>/
   );
   assert.doesNotMatch(html, /data-card-field="editButton"/);

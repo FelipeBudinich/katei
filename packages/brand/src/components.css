@@ -489,6 +489,21 @@
     mask-image: url("/svg/team.svg");
   }
 
+  .touch-button-secondary--prompt::before {
+    content: "";
+    width: 1rem;
+    height: 1rem;
+    background-color: currentColor;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    -webkit-mask-image: url("/svg/prompt.svg");
+    mask-image: url("/svg/prompt.svg");
+  }
+
   .touch-button-danger {
     @apply inline-grid min-h-11 place-items-center rounded-2xl border px-4 py-2.5 text-sm font-medium transition;
     border-color: var(--color-danger-border);
