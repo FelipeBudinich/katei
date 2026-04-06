@@ -694,6 +694,8 @@ test('workspace template renders edit localization controls and a simplified loc
     cardEditorDialog,
     /class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--close"[\s\S]*?aria-label="Close"[\s\S]*?data-action="card-editor#close"[\s\S]*?<span class="sr-only">Close<\/span>/
   );
+  assert.doesNotMatch(cardEditorDialog, /data-action="card-editor#closeForAction workspace#deleteCard"/);
+  assert.doesNotMatch(cardEditorDialog, /class="touch-button-danger"/);
 
   assert.match(
     cardViewDialog,

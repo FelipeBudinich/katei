@@ -4,7 +4,6 @@ import {
   getDefaultBoardStageId,
   getStageMoveOptions,
   resolveBoardStageId,
-  shouldShowDeleteForStage,
   shouldShowPriorityForStage
 } from './stage_ui.js';
 import {
@@ -44,9 +43,6 @@ export default class extends Controller {
     'clearLocaleRequestButton',
     'verifyLocaleButton',
     'editActions',
-    'deleteActions',
-    'deleteActionRegion',
-    'deleteButtonTemplate',
     'moveOptionRegion',
     'moveOptionTemplate',
     'submitActions'
@@ -465,19 +461,9 @@ export default class extends Controller {
   syncEditActions({ isEditMode, cardId, sourceStageId, targetStageId }) {
     const shouldShowPrioritySection = shouldShowPriorityForStage(targetStageId);
     const canMutateCard = isEditMode && !this.isReadOnlyLocaleView;
-    const shouldShowDeleteAction = canMutateCard && shouldShowDeleteForStage(this.board, sourceStageId);
 
     this.prioritySectionTarget.hidden = !shouldShowPrioritySection;
     this.editActionsTarget.hidden = !canMutateCard;
-    this.deleteActionsTarget.hidden = !shouldShowDeleteAction;
-    this.deleteActionRegionTarget.replaceChildren();
-
-    if (shouldShowDeleteAction) {
-      const deleteButton = this.deleteButtonTemplateTarget.content.firstElementChild.cloneNode(true);
-      deleteButton.dataset.cardId = cardId;
-      deleteButton.dataset.boardId = this.boardIdInputTarget.value;
-      this.deleteActionRegionTarget.append(deleteButton);
-    }
 
     for (const button of this.getMoveOptionButtons()) {
       const buttonTargetStageId = button.dataset.targetStageId;
