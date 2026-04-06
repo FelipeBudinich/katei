@@ -14,6 +14,17 @@
       </div>
 
       <div class="flex items-center gap-2">
+        <button
+          type="button"
+          class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--prompt"
+          hidden
+          aria-label="{{ t('workspace.cardPromptRunButton') }}"
+          data-workspace-target="viewPromptRunButton"
+          data-action="workspace#handleRunStagePromptFromView"
+        >
+          <span class="sr-only">{{ t('workspace.cardPromptRunButton') }}</span>
+        </button>
+
         <div hidden data-workspace-target="viewLocaleSection">
           <div class="view-locale-picker">
             <button
@@ -107,18 +118,7 @@
         </div>
       </div>
 
-      <div class="flex flex-wrap items-center gap-3 pt-2" hidden data-workspace-target="viewActionRegion">
-        <button
-          type="button"
-          class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--prompt"
-          hidden
-          aria-label="{{ t('workspace.cardPromptRunButton') }}"
-          data-workspace-target="viewPromptRunButton"
-          data-action="workspace#handleRunStagePromptFromView"
-        >
-          <span class="sr-only">{{ t('workspace.cardPromptRunButton') }}</span>
-        </button>
-      </div>
+      <div class="flex flex-wrap items-center gap-3 pt-2" hidden data-workspace-target="viewActionRegion"></div>
     </div>
   </div>
 </dialog>
