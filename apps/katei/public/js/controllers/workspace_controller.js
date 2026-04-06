@@ -1354,9 +1354,6 @@ export default class extends Controller {
       && board
       && card
     );
-    const shouldShowAnyActionButton = Boolean(
-      shouldShowPromptRunButton || shouldShowDeleteButton
-    );
     const shouldShowEditButton = Boolean(
       canEditBoard
       && board
@@ -1412,7 +1409,7 @@ export default class extends Controller {
     }
 
     if (this.hasViewActionRegionTarget) {
-      this.viewActionRegionTarget.hidden = !shouldShowAnyActionButton;
+      this.viewActionRegionTarget.hidden = true;
     }
 
     if (this.hasViewDeleteButtonTarget) {

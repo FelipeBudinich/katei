@@ -1595,7 +1595,7 @@ test('openView shows the prompt-run button in the modal for editable prompt-enab
     });
 
     assert.equal(controller.viewDialogState.canEditBoard, true);
-    assert.equal(controller.viewActionRegionTarget.hidden, false);
+    assert.equal(controller.viewActionRegionTarget.hidden, true);
     assert.equal(controller.viewDeleteButtonTarget.hidden, false);
     assert.equal(controller.viewDeleteButtonTarget.disabled, false);
     assert.equal(controller.viewDeleteButtonTarget.attributes['aria-disabled'], 'false');
@@ -1957,7 +1957,7 @@ test('syncViewDialog hides the prompt-run button and clears datasets for ineligi
 
     WorkspaceController.prototype.syncViewDialog.call(controller);
 
-    assert.equal(controller.viewActionRegionTarget.hidden, false);
+    assert.equal(controller.viewActionRegionTarget.hidden, true);
     assert.equal(controller.viewDeleteButtonTarget.hidden, false);
     assert.equal(controller.viewDeleteButtonTarget.disabled, false);
     assert.equal(controller.viewDeleteButtonTarget.attributes['aria-disabled'], 'false');
@@ -1984,7 +1984,7 @@ test('openView shows the delete button and action region when delete is availabl
       currentTarget: createViewTriggerDouble(card.id, 'review', { requestedLocale: 'es-CL' })
     });
 
-    assert.equal(controller.viewActionRegionTarget.hidden, false);
+    assert.equal(controller.viewActionRegionTarget.hidden, true);
     assert.equal(controller.viewDeleteButtonTarget.hidden, false);
     assert.equal(controller.viewDeleteButtonTarget.disabled, false);
     assert.equal(controller.viewDeleteButtonTarget.attributes['aria-disabled'], 'false');
@@ -1997,6 +1997,7 @@ test('openView shows the delete button and action region when delete is availabl
     restoreDom();
   }
 });
+
 
 test('openEdit dispatches the card editor event for an editable board card', () => {
   const restoreDom = installViewDialogDomStubs();
