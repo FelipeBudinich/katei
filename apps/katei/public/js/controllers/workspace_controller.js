@@ -52,6 +52,7 @@ export default class extends Controller {
     'viewReviewState',
     'viewRequestVerificationButton',
     'viewActionRegion',
+    'viewDeleteButton',
     'viewEditButton',
     'viewPromptRunButton',
     'viewCardTitle',
@@ -1348,6 +1349,14 @@ export default class extends Controller {
       && resolvedStageId
       && shouldShowPromptRunForStage(board, resolvedStageId)
     );
+    const shouldShowDeleteButton = Boolean(
+      canEditBoard
+      && board
+      && card
+    );
+    const shouldShowAnyActionButton = Boolean(
+      shouldShowPromptRunButton || shouldShowDeleteButton
+    );
     const shouldShowEditButton = Boolean(
       canEditBoard
       && board
@@ -1403,7 +1412,27 @@ export default class extends Controller {
     }
 
     if (this.hasViewActionRegionTarget) {
-      this.viewActionRegionTarget.hidden = !shouldShowPromptRunButton;
+      this.viewActionRegionTarget.hidden = !shouldShowAnyActionButton;
+    }
+
+    if (this.hasViewDeleteButtonTarget) {
+      this.viewDeleteButtonTarget.hidden = !shouldShowDeleteButton;
+      this.viewDeleteButtonTarget.disabled = !shouldShowDeleteButton;
+      this.viewDeleteButtonTarget.setAttribute(
+        'aria-disabled',
+        String(!shouldShowDeleteButton)
+      );
+
+      setOptionalDatasetValue(
+        this.viewDeleteButtonTarget,
+        'boardId',
+        shouldShowDeleteButton ? board.id : null
+      );
+      setOptionalDatasetValue(
+        this.viewDeleteButtonTarget,
+        'cardId',
+        shouldShowDeleteButton ? card.id : null
+      );
     }
 
     if (this.hasViewEditButtonTarget) {

@@ -1454,6 +1454,10 @@ test('openView uses the dedicated view dialog and limits locales to present loca
     assert.equal(controller.viewEditButtonTarget.disabled, true);
     assert.equal(controller.viewEditButtonTarget.attributes['aria-disabled'], 'true');
     assert.deepEqual(controller.viewEditButtonTarget.dataset, {});
+    assert.equal(controller.viewDeleteButtonTarget.hidden, true);
+    assert.equal(controller.viewDeleteButtonTarget.disabled, true);
+    assert.equal(controller.viewDeleteButtonTarget.attributes['aria-disabled'], 'true');
+    assert.deepEqual(controller.viewDeleteButtonTarget.dataset, {});
     assert.equal(controller.viewPromptRunButtonTarget.hidden, true);
   } finally {
     restoreDom();
@@ -1592,6 +1596,13 @@ test('openView shows the prompt-run button in the modal for editable prompt-enab
 
     assert.equal(controller.viewDialogState.canEditBoard, true);
     assert.equal(controller.viewActionRegionTarget.hidden, false);
+    assert.equal(controller.viewDeleteButtonTarget.hidden, false);
+    assert.equal(controller.viewDeleteButtonTarget.disabled, false);
+    assert.equal(controller.viewDeleteButtonTarget.attributes['aria-disabled'], 'false');
+    assert.deepEqual(controller.viewDeleteButtonTarget.dataset, {
+      boardId: board.id,
+      cardId: card.id
+    });
     assert.equal(controller.viewEditButtonTarget.hidden, false);
     assert.equal(controller.viewEditButtonTarget.disabled, false);
     assert.equal(controller.viewEditButtonTarget.attributes['aria-disabled'], 'false');
@@ -1630,6 +1641,11 @@ test('syncViewDialog hides the modal edit button and clears datasets for read-on
 
     WorkspaceController.prototype.syncViewDialog.call(controller);
 
+    assert.equal(controller.viewActionRegionTarget.hidden, true);
+    assert.equal(controller.viewDeleteButtonTarget.hidden, true);
+    assert.equal(controller.viewDeleteButtonTarget.disabled, true);
+    assert.equal(controller.viewDeleteButtonTarget.attributes['aria-disabled'], 'true');
+    assert.deepEqual(controller.viewDeleteButtonTarget.dataset, {});
     assert.equal(controller.viewEditButtonTarget.hidden, true);
     assert.equal(controller.viewEditButtonTarget.disabled, true);
     assert.equal(controller.viewEditButtonTarget.attributes['aria-disabled'], 'true');
@@ -1653,6 +1669,7 @@ test('openView shows the AI review state and a human verification request button
     assert.equal(controller.viewReviewStateTarget.textContent, 'cardViewDialog.reviewState.ai');
     assert.equal(controller.viewRequestVerificationButtonTarget.hidden, false);
     assert.equal(controller.viewActionRegionTarget.hidden, true);
+    assert.equal(controller.viewDeleteButtonTarget.hidden, true);
     assert.equal(controller.viewPromptRunButtonTarget.hidden, true);
   } finally {
     restoreDom();
@@ -1940,11 +1957,42 @@ test('syncViewDialog hides the prompt-run button and clears datasets for ineligi
 
     WorkspaceController.prototype.syncViewDialog.call(controller);
 
-    assert.equal(controller.viewActionRegionTarget.hidden, true);
+    assert.equal(controller.viewActionRegionTarget.hidden, false);
+    assert.equal(controller.viewDeleteButtonTarget.hidden, false);
+    assert.equal(controller.viewDeleteButtonTarget.disabled, false);
+    assert.equal(controller.viewDeleteButtonTarget.attributes['aria-disabled'], 'false');
+    assert.deepEqual(controller.viewDeleteButtonTarget.dataset, {
+      boardId: board.id,
+      cardId: card.id
+    });
     assert.equal(controller.viewPromptRunButtonTarget.hidden, true);
     assert.equal(controller.viewPromptRunButtonTarget.disabled, true);
     assert.equal(controller.viewPromptRunButtonTarget.attributes['aria-disabled'], 'true');
     assert.deepEqual(controller.viewPromptRunButtonTarget.dataset, {});
+  } finally {
+    restoreDom();
+  }
+});
+
+test('openView shows the delete button and action region when delete is available without prompt-run', () => {
+  const restoreDom = installViewDialogDomStubs();
+
+  try {
+    const { controller, board, card } = createViewDialogController({ viewerRole: 'editor' });
+
+    WorkspaceController.prototype.openView.call(controller, {
+      currentTarget: createViewTriggerDouble(card.id, 'review', { requestedLocale: 'es-CL' })
+    });
+
+    assert.equal(controller.viewActionRegionTarget.hidden, false);
+    assert.equal(controller.viewDeleteButtonTarget.hidden, false);
+    assert.equal(controller.viewDeleteButtonTarget.disabled, false);
+    assert.equal(controller.viewDeleteButtonTarget.attributes['aria-disabled'], 'false');
+    assert.deepEqual(controller.viewDeleteButtonTarget.dataset, {
+      boardId: board.id,
+      cardId: card.id
+    });
+    assert.equal(controller.viewPromptRunButtonTarget.hidden, true);
   } finally {
     restoreDom();
   }
@@ -3068,6 +3116,8 @@ function createViewDialogController({
   controller.viewRequestVerificationButtonTarget = createButtonDouble();
   controller.hasViewActionRegionTarget = true;
   controller.viewActionRegionTarget = { hidden: true };
+  controller.hasViewDeleteButtonTarget = true;
+  controller.viewDeleteButtonTarget = createButtonDouble();
   controller.hasViewEditButtonTarget = true;
   controller.viewEditButtonTarget = createButtonDouble();
   controller.hasViewPromptRunButtonTarget = true;

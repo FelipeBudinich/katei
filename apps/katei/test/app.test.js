@@ -697,7 +697,7 @@ test('workspace template renders edit localization controls and a simplified loc
 
   assert.match(
     cardViewDialog,
-    /data-workspace-target="viewCardPrioritySection"[\s\S]*data-workspace-target="viewLocaleSection"[\s\S]*id="card-view-locale-trigger"[\s\S]*data-workspace-target="viewLocaleButton"[\s\S]*id="card-view-locale-menu"[\s\S]*data-workspace-target="viewLocaleMenu"[\s\S]*id="card-view-locale-select"[\s\S]*data-workspace-target="viewLocaleSelect"[\s\S]*data-workspace-target="viewEditButton"[\s\S]*data-workspace-target="viewCardTitle"[\s\S]*data-workspace-target="viewCardBody"[\s\S]*data-workspace-target="viewPromptRunButton"/
+    /data-workspace-target="viewCardPrioritySection"[\s\S]*data-workspace-target="viewPromptRunButton"[\s\S]*data-workspace-target="viewLocaleSection"[\s\S]*id="card-view-locale-trigger"[\s\S]*data-workspace-target="viewLocaleButton"[\s\S]*id="card-view-locale-menu"[\s\S]*data-workspace-target="viewLocaleMenu"[\s\S]*id="card-view-locale-select"[\s\S]*data-workspace-target="viewLocaleSelect"[\s\S]*data-workspace-target="viewEditButton"[\s\S]*data-workspace-target="viewCardTitle"[\s\S]*data-workspace-target="viewCardBody"[\s\S]*data-workspace-target="viewDeleteButton"/
   );
   assert.doesNotMatch(cardViewDialog, /data-card-editor-target="titleInput"/);
   assert.doesNotMatch(cardViewDialog, /data-card-editor-target="markdownInput"/);
@@ -712,6 +712,10 @@ test('workspace template renders edit localization controls and a simplified loc
   assert.match(
     cardViewDialog,
     /class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--prompt"[\s\S]*?aria-label="Run prompt"[\s\S]*?data-workspace-target="viewPromptRunButton"[\s\S]*?data-action="workspace#handleRunStagePromptFromView"[\s\S]*?<span class="sr-only">Run prompt<\/span>/
+  );
+  assert.match(
+    cardViewDialog,
+    /class="touch-button-danger"[\s\S]*?data-workspace-target="viewDeleteButton"[\s\S]*?data-action="workspace#deleteCard"[\s\S]*?Delete/
   );
   assert.match(
     cardViewDialog,
