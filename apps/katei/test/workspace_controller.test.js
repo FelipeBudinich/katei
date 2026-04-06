@@ -2773,6 +2773,90 @@ test('confirmPendingAction discards localized content and refreshes the editor o
   assert.equal(controller.confirmButtonTarget.disabled, false);
 });
 
+test('confirmPendingAction closes the view dialog before the confirm dialog for the currently viewed deleted card', async () => {
+  const controller = Object.create(WorkspaceController.prototype);
+  const serviceCalls = [];
+  const callOrder = [];
+
+  controller.pendingConfirmation = {
+    type: 'delete-card',
+    boardId: 'main',
+    cardId: 'card_1'
+  };
+  controller.confirmButtonTarget = {
+    disabled: false
+  };
+  controller.service = {
+    async deleteCard(...args) {
+      serviceCalls.push(args);
+      return createEmptyWorkspace();
+    }
+  };
+  controller.t = createTranslator('en');
+  controller.runAction = async (action) => {
+    await action();
+    return true;
+  };
+  controller.isViewDialogOpenFor = () => true;
+  controller.dismissViewDialog = (detail) => {
+    callOrder.push({ name: 'dismissViewDialog', detail });
+  };
+  controller.closeConfirmDialog = () => {
+    callOrder.push({ name: 'closeConfirmDialog' });
+  };
+
+  await WorkspaceController.prototype.confirmPendingAction.call(controller);
+
+  assert.deepEqual(serviceCalls, [['main', 'card_1']]);
+  assert.deepEqual(callOrder, [
+    {
+      name: 'dismissViewDialog',
+      detail: { restoreFocus: false }
+    },
+    { name: 'closeConfirmDialog' }
+  ]);
+  assert.equal(controller.confirmButtonTarget.disabled, false);
+});
+
+test('confirmPendingAction leaves the view dialog alone when deleting a card from another surface', async () => {
+  const controller = Object.create(WorkspaceController.prototype);
+  const serviceCalls = [];
+  const callOrder = [];
+
+  controller.pendingConfirmation = {
+    type: 'delete-card',
+    boardId: 'main',
+    cardId: 'card_1'
+  };
+  controller.confirmButtonTarget = {
+    disabled: false
+  };
+  controller.service = {
+    async deleteCard(...args) {
+      serviceCalls.push(args);
+      return createEmptyWorkspace();
+    }
+  };
+  controller.t = createTranslator('en');
+  controller.runAction = async (action) => {
+    await action();
+    return true;
+  };
+  controller.isViewDialogOpenFor = () => false;
+  controller.dismissViewDialog = () => {
+    callOrder.push({ name: 'dismissViewDialog' });
+  };
+  controller.closeConfirmDialog = () => {
+    callOrder.push({ name: 'closeConfirmDialog' });
+  };
+
+  await WorkspaceController.prototype.confirmPendingAction.call(controller);
+
+  assert.deepEqual(serviceCalls, [['main', 'card_1']]);
+  assert.deepEqual(callOrder, [{ name: 'closeConfirmDialog' }]);
+  assert.equal(controller.confirmButtonTarget.disabled, false);
+});
+
 function createBoardWithCustomStages() {
   const board = createWorkspaceBoard({
     id: 'board_flow',

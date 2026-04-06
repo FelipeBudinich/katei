@@ -1514,6 +1514,13 @@ export default class extends Controller {
     }
 
     const confirmation = this.pendingConfirmation;
+    const shouldCloseViewDialogAfterDelete = (
+      confirmation.type === 'delete-card' &&
+      this.isViewDialogOpenFor({
+        boardId: confirmation.boardId,
+        cardId: confirmation.cardId
+      })
+    );
     this.isConfirming = true;
     this.confirmButtonTarget.disabled = true;
 
@@ -1545,6 +1552,10 @@ export default class extends Controller {
     this.isConfirming = false;
 
     if (success) {
+      if (shouldCloseViewDialogAfterDelete) {
+        this.dismissViewDialog({ restoreFocus: false });
+      }
+
       if (confirmation.type === 'discard-card-locale' && this.isCardEditorOpenFor(confirmation)) {
         this.refreshCardEditor({
           boardId: confirmation.boardId,
