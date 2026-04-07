@@ -22,6 +22,14 @@ export class WorkspaceAccessDeniedError extends Error {
   }
 }
 
+export class WorkspaceTitleManagementPermissionError extends Error {
+  constructor(message = 'Workspace title management is only available to super admins.') {
+    super(message);
+    this.name = 'WorkspaceTitleManagementPermissionError';
+    this.code = 'WORKSPACE_TITLE_MANAGEMENT_FORBIDDEN';
+  }
+}
+
 export class WorkspaceRecordRepository {
   async loadOrCreateWorkspaceRecord({ viewerSub, workspaceId, viewerEmail } = {}) {
     throw new Error('Not implemented');
@@ -36,6 +44,14 @@ export class WorkspaceRecordRepository {
   }
 
   async loadOrCreateAuthoritativeWorkspaceRecord({ viewerSub, workspaceId, viewerEmail } = {}) {
+    throw new Error('Not implemented');
+  }
+
+  async loadWorkspaceRecordForSuperAdminTitleManagement({ viewerIsSuperAdmin, workspaceId } = {}) {
+    throw new Error('Not implemented');
+  }
+
+  async saveWorkspaceTitleForSuperAdmin({ viewerIsSuperAdmin, workspaceId, title, actor, expectedRevision } = {}) {
     throw new Error('Not implemented');
   }
 

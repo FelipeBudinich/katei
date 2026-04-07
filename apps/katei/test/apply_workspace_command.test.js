@@ -239,6 +239,107 @@ test('board.create mints a server-side board id and timestamps from context', ()
   assert.equal(activityEvent.revision, 1);
 });
 
+test('workspace.title.set adds a trimmed title to an untitled workspace without changing board state', () => {
+  const workspace = createWorkspaceForActor();
+  const boardSnapshot = structuredClone(workspace.boards);
+
+  const { workspace: nextWorkspace, result, activityEvent } = applyWorkspaceCommand({
+    record: createRecord(workspace, 0),
+    command: {
+      clientMutationId: 'workspace_title_set_1',
+      type: 'workspace.title.set',
+      payload: {
+        title: '  Studio workspace  '
+      }
+    },
+    expectedRevision: 0,
+    context: createContext({ viewerIsSuperAdmin: true })
+  });
+
+  assert.equal(Object.hasOwn(workspace, 'title'), false);
+  assert.equal(nextWorkspace.title, 'Studio workspace');
+  assert.deepEqual(nextWorkspace.boards, boardSnapshot);
+  assert.equal(result.workspaceId, workspace.workspaceId);
+  assert.equal(result.workspaceTitle, 'Studio workspace');
+  assert.equal(result.noOp, false);
+  assert.equal(activityEvent.type, 'workspace.title.updated');
+  assert.deepEqual(activityEvent.entity, {
+    kind: 'workspace',
+    boardId: null,
+    cardId: null
+  });
+  assert.deepEqual(activityEvent.details, {
+    workspaceId: workspace.workspaceId,
+    workspaceTitle: 'Studio workspace'
+  });
+});
+
+test('workspace.title.set renames an existing workspace title', () => {
+  const workspace = createWorkspaceForActor();
+  workspace.title = 'Old workspace name';
+
+  const { workspace: nextWorkspace, result } = applyWorkspaceCommand({
+    record: createRecord(workspace, 0),
+    command: {
+      clientMutationId: 'workspace_title_set_2',
+      type: 'workspace.title.set',
+      payload: {
+        title: '  New workspace name '
+      }
+    },
+    expectedRevision: 0,
+    context: createContext({ viewerIsSuperAdmin: true })
+  });
+
+  assert.equal(nextWorkspace.title, 'New workspace name');
+  assert.equal(result.workspaceTitle, 'New workspace name');
+  assert.equal(nextWorkspace.boards.main.title, workspace.boards.main.title);
+});
+
+test('workspace.title.set unsets the stored title when the payload is blank', () => {
+  const workspace = createWorkspaceForActor();
+  workspace.title = 'Operations HQ';
+
+  const { workspace: nextWorkspace, result, activityEvent } = applyWorkspaceCommand({
+    record: createRecord(workspace, 0),
+    command: {
+      clientMutationId: 'workspace_title_set_3',
+      type: 'workspace.title.set',
+      payload: {
+        title: '   '
+      }
+    },
+    expectedRevision: 0,
+    context: createContext({ viewerIsSuperAdmin: true })
+  });
+
+  assert.equal(Object.hasOwn(nextWorkspace, 'title'), false);
+  assert.equal(result.workspaceTitle, null);
+  assert.deepEqual(activityEvent.details, {
+    workspaceId: workspace.workspaceId,
+    workspaceTitle: null
+  });
+});
+
+test('workspace.title.set rejects non-super-admin actors', () => {
+  assertPermissionError(
+    () =>
+      applyWorkspaceCommand({
+        record: createRecord(),
+        command: {
+          clientMutationId: 'workspace_title_forbidden',
+          type: 'workspace.title.set',
+          payload: {
+            title: 'Forbidden title'
+          }
+        },
+        expectedRevision: 0,
+        context: createContext()
+      }),
+    /manage workspace titles/i
+  );
+});
+
 test('board.update saves valid schema edits through the command engine', () => {
   const workspace = createWorkspaceForActor();
 

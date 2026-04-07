@@ -50,7 +50,8 @@ import {
 import {
   cloneWorkspace,
   createWorkspaceBoard,
-  DEFAULT_PRIORITY
+  DEFAULT_PRIORITY,
+  normalizeWorkspaceTitle
 } from '../../public/js/domain/workspace_read_model.js';
 import { findColumnIdByCardId, getBoard, getCard } from '../../public/js/domain/workspace_selectors.js';
 import {
@@ -157,6 +158,8 @@ export function createWorkspaceCommandEngine(dependencies = {}) {
 
 function applyCommandToWorkspace({ workspace, command, context }) {
   switch (command.type) {
+    case 'workspace.title.set':
+      return applyWorkspaceTitleSet(workspace, command, context);
     case 'board.create':
       return applyBoardCreate(workspace, command, context);
     case 'board.update':
@@ -204,6 +207,50 @@ function applyCommandToWorkspace({ workspace, command, context }) {
     default:
       throw new Error(`Unsupported workspace command type: ${command.type}`);
   }
+}
+
+function applyWorkspaceTitleSet(workspace, command, context) {
+  assertAuthenticatedHumanActor(context.actor, 'You must be signed in to update the workspace title.');
+  assertActorCanManageWorkspaceTitle(context);
+  const currentWorkspaceTitle = normalizeWorkspaceTitle(workspace?.title);
+  const nextWorkspaceTitle = normalizeWorkspaceTitle(command.payload.title);
+
+  if (currentWorkspaceTitle === nextWorkspaceTitle) {
+    return {
+      workspace,
+      result: createCommandResult(command, {
+        noOp: true,
+        workspaceId: workspace.workspaceId,
+        workspaceTitle: nextWorkspaceTitle
+      })
+    };
+  }
+
+  const nextWorkspace = cloneWorkspace(workspace);
+
+  if (nextWorkspaceTitle) {
+    nextWorkspace.title = nextWorkspaceTitle;
+  } else {
+    delete nextWorkspace.title;
+  }
+
+  return {
+    workspace: nextWorkspace,
+    result: createCommandResult(command, {
+      workspaceId: nextWorkspace.workspaceId,
+      workspaceTitle: nextWorkspaceTitle
+    }),
+    activityEventInput: {
+      type: 'workspace.title.updated',
+      entity: {
+        kind: 'workspace'
+      },
+      details: {
+        workspaceId: nextWorkspace.workspaceId,
+        workspaceTitle: nextWorkspaceTitle
+      }
+    }
+  };
 }
 
 function applyBoardCreate(workspace, command, context) {
@@ -1289,6 +1336,12 @@ function assertAuthenticatedActor(actor, errorMessage) {
   }
 
   return normalizedActor;
+}
+
+function assertActorCanManageWorkspaceTitle(context) {
+  if (context?.viewerIsSuperAdmin !== true) {
+    throw new WorkspaceCommandPermissionError('You do not have permission to manage workspace titles.');
+  }
 }
 
 function assertActorCanReadBoard(board, actor) {

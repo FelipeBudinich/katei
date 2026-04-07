@@ -257,6 +257,7 @@ export function createWorkspaceApiRouter({
 
       const context = createDefaultMutationContext({
         actor: createViewerMutationActor(request.viewer),
+        viewerIsSuperAdmin: request.viewer?.isSuperAdmin === true,
         boardSecretEncryptionKey: config?.boardSecretEncryptionKey ?? null,
         debugLog,
         acceptDebugLog

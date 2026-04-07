@@ -14,7 +14,8 @@ test('createDefaultMutationContext returns the default server mutation context s
       id: 'viewer_123',
       email: 'viewer@example.com',
       name: 'Viewer Name'
-    }
+    },
+    viewerIsSuperAdmin: true
   });
 
   assert.deepEqual(context.actor, {
@@ -27,6 +28,7 @@ test('createDefaultMutationContext returns the default server mutation context s
   assert.match(context.now, /^\d{4}-\d{2}-\d{2}T/);
   assert.equal(typeof context.createBoardId, 'function');
   assert.equal(typeof context.createCardId, 'function');
+  assert.equal(context.viewerIsSuperAdmin, true);
 });
 
 test('createMutationContext preserves an injected timestamp for one command application', () => {
@@ -60,6 +62,7 @@ test('createMutationContext accepts null or populated actor values', () => {
   });
 
   assert.equal(nullActorContext.actor, null);
+  assert.equal(nullActorContext.viewerIsSuperAdmin, false);
   assert.deepEqual(systemActorContext.actor, {
     type: 'system',
     id: 'seed-job',

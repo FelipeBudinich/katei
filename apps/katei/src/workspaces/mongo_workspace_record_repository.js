@@ -9,7 +9,8 @@ import {
   WorkspaceAccessDeniedError,
   WorkspaceImportConflictError,
   WorkspaceRecordRepository,
-  WorkspaceRevisionConflictError
+  WorkspaceRevisionConflictError,
+  WorkspaceTitleManagementPermissionError
 } from './workspace_record_repository.js';
 import {
   WORKSPACE_RECORD_COLLECTION_NAME,
@@ -95,6 +96,52 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
       viewerEmail,
       debugLog,
       projectForViewer: false
+    });
+  }
+
+  async loadWorkspaceRecordForSuperAdminTitleManagement({ viewerIsSuperAdmin = false, workspaceId } = {}) {
+    assertSuperAdminTitleManagementAccess(viewerIsSuperAdmin);
+
+    return this.#loadWorkspaceRecordForSuperAdminTitleManagement(workspaceId);
+  }
+
+  async saveWorkspaceTitleForSuperAdmin({
+    viewerIsSuperAdmin = false,
+    workspaceId,
+    title = undefined,
+    actor = null,
+    expectedRevision
+  } = {}) {
+    assertSuperAdminTitleManagementAccess(viewerIsSuperAdmin);
+
+    const currentRecord = await this.#loadWorkspaceRecordForSuperAdminTitleManagement(workspaceId);
+
+    if (currentRecord.revision !== expectedRevision) {
+      throw new WorkspaceRevisionConflictError();
+    }
+
+    const nextWorkspace = structuredClone(currentRecord.workspace);
+    const normalizedTitle = normalizeOptionalString(title);
+
+    if (normalizedTitle) {
+      nextWorkspace.title = normalizedTitle;
+    } else {
+      delete nextWorkspace.title;
+    }
+
+    const nextRecord = createUpdatedWorkspaceRecord(currentRecord, {
+      workspace: nextWorkspace,
+      actor,
+      now: this.now(),
+      activityType: 'workspace.title.updated',
+      createActivityEventId: this.createActivityEventId
+    });
+
+    return this.#persistWorkspaceRecord({
+      currentDocumentId: currentRecord.documentId ?? currentRecord.workspaceId,
+      nextRecord,
+      expectedRevision,
+      conflictErrorClass: WorkspaceRevisionConflictError
     });
   }
 
@@ -335,6 +382,20 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
     return record;
   }
 
+  async #loadWorkspaceRecordForSuperAdminTitleManagement(workspaceId) {
+    const normalizedWorkspaceId = normalizeWorkspaceId(workspaceId);
+
+    try {
+      return await this.#loadRequiredWorkspaceRecord(normalizedWorkspaceId);
+    } catch (error) {
+      if (isWorkspaceRecordNotFoundError(error, normalizedWorkspaceId)) {
+        throw new WorkspaceAccessDeniedError();
+      }
+
+      throw error;
+    }
+  }
+
   async #loadHomeWorkspaceRecord(viewerSub) {
     const collection = this.#getCollection();
     const homeDocument =
@@ -436,6 +497,16 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
 
 function createNowIsoString() {
   return new Date().toISOString();
+}
+
+function assertSuperAdminTitleManagementAccess(viewerIsSuperAdmin) {
+  if (viewerIsSuperAdmin !== true) {
+    throw new WorkspaceTitleManagementPermissionError();
+  }
+}
+
+function isWorkspaceRecordNotFoundError(error, workspaceId) {
+  return error?.message === `Workspace record was not found for workspace ${workspaceId}.`;
 }
 
 function normalizeOptionalWorkspaceId(workspaceId) {

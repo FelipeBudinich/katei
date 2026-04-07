@@ -7,6 +7,7 @@ import { PRIORITY_ORDER } from './workspace_read_model.js';
 import { validateWorkspaceShape } from './workspace_validation.js';
 
 export const WORKSPACE_COMMAND_TYPES = Object.freeze([
+  'workspace.title.set',
   'board.create',
   'board.update',
   'board.rename',
@@ -93,6 +94,8 @@ function validateWorkspaceCommandInternal(command) {
 
 function validatePayload(type, payload) {
   switch (type) {
+    case 'workspace.title.set':
+      return validateWorkspaceTitleSetPayload(payload);
     case 'board.create':
       return validateBoardCreatePayload(payload);
     case 'board.update':
@@ -132,6 +135,18 @@ function validatePayload(type, payload) {
     default:
       return invalid(`Invalid workspace command type: ${type}`);
   }
+}
+
+function validateWorkspaceTitleSetPayload(payload) {
+  if (!Object.prototype.hasOwnProperty.call(payload, 'title')) {
+    return invalid('workspace.title.set payload.title is required.');
+  }
+
+  if (typeof payload.title !== 'string') {
+    return invalid('workspace.title.set payload.title must be a string.');
+  }
+
+  return valid();
 }
 
 function validateBoardCreatePayload(payload) {

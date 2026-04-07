@@ -1998,6 +1998,71 @@ test('POST /api/workspace/commands applies a valid runtime command for the authe
   assert.equal(workspaceRecordRepository.replaceRecordCalls[0].record.commandReceipts[0].clientMutationId, 'm1');
 });
 
+test('POST /api/workspace/commands applies workspace.title.set through the command pipeline for super admins', async () => {
+  const existingRecord = createHomeWorkspaceRecordFixture({
+    viewerSub: 'sub_admin',
+    workspaceTitle: 'Old workspace title'
+  });
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([existingRecord]);
+  const app = createTestApp({
+    env: {
+      SUPER_ADMINS: 'admin@example.com'
+    },
+    googleTokenVerifier: async () => ({ sub: 'sub_admin', email: 'admin@example.com' }),
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .post('/api/workspace/commands')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_admin', email: 'admin@example.com', name: 'Admin' }))
+    .send({
+      command: {
+        clientMutationId: 'workspace_title_command_1',
+        type: 'workspace.title.set',
+        payload: {
+          title: '  Studio HQ  '
+        }
+      },
+      expectedRevision: existingRecord.revision
+    });
+
+  assert.equal(response.status, 200);
+  assert.equal(response.body.workspace.title, 'Studio HQ');
+  assert.equal(response.body.activeWorkspace.workspaceTitle, 'Studio HQ');
+  assert.deepEqual(response.body.result, {
+    clientMutationId: 'workspace_title_command_1',
+    type: 'workspace.title.set',
+    noOp: false,
+    workspaceId: existingRecord.workspaceId,
+    workspaceTitle: 'Studio HQ'
+  });
+  assert.equal(response.body.meta.revision, existingRecord.revision + 1);
+  assert.equal(workspaceRecordRepository.replaceRecordCalls.length, 1);
+  assert.equal(
+    workspaceRecordRepository.replaceRecordCalls[0].record.commandReceipts.at(-1)?.commandType,
+    'workspace.title.set'
+  );
+  assert.deepEqual(workspaceRecordRepository.replaceRecordCalls[0].record.activityEvents.at(-1), {
+    id: workspaceRecordRepository.replaceRecordCalls[0].record.activityEvents.at(-1).id,
+    type: 'workspace.title.updated',
+    actor: {
+      type: 'human',
+      id: 'sub_admin'
+    },
+    createdAt: workspaceRecordRepository.replaceRecordCalls[0].record.activityEvents.at(-1).createdAt,
+    revision: existingRecord.revision + 1,
+    entity: {
+      kind: 'workspace',
+      boardId: null,
+      cardId: null
+    },
+    details: {
+      workspaceId: existingRecord.workspaceId,
+      workspaceTitle: 'Studio HQ'
+    }
+  });
+});
+
 test('POST /api/workspace/commands persists locale review activity for viewer verification requests', async () => {
   const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_review_request', {
     memberRole: 'viewer',

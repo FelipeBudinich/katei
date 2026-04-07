@@ -21,7 +21,8 @@ import {
 import {
   WorkspaceAccessDeniedError,
   WorkspaceImportConflictError,
-  WorkspaceRevisionConflictError
+  WorkspaceRevisionConflictError,
+  WorkspaceTitleManagementPermissionError
 } from '../src/workspaces/workspace_record_repository.js';
 
 test('loadOrCreateWorkspaceRecord creates an empty record on first access', async () => {
@@ -245,6 +246,134 @@ test('loadOrCreateAuthoritativeWorkspaceRecord preserves the full stored shared 
   assert.equal(record.workspace.ui.activeBoardId, 'main');
   assert.equal(firstCardTitle(record.workspace.boards.main), 'Owner board card');
   assert.equal(firstCardTitle(record.workspace.boards.invite), 'Invite board card');
+});
+
+test('loadOrCreateAuthoritativeWorkspaceRecord still rejects inaccessible shared workspaces by workspaceId', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_authoritative_blocked');
+  const collection = createWorkspaceRecordCollectionDouble([toWorkspaceRecordDocument(sharedRecord)]);
+  const repository = new MongoWorkspaceRecordRepository({ collection });
+
+  await assert.rejects(
+    repository.loadOrCreateAuthoritativeWorkspaceRecord({
+      viewerSub: 'sub_blocked',
+      workspaceId: 'workspace_shared_authoritative_blocked'
+    }),
+    WorkspaceAccessDeniedError
+  );
+});
+
+test('loadWorkspaceRecordForSuperAdminTitleManagement loads an existing workspace by workspaceId for super admins', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_title_admin');
+  const collection = createWorkspaceRecordCollectionDouble([toWorkspaceRecordDocument(sharedRecord)]);
+  const repository = new MongoWorkspaceRecordRepository({ collection });
+
+  const record = await repository.loadWorkspaceRecordForSuperAdminTitleManagement({
+    viewerIsSuperAdmin: true,
+    workspaceId: 'workspace_shared_title_admin'
+  });
+
+  assert.equal(record.workspaceId, 'workspace_shared_title_admin');
+  assert.deepEqual(record.workspace.boardOrder, ['main', 'member', 'invite']);
+  assert.equal(record.workspace.ui.activeBoardId, 'main');
+  assert.equal(firstCardTitle(record.workspace.boards.main), 'Owner board card');
+});
+
+test('loadWorkspaceRecordForSuperAdminTitleManagement rejects non-super-admin callers', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_title_forbidden');
+  const collection = createWorkspaceRecordCollectionDouble([toWorkspaceRecordDocument(sharedRecord)]);
+  const repository = new MongoWorkspaceRecordRepository({ collection });
+
+  await assert.rejects(
+    repository.loadWorkspaceRecordForSuperAdminTitleManagement({
+      viewerIsSuperAdmin: false,
+      workspaceId: 'workspace_shared_title_forbidden'
+    }),
+    WorkspaceTitleManagementPermissionError
+  );
+});
+
+test('loadWorkspaceRecordForSuperAdminTitleManagement returns not found when the workspace does not exist', async () => {
+  const repository = new MongoWorkspaceRecordRepository({
+    collection: createWorkspaceRecordCollectionDouble()
+  });
+
+  await assert.rejects(
+    repository.loadWorkspaceRecordForSuperAdminTitleManagement({
+      viewerIsSuperAdmin: true,
+      workspaceId: 'workspace_missing_title_admin'
+    }),
+    WorkspaceAccessDeniedError
+  );
+});
+
+test('saveWorkspaceTitleForSuperAdmin trims titles, clears blank titles, and persists revisions for admin title management', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_title_save');
+  const collection = createWorkspaceRecordCollectionDouble([toWorkspaceRecordDocument(sharedRecord)]);
+  const repository = new MongoWorkspaceRecordRepository({
+    collection,
+    now: () => '2026-04-01T12:00:00.000Z',
+    createActivityEventId: () => 'activity_workspace_title_updated'
+  });
+
+  const updatedRecord = await repository.saveWorkspaceTitleForSuperAdmin({
+    viewerIsSuperAdmin: true,
+    workspaceId: 'workspace_shared_title_save',
+    title: '  Studio workspace  ',
+    actor: { type: 'human', id: 'sub_super_admin' },
+    expectedRevision: sharedRecord.revision
+  });
+
+  assert.equal(updatedRecord.workspace.title, 'Studio workspace');
+  assert.equal(updatedRecord.revision, sharedRecord.revision + 1);
+  assert.equal(updatedRecord.updatedAt, '2026-04-01T12:00:00.000Z');
+  assert.equal(updatedRecord.lastChangedBy, 'sub_super_admin');
+  assert.equal(updatedRecord.activityEvents.at(-1)?.type, 'workspace.title.updated');
+  assert.equal(collection.getDocument('workspace_shared_title_save').workspace.title, 'Studio workspace');
+
+  const clearedRecord = await repository.saveWorkspaceTitleForSuperAdmin({
+    viewerIsSuperAdmin: true,
+    workspaceId: 'workspace_shared_title_save',
+    title: '   ',
+    actor: { type: 'human', id: 'sub_super_admin' },
+    expectedRevision: updatedRecord.revision
+  });
+
+  assert.equal(Object.hasOwn(clearedRecord.workspace, 'title'), false);
+  assert.equal(Object.hasOwn(collection.getDocument('workspace_shared_title_save').workspace, 'title'), false);
+});
+
+test('saveWorkspaceTitleForSuperAdmin rejects stale revisions', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_title_conflict');
+  const collection = createWorkspaceRecordCollectionDouble([toWorkspaceRecordDocument(sharedRecord)]);
+  const repository = new MongoWorkspaceRecordRepository({ collection });
+
+  await assert.rejects(
+    repository.saveWorkspaceTitleForSuperAdmin({
+      viewerIsSuperAdmin: true,
+      workspaceId: 'workspace_shared_title_conflict',
+      title: 'Renamed by admin',
+      actor: { type: 'human', id: 'sub_super_admin' },
+      expectedRevision: sharedRecord.revision - 1
+    }),
+    WorkspaceRevisionConflictError
+  );
+});
+
+test('saveWorkspaceTitleForSuperAdmin rejects non-super-admin callers', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_title_save_forbidden');
+  const collection = createWorkspaceRecordCollectionDouble([toWorkspaceRecordDocument(sharedRecord)]);
+  const repository = new MongoWorkspaceRecordRepository({ collection });
+
+  await assert.rejects(
+    repository.saveWorkspaceTitleForSuperAdmin({
+      viewerIsSuperAdmin: false,
+      workspaceId: 'workspace_shared_title_save_forbidden',
+      title: 'Forbidden update',
+      actor: { type: 'human', id: 'sub_not_admin' },
+      expectedRevision: sharedRecord.revision
+    }),
+    WorkspaceTitleManagementPermissionError
+  );
 });
 
 test('loadOrCreateAuthoritativeWorkspaceRecord keeps encrypted board AI secrets for the owner home workspace', async () => {

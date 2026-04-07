@@ -11,6 +11,7 @@ import {
 } from '../public/js/domain/workspace_commands.js';
 
 test('isWorkspaceCommandType accepts known command types and rejects unknown ones', () => {
+  assert.equal(isWorkspaceCommandType('workspace.title.set'), true);
   assert.equal(isWorkspaceCommandType('board.create'), true);
   assert.equal(isWorkspaceCommandType('board.update'), true);
   assert.equal(isWorkspaceCommandType('board.invite.create'), true);
@@ -28,6 +29,11 @@ test('isWorkspaceCommandType accepts known command types and rejects unknown one
 
 test('validateWorkspaceCommand accepts valid command envelopes', () => {
   const commands = [
+    {
+      clientMutationId: 'm0',
+      type: 'workspace.title.set',
+      payload: { title: '  Studio workspace  ' }
+    },
     {
       clientMutationId: 'm1',
       type: 'board.create',
@@ -584,6 +590,26 @@ test('validateWorkspaceCommand rejects invalid payloads', () => {
   assert.equal(
     validateWorkspaceCommand({
       clientMutationId: 'm1',
+      type: 'workspace.title.set',
+      payload: {}
+    }),
+    false
+  );
+
+  assert.equal(
+    validateWorkspaceCommand({
+      clientMutationId: 'm1b',
+      type: 'workspace.title.set',
+      payload: {
+        title: null
+      }
+    }),
+    false
+  );
+
+  assert.equal(
+    validateWorkspaceCommand({
+      clientMutationId: 'm2',
       type: 'board.create',
       payload: { title: '   ' }
     }),
@@ -592,7 +618,7 @@ test('validateWorkspaceCommand rejects invalid payloads', () => {
 
   assert.equal(
     validateWorkspaceCommand({
-      clientMutationId: 'm2',
+      clientMutationId: 'm3',
       type: 'card.create',
       payload: {
         boardId: 'main',
@@ -604,7 +630,7 @@ test('validateWorkspaceCommand rejects invalid payloads', () => {
 
   assert.equal(
     validateWorkspaceCommand({
-      clientMutationId: 'm3',
+      clientMutationId: 'm4',
       type: 'card.move',
       payload: {
         boardId: 'main',
@@ -617,7 +643,7 @@ test('validateWorkspaceCommand rejects invalid payloads', () => {
 
   assert.equal(
     validateWorkspaceCommand({
-      clientMutationId: 'm4',
+      clientMutationId: 'm5',
       type: 'board.update',
       payload: {
         boardId: 'main',

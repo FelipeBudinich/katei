@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 export function createMutationContext({
   actor = null,
+  viewerIsSuperAdmin = false,
   now = new Date().toISOString(),
   createBoardId = createDefaultBoardId,
   createCardId = createDefaultCardId,
@@ -11,6 +12,7 @@ export function createMutationContext({
 } = {}) {
   return {
     actor: normalizeMutationActor(actor),
+    viewerIsSuperAdmin: normalizeOptionalBoolean(viewerIsSuperAdmin),
     now: normalizeIsoTimestamp(now, 'now'),
     createBoardId: normalizeFactory(createBoardId, 'createBoardId'),
     createCardId: normalizeFactory(createCardId, 'createCardId'),
@@ -25,11 +27,18 @@ export function createMutationContext({
 
 export function createDefaultMutationContext({
   actor = null,
+  viewerIsSuperAdmin = false,
   boardSecretEncryptionKey = null,
   debugLog = null,
   acceptDebugLog = null
 } = {}) {
-  return createMutationContext({ actor, boardSecretEncryptionKey, debugLog, acceptDebugLog });
+  return createMutationContext({
+    actor,
+    viewerIsSuperAdmin,
+    boardSecretEncryptionKey,
+    debugLog,
+    acceptDebugLog
+  });
 }
 
 export function createDefaultBoardId() {
@@ -143,4 +152,8 @@ function normalizeOptionalDebugLog(value) {
   }
 
   return value;
+}
+
+function normalizeOptionalBoolean(value) {
+  return value === true;
 }
