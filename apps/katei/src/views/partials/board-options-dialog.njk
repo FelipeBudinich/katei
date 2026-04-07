@@ -34,6 +34,78 @@
 
     {% if viewer.isSuperAdmin %}
       <section class="mt-6 space-y-3">
+        <p class="field-label text-sm font-semibold">{{ t('boardOptionsDialog.workspaceLabel') }}</p>
+        <div class="paper-panel px-4 py-4 space-y-4">
+          <div class="space-y-1">
+            <p class="text-base text-strong" data-board-options-target="workspaceSummary">
+              {{ workspace.title or workspace.workspaceId }}
+            </p>
+            <p class="text-xs uppercase tracking-[0.24em] text-subtle" data-board-options-target="workspaceMeta">
+              {{ t('boardOptionsDialog.workspaceIdSummary', { workspaceId: workspace.workspaceId }) }}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            class="touch-button-secondary"
+            data-board-options-field="workspaceTitleButton"
+            data-action="board-options#openRenameDialog"
+          >
+            {{ t('boardOptionsDialog.editWorkspaceTitle') }}
+          </button>
+
+          <section class="paper-panel px-4 py-4 space-y-5" hidden data-board-options-target="workspaceTitleEditor">
+            <div class="dialog-header-row">
+              <div>
+                <h3 class="font-serif text-2xl text-strong" data-board-options-target="workspaceTitleHeading">
+                  {{ t('portfolio.workspaceTitleEditor.assignHeading') }}
+                </h3>
+              </div>
+              <button
+                type="button"
+                class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--close"
+                aria-label="{{ t('common.close') }}"
+                data-action="board-options#closeRenameDialog"
+                data-board-options-target="workspaceTitleCloseButton"
+              >
+                <span class="sr-only">{{ t('common.close') }}</span>
+              </button>
+            </div>
+
+            <form class="space-y-5" data-action="submit->board-options#saveWorkspaceTitle">
+              <label class="block space-y-2">
+                <span class="field-label text-sm font-semibold">{{ t('portfolio.workspaceTitleEditor.fieldLabel') }}</span>
+                <input
+                  type="text"
+                  class="field-control"
+                  placeholder="{{ t('portfolio.workspaceTitleEditor.placeholder') }}"
+                  data-action="input->board-options#handleTitleInput"
+                  data-board-options-target="workspaceTitleInput"
+                >
+              </label>
+
+              <p class="text-xs leading-5 text-muted">{{ t('portfolio.workspaceTitleEditor.help') }}</p>
+              <p class="portfolio-dialog-status text-sm" hidden data-board-options-target="workspaceTitleError"></p>
+
+              <div class="dialog-actions board-options-actions">
+                <button
+                  type="button"
+                  class="touch-button-secondary"
+                  data-action="board-options#closeRenameDialog"
+                  data-board-options-target="workspaceTitleCancelButton"
+                >
+                  {{ t('common.cancel') }}
+                </button>
+                <button type="submit" class="touch-button-primary" data-board-options-target="workspaceTitleSaveButton">
+                  {{ t('common.save') }}
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      </section>
+
+      <section class="mt-6 space-y-3">
         <p class="field-label text-sm font-semibold">{{ t('boardOptionsDialog.portfolioLabel') }}</p>
         <div class="paper-panel px-4 py-4">
           <button

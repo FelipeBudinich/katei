@@ -868,6 +868,7 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
   assert.match(response.text, /Logout/);
   assert.match(response.text, /Tester/);
   assert.match(response.text, /Roadmap alpha/);
+  assert.match(response.text, /data-workspace-target="workspaceLabel">\s*Operations HQ\s*</);
   assert.match(response.text, /Ship launch checklist/);
   assert.match(response.text, /Owner: Mina/);
   assert.match(response.text, /data-card-field="preview"/);
@@ -949,6 +950,8 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
   assert.match(boardOptionsDialog, /board-options#createBoard/);
   assert.match(boardOptionsDialog, /board-options#openCollaborators/);
   assert.doesNotMatch(boardOptionsDialog, /board-options#openPortfolio/);
+  assert.doesNotMatch(boardOptionsDialog, /board-options#openRenameDialog/);
+  assert.doesNotMatch(boardOptionsDialog, /data-board-options-field="workspaceTitleButton"/);
   assert.match(boardOptionsDialog, /data-board-options-field="collaboratorsButton"/);
   assert.match(boardOptionsDialog, /data-board-options-field="collaboratorsButton"[\s\S]*?board-options#openCollaborators/);
   assert.match(
@@ -1172,7 +1175,15 @@ test('GET /boards renders the Portfolio action in board options for super admins
 
   assert.equal(response.status, 200);
   assert.match(response.text, /data-workspace-viewer-super-admin-value="true"/);
+  assert.match(
+    response.text,
+    new RegExp(`data-workspace-target="workspaceLabel">\\s*${escapeForRegex(createHomeWorkspaceId('sub_123'))}\\s*<`)
+  );
   assert.match(response.text, /board-options:open-portfolio->workspace#openPortfolio/);
+  assert.match(boardOptionsDialog, /data-board-options-field="workspaceTitleButton"/);
+  assert.match(boardOptionsDialog, /board-options#openRenameDialog/);
+  assert.match(boardOptionsDialog, /data-board-options-target="workspaceTitleEditor"/);
+  assert.match(boardOptionsDialog, />\s*Edit workspace title\s*</);
   assert.match(boardOptionsDialog, /data-board-options-field="portfolioButton"/);
   assert.match(boardOptionsDialog, /board-options#openPortfolio/);
   assert.match(boardOptionsDialog, />\s*Open portfolio\s*</);

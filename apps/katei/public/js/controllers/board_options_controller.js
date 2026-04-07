@@ -1,5 +1,6 @@
 import { Controller } from '../../vendor/stimulus/stimulus.js';
 import { getBrowserTranslator } from '../i18n/browser.js';
+import { localizeErrorMessage } from '../i18n/errors.js';
 import { logInviteDebug } from '../lib/invite_debug.js';
 import { createInviteDecisionDetail } from './board_collaborators_actions.js';
 import {
@@ -14,6 +15,15 @@ export default class extends Controller {
     'summary',
     'roleSummary',
     'pendingSummary',
+    'workspaceSummary',
+    'workspaceMeta',
+    'workspaceTitleEditor',
+    'workspaceTitleHeading',
+    'workspaceTitleInput',
+    'workspaceTitleError',
+    'workspaceTitleSaveButton',
+    'workspaceTitleCancelButton',
+    'workspaceTitleCloseButton',
     'boardList',
     'workspaceSectionTemplate',
     'boardItemTemplate',
@@ -32,17 +42,24 @@ export default class extends Controller {
     this.activeWorkspaceIsHome = false;
     this.isSuperAdmin = false;
     this.accessibleWorkspaces = [];
+    this.workspaceService = null;
     this.restoreFocusElement = null;
+    this.workspaceTitleRestoreFocusElement = null;
+    this.currentWorkspaceTitleEditorId = null;
+    this.isSubmittingWorkspaceTitle = false;
+    this.resetWorkspaceTitleEditorState();
   }
 
   openFromEvent(event) {
     this.restoreFocusElement = event.detail?.triggerElement ?? null;
+    this.closeRenameDialog(null, { restoreFocus: false });
     this.syncWorkspace(event.detail?.workspace, event.detail?.viewerActor, {
       pendingWorkspaceInvites: event.detail?.pendingWorkspaceInvites,
       activeWorkspaceId: event.detail?.activeWorkspaceId,
       activeWorkspaceIsHome: event.detail?.activeWorkspaceIsHome,
       isSuperAdmin: event.detail?.isSuperAdmin,
-      accessibleWorkspaces: event.detail?.accessibleWorkspaces
+      accessibleWorkspaces: event.detail?.accessibleWorkspaces,
+      workspaceService: event.detail?.workspaceService
     });
 
     if (!this.dialogTarget.open) {
@@ -60,7 +77,8 @@ export default class extends Controller {
       activeWorkspaceId: event.detail?.activeWorkspaceId,
       activeWorkspaceIsHome: event.detail?.activeWorkspaceIsHome,
       isSuperAdmin: event.detail?.isSuperAdmin,
-      accessibleWorkspaces: event.detail?.accessibleWorkspaces
+      accessibleWorkspaces: event.detail?.accessibleWorkspaces,
+      workspaceService: event.detail?.workspaceService
     });
   }
 
@@ -73,6 +91,10 @@ export default class extends Controller {
   close(event) {
     if (event) {
       event.preventDefault();
+    }
+
+    if (this.isSubmittingWorkspaceTitle) {
+      return;
     }
 
     this.closeDialog();
@@ -131,6 +153,103 @@ export default class extends Controller {
     this.closeDialog({ restoreFocus: false });
   }
 
+  openRenameDialog(event) {
+    if (event) {
+      event.preventDefault();
+    }
+
+    if (!this.canManageWorkspaceTitles() || !this.hasWorkspaceTitleEditorTarget || !this.hasWorkspaceTitleInputTarget) {
+      return;
+    }
+
+    const workspaceId = normalizeOptionalWorkspaceId(this.workspace?.workspaceId) ?? this.activeWorkspaceId;
+
+    if (!workspaceId) {
+      return;
+    }
+
+    const workspaceTitle = normalizeOptionalString(this.workspace?.title);
+
+    this.workspaceTitleRestoreFocusElement = event?.currentTarget ?? null;
+    this.currentWorkspaceTitleEditorId = workspaceId;
+    this.resetWorkspaceTitleEditorState();
+    this.workspaceTitleHeadingTarget.textContent = this.t(
+      workspaceTitle
+        ? 'portfolio.workspaceTitleEditor.editHeading'
+        : 'portfolio.workspaceTitleEditor.assignHeading'
+    );
+    this.workspaceTitleInputTarget.value = workspaceTitle;
+    this.workspaceTitleEditorTarget.hidden = false;
+    this.focusWorkspaceTitleInput();
+  }
+
+  closeRenameDialog(event, { restoreFocus = true, force = false } = {}) {
+    if (event) {
+      event.preventDefault();
+    }
+
+    if (this.isSubmittingWorkspaceTitle && force !== true) {
+      return;
+    }
+
+    const restoreFocusElement = this.workspaceTitleRestoreFocusElement;
+
+    if (this.hasWorkspaceTitleEditorTarget) {
+      this.workspaceTitleEditorTarget.hidden = true;
+    }
+
+    this.workspaceTitleRestoreFocusElement = null;
+    this.currentWorkspaceTitleEditorId = null;
+    this.resetWorkspaceTitleEditorState();
+
+    if (restoreFocus && restoreFocusElement?.isConnected) {
+      restoreFocusElement.focus();
+    }
+  }
+
+  handleTitleInput() {
+    this.hideWorkspaceTitleError();
+  }
+
+  async saveWorkspaceTitle(event) {
+    if (event) {
+      event.preventDefault();
+    }
+
+    if (
+      !this.canManageWorkspaceTitles()
+      || !this.currentWorkspaceTitleEditorId
+      || this.isSubmittingWorkspaceTitle
+    ) {
+      return;
+    }
+
+    this.hideWorkspaceTitleError();
+    this.setWorkspaceTitleSubmittingState(true);
+
+    try {
+      const result = await this.workspaceService.setWorkspaceTitle(
+        this.currentWorkspaceTitleEditorId,
+        this.workspaceTitleInputTarget.value
+      );
+
+      const nextWorkspace = isPlainObject(result?.workspace) ? result.workspace : this.workspace;
+
+      this.syncWorkspace(nextWorkspace, this.viewerActor, this.getWorkspaceSyncOptions({
+        workspaceService: this.workspaceService
+      }));
+      this.closeRenameDialog(null, { restoreFocus: true, force: true });
+      this.dispatch('workspace-title-updated', {
+        detail: result
+      });
+    } catch (error) {
+      console.error(error);
+      this.showWorkspaceTitleError(localizeErrorMessage(error, this.t));
+    } finally {
+      this.setWorkspaceTitleSubmittingState(false);
+    }
+  }
+
   switchBoard(event) {
     const boardId = event.currentTarget.dataset.boardId;
     const workspaceId = normalizeOptionalWorkspaceId(event.currentTarget.dataset.workspaceId)
@@ -177,7 +296,8 @@ export default class extends Controller {
       activeWorkspaceId = this.activeWorkspaceId,
       activeWorkspaceIsHome = this.activeWorkspaceIsHome,
       isSuperAdmin = this.isSuperAdmin,
-      accessibleWorkspaces = this.accessibleWorkspaces
+      accessibleWorkspaces = this.accessibleWorkspaces,
+      workspaceService = this.workspaceService
     } = {}
   ) {
     if (!workspace) {
@@ -191,6 +311,7 @@ export default class extends Controller {
     this.activeWorkspaceIsHome = activeWorkspaceIsHome === true;
     this.isSuperAdmin = isSuperAdmin === true;
     this.accessibleWorkspaces = Array.isArray(accessibleWorkspaces) ? accessibleWorkspaces : [];
+    this.workspaceService = workspaceService ?? this.workspaceService;
     this.optionsState = createBoardOptionsState(this.workspace, this.viewerActor, {
       pendingWorkspaceInvites: this.pendingWorkspaceInvites,
       activeWorkspaceId: this.activeWorkspaceId,
@@ -206,6 +327,8 @@ export default class extends Controller {
     if (!this.workspace) {
       return;
     }
+
+    this.renderWorkspaceSummary();
 
     if (!this.activeBoard || !activeBoardState) {
       this.summaryTarget.textContent = this.t('boardOptionsDialog.noVisibleBoards');
@@ -228,6 +351,18 @@ export default class extends Controller {
 
     this.boardListTarget.replaceChildren(...this.createWorkspaceSectionItems());
     this.renderPendingWorkspaceInvites();
+  }
+
+  renderWorkspaceSummary() {
+    if (this.hasWorkspaceSummaryTarget) {
+      this.workspaceSummaryTarget.textContent = getCurrentWorkspaceLabel(this.workspace, this.activeWorkspaceId);
+    }
+
+    if (this.hasWorkspaceMetaTarget) {
+      this.workspaceMetaTarget.textContent = this.t('boardOptionsDialog.workspaceIdSummary', {
+        workspaceId: normalizeOptionalWorkspaceId(this.workspace?.workspaceId) ?? this.activeWorkspaceId ?? ''
+      });
+    }
   }
 
   createWorkspaceSectionItems() {
@@ -362,6 +497,8 @@ export default class extends Controller {
   }
 
   closeDialog({ restoreFocus = true } = {}) {
+    this.closeRenameDialog(null, { restoreFocus: false });
+
     if (this.dialogTarget.open) {
       this.dialogTarget.close();
     }
@@ -371,6 +508,106 @@ export default class extends Controller {
     }
 
     this.restoreFocusElement = null;
+  }
+
+  canManageWorkspaceTitles() {
+    return this.isSuperAdmin === true && this.workspaceService && typeof this.workspaceService.setWorkspaceTitle === 'function';
+  }
+
+  getWorkspaceSyncOptions({ workspaceService = this.workspaceService } = {}) {
+    return {
+      pendingWorkspaceInvites:
+        typeof workspaceService?.getPendingWorkspaceInvites === 'function'
+          ? workspaceService.getPendingWorkspaceInvites()
+          : this.pendingWorkspaceInvites,
+      activeWorkspaceId:
+        typeof workspaceService?.getActiveWorkspaceId === 'function'
+          ? workspaceService.getActiveWorkspaceId()
+          : this.activeWorkspaceId,
+      activeWorkspaceIsHome:
+        typeof workspaceService?.getIsHomeWorkspace === 'function'
+          ? workspaceService.getIsHomeWorkspace()
+          : this.activeWorkspaceIsHome,
+      isSuperAdmin: this.isSuperAdmin,
+      accessibleWorkspaces:
+        typeof workspaceService?.getAccessibleWorkspaces === 'function'
+          ? workspaceService.getAccessibleWorkspaces()
+          : this.accessibleWorkspaces,
+      workspaceService
+    };
+  }
+
+  focusWorkspaceTitleInput() {
+    this.workspaceTitleInputTarget.focus();
+  }
+
+  resetWorkspaceTitleEditorState() {
+    this.hideWorkspaceTitleError();
+
+    if (this.hasWorkspaceTitleHeadingTarget) {
+      this.workspaceTitleHeadingTarget.textContent = this.t('portfolio.workspaceTitleEditor.assignHeading');
+    }
+
+    if (this.hasWorkspaceTitleInputTarget) {
+      this.workspaceTitleInputTarget.value = '';
+      this.workspaceTitleInputTarget.disabled = false;
+    }
+
+    if (this.hasWorkspaceTitleSaveButtonTarget) {
+      this.workspaceTitleSaveButtonTarget.disabled = false;
+      this.workspaceTitleSaveButtonTarget.textContent = this.t('common.save');
+    }
+
+    if (this.hasWorkspaceTitleCancelButtonTarget) {
+      this.workspaceTitleCancelButtonTarget.disabled = false;
+    }
+
+    if (this.hasWorkspaceTitleCloseButtonTarget) {
+      this.workspaceTitleCloseButtonTarget.disabled = false;
+    }
+
+    this.isSubmittingWorkspaceTitle = false;
+  }
+
+  setWorkspaceTitleSubmittingState(isSubmitting) {
+    this.isSubmittingWorkspaceTitle = isSubmitting === true;
+
+    if (this.hasWorkspaceTitleInputTarget) {
+      this.workspaceTitleInputTarget.disabled = this.isSubmittingWorkspaceTitle;
+    }
+
+    if (this.hasWorkspaceTitleSaveButtonTarget) {
+      this.workspaceTitleSaveButtonTarget.disabled = this.isSubmittingWorkspaceTitle;
+      this.workspaceTitleSaveButtonTarget.textContent = this.t(
+        this.isSubmittingWorkspaceTitle ? 'portfolio.workspaceTitleEditor.savingAction' : 'common.save'
+      );
+    }
+
+    if (this.hasWorkspaceTitleCancelButtonTarget) {
+      this.workspaceTitleCancelButtonTarget.disabled = this.isSubmittingWorkspaceTitle;
+    }
+
+    if (this.hasWorkspaceTitleCloseButtonTarget) {
+      this.workspaceTitleCloseButtonTarget.disabled = this.isSubmittingWorkspaceTitle;
+    }
+  }
+
+  showWorkspaceTitleError(message) {
+    if (!this.hasWorkspaceTitleErrorTarget) {
+      return;
+    }
+
+    this.workspaceTitleErrorTarget.hidden = false;
+    this.workspaceTitleErrorTarget.textContent = message;
+  }
+
+  hideWorkspaceTitleError() {
+    if (!this.hasWorkspaceTitleErrorTarget) {
+      return;
+    }
+
+    this.workspaceTitleErrorTarget.hidden = true;
+    this.workspaceTitleErrorTarget.textContent = '';
   }
 }
 
@@ -387,9 +624,18 @@ function getWorkspaceLabel(section, t) {
     return workspaceTitle;
   }
 
-  return section?.isHomeWorkspace === true
-    ? t('boardOptionsDialog.homeWorkspaceLabel')
-    : normalizeOptionalString(section?.workspaceId);
+  return normalizeOptionalString(section?.workspaceId);
+}
+
+function getCurrentWorkspaceLabel(workspace, activeWorkspaceId) {
+  return normalizeOptionalString(workspace?.title)
+    || normalizeOptionalWorkspaceId(workspace?.workspaceId)
+    || normalizeOptionalWorkspaceId(activeWorkspaceId)
+    || '';
+}
+
+function isPlainObject(value) {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
 function normalizeOptionalWorkspaceId(workspaceId) {

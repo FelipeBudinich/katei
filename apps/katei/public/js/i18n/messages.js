@@ -320,6 +320,9 @@ const EN_MESSAGES = freezeCatalog({
   boardOptionsDialog: {
     sectionLabel: 'Boards',
     heading: 'Board options',
+    workspaceLabel: 'Workspace',
+    editWorkspaceTitle: 'Edit workspace title',
+    workspaceIdSummary: 'Workspace ID: {workspaceId}',
     portfolioLabel: 'Portfolio',
     openPortfolio: 'Open portfolio',
     switchBoardLabel: 'Switch board',
@@ -915,6 +918,9 @@ const ES_CL_MESSAGES = freezeCatalog({
   boardOptionsDialog: {
     sectionLabel: 'Tableros',
     heading: 'Opciones del tablero',
+    workspaceLabel: 'Espacio',
+    editWorkspaceTitle: 'Editar titulo del espacio',
+    workspaceIdSummary: 'ID del espacio: {workspaceId}',
     portfolioLabel: 'Portafolio',
     openPortfolio: 'Abrir portafolio',
     switchBoardLabel: 'Cambiar tablero',
@@ -1511,6 +1517,9 @@ const JA_MESSAGES = freezeCatalog({
   boardOptionsDialog: {
     sectionLabel: 'ボード',
     heading: 'ボードオプション',
+    workspaceLabel: 'ワークスペース',
+    editWorkspaceTitle: 'ワークスペース名を編集',
+    workspaceIdSummary: 'ワークスペース ID: {workspaceId}',
     portfolioLabel: 'ポートフォリオ',
     openPortfolio: 'ポートフォリオを開く',
     switchBoardLabel: 'ボードを切り替える',

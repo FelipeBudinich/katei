@@ -19,6 +19,7 @@
     board-options:edit-board->workspace#openEditBoard
     board-options:reset-board->workspace#confirmResetBoard
     board-options:open-collaborators->workspace#openBoardCollaborators
+    board-options:workspace-title-updated->workspace#handleWorkspaceTitleUpdated
     {% if viewer.isSuperAdmin %}
       board-options:open-portfolio->workspace#openPortfolio
     {% endif %}
@@ -37,6 +38,9 @@
   {% else %}
     <header class="top-bar">
       <div class="top-bar-heading-group">
+        <p class="field-label text-sm font-semibold" data-workspace-target="workspaceLabel">
+          {{ workspace.title or workspace.workspaceId }}
+        </p>
         <h1 class="top-bar-title font-serif text-3xl leading-tight text-strong" data-workspace-target="boardTitle">
           {{ t('workspace.noVisibleBoardsTitle') }}
         </h1>

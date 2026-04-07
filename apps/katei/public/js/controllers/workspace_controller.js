@@ -41,6 +41,7 @@ export default class extends Controller {
   };
 
   static targets = [
+    'workspaceLabel',
     'boardTitle',
     'boardAccessNotice',
     'desktopColumns',
@@ -185,6 +186,28 @@ export default class extends Controller {
         triggerElement: event?.currentTarget ?? null
       })
     );
+  }
+
+  handleWorkspaceTitleUpdated(event) {
+    const nextWorkspace = event.detail?.workspace;
+    const nextWorkspaceId = normalizeOptionalWorkspaceId(nextWorkspace?.workspaceId ?? event.detail?.workspaceId);
+    const activeWorkspaceId = normalizeOptionalWorkspaceId(this.service?.getActiveWorkspaceId?.() ?? this.workspace?.workspaceId);
+
+    if (!nextWorkspaceId || (activeWorkspaceId && nextWorkspaceId !== activeWorkspaceId)) {
+      return;
+    }
+
+    if (nextWorkspace) {
+      this.workspace = nextWorkspace;
+    } else if (this.workspace && Object.prototype.hasOwnProperty.call(event.detail ?? {}, 'workspaceTitle')) {
+      this.workspace = {
+        ...this.workspace,
+        title: normalizeOptionalString(event.detail?.workspaceTitle) || null
+      };
+    }
+
+    this.render();
+    this.announce(this.t('portfolio.workspaceTitleEditor.savedStatus'));
   }
 
   openProfileOptions(event) {
@@ -1241,6 +1264,13 @@ export default class extends Controller {
       return;
     }
 
+    if (this.hasWorkspaceLabelTarget) {
+      this.workspaceLabelTarget.textContent = getCurrentWorkspaceLabel(
+        this.workspace,
+        this.service?.getActiveWorkspaceId?.()
+      );
+    }
+
     if (!this.activeBoard || !activeBoardState) {
       if (this.hasBoardAccessNoticeTarget) {
         this.boardAccessNoticeTarget.hidden = false;
@@ -1730,7 +1760,8 @@ export default class extends Controller {
       activeWorkspaceIsHome: this.service?.getIsHomeWorkspace?.() ?? false,
       isSuperAdmin: this.isSuperAdmin === true,
       pendingWorkspaceInvites: this.service?.getPendingWorkspaceInvites?.() ?? [],
-      accessibleWorkspaces: this.service?.getAccessibleWorkspaces?.() ?? []
+      accessibleWorkspaces: this.service?.getAccessibleWorkspaces?.() ?? [],
+      workspaceService: this.service ?? null
     };
 
     logInviteDebug('client.invite.state', {
@@ -2011,6 +2042,13 @@ function createColumnCollapseCacheKey(workspaceId, boardId) {
   const normalizedWorkspaceId = typeof workspaceId === 'string' && workspaceId.trim() ? workspaceId.trim() : '__workspace__';
   const normalizedBoardId = typeof boardId === 'string' && boardId.trim() ? boardId.trim() : '__board__';
   return `${normalizedWorkspaceId}::${normalizedBoardId}`;
+}
+
+function getCurrentWorkspaceLabel(workspace, activeWorkspaceId) {
+  return normalizeOptionalString(workspace?.title)
+    || normalizeOptionalWorkspaceId(workspace?.workspaceId)
+    || normalizeOptionalWorkspaceId(activeWorkspaceId)
+    || '';
 }
 
 function createLocaleOption(locale) {

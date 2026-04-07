@@ -241,7 +241,8 @@ test('workspace controller includes pendingWorkspaceInvites and activeWorkspaceI
         activeWorkspaceIsHome: true,
         isSuperAdmin: true,
         pendingWorkspaceInvites,
-        accessibleWorkspaces
+        accessibleWorkspaces,
+        workspaceService: controller.service
       }
     }
   ]);
@@ -328,9 +329,75 @@ test('workspace controller sync-board-options payload includes pendingWorkspaceI
       activeWorkspaceIsHome: true,
       isSuperAdmin: false,
       pendingWorkspaceInvites: controller.service.getPendingWorkspaceInvites(),
-      accessibleWorkspaces
+      accessibleWorkspaces,
+      workspaceService: controller.service
     }
   });
+});
+
+test('workspace controller refreshes the active workspace label after a board-options workspace title update', () => {
+  const viewerActor = createActor('viewer_1', 'viewer@example.com', 'Viewer');
+  const controller = Object.create(WorkspaceController.prototype);
+  const workspace = createViewerWorkspace('workspace_home', viewerActor);
+  const announcements = [];
+
+  workspace.boardOrder = [];
+  workspace.boards = {};
+  workspace.ui.activeBoardId = null;
+
+  controller.workspace = workspace;
+  controller.viewerActor = viewerActor;
+  controller.service = {
+    getActiveWorkspaceId() {
+      return 'workspace_home';
+    },
+    getIsHomeWorkspace() {
+      return true;
+    },
+    getPendingWorkspaceInvites() {
+      return [];
+    },
+    getAccessibleWorkspaces() {
+      return [];
+    }
+  };
+  controller.t = (key) => key === 'portfolio.workspaceTitleEditor.savedStatus' ? 'Workspace title saved.' : key;
+  controller.announce = (message) => announcements.push(message);
+  controller.hasWorkspaceLabelTarget = true;
+  controller.workspaceLabelTarget = {
+    textContent: ''
+  };
+  controller.hasBoardAccessNoticeTarget = true;
+  controller.boardAccessNoticeTarget = {
+    hidden: true,
+    textContent: ''
+  };
+  controller.hasBoardTitleTarget = true;
+  controller.boardTitleTarget = {
+    textContent: ''
+  };
+  controller.hasDesktopColumnsTarget = true;
+  controller.desktopColumnsTarget = {
+    hidden: false,
+    replaceChildren() {}
+  };
+  controller.dispatchWorkspaceEvent = () => {};
+  controller.syncOpenViewDialogState = () => {};
+  controller.syncWorkspaceHistory = () => {};
+
+  WorkspaceController.prototype.handleWorkspaceTitleUpdated.call(controller, {
+    detail: {
+      workspace: {
+        ...workspace,
+        title: 'Studio HQ'
+      },
+      workspaceId: 'workspace_home',
+      workspaceTitle: 'Studio HQ'
+    }
+  });
+
+  assert.equal(controller.workspaceLabelTarget.textContent, 'Studio HQ');
+  assert.deepEqual(announcements, ['Workspace title saved.']);
 });
 
 test('workspace controller openPortfolio navigates super admins to /portfolio', () => {
