@@ -659,6 +659,48 @@ test('listAccessibleWorkspacesForViewer excludes invite-only workspaces from the
   assert.deepEqual(accessibleWorkspaces, []);
 });
 
+test('listAccessibleWorkspacesForViewer picks up newly readable workspaces through normal board memberships', async () => {
+  const homeRecord = createHomeWorkspaceRecordFixture({
+    viewerSub: 'sub_super_admin',
+    workspaceTitle: 'Super admin home',
+    boardTitle: 'Home board'
+  });
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_self_role_visible', {
+    workspaceTitle: 'Visible after self role'
+  });
+  sharedRecord.workspace.boards.main.collaboration.memberships.push({
+    actor: { type: 'human', id: 'sub_super_admin', email: 'admin@example.com' },
+    role: 'viewer',
+    joinedAt: '2026-04-01T11:30:00.000Z'
+  });
+  const collection = createWorkspaceRecordCollectionDouble([
+    toWorkspaceRecordDocument(homeRecord),
+    toWorkspaceRecordDocument(sharedRecord)
+  ]);
+  const repository = new MongoWorkspaceRecordRepository({ collection });
+
+  const accessibleWorkspaces = await repository.listAccessibleWorkspacesForViewer({
+    viewerSub: 'sub_super_admin',
+    viewerEmail: 'admin@example.com',
+    excludeWorkspaceId: homeRecord.workspaceId
+  });
+
+  assert.deepEqual(accessibleWorkspaces, [
+    {
+      workspaceId: 'workspace_shared_self_role_visible',
+      workspaceTitle: 'Visible after self role',
+      isHomeWorkspace: false,
+      boards: [
+        {
+          boardId: 'main',
+          boardTitle: 'Owner board',
+          role: 'viewer'
+        }
+      ]
+    }
+  ]);
+});
+
 test('replaceWorkspaceSnapshot stores a validated full-workspace snapshot with metadata', async () => {
   const collection = createWorkspaceRecordCollectionDouble();
   const nowValues = ['2026-04-01T10:00:00.000Z', '2026-04-01T11:15:00.000Z'];

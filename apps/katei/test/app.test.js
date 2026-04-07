@@ -2433,6 +2433,89 @@ test('POST /api/workspace/commands applies board.self.role.set through the dedic
   );
 });
 
+test('board.self.role.set makes the workspace appear in normal accessible-workspace reads and board bootstraps', async () => {
+  const homeRecord = createHomeWorkspaceRecordFixture({
+    viewerSub: 'sub_admin',
+    workspaceTitle: 'Admin home',
+    boardTitle: 'Home board'
+  });
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_self_role_followup', {
+    workspaceTitle: 'Shared studio',
+    includeInvite: false
+  });
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([
+    homeRecord,
+    sharedRecord
+  ]);
+  const app = createTestApp({
+    env: {
+      SUPER_ADMINS: 'admin@example.com'
+    },
+    googleTokenVerifier: async () => ({ sub: 'sub_admin', email: 'admin@example.com' }),
+    workspaceRecordRepository
+  });
+  const cookie = createSessionCookieHeader({ sub: 'sub_admin', email: 'admin@example.com', name: 'Admin' });
+
+  const commandResponse = await request(app)
+    .post('/api/workspace/commands')
+    .set('Cookie', cookie)
+    .send({
+      workspaceId: sharedRecord.workspaceId,
+      command: {
+        clientMutationId: 'board_self_role_followup_1',
+        type: 'board.self.role.set',
+        payload: {
+          boardId: 'main',
+          role: 'viewer'
+        }
+      },
+      expectedRevision: sharedRecord.revision
+    });
+
+  const homeApiResponse = await request(app)
+    .get('/api/workspace')
+    .set('Cookie', cookie);
+  const boardsResponse = await request(app)
+    .get(`/boards?workspaceId=${sharedRecord.workspaceId}`)
+    .set('Cookie', cookie);
+  const bootstrapPayload = readWorkspaceBootstrapPayload(boardsResponse.text);
+
+  assert.equal(commandResponse.status, 200);
+  assert.equal(homeApiResponse.status, 200);
+  assert.equal(boardsResponse.status, 200);
+  assert.deepEqual(homeApiResponse.body.accessibleWorkspaces, [
+    {
+      workspaceId: sharedRecord.workspaceId,
+      workspaceTitle: 'Shared studio',
+      isHomeWorkspace: false,
+      boards: [
+        {
+          boardId: 'main',
+          boardTitle: 'Owner board',
+          role: 'viewer'
+        }
+      ]
+    }
+  ]);
+  assert.equal(bootstrapPayload.activeWorkspace.workspaceId, sharedRecord.workspaceId);
+  assert.deepEqual(bootstrapPayload.workspace.boardOrder, ['main']);
+  assert.deepEqual(Object.keys(bootstrapPayload.workspace.boards), ['main']);
+  assert.deepEqual(bootstrapPayload.accessibleWorkspaces, [
+    {
+      workspaceId: homeRecord.workspaceId,
+      workspaceTitle: 'Admin home',
+      isHomeWorkspace: true,
+      boards: [
+        {
+          boardId: 'main',
+          boardTitle: 'Home board',
+          role: 'admin'
+        }
+      ]
+    }
+  ]);
+});
+
 test('POST /api/workspace/commands persists locale review activity for viewer verification requests', async () => {
   const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_review_request', {
     memberRole: 'viewer',
