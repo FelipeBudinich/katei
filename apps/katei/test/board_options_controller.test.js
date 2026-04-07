@@ -279,6 +279,63 @@ test('board options controller saves the active workspace title and refreshes th
   ]);
 });
 
+test('board options controller saves the active board self-role and refreshes the active board state', async () => {
+  const { workspace, viewerActor } = createAdminBoardOptionsFixture();
+  const controller = createBoardOptionsControllerDouble();
+  const dispatched = [];
+  const serviceCalls = [];
+  const updatedWorkspace = structuredClone(workspace);
+
+  setMembershipRole(updatedWorkspace.boards.main, viewerActor.id, 'viewer');
+  controller.dispatch = (name, options) => dispatched.push({ name, detail: options?.detail ?? null });
+  BoardOptionsController.prototype.syncWorkspace.call(controller, workspace, viewerActor, {
+    activeWorkspaceId: workspace.workspaceId,
+    isSuperAdmin: true,
+    workspaceService: createWorkspaceTitleServiceDouble({
+      workspaceId: workspace.workspaceId,
+      workspace,
+      selfRoleWorkspace: updatedWorkspace,
+      onSetBoardSelfRole(call) {
+        serviceCalls.push(call);
+      }
+    })
+  });
+  controller.selfRoleSelectTarget.value = 'viewer';
+  BoardOptionsController.prototype.handleSelfRoleInput.call(controller);
+
+  await BoardOptionsController.prototype.saveBoardSelfRole.call(controller, {
+    preventDefault() {}
+  });
+
+  assert.deepEqual(serviceCalls, [
+    {
+      boardId: 'main',
+      role: 'viewer',
+      options: {
+        workspaceId: workspace.workspaceId
+      }
+    }
+  ]);
+  assert.equal(controller.selfRoleSectionTarget.hidden, false);
+  assert.equal(controller.roleSummaryTarget.textContent, 'Your access: Viewer');
+  assert.equal(controller.selfRoleSummaryTarget.textContent, 'Current role: Viewer');
+  assert.equal(controller.selfRoleSelectTarget.value, 'viewer');
+  assert.equal(controller.selfRoleSaveButtonTarget.disabled, true);
+  assert.equal(controller.selfRoleSaveButtonTarget.textContent, 'Save role');
+  assert.equal(flattenRenderedBoardRows(controller.boardListTarget)[0].fields.editButton.hidden, true);
+  assert.deepEqual(dispatched, [
+    {
+      name: 'board-self-role-updated',
+      detail: {
+        workspace: updatedWorkspace,
+        workspaceId: workspace.workspaceId,
+        boardId: 'main',
+        role: 'viewer'
+      }
+    }
+  ]);
+});
+
 test('board list action state keeps switch and invite responses mutually exclusive', () => {
   const { optionsState } = createSharedBoardOptionsFixture();
   const activeBoardActions = createBoardListActionState(optionsState.boardStates[0]);
@@ -729,6 +786,17 @@ function addMembership(board, actor, role) {
   });
 }
 
+function setMembershipRole(board, actorId, role) {
+  board.collaboration.memberships = board.collaboration.memberships.map((membership) => (
+    membership?.actor?.id === actorId
+      ? {
+          ...membership,
+          role
+        }
+      : membership
+  ));
+}
+
 function createInvite(id, email, role, invitedBy) {
   return {
     id,
@@ -914,6 +982,11 @@ function createBoardOptionsControllerDouble() {
   controller.workspaceTitleSaveButtonTarget = createButtonElement();
   controller.workspaceTitleCancelButtonTarget = createButtonElement();
   controller.workspaceTitleCloseButtonTarget = createButtonElement();
+  controller.selfRoleSectionTarget = createToggleTarget(true);
+  controller.selfRoleSummaryTarget = createTextTarget();
+  controller.selfRoleSelectTarget = createSelectElement();
+  controller.selfRoleErrorTarget = createTextTarget({ hidden: true });
+  controller.selfRoleSaveButtonTarget = createButtonElement();
   controller.boardListTarget = createListTarget();
   controller.workspaceSectionTemplateTarget = createTemplateDouble([
     'workspaceTitle',
@@ -953,8 +1026,14 @@ function createBoardOptionsControllerDouble() {
   controller.hasWorkspaceTitleSaveButtonTarget = true;
   controller.hasWorkspaceTitleCancelButtonTarget = true;
   controller.hasWorkspaceTitleCloseButtonTarget = true;
+  controller.hasSelfRoleSectionTarget = true;
+  controller.hasSelfRoleSummaryTarget = true;
+  controller.hasSelfRoleSelectTarget = true;
+  controller.hasSelfRoleErrorTarget = true;
+  controller.hasSelfRoleSaveButtonTarget = true;
 
   BoardOptionsController.prototype.resetWorkspaceTitleEditorState.call(controller);
+  BoardOptionsController.prototype.resetBoardSelfRoleEditorState.call(controller);
 
   return controller;
 }
@@ -1041,10 +1120,19 @@ function createInputTarget() {
   };
 }
 
+function createSelectElement(value = 'viewer') {
+  return {
+    disabled: false,
+    value
+  };
+}
+
 function createWorkspaceTitleServiceDouble({
   workspaceId,
   workspace,
-  onSetWorkspaceTitle = () => {}
+  selfRoleWorkspace = workspace,
+  onSetWorkspaceTitle = () => {},
+  onSetBoardSelfRole = () => {}
 }) {
   return {
     getActiveWorkspaceId() {
@@ -1066,6 +1154,10 @@ function createWorkspaceTitleServiceDouble({
         workspaceId: requestWorkspaceId,
         workspaceTitle: workspace.title
       };
+    },
+    async setBoardSelfRole(boardId, role, options) {
+      onSetBoardSelfRole({ boardId, role, options });
+      return structuredClone(selfRoleWorkspace);
     }
   };
 }

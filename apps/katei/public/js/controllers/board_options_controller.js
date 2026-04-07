@@ -1,4 +1,5 @@
 import { Controller } from '../../vendor/stimulus/stimulus.js';
+import { canonicalizeBoardRole } from '../domain/board_collaboration.js';
 import { getBrowserTranslator } from '../i18n/browser.js';
 import { localizeErrorMessage } from '../i18n/errors.js';
 import { logInviteDebug } from '../lib/invite_debug.js';
@@ -24,6 +25,11 @@ export default class extends Controller {
     'workspaceTitleSaveButton',
     'workspaceTitleCancelButton',
     'workspaceTitleCloseButton',
+    'selfRoleSection',
+    'selfRoleSummary',
+    'selfRoleSelect',
+    'selfRoleError',
+    'selfRoleSaveButton',
     'boardList',
     'workspaceSectionTemplate',
     'boardItemTemplate',
@@ -47,7 +53,9 @@ export default class extends Controller {
     this.workspaceTitleRestoreFocusElement = null;
     this.currentWorkspaceTitleEditorId = null;
     this.isSubmittingWorkspaceTitle = false;
+    this.isSubmittingBoardSelfRole = false;
     this.resetWorkspaceTitleEditorState();
+    this.resetBoardSelfRoleEditorState();
   }
 
   openFromEvent(event) {
@@ -93,7 +101,7 @@ export default class extends Controller {
       event.preventDefault();
     }
 
-    if (this.isSubmittingWorkspaceTitle) {
+    if (this.isSubmittingWorkspaceTitle || this.isSubmittingBoardSelfRole) {
       return;
     }
 
@@ -211,6 +219,11 @@ export default class extends Controller {
     this.hideWorkspaceTitleError();
   }
 
+  handleSelfRoleInput() {
+    this.hideBoardSelfRoleError();
+    this.syncBoardSelfRoleActionState();
+  }
+
   async saveWorkspaceTitle(event) {
     if (event) {
       event.preventDefault();
@@ -247,6 +260,56 @@ export default class extends Controller {
       this.showWorkspaceTitleError(localizeErrorMessage(error, this.t));
     } finally {
       this.setWorkspaceTitleSubmittingState(false);
+    }
+  }
+
+  async saveBoardSelfRole(event) {
+    if (event) {
+      event.preventDefault();
+    }
+
+    if (!this.canManageBoardSelfRoles() || this.isSubmittingBoardSelfRole || !this.activeBoard) {
+      return;
+    }
+
+    const currentRole = this.getActiveBoardSelfRole();
+    const requestedRole = canonicalizeBoardRole(this.selfRoleSelectTarget?.value);
+    const workspaceId = normalizeOptionalWorkspaceId(this.workspace?.workspaceId) ?? this.activeWorkspaceId;
+    const boardId = normalizeOptionalString(this.activeBoard?.id);
+
+    if (!workspaceId || !boardId || !requestedRole || !currentRole || requestedRole === currentRole) {
+      this.syncBoardSelfRoleActionState(currentRole);
+      return;
+    }
+
+    this.hideBoardSelfRoleError();
+    this.setBoardSelfRoleSubmittingState(true, currentRole);
+
+    try {
+      const result = await this.workspaceService.setBoardSelfRole(boardId, requestedRole, {
+        workspaceId
+      });
+      const nextWorkspace = isPlainObject(result) ? result : this.workspace;
+
+      this.syncWorkspace(nextWorkspace, this.viewerActor, this.getWorkspaceSyncOptions({
+        workspaceService: this.workspaceService
+      }));
+
+      const effectiveRole = this.getActiveBoardSelfRole() ?? requestedRole;
+
+      this.dispatch('board-self-role-updated', {
+        detail: {
+          workspace: nextWorkspace,
+          workspaceId,
+          boardId,
+          role: effectiveRole
+        }
+      });
+    } catch (error) {
+      console.error(error);
+      this.showBoardSelfRoleError(localizeErrorMessage(error, this.t));
+    } finally {
+      this.setBoardSelfRoleSubmittingState(false);
     }
   }
 
@@ -329,6 +392,7 @@ export default class extends Controller {
     }
 
     this.renderWorkspaceSummary();
+    this.renderBoardSelfRoleSection(activeBoardState);
 
     if (!this.activeBoard || !activeBoardState) {
       this.summaryTarget.textContent = this.t('boardOptionsDialog.noVisibleBoards');
@@ -363,6 +427,34 @@ export default class extends Controller {
         workspaceId: normalizeOptionalWorkspaceId(this.workspace?.workspaceId) ?? this.activeWorkspaceId ?? ''
       });
     }
+  }
+
+  renderBoardSelfRoleSection(activeBoardState) {
+    if (!this.hasSelfRoleSectionTarget) {
+      return;
+    }
+
+    const currentRole = canonicalizeBoardRole(activeBoardState?.currentRole);
+    const shouldShow = this.canManageBoardSelfRoles() && Boolean(this.activeBoard) && Boolean(currentRole);
+
+    this.selfRoleSectionTarget.hidden = !shouldShow;
+
+    if (!shouldShow) {
+      this.resetBoardSelfRoleEditorState();
+      return;
+    }
+
+    if (this.hasSelfRoleSummaryTarget) {
+      this.selfRoleSummaryTarget.textContent = this.t('collaborators.currentRoleValue', {
+        role: this.t(getBoardRoleTranslationKey(currentRole))
+      });
+    }
+
+    if (this.hasSelfRoleSelectTarget && this.isSubmittingBoardSelfRole !== true) {
+      this.selfRoleSelectTarget.value = currentRole;
+    }
+
+    this.syncBoardSelfRoleActionState(currentRole);
   }
 
   createWorkspaceSectionItems() {
@@ -514,6 +606,10 @@ export default class extends Controller {
     return this.isSuperAdmin === true && this.workspaceService && typeof this.workspaceService.setWorkspaceTitle === 'function';
   }
 
+  canManageBoardSelfRoles() {
+    return this.isSuperAdmin === true && this.workspaceService && typeof this.workspaceService.setBoardSelfRole === 'function';
+  }
+
   getWorkspaceSyncOptions({ workspaceService = this.workspaceService } = {}) {
     return {
       pendingWorkspaceInvites:
@@ -569,6 +665,25 @@ export default class extends Controller {
     this.isSubmittingWorkspaceTitle = false;
   }
 
+  resetBoardSelfRoleEditorState() {
+    if (this.hasSelfRoleSummaryTarget) {
+      this.selfRoleSummaryTarget.textContent = '';
+    }
+
+    if (this.hasSelfRoleSelectTarget) {
+      this.selfRoleSelectTarget.value = 'viewer';
+      this.selfRoleSelectTarget.disabled = true;
+    }
+
+    if (this.hasSelfRoleSaveButtonTarget) {
+      this.selfRoleSaveButtonTarget.disabled = true;
+      this.selfRoleSaveButtonTarget.textContent = this.t('boardOptionsDialog.saveSelfRole');
+    }
+
+    this.hideBoardSelfRoleError();
+    this.isSubmittingBoardSelfRole = false;
+  }
+
   setWorkspaceTitleSubmittingState(isSubmitting) {
     this.isSubmittingWorkspaceTitle = isSubmitting === true;
 
@@ -608,6 +723,56 @@ export default class extends Controller {
 
     this.workspaceTitleErrorTarget.hidden = true;
     this.workspaceTitleErrorTarget.textContent = '';
+  }
+
+  getActiveBoardSelfRole() {
+    return canonicalizeBoardRole(this.optionsState?.activeBoardState?.currentRole);
+  }
+
+  syncBoardSelfRoleActionState(currentRole = this.getActiveBoardSelfRole()) {
+    if (this.hasSelfRoleSelectTarget) {
+      this.selfRoleSelectTarget.disabled = this.isSubmittingBoardSelfRole === true;
+    }
+
+    if (!this.hasSelfRoleSaveButtonTarget) {
+      return;
+    }
+
+    const selectedRole = canonicalizeBoardRole(this.selfRoleSelectTarget?.value);
+
+    this.selfRoleSaveButtonTarget.disabled =
+      this.isSubmittingBoardSelfRole === true
+      || !selectedRole
+      || !currentRole
+      || selectedRole === currentRole;
+    this.selfRoleSaveButtonTarget.textContent = this.t(
+      this.isSubmittingBoardSelfRole === true
+        ? 'boardOptionsDialog.savingSelfRole'
+        : 'boardOptionsDialog.saveSelfRole'
+    );
+  }
+
+  setBoardSelfRoleSubmittingState(isSubmitting, currentRole = this.getActiveBoardSelfRole()) {
+    this.isSubmittingBoardSelfRole = isSubmitting === true;
+    this.syncBoardSelfRoleActionState(currentRole);
+  }
+
+  showBoardSelfRoleError(message) {
+    if (!this.hasSelfRoleErrorTarget) {
+      return;
+    }
+
+    this.selfRoleErrorTarget.hidden = false;
+    this.selfRoleErrorTarget.textContent = message;
+  }
+
+  hideBoardSelfRoleError() {
+    if (!this.hasSelfRoleErrorTarget) {
+      return;
+    }
+
+    this.selfRoleErrorTarget.hidden = true;
+    this.selfRoleErrorTarget.textContent = '';
   }
 }
 

@@ -10,7 +10,8 @@ import { renderBoardState } from '../renderers/board_renderer.js';
 import { WorkspaceService } from '../services/workspace_service.js';
 import {
   createWorkspaceViewerActor,
-  getBoardCollaborationState
+  getBoardCollaborationState,
+  getBoardRoleTranslationKey
 } from './board_collaboration_state.js';
 import {
   performWorkspaceCollaboratorAction,
@@ -208,6 +209,25 @@ export default class extends Controller {
 
     this.render();
     this.announce(this.t('portfolio.workspaceTitleEditor.savedStatus'));
+  }
+
+  handleBoardSelfRoleUpdated(event) {
+    const nextWorkspace = event.detail?.workspace;
+    const nextWorkspaceId = normalizeOptionalWorkspaceId(nextWorkspace?.workspaceId ?? event.detail?.workspaceId);
+    const activeWorkspaceId = normalizeOptionalWorkspaceId(this.service?.getActiveWorkspaceId?.() ?? this.workspace?.workspaceId);
+
+    if (!nextWorkspaceId || (activeWorkspaceId && nextWorkspaceId !== activeWorkspaceId) || !nextWorkspace) {
+      return;
+    }
+
+    this.workspace = nextWorkspace;
+    this.render();
+
+    const roleKey = this.activeBoardCollaborationState?.currentRole ?? event.detail?.role;
+
+    this.announce(this.t('boardOptionsDialog.selfRoleSavedStatus', {
+      role: this.t(getBoardRoleTranslationKey(roleKey))
+    }));
   }
 
   openProfileOptions(event) {

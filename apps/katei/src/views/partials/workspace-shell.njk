@@ -20,6 +20,7 @@
     board-options:reset-board->workspace#confirmResetBoard
     board-options:open-collaborators->workspace#openBoardCollaborators
     board-options:workspace-title-updated->workspace#handleWorkspaceTitleUpdated
+    board-options:board-self-role-updated->workspace#handleBoardSelfRoleUpdated
     {% if viewer.isSuperAdmin %}
       board-options:open-portfolio->workspace#openPortfolio
     {% endif %}

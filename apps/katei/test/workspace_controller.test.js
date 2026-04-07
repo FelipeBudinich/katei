@@ -400,6 +400,54 @@ test('workspace controller refreshes the active workspace label after a board-op
   assert.deepEqual(announcements, ['Workspace title saved.']);
 });
 
+test('workspace controller refreshes the active board permissions after a board-options self-role update', () => {
+  const adminActor = createActor('admin_1', 'admin@example.com', 'Admin');
+  const controller = Object.create(WorkspaceController.prototype);
+  const workspace = createEmptyWorkspace({
+    workspaceId: 'workspace_home',
+    creator: adminActor
+  });
+  const updatedWorkspace = structuredClone(workspace);
+  const announcements = [];
+  let renderCalls = 0;
+
+  updatedWorkspace.boards.main.collaboration.memberships = updatedWorkspace.boards.main.collaboration.memberships.map((membership) => (
+    membership?.actor?.id === adminActor.id
+      ? {
+          ...membership,
+          role: 'viewer'
+        }
+      : membership
+  ));
+
+  controller.workspace = workspace;
+  controller.viewerActor = adminActor;
+  controller.service = {
+    getActiveWorkspaceId() {
+      return 'workspace_home';
+    }
+  };
+  controller.t = createTranslator('en');
+  controller.render = () => {
+    renderCalls += 1;
+  };
+  controller.announce = (message) => announcements.push(message);
+
+  WorkspaceController.prototype.handleBoardSelfRoleUpdated.call(controller, {
+    detail: {
+      workspace: updatedWorkspace,
+      workspaceId: 'workspace_home',
+      boardId: 'main',
+      role: 'viewer'
+    }
+  });
+
+  assert.equal(renderCalls, 1);
+  assert.equal(controller.canAdminActiveBoard, false);
+  assert.equal(controller.canEditActiveBoard, false);
+  assert.deepEqual(announcements, ['Your role on this board is now Viewer.']);
+});
+
 test('workspace controller openPortfolio navigates super admins to /portfolio', () => {
   const controller = Object.create(WorkspaceController.prototype);
   const navigations = [];

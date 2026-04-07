@@ -105,6 +105,37 @@
         </div>
       </section>
 
+      <section class="mt-6 space-y-3" hidden data-board-options-target="selfRoleSection">
+        <p class="field-label text-sm font-semibold">{{ t('boardOptionsDialog.selfRoleLabel') }}</p>
+        <div class="paper-panel px-4 py-4">
+          <form class="space-y-4" data-action="change->board-options#handleSelfRoleInput submit->board-options#saveBoardSelfRole">
+            <div class="space-y-2">
+              <p class="text-sm leading-6 text-muted" data-board-options-target="selfRoleSummary">
+                {{ t('collaborators.currentRoleValue', { role: t('collaborators.roles.none') }) }}
+              </p>
+            </div>
+
+            <label class="block space-y-2">
+              <span class="field-label text-sm font-semibold">{{ t('boardOptionsDialog.selfRoleSelectLabel') }}</span>
+              <select class="field-control" data-board-options-target="selfRoleSelect">
+                <option value="viewer">{{ t('collaborators.roles.viewer') }}</option>
+                <option value="editor">{{ t('collaborators.roles.editor') }}</option>
+                <option value="admin">{{ t('collaborators.roles.admin') }}</option>
+              </select>
+            </label>
+
+            <p class="text-xs leading-5 text-muted">{{ t('boardOptionsDialog.selfRoleHelp') }}</p>
+            <p class="portfolio-dialog-status text-sm" hidden data-board-options-target="selfRoleError"></p>
+
+            <div class="dialog-actions board-options-actions">
+              <button type="submit" class="touch-button-primary" data-board-options-target="selfRoleSaveButton">
+                {{ t('boardOptionsDialog.saveSelfRole') }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+
       <section class="mt-6 space-y-3">
         <p class="field-label text-sm font-semibold">{{ t('boardOptionsDialog.portfolioLabel') }}</p>
         <div class="paper-panel px-4 py-4">
