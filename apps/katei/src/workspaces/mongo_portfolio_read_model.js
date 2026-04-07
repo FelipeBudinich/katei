@@ -34,6 +34,7 @@ export class MongoPortfolioReadModel {
     const boardDirectory = [];
     const awaitingHumanVerificationItems = [];
     const agentProposalItems = [];
+    const missingRequiredLocalizationItems = [];
 
     for (const record of records) {
       const boardIds = listWorkspaceBoardIds(record.workspace);
@@ -54,6 +55,7 @@ export class MongoPortfolioReadModel {
         boardDirectory.push(boardSummary);
         awaitingHumanVerificationItems.push(...boardPortfolioDetails.awaitingHumanVerificationItems);
         agentProposalItems.push(...boardPortfolioDetails.agentProposalItems);
+        missingRequiredLocalizationItems.push(...boardPortfolioDetails.missingRequiredLocalizationItems);
         accumulatePortfolioTotals(totals, boardSummary);
       }
     }
@@ -66,7 +68,8 @@ export class MongoPortfolioReadModel {
       workspaces,
       boardDirectory,
       awaitingHumanVerificationItems: awaitingHumanVerificationItems.sort(compareAwaitingHumanVerificationItems),
-      agentProposalItems: agentProposalItems.sort(compareAgentProposalItems)
+      agentProposalItems: agentProposalItems.sort(compareAgentProposalItems),
+      missingRequiredLocalizationItems: missingRequiredLocalizationItems.sort(compareMissingRequiredLocalizationItems)
     };
   }
 
@@ -127,6 +130,7 @@ function createBoardPortfolioDetails(record, board, boardId, localePolicy) {
   const aging = createEmptyBoardAging();
   const awaitingHumanVerificationItems = [];
   const agentProposalItems = [];
+  const missingRequiredLocalizationItems = [];
   const boardTitle = normalizeOptionalString(board?.title) || boardId;
 
   for (const [cardId, card] of Object.entries(board?.cards ?? {}).sort(compareCardEntries)) {
@@ -134,12 +138,25 @@ function createBoardPortfolioDetails(record, board, boardId, localePolicy) {
       continue;
     }
 
-    if (getMissingRequiredLocales(board, card).length > 0) {
+    const missingRequiredLocales = getMissingRequiredLocales(board, card);
+
+    if (missingRequiredLocales.length > 0) {
       summary.cardsMissingRequiredLocales += 1;
       aging.oldestMissingRequiredLocaleUpdatedAt = pickEarlierIsoTimestamp(
         aging.oldestMissingRequiredLocaleUpdatedAt,
         card.updatedAt
       );
+      missingRequiredLocalizationItems.push({
+        ...createCardPortfolioItemBase({
+          record,
+          boardId,
+          boardTitle,
+          cardId,
+          card,
+          localePolicy
+        }),
+        missingLocales: [...missingRequiredLocales]
+      });
     }
 
     for (const localeStatus of listCardLocaleStatuses(board, card)) {
@@ -213,7 +230,8 @@ function createBoardPortfolioDetails(record, board, boardId, localePolicy) {
     summary,
     aging,
     awaitingHumanVerificationItems,
-    agentProposalItems
+    agentProposalItems,
+    missingRequiredLocalizationItems
   };
 }
 
@@ -239,6 +257,18 @@ function createLocalizedPortfolioItemBase({
     cardTitle,
     localizedTitle,
     locale,
+    cardUpdatedAt: normalizeOptionalIsoTimestamp(card?.updatedAt)
+  };
+}
+
+function createCardPortfolioItemBase({ record, boardId, boardTitle, cardId, card, localePolicy }) {
+  return {
+    workspaceId: record.workspaceId,
+    workspaceTitle: null,
+    boardId,
+    boardTitle,
+    cardId,
+    cardTitle: resolvePortfolioCardTitle(card, localePolicy),
     cardUpdatedAt: normalizeOptionalIsoTimestamp(card?.updatedAt)
   };
 }
@@ -278,6 +308,10 @@ function compareAwaitingHumanVerificationItems(left, right) {
 
 function compareAgentProposalItems(left, right) {
   return comparePortfolioItemsByTimestamp(left?.proposedAt, right?.proposedAt, left, right);
+}
+
+function compareMissingRequiredLocalizationItems(left, right) {
+  return comparePortfolioItemsByTimestamp(left?.cardUpdatedAt, right?.cardUpdatedAt, left, right);
 }
 
 function comparePortfolioItemsByTimestamp(leftTimestamp, rightTimestamp, left, right) {

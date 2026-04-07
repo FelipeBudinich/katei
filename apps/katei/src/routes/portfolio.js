@@ -37,6 +37,13 @@ export function buildPortfolioPageModel({ viewer, t, portfolio = createEmptyPort
     normalizedPortfolio.agentProposalItems,
     normalizedSearchQuery
   );
+  const filteredMissingRequiredLocalizationItems = filterPortfolioEntries(
+    normalizedPortfolio.missingRequiredLocalizationItems,
+    normalizedSearchQuery
+  );
+  const incompleteCoverageBoards = filteredBoardDirectory.filter(
+    (entry) => normalizeNonNegativeInteger(entry?.localizationSummary?.cardsMissingRequiredLocales) > 0
+  );
 
   return {
     pageTitle: t('pageTitles.portfolio', { appTitle: APP_TITLE }),
@@ -90,7 +97,11 @@ export function buildPortfolioPageModel({ viewer, t, portfolio = createEmptyPort
       timestampLabel: t('portfolio.agentProposals.proposedAtColumnLabel'),
       timestamp: entry?.proposedAt
     })),
-    agentProposalCount: filteredAgentProposalItems.length
+    agentProposalCount: filteredAgentProposalItems.length,
+    missingRequiredLocalizationEntries: filteredMissingRequiredLocalizationItems.map((entry) => createMissingRequiredLocalizationEntryViewModel(entry)),
+    missingRequiredLocalizationCount: filteredMissingRequiredLocalizationItems.length,
+    incompleteCoverageEntries: incompleteCoverageBoards.map((entry) => createIncompleteCoverageEntryViewModel(entry, t)),
+    incompleteCoverageCount: incompleteCoverageBoards.length
   };
 }
 
@@ -100,7 +111,8 @@ function createEmptyPortfolioData() {
     workspaces: [],
     boardDirectory: [],
     awaitingHumanVerificationItems: [],
-    agentProposalItems: []
+    agentProposalItems: [],
+    missingRequiredLocalizationItems: []
   };
 }
 
@@ -111,13 +123,17 @@ function normalizePortfolio(portfolio) {
     ? portfolio.awaitingHumanVerificationItems
     : [];
   const agentProposalItems = Array.isArray(portfolio?.agentProposalItems) ? portfolio.agentProposalItems : [];
+  const missingRequiredLocalizationItems = Array.isArray(portfolio?.missingRequiredLocalizationItems)
+    ? portfolio.missingRequiredLocalizationItems
+    : [];
 
   return {
     totals: normalizePortfolioTotals(portfolio?.totals, { workspaces, boardDirectory }),
     workspaces,
     boardDirectory,
     awaitingHumanVerificationItems,
-    agentProposalItems
+    agentProposalItems,
+    missingRequiredLocalizationItems
   };
 }
 
@@ -192,6 +208,38 @@ function createReviewQueueEntryViewModel(entry, t, { stateKey, timestampLabel, t
     stateLabel: t(stateKey),
     timestampLabel,
     timestamp: normalizeOptionalString(timestamp),
+    openBoardHref: buildBoardHref(entry)
+  };
+}
+
+function createMissingRequiredLocalizationEntryViewModel(entry) {
+  const workspaceTitle = normalizeOptionalString(entry?.workspaceTitle) || normalizeOptionalString(entry?.workspaceId);
+  const boardTitle = normalizeOptionalString(entry?.boardTitle) || normalizeOptionalString(entry?.boardId);
+  const cardTitle = normalizeOptionalString(entry?.cardTitle) || normalizeOptionalString(entry?.cardId);
+
+  return {
+    workspaceTitle,
+    boardTitle,
+    cardTitle,
+    missingLocales: joinValues(entry?.missingLocales),
+    cardUpdatedAt: normalizeOptionalString(entry?.cardUpdatedAt),
+    openBoardHref: buildBoardHref(entry)
+  };
+}
+
+function createIncompleteCoverageEntryViewModel(entry, t) {
+  const workspaceTitle = normalizeOptionalString(entry?.workspaceTitle) || normalizeOptionalString(entry?.workspaceId);
+  const boardTitle = normalizeOptionalString(entry?.boardTitle) || normalizeOptionalString(entry?.boardId);
+  const cardsMissingRequiredLocales = normalizeNonNegativeInteger(entry?.localizationSummary?.cardsMissingRequiredLocales);
+
+  return {
+    workspaceTitle,
+    boardTitle,
+    cardsMissingRequiredLocales,
+    oldestMissingRequiredLocaleUpdatedAt: normalizeOptionalString(entry?.aging?.oldestMissingRequiredLocaleUpdatedAt),
+    statusLabel: cardsMissingRequiredLocales > 0
+      ? t('portfolio.coverage.incomplete')
+      : t('portfolio.coverage.complete'),
     openBoardHref: buildBoardHref(entry)
   };
 }

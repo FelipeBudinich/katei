@@ -143,6 +143,44 @@ const EN_MESSAGES = freezeCatalog({
         description: 'Try another workspace, board, card, or locale term.'
       }
     },
+    missingRequiredLocalizations: {
+      heading: 'Missing required localizations',
+      description: 'Cards still missing one or more required locales are listed across boards here.',
+      workspaceColumnLabel: 'Workspace',
+      boardColumnLabel: 'Board',
+      cardColumnLabel: 'Card',
+      missingLocalesColumnLabel: 'Missing locales',
+      updatedAtColumnLabel: 'Card updated',
+      actionsColumnLabel: 'Actions',
+      openBoardAction: 'Open board',
+      empty: {
+        heading: 'No missing required localizations',
+        description: 'Every required locale currently has card content.'
+      },
+      emptyFiltered: {
+        heading: 'No missing-localization items match this search',
+        description: 'Try another workspace, board, card, or locale term.'
+      }
+    },
+    incompleteCoverage: {
+      heading: 'Incomplete locale coverage',
+      description: 'Boards with one or more cards still missing required locales are listed here.',
+      workspaceColumnLabel: 'Workspace',
+      boardColumnLabel: 'Board',
+      statusColumnLabel: 'Coverage status',
+      cardsMissingRequiredLocalesColumnLabel: 'Cards missing required locales',
+      oldestMissingRequiredLocaleUpdatedAtColumnLabel: 'Oldest missing required locale',
+      actionsColumnLabel: 'Actions',
+      openBoardAction: 'Open board',
+      empty: {
+        heading: 'No boards have incomplete locale coverage',
+        description: 'Every board currently satisfies its required-locale policy.'
+      },
+      emptyFiltered: {
+        heading: 'No incomplete-coverage boards match this search',
+        description: 'Try another workspace, board, or locale term.'
+      }
+    },
     empty: {
       heading: 'No portfolio data yet',
       description: 'No workspace summaries are available yet.'
@@ -647,6 +685,44 @@ const ES_CL_MESSAGES = freezeCatalog({
       emptyFiltered: {
         heading: 'Ninguna propuesta coincide con esta búsqueda',
         description: 'Prueba con otro espacio, tablero, tarjeta o término de locale.'
+      }
+    },
+    missingRequiredLocalizations: {
+      heading: 'Localizaciones requeridas faltantes',
+      description: 'Aquí se listan entre tableros las tarjetas a las que todavía les falta uno o más locales requeridos.',
+      workspaceColumnLabel: 'Espacio',
+      boardColumnLabel: 'Tablero',
+      cardColumnLabel: 'Tarjeta',
+      missingLocalesColumnLabel: 'Locales faltantes',
+      updatedAtColumnLabel: 'Tarjeta actualizada',
+      actionsColumnLabel: 'Acciones',
+      openBoardAction: 'Abrir tablero',
+      empty: {
+        heading: 'No faltan localizaciones requeridas',
+        description: 'Cada locale requerido ya tiene contenido de tarjeta.'
+      },
+      emptyFiltered: {
+        heading: 'Ningún elemento con localización faltante coincide con esta búsqueda',
+        description: 'Prueba con otro espacio, tablero, tarjeta o término de locale.'
+      }
+    },
+    incompleteCoverage: {
+      heading: 'Cobertura de locales incompleta',
+      description: 'Aquí se listan los tableros que todavía tienen una o más tarjetas con locales requeridos faltantes.',
+      workspaceColumnLabel: 'Espacio',
+      boardColumnLabel: 'Tablero',
+      statusColumnLabel: 'Estado de cobertura',
+      cardsMissingRequiredLocalesColumnLabel: 'Tarjetas con locales requeridos faltantes',
+      oldestMissingRequiredLocaleUpdatedAtColumnLabel: 'Falta más antigua de locale requerido',
+      actionsColumnLabel: 'Acciones',
+      openBoardAction: 'Abrir tablero',
+      empty: {
+        heading: 'Ningún tablero tiene cobertura incompleta',
+        description: 'Cada tablero cumple actualmente su política de locales requeridos.'
+      },
+      emptyFiltered: {
+        heading: 'Ningún tablero con cobertura incompleta coincide con esta búsqueda',
+        description: 'Prueba con otro espacio, tablero o término de locale.'
       }
     },
     empty: {
@@ -1154,6 +1230,44 @@ const JA_MESSAGES = freezeCatalog({
       emptyFiltered: {
         heading: '検索条件に一致する提案はありません',
         description: '別のワークスペース名、ボード名、カード名、または locale で試してください。'
+      }
+    },
+    missingRequiredLocalizations: {
+      heading: '必須ローカライズ不足',
+      description: 'まだ 1 つ以上の必須 locale が不足しているカードを、ボード横断で一覧表示します。',
+      workspaceColumnLabel: 'ワークスペース',
+      boardColumnLabel: 'ボード',
+      cardColumnLabel: 'カード',
+      missingLocalesColumnLabel: '不足 locale',
+      updatedAtColumnLabel: 'カード更新日時',
+      actionsColumnLabel: '操作',
+      openBoardAction: 'ボードを開く',
+      empty: {
+        heading: '不足している必須ローカライズはありません',
+        description: 'すべての必須 locale にカード内容があります。'
+      },
+      emptyFiltered: {
+        heading: '検索条件に一致する不足項目はありません',
+        description: '別のワークスペース名、ボード名、カード名、または locale で試してください。'
+      }
+    },
+    incompleteCoverage: {
+      heading: 'locale カバレッジ未完了',
+      description: 'まだ必須 locale が不足しているカードを含むボードを一覧表示します。',
+      workspaceColumnLabel: 'ワークスペース',
+      boardColumnLabel: 'ボード',
+      statusColumnLabel: 'カバレッジ状態',
+      cardsMissingRequiredLocalesColumnLabel: '必須 locale が不足しているカード',
+      oldestMissingRequiredLocaleUpdatedAtColumnLabel: '最も古い必須 locale 未対応',
+      actionsColumnLabel: '操作',
+      openBoardAction: 'ボードを開く',
+      empty: {
+        heading: 'カバレッジ未完了のボードはありません',
+        description: '現在、すべてのボードが必須 locale ポリシーを満たしています。'
+      },
+      emptyFiltered: {
+        heading: '検索条件に一致する未完了ボードはありません',
+        description: '別のワークスペース名、ボード名、または locale で試してください。'
       }
     },
     empty: {

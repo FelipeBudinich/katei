@@ -390,6 +390,18 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
           cardUpdatedAt: '2026-04-03T09:20:00.000Z',
           proposedAt: '2026-04-03T09:30:00.000Z'
         }
+      ],
+      missingRequiredLocalizationItems: [
+        {
+          workspaceId: 'workspace_portfolio_alpha',
+          workspaceTitle: null,
+          boardId: 'main',
+          boardTitle: 'Executive roadmap',
+          cardId: 'card_missing',
+          cardTitle: 'Translate hero copy',
+          cardUpdatedAt: '2026-04-03T10:30:00.000Z',
+          missingLocales: ['ja']
+        }
       ]
     }
   });
@@ -429,6 +441,12 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
   assert.match(response.text, /Check glossaries/);
   assert.match(response.text, /用語集を確認/);
   assert.match(response.text, /2026-04-03T09:30:00.000Z/);
+  assert.match(response.text, /Missing required localizations/);
+  assert.match(response.text, /Translate hero copy/);
+  assert.match(response.text, /ja/);
+  assert.match(response.text, /Incomplete locale coverage/);
+  assert.match(response.text, /Oldest missing required locale/);
+  assert.match(response.text, /2026-04-03T10:30:00.000Z/);
   assert.match(response.text, /Board ID/);
   assert.match(response.text, /Locale coverage/);
   assert.match(response.text, /Key counts/);

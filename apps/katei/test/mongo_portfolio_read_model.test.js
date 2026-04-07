@@ -325,6 +325,26 @@ test('loadPortfolioSummary returns deterministic summary rollups with localizati
       }
     ]
   );
+  assert.deepEqual(
+    summary.missingRequiredLocalizationItems.map((item) => ({
+      workspaceId: item.workspaceId,
+      boardId: item.boardId,
+      boardTitle: item.boardTitle,
+      cardTitle: item.cardTitle,
+      missingLocales: item.missingLocales,
+      cardUpdatedAt: item.cardUpdatedAt
+    })),
+    [
+      {
+        workspaceId: 'workspace_zeta_shared',
+        boardId: 'secondary',
+        boardTitle: 'Client localization',
+        cardTitle: 'Translate hero copy',
+        missingLocales: ['ja'],
+        cardUpdatedAt: '2026-04-02T09:10:00.000Z'
+      }
+    ]
+  );
 });
 
 test('loadPortfolioSummary handles an empty database cleanly', async () => {
@@ -347,7 +367,8 @@ test('loadPortfolioSummary handles an empty database cleanly', async () => {
     workspaces: [],
     boardDirectory: [],
     awaitingHumanVerificationItems: [],
-    agentProposalItems: []
+    agentProposalItems: [],
+    missingRequiredLocalizationItems: []
   });
 });
 

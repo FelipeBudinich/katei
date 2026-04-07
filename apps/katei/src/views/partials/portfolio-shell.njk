@@ -277,4 +277,108 @@
       </div>
     {% endif %}
   </section>
+
+  <section class="paper-panel portfolio-section">
+    <div class="portfolio-section-header">
+      <h2 class="font-serif text-3xl text-strong">{{ t('portfolio.missingRequiredLocalizations.heading') }}</h2>
+      <p class="text-sm leading-6 text-muted">{{ t('portfolio.missingRequiredLocalizations.description') }}</p>
+    </div>
+
+    {% if missingRequiredLocalizationEntries.length %}
+      <p class="portfolio-results-label">
+        {{ t('portfolio.filters.resultsLabel', { count: missingRequiredLocalizationCount }) }}
+      </p>
+
+      <div class="portfolio-table-wrap">
+        <table class="portfolio-table">
+          <thead>
+            <tr>
+              <th scope="col">{{ t('portfolio.missingRequiredLocalizations.workspaceColumnLabel') }}</th>
+              <th scope="col">{{ t('portfolio.missingRequiredLocalizations.boardColumnLabel') }}</th>
+              <th scope="col">{{ t('portfolio.missingRequiredLocalizations.cardColumnLabel') }}</th>
+              <th scope="col">{{ t('portfolio.missingRequiredLocalizations.missingLocalesColumnLabel') }}</th>
+              <th scope="col">{{ t('portfolio.missingRequiredLocalizations.updatedAtColumnLabel') }}</th>
+              <th scope="col">{{ t('portfolio.missingRequiredLocalizations.actionsColumnLabel') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for entry in missingRequiredLocalizationEntries %}
+              <tr>
+                <td><div class="portfolio-table-primary">{{ entry.workspaceTitle }}</div></td>
+                <td><div class="portfolio-table-primary">{{ entry.boardTitle }}</div></td>
+                <td><div class="portfolio-table-primary">{{ entry.cardTitle }}</div></td>
+                <td><div class="portfolio-table-primary">{{ entry.missingLocales }}</div></td>
+                <td><div class="portfolio-table-primary">{{ entry.cardUpdatedAt }}</div></td>
+                <td>
+                  <a href="{{ entry.openBoardHref }}" class="touch-button-secondary">{{ t('portfolio.missingRequiredLocalizations.openBoardAction') }}</a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="portfolio-empty-state">
+        {% if portfolioFilters.hasSearchQuery %}
+          <h3 class="font-serif text-2xl text-strong">{{ t('portfolio.missingRequiredLocalizations.emptyFiltered.heading') }}</h3>
+          <p class="text-sm leading-6 text-muted">{{ t('portfolio.missingRequiredLocalizations.emptyFiltered.description') }}</p>
+        {% else %}
+          <h3 class="font-serif text-2xl text-strong">{{ t('portfolio.missingRequiredLocalizations.empty.heading') }}</h3>
+          <p class="text-sm leading-6 text-muted">{{ t('portfolio.missingRequiredLocalizations.empty.description') }}</p>
+        {% endif %}
+      </div>
+    {% endif %}
+  </section>
+
+  <section class="paper-panel portfolio-section">
+    <div class="portfolio-section-header">
+      <h2 class="font-serif text-3xl text-strong">{{ t('portfolio.incompleteCoverage.heading') }}</h2>
+      <p class="text-sm leading-6 text-muted">{{ t('portfolio.incompleteCoverage.description') }}</p>
+    </div>
+
+    {% if incompleteCoverageEntries.length %}
+      <p class="portfolio-results-label">
+        {{ t('portfolio.filters.resultsLabel', { count: incompleteCoverageCount }) }}
+      </p>
+
+      <div class="portfolio-table-wrap">
+        <table class="portfolio-table">
+          <thead>
+            <tr>
+              <th scope="col">{{ t('portfolio.incompleteCoverage.workspaceColumnLabel') }}</th>
+              <th scope="col">{{ t('portfolio.incompleteCoverage.boardColumnLabel') }}</th>
+              <th scope="col">{{ t('portfolio.incompleteCoverage.statusColumnLabel') }}</th>
+              <th scope="col">{{ t('portfolio.incompleteCoverage.cardsMissingRequiredLocalesColumnLabel') }}</th>
+              <th scope="col">{{ t('portfolio.incompleteCoverage.oldestMissingRequiredLocaleUpdatedAtColumnLabel') }}</th>
+              <th scope="col">{{ t('portfolio.incompleteCoverage.actionsColumnLabel') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for entry in incompleteCoverageEntries %}
+              <tr>
+                <td><div class="portfolio-table-primary">{{ entry.workspaceTitle }}</div></td>
+                <td><div class="portfolio-table-primary">{{ entry.boardTitle }}</div></td>
+                <td><div class="portfolio-table-primary">{{ entry.statusLabel }}</div></td>
+                <td><div class="portfolio-table-primary">{{ entry.cardsMissingRequiredLocales }}</div></td>
+                <td><div class="portfolio-table-primary">{{ entry.oldestMissingRequiredLocaleUpdatedAt }}</div></td>
+                <td>
+                  <a href="{{ entry.openBoardHref }}" class="touch-button-secondary">{{ t('portfolio.incompleteCoverage.openBoardAction') }}</a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="portfolio-empty-state">
+        {% if portfolioFilters.hasSearchQuery %}
+          <h3 class="font-serif text-2xl text-strong">{{ t('portfolio.incompleteCoverage.emptyFiltered.heading') }}</h3>
+          <p class="text-sm leading-6 text-muted">{{ t('portfolio.incompleteCoverage.emptyFiltered.description') }}</p>
+        {% else %}
+          <h3 class="font-serif text-2xl text-strong">{{ t('portfolio.incompleteCoverage.empty.heading') }}</h3>
+          <p class="text-sm leading-6 text-muted">{{ t('portfolio.incompleteCoverage.empty.description') }}</p>
+        {% endif %}
+      </div>
+    {% endif %}
+  </section>
 </main>
