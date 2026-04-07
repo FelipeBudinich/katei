@@ -36,7 +36,8 @@ import {
 export default class extends Controller {
   static values = {
     viewerSub: String,
-    viewerEmail: String
+    viewerEmail: String,
+    viewerSuperAdmin: Boolean
   };
 
   static targets = [
@@ -99,6 +100,7 @@ export default class extends Controller {
       sub: this.viewerSubValue,
       email: this.hasViewerEmailValue ? this.viewerEmailValue : null
     });
+    this.isSuperAdmin = this.hasViewerSuperAdminValue ? this.viewerSuperAdminValue : false;
     this.columnCollapseState = new Map();
     this.pendingConfirmation = null;
     this.viewTriggerElement = null;
@@ -260,6 +262,23 @@ export default class extends Controller {
       boardId,
       triggerElement: event?.target ?? null
     });
+  }
+
+  openPortfolio() {
+    if (!this.isSuperAdmin) {
+      return;
+    }
+
+    const assign = this.browserWindow?.location?.assign;
+
+    if (typeof assign === 'function') {
+      assign.call(this.browserWindow.location, '/portfolio');
+      return;
+    }
+
+    if (this.browserLocation) {
+      this.browserLocation.href = '/portfolio';
+    }
   }
 
   async handleBoardSwitch(event) {
@@ -1709,6 +1728,7 @@ export default class extends Controller {
       triggerElement,
       activeWorkspaceId: this.service?.getActiveWorkspaceId?.() ?? null,
       activeWorkspaceIsHome: this.service?.getIsHomeWorkspace?.() ?? false,
+      isSuperAdmin: this.isSuperAdmin === true,
       pendingWorkspaceInvites: this.service?.getPendingWorkspaceInvites?.() ?? [],
       accessibleWorkspaces: this.service?.getAccessibleWorkspaces?.() ?? []
     };

@@ -148,6 +148,8 @@ const EN_MESSAGES = freezeCatalog({
   boardOptionsDialog: {
     sectionLabel: 'Boards',
     heading: 'Board options',
+    portfolioLabel: 'Portfolio',
+    openPortfolio: 'Open portfolio',
     switchBoardLabel: 'Switch board',
     invitesHeading: 'Pending workspace invites',
     inviteContext: 'Workspace: {workspace}. From {inviter}',
@@ -568,6 +570,8 @@ const ES_CL_MESSAGES = freezeCatalog({
   boardOptionsDialog: {
     sectionLabel: 'Tableros',
     heading: 'Opciones del tablero',
+    portfolioLabel: 'Portafolio',
+    openPortfolio: 'Abrir portafolio',
     switchBoardLabel: 'Cambiar tablero',
     invitesHeading: 'Invitaciones pendientes de espacios',
     inviteContext: 'Espacio: {workspace}. De {inviter}',
@@ -989,6 +993,8 @@ const JA_MESSAGES = freezeCatalog({
   boardOptionsDialog: {
     sectionLabel: 'ボード',
     heading: 'ボードオプション',
+    portfolioLabel: 'ポートフォリオ',
+    openPortfolio: 'ポートフォリオを開く',
     switchBoardLabel: 'ボードを切り替える',
     invitesHeading: '保留中のワークスペース招待',
     inviteContext: 'ワークスペース: {workspace}. {inviter} から',

@@ -6,6 +6,7 @@
   data-controller="workspace"
   data-workspace-viewer-sub-value="{{ viewer.sub }}"
   data-workspace-viewer-email-value="{{ viewer.email or '' }}"
+  data-workspace-viewer-super-admin-value="{{ 'true' if viewer.isSuperAdmin else 'false' }}"
   data-action="
     card-editor:save->workspace#handleCardEditorSave
     card-editor:generate-locale->workspace#handleGenerateCardLocalization
@@ -18,6 +19,9 @@
     board-options:edit-board->workspace#openEditBoard
     board-options:reset-board->workspace#confirmResetBoard
     board-options:open-collaborators->workspace#openBoardCollaborators
+    {% if viewer.isSuperAdmin %}
+      board-options:open-portfolio->workspace#openPortfolio
+    {% endif %}
     board-options:accept-invite->workspace#handleAcceptInvite
     board-options:decline-invite->workspace#handleDeclineInvite
     board-collaborators:invite-member->workspace#handleInviteMember

@@ -207,6 +207,7 @@ test('workspace controller includes pendingWorkspaceInvites and activeWorkspaceI
 
   controller.workspace = workspace;
   controller.viewerActor = createActor('viewer_1', 'viewer@example.com', 'Viewer');
+  controller.isSuperAdmin = true;
   controller.service = {
     getActiveWorkspaceId() {
       return 'workspace_home';
@@ -238,6 +239,7 @@ test('workspace controller includes pendingWorkspaceInvites and activeWorkspaceI
         triggerElement,
         activeWorkspaceId: 'workspace_home',
         activeWorkspaceIsHome: true,
+        isSuperAdmin: true,
         pendingWorkspaceInvites,
         accessibleWorkspaces
       }
@@ -266,6 +268,7 @@ test('workspace controller sync-board-options payload includes pendingWorkspaceI
   controller.workspace.boards = {};
   controller.workspace.ui.activeBoardId = null;
   controller.viewerActor = createActor('viewer_1', 'viewer@example.com', 'Viewer');
+  controller.isSuperAdmin = false;
   controller.service = {
     getActiveWorkspaceId() {
       return 'workspace_home';
@@ -323,10 +326,47 @@ test('workspace controller sync-board-options payload includes pendingWorkspaceI
       triggerElement: null,
       activeWorkspaceId: 'workspace_home',
       activeWorkspaceIsHome: true,
+      isSuperAdmin: false,
       pendingWorkspaceInvites: controller.service.getPendingWorkspaceInvites(),
       accessibleWorkspaces
     }
   });
+});
+
+test('workspace controller openPortfolio navigates super admins to /portfolio', () => {
+  const controller = Object.create(WorkspaceController.prototype);
+  const navigations = [];
+
+  controller.isSuperAdmin = true;
+  controller.browserWindow = {
+    location: {
+      assign(href) {
+        navigations.push(href);
+      }
+    }
+  };
+
+  WorkspaceController.prototype.openPortfolio.call(controller);
+
+  assert.deepEqual(navigations, ['/portfolio']);
+});
+
+test('workspace controller openPortfolio ignores non-super-admin viewers', () => {
+  const controller = Object.create(WorkspaceController.prototype);
+  const navigations = [];
+
+  controller.isSuperAdmin = false;
+  controller.browserWindow = {
+    location: {
+      assign(href) {
+        navigations.push(href);
+      }
+    }
+  };
+
+  WorkspaceController.prototype.openPortfolio.call(controller);
+
+  assert.deepEqual(navigations, []);
 });
 
 test('handleBoardSwitch switches workspaces before selecting a board in another workspace', async () => {

@@ -325,6 +325,10 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
   assert.match(response.text, /Board directory/);
   assert.match(response.text, /No portfolio data yet/);
   assert.match(response.text, /Tester/);
+  assert.match(
+    findSetCookie(response, KATEI_LAST_SURFACE_COOKIE_NAME) ?? '',
+    new RegExp(escapeForRegex(createLastSurfaceCookieValue({ surface: 'portfolio' })))
+  );
   assert.doesNotMatch(response.text, /data-controller="workspace"/);
   assert.doesNotMatch(response.text, /id="workspace-bootstrap"/);
   assert.deepEqual(workspaceRecordRepository.loadCalls, []);
@@ -412,6 +416,7 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
   assert.match(response.text, /<script defer src="\/vendor\/easymde\/easymde\.min\.js"><\/script>/);
   assert.match(response.text, /data-action="workspace#openBoardOptions"/);
   assert.match(response.text, /data-action="workspace#openProfileOptions"/);
+  assert.match(response.text, /data-workspace-viewer-super-admin-value="false"/);
   assert.match(response.text, />\s*Options\s*</);
   assert.match(
     response.text,
@@ -440,6 +445,7 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
   assert.match(boardOptionsDialog, /class="dialog-actions board-options-actions mt-6"/);
   assert.match(boardOptionsDialog, /board-options#createBoard/);
   assert.match(boardOptionsDialog, /board-options#openCollaborators/);
+  assert.doesNotMatch(boardOptionsDialog, /board-options#openPortfolio/);
   assert.match(boardOptionsDialog, /data-board-options-field="collaboratorsButton"/);
   assert.match(boardOptionsDialog, /data-board-options-field="collaboratorsButton"[\s\S]*?board-options#openCollaborators/);
   assert.match(
@@ -476,6 +482,7 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
     /class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--close"[\s\S]*?aria-label="Close"[\s\S]*?data-board-options-initial-focus[\s\S]*?data-action="board-options#close"[\s\S]*?<span class="sr-only">Close<\/span>/
   );
   assert.doesNotMatch(response.text, /board-options:delete-board->workspace#confirmDeleteBoard/);
+  assert.doesNotMatch(response.text, /board-options:open-portfolio->workspace#openPortfolio/);
   assert.match(boardCollaboratorsDialog, /type="email"[\s\S]*?name="email"[\s\S]*?autocomplete="email"/);
   assert.match(
     boardCollaboratorsDialog,
@@ -499,6 +506,33 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
   assert.match(response.text, /data-session-target="confirmMessage"/);
   assert.match(response.text, /data-session-target="confirmButton"/);
   assert.match(response.text, /session#confirmLogout/);
+});
+
+test('GET /boards renders the Portfolio action in board options for super admins', async () => {
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble();
+  const app = createTestApp({
+    env: {
+      SUPER_ADMINS: 'tester@example.com'
+    },
+    googleTokenVerifier: async () => ({ sub: 'sub_123' }),
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .get('/boards')
+    .set('Cookie', createSessionCookieHeader({
+      sub: 'sub_123',
+      name: 'Tester',
+      email: 'tester@example.com'
+    }));
+  const boardOptionsDialog = extractDialogHtml(response.text, 'board-options');
+
+  assert.equal(response.status, 200);
+  assert.match(response.text, /data-workspace-viewer-super-admin-value="true"/);
+  assert.match(response.text, /board-options:open-portfolio->workspace#openPortfolio/);
+  assert.match(boardOptionsDialog, /data-board-options-field="portfolioButton"/);
+  assert.match(boardOptionsDialog, /board-options#openPortfolio/);
+  assert.match(boardOptionsDialog, />\s*Open portfolio\s*</);
 });
 
 test('GET /boards?lang=ja renders localized card content in server HTML and keeps bootstrap content aligned', async () => {

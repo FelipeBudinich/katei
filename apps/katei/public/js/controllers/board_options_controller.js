@@ -30,6 +30,7 @@ export default class extends Controller {
     this.pendingWorkspaceInvites = [];
     this.activeWorkspaceId = null;
     this.activeWorkspaceIsHome = false;
+    this.isSuperAdmin = false;
     this.accessibleWorkspaces = [];
     this.restoreFocusElement = null;
   }
@@ -40,6 +41,7 @@ export default class extends Controller {
       pendingWorkspaceInvites: event.detail?.pendingWorkspaceInvites,
       activeWorkspaceId: event.detail?.activeWorkspaceId,
       activeWorkspaceIsHome: event.detail?.activeWorkspaceIsHome,
+      isSuperAdmin: event.detail?.isSuperAdmin,
       accessibleWorkspaces: event.detail?.accessibleWorkspaces
     });
 
@@ -57,6 +59,7 @@ export default class extends Controller {
       pendingWorkspaceInvites: event.detail?.pendingWorkspaceInvites,
       activeWorkspaceId: event.detail?.activeWorkspaceId,
       activeWorkspaceIsHome: event.detail?.activeWorkspaceIsHome,
+      isSuperAdmin: event.detail?.isSuperAdmin,
       accessibleWorkspaces: event.detail?.accessibleWorkspaces
     });
   }
@@ -119,6 +122,15 @@ export default class extends Controller {
     this.closeDialog({ restoreFocus: false });
   }
 
+  openPortfolio() {
+    if (!this.isSuperAdmin) {
+      return;
+    }
+
+    this.dispatch('open-portfolio');
+    this.closeDialog({ restoreFocus: false });
+  }
+
   switchBoard(event) {
     const boardId = event.currentTarget.dataset.boardId;
     const workspaceId = normalizeOptionalWorkspaceId(event.currentTarget.dataset.workspaceId)
@@ -164,6 +176,7 @@ export default class extends Controller {
       pendingWorkspaceInvites = this.pendingWorkspaceInvites,
       activeWorkspaceId = this.activeWorkspaceId,
       activeWorkspaceIsHome = this.activeWorkspaceIsHome,
+      isSuperAdmin = this.isSuperAdmin,
       accessibleWorkspaces = this.accessibleWorkspaces
     } = {}
   ) {
@@ -176,6 +189,7 @@ export default class extends Controller {
     this.pendingWorkspaceInvites = Array.isArray(pendingWorkspaceInvites) ? pendingWorkspaceInvites : [];
     this.activeWorkspaceId = normalizeOptionalWorkspaceId(activeWorkspaceId);
     this.activeWorkspaceIsHome = activeWorkspaceIsHome === true;
+    this.isSuperAdmin = isSuperAdmin === true;
     this.accessibleWorkspaces = Array.isArray(accessibleWorkspaces) ? accessibleWorkspaces : [];
     this.optionsState = createBoardOptionsState(this.workspace, this.viewerActor, {
       pendingWorkspaceInvites: this.pendingWorkspaceInvites,
