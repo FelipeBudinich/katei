@@ -372,6 +372,252 @@ test('loadPortfolioSummary handles an empty database cleanly', async () => {
   });
 });
 
+test('loadPortfolioSummary keeps workspace and board grouping stable and sorts queue items by the expected timestamps', async () => {
+  const alphaRecord = createPortfolioRecordFixture({
+    workspaceId: 'workspace_alpha',
+    viewerSub: 'sub_owner_alpha',
+    recordCreatedAt: '2026-04-01T08:00:00.000Z',
+    recordUpdatedAt: '2026-04-03T12:00:00.000Z',
+    boards: [
+      {
+        boardId: 'bravo',
+        title: 'Complete board',
+        createdAt: '2026-04-01T08:05:00.000Z',
+        updatedAt: '2026-04-03T11:00:00.000Z',
+        cards: [
+          {
+            title: 'Complete card',
+            detailsMarkdown: 'No localization backlog'
+          }
+        ]
+      },
+      {
+        boardId: 'charlie',
+        title: 'Alpha localization backlog',
+        createdAt: '2026-04-01T08:10:00.000Z',
+        updatedAt: '2026-04-03T11:30:00.000Z',
+        languagePolicy: {
+          sourceLocale: 'en',
+          defaultLocale: 'en',
+          supportedLocales: ['en', 'ja'],
+          requiredLocales: ['ja']
+        },
+        cards: [
+          {
+            title: 'Await approval alpha',
+            detailsMarkdown: 'Needs human verification',
+            createdAt: '2026-04-01T08:11:00.000Z',
+            updatedAt: '2026-04-02T09:10:00.000Z',
+            localizedContent: [
+              createLocalizedVariant({
+                locale: 'ja',
+                title: '確認待ち alpha',
+                detailsMarkdown: 'Alpha verification item',
+                actor: { type: 'agent', id: 'agent_localizer' },
+                timestamp: '2026-04-03T09:05:00.000Z',
+                includesHumanInput: false,
+                review: {
+                  origin: 'ai',
+                  verificationRequestedBy: { type: 'human', id: 'sub_owner_alpha' },
+                  verificationRequestedAt: '2026-04-01T10:00:00.000Z'
+                }
+              })
+            ]
+          },
+          {
+            title: 'AI proposal alpha',
+            detailsMarkdown: 'Alpha proposal item',
+            createdAt: '2026-04-01T08:12:00.000Z',
+            updatedAt: '2026-04-02T09:20:00.000Z',
+            localizedContent: [
+              createLocalizedVariant({
+                locale: 'ja',
+                title: '提案 alpha',
+                detailsMarkdown: 'Alpha AI proposal',
+                actor: { type: 'agent', id: 'agent_localizer' },
+                timestamp: '2026-04-02T08:00:00.000Z',
+                includesHumanInput: false,
+                review: {
+                  origin: 'ai'
+                }
+              })
+            ]
+          },
+          {
+            title: 'Missing alpha',
+            detailsMarkdown: 'Still needs Japanese',
+            createdAt: '2026-04-01T08:13:00.000Z',
+            updatedAt: '2026-04-02T09:00:00.000Z'
+          }
+        ]
+      }
+    ],
+    boardOrder: ['bravo', 'charlie']
+  });
+  const betaRecord = createPortfolioRecordFixture({
+    workspaceId: 'workspace_beta',
+    viewerSub: 'sub_owner_beta',
+    recordCreatedAt: '2026-04-01T07:00:00.000Z',
+    recordUpdatedAt: '2026-04-04T12:00:00.000Z',
+    boards: [
+      {
+        boardId: 'alpha',
+        title: 'Beta localization backlog',
+        createdAt: '2026-04-01T08:05:00.000Z',
+        updatedAt: '2026-04-04T11:30:00.000Z',
+        languagePolicy: {
+          sourceLocale: 'en',
+          defaultLocale: 'en',
+          supportedLocales: ['en', 'ja'],
+          requiredLocales: ['ja']
+        },
+        cards: [
+          {
+            title: 'Await approval beta',
+            detailsMarkdown: 'Needs human verification too',
+            createdAt: '2026-04-01T08:06:00.000Z',
+            updatedAt: '2026-04-04T09:10:00.000Z',
+            localizedContent: [
+              createLocalizedVariant({
+                locale: 'ja',
+                title: '確認待ち beta',
+                detailsMarkdown: 'Beta verification item',
+                actor: { type: 'agent', id: 'agent_localizer' },
+                timestamp: '2026-04-04T09:05:00.000Z',
+                includesHumanInput: false,
+                review: {
+                  origin: 'ai',
+                  verificationRequestedBy: { type: 'human', id: 'sub_owner_beta' },
+                  verificationRequestedAt: '2026-04-03T10:00:00.000Z'
+                }
+              })
+            ]
+          },
+          {
+            title: 'AI proposal beta',
+            detailsMarkdown: 'Beta proposal item',
+            createdAt: '2026-04-01T08:07:00.000Z',
+            updatedAt: '2026-04-04T09:20:00.000Z',
+            localizedContent: [
+              createLocalizedVariant({
+                locale: 'ja',
+                title: '提案 beta',
+                detailsMarkdown: 'Beta AI proposal',
+                actor: { type: 'agent', id: 'agent_localizer' },
+                timestamp: '2026-04-02T08:00:00.000Z',
+                includesHumanInput: false,
+                review: {
+                  origin: 'ai'
+                }
+              })
+            ]
+          },
+          {
+            title: 'Missing beta',
+            detailsMarkdown: 'Still needs Japanese too',
+            createdAt: '2026-04-01T08:08:00.000Z',
+            updatedAt: '2026-04-01T09:00:00.000Z'
+          }
+        ]
+      }
+    ]
+  });
+  const collection = createCollectionDouble([
+    toWorkspaceRecordDocument(betaRecord),
+    toWorkspaceRecordDocument(alphaRecord)
+  ]);
+  const readModel = new MongoPortfolioReadModel({ collection });
+
+  const summary = await readModel.loadPortfolioSummary();
+
+  assert.deepEqual(
+    summary.workspaces.map((workspace) => workspace.workspaceId),
+    ['workspace_alpha', 'workspace_beta']
+  );
+  assert.deepEqual(
+    summary.boardDirectory.map((entry) => `${entry.workspaceId}:${entry.boardId}`),
+    ['workspace_alpha:bravo', 'workspace_alpha:charlie', 'workspace_beta:alpha']
+  );
+  assert.deepEqual(
+    summary.awaitingHumanVerificationItems.map((item) => ({
+      workspaceId: item.workspaceId,
+      boardId: item.boardId,
+      cardTitle: item.cardTitle,
+      verificationRequestedAt: item.verificationRequestedAt
+    })),
+    [
+      {
+        workspaceId: 'workspace_alpha',
+        boardId: 'charlie',
+        cardTitle: 'Await approval alpha',
+        verificationRequestedAt: '2026-04-01T10:00:00.000Z'
+      },
+      {
+        workspaceId: 'workspace_beta',
+        boardId: 'alpha',
+        cardTitle: 'Await approval beta',
+        verificationRequestedAt: '2026-04-03T10:00:00.000Z'
+      }
+    ]
+  );
+  assert.deepEqual(
+    summary.agentProposalItems.map((item) => ({
+      workspaceId: item.workspaceId,
+      boardId: item.boardId,
+      cardTitle: item.cardTitle,
+      proposedAt: item.proposedAt
+    })),
+    [
+      {
+        workspaceId: 'workspace_alpha',
+        boardId: 'charlie',
+        cardTitle: 'AI proposal alpha',
+        proposedAt: '2026-04-02T08:00:00.000Z'
+      },
+      {
+        workspaceId: 'workspace_beta',
+        boardId: 'alpha',
+        cardTitle: 'AI proposal beta',
+        proposedAt: '2026-04-02T08:00:00.000Z'
+      }
+    ]
+  );
+  assert.deepEqual(
+    summary.missingRequiredLocalizationItems.map((item) => ({
+      workspaceId: item.workspaceId,
+      boardId: item.boardId,
+      cardTitle: item.cardTitle,
+      cardUpdatedAt: item.cardUpdatedAt
+    })),
+    [
+      {
+        workspaceId: 'workspace_beta',
+        boardId: 'alpha',
+        cardTitle: 'Missing beta',
+        cardUpdatedAt: '2026-04-01T09:00:00.000Z'
+      },
+      {
+        workspaceId: 'workspace_alpha',
+        boardId: 'charlie',
+        cardTitle: 'Missing alpha',
+        cardUpdatedAt: '2026-04-02T09:00:00.000Z'
+      }
+    ]
+  );
+
+  for (const item of [
+    ...summary.awaitingHumanVerificationItems,
+    ...summary.agentProposalItems,
+    ...summary.missingRequiredLocalizationItems
+  ]) {
+    assert.equal(Object.hasOwn(item, 'contentByLocale'), false);
+    assert.equal(Object.hasOwn(item, 'detailsMarkdown'), false);
+    assert.equal(Object.hasOwn(item, 'localeRequests'), false);
+    assert.equal(Object.hasOwn(item, 'provenance'), false);
+    assert.equal(Object.hasOwn(item, 'review'), false);
+  }
+});
+
 function createPortfolioRecordFixture({
   workspaceId,
   viewerSub,

@@ -78,6 +78,35 @@ test('createAttachSessionMiddleware keeps isSuperAdmin false when the viewer ema
   assert.deepEqual(response.locals.viewer, request.viewer);
 });
 
+test('createAttachSessionMiddleware keeps isSuperAdmin false when the viewer email does not match a configured super admin', () => {
+  const now = new Date();
+  const payload = createSessionPayload(
+    {
+      sub: 'sub_123',
+      email: 'viewer@example.com',
+      name: 'Viewer'
+    },
+    config.sessionTtlSeconds,
+    now
+  );
+  const request = {
+    cookies: {
+      [KATEI_SESSION_COOKIE_NAME]: createSignedSessionCookieValue(payload, config.sessionSecret)
+    }
+  };
+  const response = createResponseDouble();
+
+  createAttachSessionMiddleware(config)(request, response, () => {});
+
+  assert.deepEqual(request.viewer, {
+    sub: 'sub_123',
+    email: 'viewer@example.com',
+    name: 'Viewer',
+    isSuperAdmin: false
+  });
+  assert.deepEqual(response.locals.viewer, request.viewer);
+});
+
 test('createAttachSessionMiddleware clears invalid cookies and leaves viewer null', () => {
   const request = {
     cookies: {

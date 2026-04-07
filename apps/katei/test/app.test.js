@@ -177,6 +177,33 @@ test('GET / redirects authenticated users to /boards', async () => {
   assert.equal(response.headers.location, '/boards');
 });
 
+test('GET / ignores remembered board destinations for authenticated non-super-admin users', async () => {
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble();
+  const app = createTestApp({
+    googleTokenVerifier: async () => ({ sub: 'sub_123' }),
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .get('/')
+    .set('Cookie', [
+      createSessionCookieHeader({
+        sub: 'sub_123',
+        name: 'Tester',
+        email: 'tester@example.com'
+      }),
+      createLastSurfaceCookieHeader({
+        surface: 'board',
+        workspaceId: 'workspace_shared_ignored_for_member',
+        boardId: 'notes'
+      })
+    ]);
+
+  assert.equal(response.status, 302);
+  assert.equal(response.headers.location, '/boards');
+  assert.deepEqual(workspaceRecordRepository.loadCalls, []);
+});
+
 test('GET / redirects authenticated super admins to /portfolio when no remembered board destination exists', async () => {
   const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble();
   const app = createTestApp({
@@ -653,9 +680,11 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
   );
   const normalizedWorkspace = structuredClone(record.workspace);
   const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([record]);
+  const portfolioReadModel = createPortfolioReadModelDouble();
   const app = createTestApp({
     googleTokenVerifier: async () => ({ sub: 'sub_123' }),
-    workspaceRecordRepository
+    workspaceRecordRepository,
+    portfolioReadModel
   });
 
   const response = await request(app)
@@ -705,6 +734,7 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
       workspaceId: null
     }
   ]);
+  assert.deepEqual(portfolioReadModel.loadCalls, []);
 
   for (const assetPath of WORKSPACE_VENDOR_ASSET_PATHS) {
     assert.match(response.text, new RegExp(escapeForRegex(assetPath)));
@@ -948,12 +978,14 @@ test('GET /boards redirects super-admin drill-downs back to /portfolio when the 
 
 test('GET /boards renders the Portfolio action in board options for super admins', async () => {
   const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble();
+  const portfolioReadModel = createPortfolioReadModelDouble();
   const app = createTestApp({
     env: {
       SUPER_ADMINS: 'tester@example.com'
     },
     googleTokenVerifier: async () => ({ sub: 'sub_123' }),
-    workspaceRecordRepository
+    workspaceRecordRepository,
+    portfolioReadModel
   });
 
   const response = await request(app)
@@ -971,6 +1003,7 @@ test('GET /boards renders the Portfolio action in board options for super admins
   assert.match(boardOptionsDialog, /data-board-options-field="portfolioButton"/);
   assert.match(boardOptionsDialog, /board-options#openPortfolio/);
   assert.match(boardOptionsDialog, />\s*Open portfolio\s*</);
+  assert.deepEqual(portfolioReadModel.loadCalls, []);
 });
 
 test('GET /boards?lang=ja renders localized card content in server HTML and keeps bootstrap content aligned', async () => {
@@ -2866,6 +2899,34 @@ test('POST /auth/google sets the Katei session cookie and returns /boards on suc
   });
   assert.match(response.headers['set-cookie'][0], /katei_session=/);
   assert.match(response.headers['set-cookie'][0], /HttpOnly/);
+});
+
+test('POST /auth/google ignores remembered board destinations for non-super-admin users', async () => {
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble();
+  const app = createTestApp({
+    googleTokenVerifier: async () => ({
+      sub: 'sub_123',
+      email: 'tester@example.com',
+      name: 'Tester'
+    }),
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .post('/auth/google')
+    .set('Cookie', createLastSurfaceCookieHeader({
+      surface: 'board',
+      workspaceId: 'workspace_shared_ignored_after_login',
+      boardId: 'notes'
+    }))
+    .send({ credential: 'valid-token' });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(response.body, {
+    ok: true,
+    redirectTo: '/boards'
+  });
+  assert.deepEqual(workspaceRecordRepository.loadCalls, []);
 });
 
 test('POST /auth/google allows any verified Google account when GOOGLE_ALLOWLIST_SUBS is blank', async () => {

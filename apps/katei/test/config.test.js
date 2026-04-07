@@ -311,3 +311,10 @@ test('parseSessionTtlSeconds rejects invalid values', () => {
 test('parseSuperAdminEmails keeps an empty set for blank input', () => {
   assert.deepEqual([...parseSuperAdminEmails('   ')], []);
 });
+
+test('parseSuperAdminEmails trims, lowercases, drops empties, and deduplicates comma-separated emails', () => {
+  assert.deepEqual(
+    [...parseSuperAdminEmails(' Admin@Example.com , , SECOND@example.com, admin@example.com, invalid-entry ')],
+    ['admin@example.com', 'second@example.com']
+  );
+});
