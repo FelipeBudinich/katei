@@ -381,4 +381,60 @@
       </div>
     {% endif %}
   </section>
+
+  <section class="paper-panel portfolio-section">
+    <div class="portfolio-section-header">
+      <h2 class="font-serif text-3xl text-strong">{{ t('portfolio.aging.heading') }}</h2>
+      <p class="text-sm leading-6 text-muted">{{ t('portfolio.aging.description') }}</p>
+    </div>
+
+    <div class="portfolio-subsection-list">
+      {% for section in agingSections %}
+        <div class="portfolio-subsection">
+          <div class="portfolio-section-header">
+            <h3 class="font-serif text-2xl text-strong">{{ section.heading }}</h3>
+            <p class="text-sm leading-6 text-muted">{{ section.description }}</p>
+          </div>
+
+          {% if section.entries.length %}
+            <p class="portfolio-results-label">
+              {{ t('portfolio.filters.resultsLabel', { count: section.count }) }}
+            </p>
+
+            <div class="portfolio-table-wrap">
+              <table class="portfolio-table">
+                <thead>
+                  <tr>
+                    <th scope="col">{{ t('portfolio.aging.workspaceColumnLabel') }}</th>
+                    <th scope="col">{{ t('portfolio.aging.boardColumnLabel') }}</th>
+                    <th scope="col">{{ section.countLabel }}</th>
+                    <th scope="col">{{ section.timestampLabel }}</th>
+                    <th scope="col">{{ section.actionsLabel }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for entry in section.entries %}
+                    <tr>
+                      <td><div class="portfolio-table-primary">{{ entry.workspaceTitle }}</div></td>
+                      <td><div class="portfolio-table-primary">{{ entry.boardTitle }}</div></td>
+                      <td><div class="portfolio-table-primary">{{ entry.count }}</div></td>
+                      <td><div class="portfolio-table-primary">{{ entry.timestamp }}</div></td>
+                      <td>
+                        <a href="{{ entry.openBoardHref }}" class="touch-button-secondary">{{ section.openBoardAction }}</a>
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <div class="portfolio-empty-state">
+              <h4 class="font-serif text-2xl text-strong">{{ section.emptyHeading }}</h4>
+              <p class="text-sm leading-6 text-muted">{{ section.emptyDescription }}</p>
+            </div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  </section>
 </main>

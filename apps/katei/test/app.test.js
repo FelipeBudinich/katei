@@ -446,6 +446,11 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
   assert.match(response.text, /ja/);
   assert.match(response.text, /Incomplete locale coverage/);
   assert.match(response.text, /Oldest missing required locale/);
+  assert.match(response.text, /Aging and bottlenecks/);
+  assert.match(response.text, /Oldest awaiting approval/);
+  assert.match(response.text, /Oldest open locale requests/);
+  assert.match(response.text, /Oldest missing required locales/);
+  assert.match(response.text, /2026-04-03T10:15:00.000Z/);
   assert.match(response.text, /2026-04-03T10:30:00.000Z/);
   assert.match(response.text, /Board ID/);
   assert.match(response.text, /Locale coverage/);

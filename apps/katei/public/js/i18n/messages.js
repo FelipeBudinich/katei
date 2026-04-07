@@ -181,6 +181,44 @@ const EN_MESSAGES = freezeCatalog({
         description: 'Try another workspace, board, or locale term.'
       }
     },
+    aging: {
+      heading: 'Aging and bottlenecks',
+      description: 'Boards are sorted here by the oldest pending signals already tracked in the current data model.',
+      workspaceColumnLabel: 'Workspace',
+      boardColumnLabel: 'Board',
+      actionsColumnLabel: 'Actions',
+      openBoardAction: 'Open board',
+      awaitingApproval: {
+        heading: 'Oldest awaiting approval',
+        description: 'Boards ordered by their oldest human-verification request.',
+        countColumnLabel: 'Awaiting approval',
+        timestampColumnLabel: 'Oldest awaiting approval',
+        empty: {
+          heading: 'No awaiting-approval backlog',
+          description: 'No boards currently have items waiting for human verification.'
+        }
+      },
+      openLocaleRequests: {
+        heading: 'Oldest open locale requests',
+        description: 'Boards ordered by their oldest open locale request.',
+        countColumnLabel: 'Open locale requests',
+        timestampColumnLabel: 'Oldest open locale request',
+        empty: {
+          heading: 'No open locale-request backlog',
+          description: 'No boards currently have open locale requests.'
+        }
+      },
+      missingRequiredLocales: {
+        heading: 'Oldest missing required locales',
+        description: 'Boards ordered by the oldest card still missing one or more required locales.',
+        countColumnLabel: 'Cards missing required locales',
+        timestampColumnLabel: 'Oldest missing required locale',
+        empty: {
+          heading: 'No missing-required-locale backlog',
+          description: 'No boards currently have cards missing required locales.'
+        }
+      }
+    },
     empty: {
       heading: 'No portfolio data yet',
       description: 'No workspace summaries are available yet.'
@@ -723,6 +761,44 @@ const ES_CL_MESSAGES = freezeCatalog({
       emptyFiltered: {
         heading: 'Ningún tablero con cobertura incompleta coincide con esta búsqueda',
         description: 'Prueba con otro espacio, tablero o término de locale.'
+      }
+    },
+    aging: {
+      heading: 'Antigüedad y cuellos de botella',
+      description: 'Aquí se ordenan los tableros según las señales pendientes más antiguas que ya existen en el modelo actual.',
+      workspaceColumnLabel: 'Espacio',
+      boardColumnLabel: 'Tablero',
+      actionsColumnLabel: 'Acciones',
+      openBoardAction: 'Abrir tablero',
+      awaitingApproval: {
+        heading: 'Espera de aprobación más antigua',
+        description: 'Tableros ordenados por su solicitud más antigua de verificación humana.',
+        countColumnLabel: 'Esperando aprobación',
+        timestampColumnLabel: 'Espera de aprobación más antigua',
+        empty: {
+          heading: 'No hay backlog esperando aprobación',
+          description: 'Actualmente ningún tablero tiene elementos esperando verificación humana.'
+        }
+      },
+      openLocaleRequests: {
+        heading: 'Solicitudes de locale abiertas más antiguas',
+        description: 'Tableros ordenados por su solicitud abierta de locale más antigua.',
+        countColumnLabel: 'Solicitudes de locale abiertas',
+        timestampColumnLabel: 'Solicitud de locale abierta más antigua',
+        empty: {
+          heading: 'No hay backlog de solicitudes de locale abiertas',
+          description: 'Actualmente ningún tablero tiene solicitudes de locale abiertas.'
+        }
+      },
+      missingRequiredLocales: {
+        heading: 'Locales requeridos faltantes más antiguos',
+        description: 'Tableros ordenados por la tarjeta más antigua que todavía tiene uno o más locales requeridos faltantes.',
+        countColumnLabel: 'Tarjetas con locales requeridos faltantes',
+        timestampColumnLabel: 'Falta más antigua de locale requerido',
+        empty: {
+          heading: 'No hay backlog de locales requeridos faltantes',
+          description: 'Actualmente ningún tablero tiene tarjetas con locales requeridos faltantes.'
+        }
       }
     },
     empty: {
@@ -1268,6 +1344,44 @@ const JA_MESSAGES = freezeCatalog({
       emptyFiltered: {
         heading: '検索条件に一致する未完了ボードはありません',
         description: '別のワークスペース名、ボード名、または locale で試してください。'
+      }
+    },
+    aging: {
+      heading: '滞留とボトルネック',
+      description: '現在のデータモデルで既に追跡している最も古い保留シグナルごとに、ボードを並べます。',
+      workspaceColumnLabel: 'ワークスペース',
+      boardColumnLabel: 'ボード',
+      actionsColumnLabel: '操作',
+      openBoardAction: 'ボードを開く',
+      awaitingApproval: {
+        heading: '最も古い承認待ち',
+        description: '最も古い人の確認依頼でボードを並べます。',
+        countColumnLabel: '承認待ち件数',
+        timestampColumnLabel: '最も古い承認待ち',
+        empty: {
+          heading: '承認待ちの滞留はありません',
+          description: '現在、人の確認待ちの項目を持つボードはありません。'
+        }
+      },
+      openLocaleRequests: {
+        heading: '最も古い open locale request',
+        description: '最も古い open locale request でボードを並べます。',
+        countColumnLabel: 'open locale requests',
+        timestampColumnLabel: '最も古い open locale request',
+        empty: {
+          heading: 'open locale request の滞留はありません',
+          description: '現在、open locale request を持つボードはありません。'
+        }
+      },
+      missingRequiredLocales: {
+        heading: '最も古い必須 locale 不足',
+        description: 'まだ 1 つ以上の必須 locale が不足している最も古いカードで、ボードを並べます。',
+        countColumnLabel: '必須 locale が不足しているカード',
+        timestampColumnLabel: '最も古い必須 locale 未対応',
+        empty: {
+          heading: '必須 locale 不足の滞留はありません',
+          description: '現在、必須 locale が不足しているカードを持つボードはありません。'
+        }
       }
     },
     empty: {

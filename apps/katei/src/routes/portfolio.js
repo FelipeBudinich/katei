@@ -44,6 +44,38 @@ export function buildPortfolioPageModel({ viewer, t, portfolio = createEmptyPort
   const incompleteCoverageBoards = filteredBoardDirectory.filter(
     (entry) => normalizeNonNegativeInteger(entry?.localizationSummary?.cardsMissingRequiredLocales) > 0
   );
+  const agingSections = [
+    createAgingSectionViewModel(filteredBoardDirectory, t, {
+      heading: t('portfolio.aging.awaitingApproval.heading'),
+      description: t('portfolio.aging.awaitingApproval.description'),
+      countLabel: t('portfolio.aging.awaitingApproval.countColumnLabel'),
+      timestampLabel: t('portfolio.aging.awaitingApproval.timestampColumnLabel'),
+      emptyHeading: t('portfolio.aging.awaitingApproval.empty.heading'),
+      emptyDescription: t('portfolio.aging.awaitingApproval.empty.description'),
+      timestampAccessor: (entry) => entry?.aging?.oldestAwaitingHumanVerificationAt,
+      countAccessor: (entry) => entry?.localizationSummary?.awaitingHumanVerificationCount
+    }),
+    createAgingSectionViewModel(filteredBoardDirectory, t, {
+      heading: t('portfolio.aging.openLocaleRequests.heading'),
+      description: t('portfolio.aging.openLocaleRequests.description'),
+      countLabel: t('portfolio.aging.openLocaleRequests.countColumnLabel'),
+      timestampLabel: t('portfolio.aging.openLocaleRequests.timestampColumnLabel'),
+      emptyHeading: t('portfolio.aging.openLocaleRequests.empty.heading'),
+      emptyDescription: t('portfolio.aging.openLocaleRequests.empty.description'),
+      timestampAccessor: (entry) => entry?.aging?.oldestOpenLocaleRequestAt,
+      countAccessor: (entry) => entry?.localizationSummary?.openLocaleRequestCount
+    }),
+    createAgingSectionViewModel(filteredBoardDirectory, t, {
+      heading: t('portfolio.aging.missingRequiredLocales.heading'),
+      description: t('portfolio.aging.missingRequiredLocales.description'),
+      countLabel: t('portfolio.aging.missingRequiredLocales.countColumnLabel'),
+      timestampLabel: t('portfolio.aging.missingRequiredLocales.timestampColumnLabel'),
+      emptyHeading: t('portfolio.aging.missingRequiredLocales.empty.heading'),
+      emptyDescription: t('portfolio.aging.missingRequiredLocales.empty.description'),
+      timestampAccessor: (entry) => entry?.aging?.oldestMissingRequiredLocaleUpdatedAt,
+      countAccessor: (entry) => entry?.localizationSummary?.cardsMissingRequiredLocales
+    })
+  ];
 
   return {
     pageTitle: t('pageTitles.portfolio', { appTitle: APP_TITLE }),
@@ -101,7 +133,8 @@ export function buildPortfolioPageModel({ viewer, t, portfolio = createEmptyPort
     missingRequiredLocalizationEntries: filteredMissingRequiredLocalizationItems.map((entry) => createMissingRequiredLocalizationEntryViewModel(entry)),
     missingRequiredLocalizationCount: filteredMissingRequiredLocalizationItems.length,
     incompleteCoverageEntries: incompleteCoverageBoards.map((entry) => createIncompleteCoverageEntryViewModel(entry, t)),
-    incompleteCoverageCount: incompleteCoverageBoards.length
+    incompleteCoverageCount: incompleteCoverageBoards.length,
+    agingSections
   };
 }
 
@@ -240,6 +273,55 @@ function createIncompleteCoverageEntryViewModel(entry, t) {
     statusLabel: cardsMissingRequiredLocales > 0
       ? t('portfolio.coverage.incomplete')
       : t('portfolio.coverage.complete'),
+    openBoardHref: buildBoardHref(entry)
+  };
+}
+
+function createAgingSectionViewModel(entries, t, {
+  heading,
+  description,
+  countLabel,
+  timestampLabel,
+  emptyHeading,
+  emptyDescription,
+  timestampAccessor,
+  countAccessor
+}) {
+  const sectionEntries = entries
+    .map((entry) => createAgingBoardEntryViewModel(entry, { timestampAccessor, countAccessor }))
+    .filter(Boolean)
+    .sort((left, right) => (
+      normalizeOptionalString(left?.timestamp).localeCompare(normalizeOptionalString(right?.timestamp))
+      || normalizeOptionalString(left?.workspaceTitle).localeCompare(normalizeOptionalString(right?.workspaceTitle))
+      || normalizeOptionalString(left?.boardTitle).localeCompare(normalizeOptionalString(right?.boardTitle))
+    ));
+
+  return {
+    heading,
+    description,
+    countLabel,
+    timestampLabel,
+    emptyHeading,
+    emptyDescription,
+    entries: sectionEntries,
+    count: sectionEntries.length,
+    actionsLabel: t('portfolio.aging.actionsColumnLabel'),
+    openBoardAction: t('portfolio.aging.openBoardAction')
+  };
+}
+
+function createAgingBoardEntryViewModel(entry, { timestampAccessor, countAccessor }) {
+  const timestamp = normalizeOptionalString(timestampAccessor(entry));
+
+  if (!timestamp) {
+    return null;
+  }
+
+  return {
+    workspaceTitle: normalizeOptionalString(entry?.workspaceTitle) || normalizeOptionalString(entry?.workspaceId),
+    boardTitle: normalizeOptionalString(entry?.boardTitle) || normalizeOptionalString(entry?.boardId),
+    count: normalizeNonNegativeInteger(countAccessor(entry)),
+    timestamp,
     openBoardHref: buildBoardHref(entry)
   };
 }
