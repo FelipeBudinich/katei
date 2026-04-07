@@ -21,7 +21,8 @@ import {
 import {
   WorkspaceAccessDeniedError,
   WorkspaceImportConflictError,
-  WorkspaceRevisionConflictError
+  WorkspaceRevisionConflictError,
+  WorkspaceTitleManagementPermissionError
 } from '../src/workspaces/workspace_record_repository.js';
 import { canViewerAccessWorkspace, filterWorkspaceForViewer } from '../src/workspaces/workspace_access.js';
 import { encryptBoardSecret } from '../src/security/board_secret_crypto.js';
@@ -218,6 +219,135 @@ test('POST /api/workspace/commands returns the filtered resulting workspace', as
     }
   ]);
   assert.deepEqual(Object.keys(response.body), ['ok', 'workspace', 'activeWorkspace', 'meta', 'pendingWorkspaceInvites', 'accessibleWorkspaces', 'result']);
+});
+
+test('POST /api/workspace/commands loads workspace.title.set through the super-admin title management seam', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_api_admin_title', {
+    workspaceTitle: 'Old workspace title',
+    includeInvite: false
+  });
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord]);
+  const app = createTestApp({
+    env: {
+      SUPER_ADMINS: 'admin@example.com'
+    },
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .post('/api/workspace/commands')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_admin', email: 'admin@example.com', name: 'Admin' }))
+    .send({
+      workspaceId: sharedRecord.workspaceId,
+      command: {
+        clientMutationId: 'workspace_title_admin_1',
+        type: 'workspace.title.set',
+        payload: {
+          title: '  Studio HQ  '
+        }
+      },
+      expectedRevision: sharedRecord.revision
+    });
+
+  assert.equal(response.status, 200);
+  assert.equal(response.body.workspace.title, 'Studio HQ');
+  assert.deepEqual(response.body.workspace.boardOrder, []);
+  assert.deepEqual(Object.keys(response.body.workspace.boards), []);
+  assert.deepEqual(response.body.activeWorkspace, {
+    workspaceId: sharedRecord.workspaceId,
+    workspaceTitle: 'Studio HQ',
+    isHomeWorkspace: false
+  });
+  assert.deepEqual(response.body.result, {
+    clientMutationId: 'workspace_title_admin_1',
+    type: 'workspace.title.set',
+    noOp: false,
+    workspaceId: sharedRecord.workspaceId,
+    workspaceTitle: 'Studio HQ'
+  });
+  assert.deepEqual(workspaceRecordRepository.loadAuthoritativeCalls, []);
+  assert.deepEqual(workspaceRecordRepository.loadSuperAdminTitleManagementCalls, [
+    {
+      viewerIsSuperAdmin: true,
+      workspaceId: sharedRecord.workspaceId
+    }
+  ]);
+  assert.equal(workspaceRecordRepository.replaceRecordCalls.length, 1);
+});
+
+test('POST /api/workspace/commands rejects workspace.title.set for non-super-admin callers before membership checks', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_api_admin_title_forbidden', {
+    memberRole: 'admin',
+    includeInvite: false
+  });
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord]);
+  const app = createTestApp({ workspaceRecordRepository });
+
+  const response = await request(app)
+    .post('/api/workspace/commands')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_member', email: 'member@example.com', name: 'Member' }))
+    .send({
+      workspaceId: sharedRecord.workspaceId,
+      command: {
+        clientMutationId: 'workspace_title_admin_forbidden_1',
+        type: 'workspace.title.set',
+        payload: {
+          title: 'Forbidden title'
+        }
+      },
+      expectedRevision: sharedRecord.revision
+    });
+
+  assert.equal(response.status, 403);
+  assert.deepEqual(response.body, {
+    ok: false,
+    error: 'Workspace title management is only available to super admins.'
+  });
+  assert.deepEqual(workspaceRecordRepository.loadAuthoritativeCalls, []);
+  assert.deepEqual(workspaceRecordRepository.loadSuperAdminTitleManagementCalls, [
+    {
+      viewerIsSuperAdmin: false,
+      workspaceId: sharedRecord.workspaceId
+    }
+  ]);
+  assert.equal(workspaceRecordRepository.replaceRecordCalls.length, 0);
+});
+
+test('POST /api/workspace/commands keeps unrelated commands on the normal authoritative load path', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_api_normal_command_path', {
+    memberRole: 'admin',
+    includeInvite: false
+  });
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord]);
+  const app = createTestApp({ workspaceRecordRepository });
+
+  const response = await request(app)
+    .post('/api/workspace/commands')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_member', email: 'member@example.com', name: 'Member' }))
+    .send({
+      workspaceId: sharedRecord.workspaceId,
+      command: {
+        clientMutationId: 'rename_member_board_normal_path_1',
+        type: 'board.rename',
+        payload: {
+          boardId: 'member',
+          title: 'Member board renamed again'
+        }
+      },
+      expectedRevision: sharedRecord.revision
+    });
+
+  assert.equal(response.status, 200);
+  assert.equal(response.body.workspace.boards.member.title, 'Member board renamed again');
+  assert.deepEqual(workspaceRecordRepository.loadAuthoritativeCalls, [
+    {
+      viewerSub: 'sub_member',
+      viewerEmail: 'member@example.com',
+      workspaceId: sharedRecord.workspaceId
+    }
+  ]);
+  assert.deepEqual(workspaceRecordRepository.loadSuperAdminTitleManagementCalls, []);
+  assert.equal(workspaceRecordRepository.replaceRecordCalls.length, 1);
 });
 
 test('POST /api/workspace/commands redacts board OpenAI secrets from mutation responses', async () => {
@@ -961,6 +1091,8 @@ test('PUT /api/workspace responses include pendingWorkspaceInvites without chang
 });
 
 function createTestApp({
+  env = {},
+  googleTokenVerifier,
   workspaceRecordRepository,
   openAiLocalizer = null,
   openAiStagePromptRunner = null
@@ -972,9 +1104,10 @@ function createTestApp({
       KATEI_SESSION_SECRET: 'test-session-secret',
       KATEI_BOARD_SECRET_ENCRYPTION_KEY: 'test-board-secret-encryption-key',
       MONGODB_URI: 'mongodb://127.0.0.1:27017',
-      MONGODB_DB_NAME: 'katei_test'
+      MONGODB_DB_NAME: 'katei_test',
+      ...env
     },
-    googleTokenVerifier: async () => ({ sub: 'sub_any' }),
+    googleTokenVerifier: googleTokenVerifier ?? (async () => ({ sub: 'sub_any' })),
     workspaceRecordRepository: workspaceRecordRepository ?? createWorkspaceRecordRepositoryDouble(),
     openAiLocalizer,
     openAiStagePromptRunner
@@ -1245,8 +1378,22 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = [], { allowInval
     return createWorkspaceRecord(records.get(homeWorkspaceId));
   }
 
+  async function loadRecordForSuperAdminTitleManagement(workspaceId) {
+    const normalizedWorkspaceId = typeof workspaceId === 'string' ? workspaceId.trim() : '';
+    const record = normalizedWorkspaceId ? records.get(normalizedWorkspaceId) : null;
+
+    if (!record) {
+      throw new WorkspaceAccessDeniedError();
+    }
+
+    return createWorkspaceRecord(record);
+  }
+
   return {
     replaceCalls: [],
+    replaceRecordCalls: [],
+    loadAuthoritativeCalls: [],
+    loadSuperAdminTitleManagementCalls: [],
 
     async loadOrCreateWorkspaceRecord({ viewerSub, viewerEmail = null, workspaceId = null } = {}) {
       return projectRecord(
@@ -1256,7 +1403,25 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = [], { allowInval
     },
 
     async loadOrCreateAuthoritativeWorkspaceRecord({ viewerSub, viewerEmail = null, workspaceId = null } = {}) {
+      this.loadAuthoritativeCalls.push({
+        viewerSub,
+        viewerEmail,
+        workspaceId
+      });
       return loadFullRecord({ viewerSub, viewerEmail, workspaceId });
+    },
+
+    async loadWorkspaceRecordForSuperAdminTitleManagement({ viewerIsSuperAdmin = false, workspaceId } = {}) {
+      this.loadSuperAdminTitleManagementCalls.push({
+        viewerIsSuperAdmin,
+        workspaceId
+      });
+
+      if (viewerIsSuperAdmin !== true) {
+        throw new WorkspaceTitleManagementPermissionError();
+      }
+
+      return loadRecordForSuperAdminTitleManagement(workspaceId);
     },
 
     async listPendingWorkspaceInvitesForViewer({ viewerSub, viewerEmail = null } = {}) {
@@ -1313,6 +1478,11 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = [], { allowInval
     },
 
     async replaceWorkspaceRecord({ record, expectedRevision }) {
+      this.replaceRecordCalls.push({
+        record,
+        expectedRevision
+      });
+
       const currentRecord =
         records.get(record.workspaceId)
         ?? createInitialWorkspaceRecord(record.viewerSub, {

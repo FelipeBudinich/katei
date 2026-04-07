@@ -688,6 +688,95 @@ test('HttpWorkspaceRepository applyCommand sends expectedRevision and updates lo
   });
 });
 
+test('HttpWorkspaceRepository setWorkspaceTitle sends workspace.title.set and updates local meta state', async () => {
+  const commandWorkspace = createEmptyWorkspace();
+
+  commandWorkspace.title = 'Studio HQ';
+
+  const repository = new HttpWorkspaceRepository({
+    fetchImpl: createFetchDouble([
+      createJsonResponse(createWorkspaceApiPayload(commandWorkspace, {
+        revision: 8,
+        updatedAt: '2026-04-03T15:00:00.000Z',
+        lastChangedBy: 'sub_123',
+        isPristine: false,
+        workspaceTitle: 'Studio HQ'
+      }, {
+        clientMutationId: 'm_title_1',
+        type: 'workspace.title.set',
+        noOp: false,
+        workspaceId: commandWorkspace.workspaceId,
+        workspaceTitle: 'Studio HQ'
+      }))
+    ]).fetch,
+    viewerSub: 'sub_123',
+    storage: null,
+    document: createDocumentDouble({
+      'workspace-bootstrap': JSON.stringify(
+        createWorkspaceApiPayload(createEmptyWorkspace(), {
+          revision: 7,
+          updatedAt: '2026-04-03T14:00:00.000Z',
+          lastChangedBy: 'sub_123',
+          isPristine: false
+        })
+      )
+    })
+  });
+
+  await repository.loadWorkspace();
+  const fetchDouble = createFetchDouble([
+    createJsonResponse(createWorkspaceApiPayload(commandWorkspace, {
+      revision: 8,
+      updatedAt: '2026-04-03T15:00:00.000Z',
+      lastChangedBy: 'sub_123',
+      isPristine: false,
+      workspaceTitle: 'Studio HQ'
+    }, {
+      clientMutationId: 'm_title_1',
+      type: 'workspace.title.set',
+      noOp: false,
+      workspaceId: commandWorkspace.workspaceId,
+      workspaceTitle: 'Studio HQ'
+    }))
+  ]);
+  repository.fetchImpl = fetchDouble.fetch;
+
+  const payload = await repository.setWorkspaceTitle({
+    clientMutationId: 'm_title_1',
+    title: '  Studio HQ  '
+  });
+
+  assert.deepEqual(payload.result, {
+    clientMutationId: 'm_title_1',
+    type: 'workspace.title.set',
+    noOp: false,
+    workspaceId: commandWorkspace.workspaceId,
+    workspaceTitle: 'Studio HQ'
+  });
+  assert.equal(payload.activeWorkspace.workspaceTitle, 'Studio HQ');
+  assert.equal(payload.workspace.title, 'Studio HQ');
+  assert.deepEqual(repository.meta, {
+    revision: 8,
+    updatedAt: '2026-04-03T15:00:00.000Z',
+    lastChangedBy: 'sub_123',
+    isPristine: false
+  });
+  assert.equal(repository.revision, 8);
+  assert.equal(fetchDouble.calls[0].url, '/api/workspace/commands');
+  assert.equal(fetchDouble.calls[0].options.method, 'POST');
+  assert.deepEqual(JSON.parse(fetchDouble.calls[0].options.body), {
+    command: {
+      clientMutationId: 'm_title_1',
+      type: 'workspace.title.set',
+      payload: {
+        title: '  Studio HQ  '
+      }
+    },
+    workspaceId: commandWorkspace.workspaceId,
+    expectedRevision: 7
+  });
+});
+
 test('HttpWorkspaceRepository generateCardLocalization sends expectedRevision and updates local meta state', async () => {
   const localizedWorkspace = createCard(createEmptyWorkspace(), 'main', {
     title: 'Command result',
@@ -1186,6 +1275,31 @@ test('HttpWorkspaceRepository surfaces revision conflicts with a friendly error'
 
   await assert.rejects(
     repository.saveWorkspace(workspace),
+    {
+      message: WORKSPACE_CONFLICT_ERROR_MESSAGE,
+      status: 409
+    }
+  );
+});
+
+test('HttpWorkspaceRepository setWorkspaceTitle surfaces revision conflicts with a friendly error', async () => {
+  const fetchDouble = createFetchDouble([
+    createJsonResponse({
+      ok: false,
+      error: 'Workspace revision mismatch.'
+    }, 409)
+  ]);
+  const repository = new HttpWorkspaceRepository({
+    fetchImpl: fetchDouble.fetch,
+    viewerSub: 'sub_123',
+    storage: null
+  });
+
+  await assert.rejects(
+    repository.setWorkspaceTitle({
+      clientMutationId: 'm_title_conflict_1',
+      title: 'Studio HQ'
+    }),
     {
       message: WORKSPACE_CONFLICT_ERROR_MESSAGE,
       status: 409

@@ -33,7 +33,8 @@ import {
 import {
   WorkspaceAccessDeniedError,
   WorkspaceImportConflictError,
-  WorkspaceRevisionConflictError
+  WorkspaceRevisionConflictError,
+  WorkspaceTitleManagementPermissionError
 } from '../src/workspaces/workspace_record_repository.js';
 import { canViewerAccessWorkspace, filterWorkspaceForViewer } from '../src/workspaces/workspace_access.js';
 
@@ -2037,6 +2038,13 @@ test('POST /api/workspace/commands applies workspace.title.set through the comma
     workspaceTitle: 'Studio HQ'
   });
   assert.equal(response.body.meta.revision, existingRecord.revision + 1);
+  assert.deepEqual(workspaceRecordRepository.loadAuthoritativeCalls, []);
+  assert.deepEqual(workspaceRecordRepository.loadSuperAdminTitleManagementCalls, [
+    {
+      viewerIsSuperAdmin: true,
+      workspaceId: existingRecord.workspaceId
+    }
+  ]);
   assert.equal(workspaceRecordRepository.replaceRecordCalls.length, 1);
   assert.equal(
     workspaceRecordRepository.replaceRecordCalls[0].record.commandReceipts.at(-1)?.commandType,
@@ -3359,8 +3367,21 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = []) {
     return createWorkspaceRecord(records.get(homeWorkspaceId));
   }
 
+  async function loadRecordForSuperAdminTitleManagement(workspaceId) {
+    const normalizedWorkspaceId = typeof workspaceId === 'string' ? workspaceId.trim() : '';
+    const record = normalizedWorkspaceId ? records.get(normalizedWorkspaceId) : null;
+
+    if (!record) {
+      throw new WorkspaceAccessDeniedError();
+    }
+
+    return createWorkspaceRecord(record);
+  }
+
   return {
     loadCalls: [],
+    loadAuthoritativeCalls: [],
+    loadSuperAdminTitleManagementCalls: [],
     replaceCalls: [],
     replaceRecordCalls: [],
     importCalls: [],
@@ -3379,7 +3400,26 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = []) {
     },
 
     async loadOrCreateAuthoritativeWorkspaceRecord({ viewerSub, viewerEmail = null, workspaceId = null } = {}) {
+      this.loadAuthoritativeCalls.push({
+        viewerSub,
+        viewerEmail,
+        workspaceId
+      });
+
       return loadFullRecord({ viewerSub, viewerEmail, workspaceId });
+    },
+
+    async loadWorkspaceRecordForSuperAdminTitleManagement({ viewerIsSuperAdmin = false, workspaceId } = {}) {
+      this.loadSuperAdminTitleManagementCalls.push({
+        viewerIsSuperAdmin,
+        workspaceId
+      });
+
+      if (viewerIsSuperAdmin !== true) {
+        throw new WorkspaceTitleManagementPermissionError();
+      }
+
+      return loadRecordForSuperAdminTitleManagement(workspaceId);
     },
 
     async listPendingWorkspaceInvitesForViewer({ viewerSub, viewerEmail = null } = {}) {

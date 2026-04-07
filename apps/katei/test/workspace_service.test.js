@@ -93,6 +93,89 @@ test('WorkspaceService switchWorkspace updates the active workspace before reloa
   assert.deepEqual(repository.events, ['set:workspace_shared', 'load']);
 });
 
+test('WorkspaceService setWorkspaceTitle resolves the target workspace revision and returns title mutation data', async () => {
+  const workspace = createEmptyWorkspace({ workspaceId: 'workspace_shared' });
+
+  workspace.title = 'Studio HQ';
+
+  const repository = createRepositoryDouble({
+    workspace,
+    activeWorkspaceId: 'workspace_home',
+    revision: 344,
+    lastRevisionWorkspaceId: 'workspace_home',
+    resolveWorkspaceRevisionMap: {
+      workspace_shared: 3
+    }
+  });
+  const service = new WorkspaceService(repository);
+
+  const result = await service.setWorkspaceTitle('workspace_shared', '  Studio HQ  ');
+
+  assert.deepEqual(repository.resolveWorkspaceRevisionCalls, ['workspace_shared']);
+  assert.equal(repository.setWorkspaceTitleCalls.length, 1);
+  assert.match(repository.setWorkspaceTitleCalls[0].clientMutationId, /^cmd_/);
+  assert.deepEqual(repository.setWorkspaceTitleCalls[0], {
+    clientMutationId: repository.setWorkspaceTitleCalls[0].clientMutationId,
+    title: '  Studio HQ  '
+  });
+  assert.deepEqual(repository.setWorkspaceTitleContexts, [
+    {
+      workspaceId: 'workspace_shared',
+      expectedRevision: 3
+    }
+  ]);
+  assert.deepEqual(result.workspace, workspace);
+  assert.deepEqual(result.activeWorkspace, {
+    workspaceId: 'workspace_shared',
+    workspaceTitle: 'Studio HQ',
+    isHomeWorkspace: false
+  });
+  assert.deepEqual(result.meta, {
+    revision: 1,
+    updatedAt: '2026-04-04T10:00:00.000Z',
+    lastChangedBy: 'sub_123',
+    isPristine: false
+  });
+  assert.deepEqual(result.result, {
+    clientMutationId: repository.setWorkspaceTitleCalls[0].clientMutationId,
+    type: 'workspace.title.set',
+    noOp: false,
+    workspaceId: 'workspace_shared',
+    workspaceTitle: 'Studio HQ'
+  });
+  assert.equal(result.workspaceId, 'workspace_shared');
+  assert.equal(result.workspaceTitle, 'Studio HQ');
+});
+
+test('WorkspaceService setWorkspaceTitle honors explicit expectedRevision and propagates repository errors', async () => {
+  const workspace = createEmptyWorkspace({ workspaceId: 'workspace_shared' });
+  const conflictError = new Error('This workspace changed elsewhere. Refresh to continue.');
+
+  conflictError.status = 409;
+
+  const repository = createRepositoryDouble({
+    workspace,
+    activeWorkspaceId: 'workspace_home',
+    revision: 344,
+    lastRevisionWorkspaceId: 'workspace_home',
+    setWorkspaceTitleError: conflictError
+  });
+  const service = new WorkspaceService(repository);
+
+  await assert.rejects(
+    service.setWorkspaceTitle('workspace_shared', 'Studio HQ', 27),
+    conflictError
+  );
+
+  assert.deepEqual(repository.resolveWorkspaceRevisionCalls, []);
+  assert.deepEqual(repository.setWorkspaceTitleContexts, [
+    {
+      workspaceId: 'workspace_shared',
+      expectedRevision: 27
+    }
+  ]);
+});
+
 test('WorkspaceService createBoard calls repository.applyCommand and returns workspace', async () => {
   await assertServiceCommand({
     action: (service) => service.createBoard({ title: 'Roadmap' }),
@@ -628,7 +711,8 @@ function createRepositoryDouble({
   revision = null,
   lastRevisionWorkspaceId = null,
   lastStateSource = 'api',
-  resolveWorkspaceRevisionMap = {}
+  resolveWorkspaceRevisionMap = {},
+  setWorkspaceTitleError = null
 }) {
   const revisionLookup = new Map(Object.entries(resolveWorkspaceRevisionMap));
 
@@ -644,6 +728,8 @@ function createRepositoryDouble({
     saveCalls: [],
     applyCommandCalls: [],
     applyCommandContexts: [],
+    setWorkspaceTitleCalls: [],
+    setWorkspaceTitleContexts: [],
     generateCardLocalizationCalls: [],
     generateCardLocalizationContexts: [],
     runStagePromptCalls: [],
@@ -702,6 +788,45 @@ function createRepositoryDouble({
           clientMutationId: command.clientMutationId,
           type: command.type,
           noOp: false
+        }
+      };
+    },
+    async setWorkspaceTitle(request, options = {}) {
+      this.setWorkspaceTitleCalls.push(structuredClone(request));
+      this.setWorkspaceTitleContexts.push(structuredClone(options));
+
+      if (setWorkspaceTitleError) {
+        throw setWorkspaceTitleError;
+      }
+
+      const nextWorkspace = structuredClone(workspace);
+      const normalizedTitle = typeof request?.title === 'string' ? request.title.trim() : '';
+
+      if (normalizedTitle) {
+        nextWorkspace.title = normalizedTitle;
+      } else {
+        delete nextWorkspace.title;
+      }
+
+      return {
+        workspace: nextWorkspace,
+        activeWorkspace: {
+          workspaceId: nextWorkspace.workspaceId,
+          workspaceTitle: normalizedTitle || null,
+          isHomeWorkspace: false
+        },
+        meta: {
+          revision: 1,
+          updatedAt: '2026-04-04T10:00:00.000Z',
+          lastChangedBy: 'sub_123',
+          isPristine: false
+        },
+        result: {
+          clientMutationId: request.clientMutationId,
+          type: 'workspace.title.set',
+          noOp: false,
+          workspaceId: nextWorkspace.workspaceId,
+          workspaceTitle: normalizedTitle || null
         }
       };
     },

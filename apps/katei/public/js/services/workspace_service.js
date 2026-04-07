@@ -1,5 +1,7 @@
 import { logInviteAcceptDebug } from '../lib/invite_debug.js';
 
+const WORKSPACE_TITLE_SET_COMMAND_TYPE = 'workspace.title.set';
+
 export class WorkspaceService {
   constructor(repository) {
     this.repository = repository;
@@ -79,6 +81,34 @@ export class WorkspaceService {
   async switchWorkspace(workspaceId) {
     this.setActiveWorkspace(workspaceId);
     return this.load();
+  }
+
+  async setWorkspaceTitle(workspaceId, title, expectedRevision = null) {
+    const targetWorkspaceId = normalizeOptionalWorkspaceId(workspaceId) ?? this.getActiveWorkspaceId();
+    const resolvedExpectedRevision =
+      Number.isInteger(expectedRevision) ? expectedRevision : await this.#resolveWorkspaceRevision(targetWorkspaceId);
+    const request = {
+      clientMutationId: createClientMutationId(),
+      title
+    };
+    const response =
+      typeof this.repository.setWorkspaceTitle === 'function'
+        ? await this.repository.setWorkspaceTitle(request, {
+            workspaceId: targetWorkspaceId,
+            expectedRevision: resolvedExpectedRevision
+          })
+        : await this.repository.applyCommand({
+            clientMutationId: request.clientMutationId,
+            type: WORKSPACE_TITLE_SET_COMMAND_TYPE,
+            payload: {
+              title
+            }
+          }, {
+            workspaceId: targetWorkspaceId,
+            expectedRevision: resolvedExpectedRevision
+          });
+
+    return createWorkspaceTitleMutationResult(response);
   }
 
   async createBoard(input) {
@@ -416,6 +446,37 @@ function buildBoardLocalizationPayload(input) {
 
 function isInviteDecisionType(type) {
   return type === 'board.invite.accept' || type === 'board.invite.decline';
+}
+
+function createWorkspaceTitleMutationResult(response) {
+  const payload = isPlainObject(response)
+    ? response
+    : {
+        workspace: response ?? null
+      };
+  const workspaceId =
+    normalizeOptionalWorkspaceId(payload?.result?.workspaceId)
+    ?? normalizeOptionalWorkspaceId(payload?.activeWorkspace?.workspaceId)
+    ?? normalizeOptionalWorkspaceId(payload?.workspace?.workspaceId);
+  const workspaceTitle =
+    normalizeOptionalString(payload?.result?.workspaceTitle)
+    || normalizeOptionalString(payload?.activeWorkspace?.workspaceTitle)
+    || normalizeOptionalString(payload?.workspace?.title)
+    || null;
+
+  return {
+    ...payload,
+    workspaceId,
+    workspaceTitle
+  };
+}
+
+function isPlainObject(value) {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function normalizeOptionalString(value) {
+  return typeof value === 'string' ? value.trim() : '';
 }
 
 function normalizeOptionalWorkspaceId(workspaceId) {

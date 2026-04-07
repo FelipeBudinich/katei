@@ -35,6 +35,7 @@ import { createDefaultMutationContext } from '../workspaces/mutation_context.js'
 import {
   createCommandAppliedWorkspaceRecord,
   createCommandReceipt,
+  createHomeWorkspaceId,
   createWorkspaceActivityEvent,
   createWorkspaceRecord,
   findCommandReceipt
@@ -42,7 +43,8 @@ import {
 import {
   WorkspaceAccessDeniedError,
   WorkspaceImportConflictError,
-  WorkspaceRevisionConflictError
+  WorkspaceRevisionConflictError,
+  WorkspaceTitleManagementPermissionError
 } from '../workspaces/workspace_record_repository.js';
 import { projectRecordForViewer } from '../workspaces/mongo_workspace_record_repository.js';
 import { canViewerReplaceWorkspaceSnapshot } from '../workspaces/workspace_access.js';
@@ -50,6 +52,7 @@ import { canViewerReplaceWorkspaceSnapshot } from '../workspaces/workspace_acces
 const BOARD_OPENAI_SECRET_FIELD = 'openAiApiKeyEncrypted';
 const CARD_LOCALIZATION_GENERATE_COMMAND_TYPE = 'card.locale.generate';
 const CARD_STAGE_PROMPT_RUN_COMMAND_TYPE = 'card.stage-prompt.run';
+const WORKSPACE_TITLE_SET_COMMAND_TYPE = 'workspace.title.set';
 
 export function createWorkspaceApiRouter({
   config,
@@ -218,10 +221,11 @@ export function createWorkspaceApiRouter({
         expectedRevision
       });
       currentRecord = createWorkspaceRecord(
-        await workspaceRecordRepository.loadOrCreateAuthoritativeWorkspaceRecord({
-          viewerSub: request.viewer.sub,
-          viewerEmail: request.viewer.email ?? null,
-          workspaceId: requestedWorkspaceId,
+        await loadWorkspaceRecordForCommandRoute({
+          workspaceRecordRepository,
+          request,
+          command,
+          requestedWorkspaceId,
           debugLog
         })
       );
@@ -371,6 +375,17 @@ export function createWorkspaceApiRouter({
         response.status(404).json({
           ok: false,
           error: 'Workspace not found.'
+        });
+        return;
+      }
+
+      if (
+        error instanceof WorkspaceTitleManagementPermissionError
+        || error?.code === 'WORKSPACE_TITLE_MANAGEMENT_FORBIDDEN'
+      ) {
+        response.status(403).json({
+          ok: false,
+          error: error.message
         });
         return;
       }
@@ -1258,6 +1273,32 @@ function resolveRequestedWorkspaceId(request) {
   }
 
   return null;
+}
+
+async function loadWorkspaceRecordForCommandRoute({
+  workspaceRecordRepository,
+  request,
+  command,
+  requestedWorkspaceId,
+  debugLog = null
+} = {}) {
+  if (isWorkspaceTitleSetCommand(command)) {
+    return workspaceRecordRepository.loadWorkspaceRecordForSuperAdminTitleManagement({
+      viewerIsSuperAdmin: request.viewer?.isSuperAdmin === true,
+      workspaceId: requestedWorkspaceId ?? createHomeWorkspaceId(request.viewer.sub)
+    });
+  }
+
+  return workspaceRecordRepository.loadOrCreateAuthoritativeWorkspaceRecord({
+    viewerSub: request.viewer.sub,
+    viewerEmail: request.viewer.email ?? null,
+    workspaceId: requestedWorkspaceId,
+    debugLog
+  });
+}
+
+function isWorkspaceTitleSetCommand(command) {
+  return command?.type === WORKSPACE_TITLE_SET_COMMAND_TYPE;
 }
 
 function normalizeOptionalString(value) {

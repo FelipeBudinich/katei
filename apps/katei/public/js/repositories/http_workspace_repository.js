@@ -6,6 +6,7 @@ import { postWorkspaceImport, readLocalV4Workspace } from '../lib/workspace_impo
 import { WorkspaceRepository } from './workspace_repository.js';
 
 export const WORKSPACE_CONFLICT_ERROR_MESSAGE = 'This workspace changed elsewhere. Refresh to continue.';
+const WORKSPACE_TITLE_SET_COMMAND_TYPE = 'workspace.title.set';
 
 export class HttpWorkspaceRepository extends WorkspaceRepository {
   constructor({
@@ -168,6 +169,31 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
         })
       },
       'Unable to apply workspace command.'
+    );
+  }
+
+  async setWorkspaceTitle(
+    {
+      clientMutationId,
+      title
+    },
+    {
+      workspaceId = null,
+      expectedRevision = null
+    } = {}
+  ) {
+    return this.applyCommand(
+      {
+        clientMutationId,
+        type: WORKSPACE_TITLE_SET_COMMAND_TYPE,
+        payload: {
+          title
+        }
+      },
+      {
+        workspaceId,
+        expectedRevision
+      }
     );
   }
 
