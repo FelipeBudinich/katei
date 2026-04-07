@@ -56,17 +56,17 @@ async function resolveRememberedBoardDestination({
     const resolvedBoardId = normalizeOptionalString(boardId);
     const hasRequestedBoard = Boolean(resolvedBoardId && record?.workspace?.boards?.[resolvedBoardId]);
 
-    if (!resolvedWorkspaceId) {
+    if (!resolvedWorkspaceId || (resolvedBoardId && !hasRequestedBoard)) {
       return null;
     }
 
     if (record?.isHomeWorkspace === true) {
-      return hasRequestedBoard
+      return resolvedBoardId
         ? `/boards?boardId=${encodeURIComponent(resolvedBoardId)}`
         : '/boards';
     }
 
-    return hasRequestedBoard
+    return resolvedBoardId
       ? `/boards?workspaceId=${encodeURIComponent(resolvedWorkspaceId)}&boardId=${encodeURIComponent(resolvedBoardId)}`
       : `/boards?workspaceId=${encodeURIComponent(resolvedWorkspaceId)}`;
   } catch (error) {

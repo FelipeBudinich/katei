@@ -242,6 +242,49 @@ test('GET / redirects authenticated super admins to a remembered board workspace
   ]);
 });
 
+test('GET / falls back to /portfolio for super admins when the remembered board no longer exists', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_portfolio_missing_board', {
+    memberSub: 'sub_123',
+    memberEmail: 'tester@example.com',
+    memberBoardId: 'notes',
+    memberBoardTitle: 'Shared notes',
+    includeInvite: false
+  });
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord]);
+  const app = createTestApp({
+    env: {
+      SUPER_ADMINS: 'tester@example.com'
+    },
+    googleTokenVerifier: async () => ({ sub: 'sub_123' }),
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .get('/')
+    .set('Cookie', [
+      createSessionCookieHeader({
+        sub: 'sub_123',
+        name: 'Tester',
+        email: 'tester@example.com'
+      }),
+      createLastSurfaceCookieHeader({
+        surface: 'board',
+        workspaceId: 'workspace_shared_portfolio_missing_board',
+        boardId: 'archived'
+      })
+    ]);
+
+  assert.equal(response.status, 302);
+  assert.equal(response.headers.location, '/portfolio');
+  assert.deepEqual(workspaceRecordRepository.loadCalls, [
+    {
+      viewerSub: 'sub_123',
+      viewerEmail: 'tester@example.com',
+      workspaceId: 'workspace_shared_portfolio_missing_board'
+    }
+  ]);
+});
+
 test('GET /vendor/stimulus/stimulus.js serves the vendored library asset', async () => {
   const app = createTestApp({
     googleTokenVerifier: async () => ({ sub: 'sub_123' })
@@ -799,6 +842,108 @@ test('GET /boards selects the requested board from the query string for first pa
       boardId: 'notes'
     })))
   );
+});
+
+test('GET /boards ignores an invalid requested board for non-super-admin viewers', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_board_invalid_query', {
+    memberSub: 'sub_123',
+    memberEmail: 'tester@example.com',
+    memberBoardId: 'notes',
+    memberBoardTitle: 'Shared notes',
+    includeInvite: false
+  });
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord]);
+  const app = createTestApp({
+    googleTokenVerifier: async () => ({ sub: 'sub_123' }),
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .get('/boards?workspaceId=workspace_shared_board_invalid_query&boardId=archived')
+    .set('Cookie', createSessionCookieHeader({
+      sub: 'sub_123',
+      name: 'Tester',
+      email: 'tester@example.com'
+    }));
+  const bootstrapPayload = readWorkspaceBootstrapPayload(response.text);
+
+  assert.equal(response.status, 200);
+  assert.match(response.text, /<h1 class="top-bar-title[\s\S]*?>Shared notes<\/h1>/);
+  assert.equal(bootstrapPayload.workspace.ui.activeBoardId, 'notes');
+  assert.match(
+    findSetCookie(response, KATEI_LAST_SURFACE_COOKIE_NAME) ?? '',
+    new RegExp(escapeForRegex(createLastSurfaceCookieValue({
+      surface: 'board',
+      workspaceId: 'workspace_shared_board_invalid_query',
+      boardId: 'notes'
+    })))
+  );
+});
+
+test('GET /boards redirects super-admin drill-downs back to /portfolio when the requested board no longer exists', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_board_missing_target', {
+    memberSub: 'sub_123',
+    memberEmail: 'tester@example.com',
+    memberBoardId: 'notes',
+    memberBoardTitle: 'Shared notes',
+    includeInvite: false
+  });
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord]);
+  const app = createTestApp({
+    env: {
+      SUPER_ADMINS: 'tester@example.com'
+    },
+    googleTokenVerifier: async () => ({ sub: 'sub_123' }),
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .get('/boards?workspaceId=workspace_shared_board_missing_target&boardId=archived')
+    .set('Cookie', createSessionCookieHeader({
+      sub: 'sub_123',
+      name: 'Tester',
+      email: 'tester@example.com'
+    }));
+
+  assert.equal(response.status, 302);
+  assert.equal(response.headers.location, '/portfolio');
+  assert.match(
+    findSetCookie(response, KATEI_LAST_SURFACE_COOKIE_NAME) ?? '',
+    new RegExp(escapeForRegex(createLastSurfaceCookieValue({ surface: 'portfolio' })))
+  );
+});
+
+test('GET /boards redirects super-admin drill-downs back to /portfolio when the requested workspace no longer exists', async () => {
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble();
+  const app = createTestApp({
+    env: {
+      SUPER_ADMINS: 'tester@example.com'
+    },
+    googleTokenVerifier: async () => ({ sub: 'sub_123' }),
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .get('/boards?workspaceId=workspace_missing_board_target&boardId=notes')
+    .set('Cookie', createSessionCookieHeader({
+      sub: 'sub_123',
+      name: 'Tester',
+      email: 'tester@example.com'
+    }));
+
+  assert.equal(response.status, 302);
+  assert.equal(response.headers.location, '/portfolio');
+  assert.match(
+    findSetCookie(response, KATEI_LAST_SURFACE_COOKIE_NAME) ?? '',
+    new RegExp(escapeForRegex(createLastSurfaceCookieValue({ surface: 'portfolio' })))
+  );
+  assert.deepEqual(workspaceRecordRepository.loadCalls, [
+    {
+      viewerSub: 'sub_123',
+      viewerEmail: 'tester@example.com',
+      workspaceId: 'workspace_missing_board_target'
+    }
+  ]);
 });
 
 test('GET /boards renders the Portfolio action in board options for super admins', async () => {
@@ -2597,6 +2742,50 @@ test('POST /auth/google resumes the remembered board workspace for super admins 
       viewerSub: 'sub_123',
       viewerEmail: 'tester@example.com',
       workspaceId: 'workspace_shared_login_resume'
+    }
+  ]);
+});
+
+test('POST /auth/google falls back to /portfolio for super admins when the remembered board no longer exists', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_login_missing_board', {
+    memberSub: 'sub_123',
+    memberEmail: 'tester@example.com',
+    memberBoardId: 'notes',
+    memberBoardTitle: 'Shared notes',
+    includeInvite: false
+  });
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord]);
+  const app = createTestApp({
+    env: {
+      SUPER_ADMINS: 'tester@example.com'
+    },
+    googleTokenVerifier: async () => ({
+      sub: 'sub_123',
+      email: 'tester@example.com',
+      name: 'Tester'
+    }),
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .post('/auth/google')
+    .set('Cookie', createLastSurfaceCookieHeader({
+      surface: 'board',
+      workspaceId: 'workspace_shared_login_missing_board',
+      boardId: 'archived'
+    }))
+    .send({ credential: 'valid-token' });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(response.body, {
+    ok: true,
+    redirectTo: '/portfolio'
+  });
+  assert.deepEqual(workspaceRecordRepository.loadCalls, [
+    {
+      viewerSub: 'sub_123',
+      viewerEmail: 'tester@example.com',
+      workspaceId: 'workspace_shared_login_missing_board'
     }
   ]);
 });

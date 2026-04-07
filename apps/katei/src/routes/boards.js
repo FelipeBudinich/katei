@@ -9,7 +9,7 @@ import {
 } from '../../public/js/domain/workspace_read_model.js';
 import { getColumnDisplayLabel, getPriorityDisplayLabel } from '../../public/js/i18n/workspace_labels.js';
 import { buildInviteResponseDebugFields, createInviteDebugLogger } from '../lib/invite_debug.js';
-import { setBoardSurfaceCookie } from '../auth/last_surface_cookie.js';
+import { setBoardSurfaceCookie, setPortfolioSurfaceCookie } from '../auth/last_surface_cookie.js';
 import { WorkspaceAccessDeniedError } from '../workspaces/workspace_record_repository.js';
 
 export function createBoardsRouter({ requireSession, workspaceRecordRepository, config }) {
@@ -17,11 +17,13 @@ export function createBoardsRouter({ requireSession, workspaceRecordRepository, 
 
   router.get('/boards', requireSession, async (request, response, next) => {
     const debugLog = createInviteDebugLogger({ request });
+    const requestedWorkspaceId = resolveRequestedWorkspaceId(request);
+    const requestedBoardId = resolveRequestedBoardId(request);
 
     try {
       debugLog('viewer.identity', {
         route: 'GET /boards',
-        workspaceId: resolveRequestedWorkspaceId(request),
+        workspaceId: requestedWorkspaceId,
         hasSession: Boolean(request?.kateiSession),
         viewerSub: request.viewer?.sub ?? null,
         viewerEmail: request.viewer?.email ?? null,
@@ -31,7 +33,7 @@ export function createBoardsRouter({ requireSession, workspaceRecordRepository, 
         workspaceRecordRepository.loadOrCreateWorkspaceRecord({
           viewerSub: request.viewer.sub,
           viewerEmail: request.viewer.email ?? null,
-          workspaceId: resolveRequestedWorkspaceId(request),
+          workspaceId: requestedWorkspaceId,
           debugLog
         }),
         workspaceRecordRepository.listPendingWorkspaceInvitesForViewer({
@@ -40,13 +42,23 @@ export function createBoardsRouter({ requireSession, workspaceRecordRepository, 
           debugLog
         })
       ]);
+      if (shouldFallbackSuperAdminBoardRequestToPortfolio(request.viewer, {
+        requestedWorkspaceId,
+        requestedBoardId,
+        workspace: record.workspace
+      })) {
+        setPortfolioSurfaceCookie(response, config);
+        response.redirect('/portfolio');
+        return;
+      }
+
       const accessibleWorkspaces = await workspaceRecordRepository.listAccessibleWorkspacesForViewer({
         viewerSub: request.viewer.sub,
         viewerEmail: request.viewer.email ?? null,
         excludeWorkspaceId: record.workspaceId,
         debugLog
       });
-      const workspaceForPage = applyRequestedBoardSelection(record.workspace, resolveRequestedBoardId(request));
+      const workspaceForPage = applyRequestedBoardSelection(record.workspace, requestedBoardId);
 
       const pageModel = buildWorkspacePageModel(
         request.viewer,
@@ -80,6 +92,15 @@ export function createBoardsRouter({ requireSession, workspaceRecordRepository, 
       response.render('pages/workspace', pageModel);
     } catch (error) {
       if (error instanceof WorkspaceAccessDeniedError || error?.code === 'WORKSPACE_ACCESS_DENIED') {
+        if (shouldFallbackSuperAdminBoardRequestToPortfolio(request.viewer, {
+          requestedWorkspaceId,
+          requestedBoardId
+        })) {
+          setPortfolioSurfaceCookie(response, config);
+          response.redirect('/portfolio');
+          return;
+        }
+
         response.status(404).send('Workspace not found.');
         return;
       }
@@ -234,6 +255,33 @@ function applyRequestedBoardSelection(workspace, requestedBoardId) {
   };
 
   return nextWorkspace;
+}
+
+function shouldFallbackSuperAdminBoardRequestToPortfolio(viewer, {
+  requestedWorkspaceId = null,
+  requestedBoardId = null,
+  workspace = null
+} = {}) {
+  if (viewer?.isSuperAdmin !== true) {
+    return false;
+  }
+
+  const normalizedRequestedWorkspaceId = normalizeOptionalString(requestedWorkspaceId);
+  const normalizedRequestedBoardId = normalizeOptionalString(requestedBoardId);
+
+  if (!normalizedRequestedWorkspaceId && !normalizedRequestedBoardId) {
+    return false;
+  }
+
+  if (!workspace || typeof workspace !== 'object') {
+    return true;
+  }
+
+  if (!normalizedRequestedBoardId) {
+    return false;
+  }
+
+  return !workspace?.boards?.[normalizedRequestedBoardId];
 }
 
 function normalizeOptionalString(value) {
