@@ -91,7 +91,7 @@
     {% if boardDirectoryEntries.length %}
       <div class="portfolio-directory-groups">
         {% for group in boardDirectoryWorkspaceGroups %}
-          <article class="portfolio-workspace-group portfolio-directory-card">
+          <article class="portfolio-workspace-group portfolio-directory-card paper-panel">
             <div class="portfolio-workspace-header">
               <div class="portfolio-workspace-header-copy">
                 <div class="portfolio-workspace-title-row">
@@ -276,52 +276,60 @@
         {{ t('portfolio.filters.resultsLabel', { count: awaitingApprovalCount }) }}
       </p>
 
-      <div class="portfolio-table-wrap">
-        <table class="portfolio-table">
-          <thead>
-            <tr>
-              <th scope="col">{{ t('portfolio.awaitingApproval.workspaceColumnLabel') }}</th>
-              <th scope="col">{{ t('portfolio.awaitingApproval.boardColumnLabel') }}</th>
-              <th scope="col">{{ t('portfolio.awaitingApproval.cardColumnLabel') }}</th>
-              <th scope="col">{{ t('portfolio.awaitingApproval.localeColumnLabel') }}</th>
-              <th scope="col">{{ t('portfolio.awaitingApproval.stateColumnLabel') }}</th>
-              <th scope="col">{{ t('portfolio.awaitingApproval.verificationRequestedAtColumnLabel') }}</th>
-              <th scope="col">{{ t('portfolio.awaitingApproval.actionsColumnLabel') }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for entry in awaitingApprovalEntries %}
-              <tr>
-                <td>
-                  <div
-                    class="portfolio-table-primary"
-                    data-portfolio-field="workspace-label"
-                    data-portfolio-workspace-id="{{ entry.workspaceId }}"
-                    data-portfolio-workspace-fallback-label="{{ entry.workspaceId }}"
-                  >
-                    {{ entry.workspaceLabel }}
-                  </div>
-                </td>
-                <td><div class="portfolio-table-primary">{{ entry.boardTitle }}</div></td>
-                <td>
-                  <div class="portfolio-table-primary">{{ entry.cardTitle }}</div>
-                  {% if entry.localizedTitle %}
-                    <p class="portfolio-table-secondary">{{ entry.localizedTitle }}</p>
-                  {% endif %}
-                </td>
-                <td><div class="portfolio-table-primary">{{ entry.locale }}</div></td>
-                <td><div class="portfolio-table-primary">{{ entry.stateLabel }}</div></td>
-                <td>
-                  <p class="portfolio-table-secondary">{{ entry.timestampLabel }}</p>
-                  <div class="portfolio-table-primary">{{ entry.timestamp }}</div>
-                </td>
-                <td>
-                  <a href="{{ entry.openBoardHref }}" class="touch-button-secondary">{{ t('portfolio.awaitingApproval.openBoardAction') }}</a>
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+      <div class="portfolio-workspace-groups">
+        {% for group in awaitingApprovalWorkspaceGroups %}
+          <article class="portfolio-workspace-group paper-panel">
+            <div class="portfolio-workspace-header">
+              <div class="portfolio-workspace-header-copy">
+                <h3
+                  class="font-serif text-2xl text-strong"
+                  data-portfolio-field="workspace-label"
+                  data-portfolio-workspace-id="{{ group.workspaceId }}"
+                  data-portfolio-workspace-fallback-label="{{ group.workspaceId }}"
+                >
+                  {{ group.workspaceLabel }}
+                </h3>
+              </div>
+            </div>
+
+            <div class="portfolio-table-wrap">
+              <table class="portfolio-table">
+                <thead>
+                  <tr>
+                    <th scope="col">{{ t('portfolio.awaitingApproval.boardColumnLabel') }}</th>
+                    <th scope="col">{{ t('portfolio.awaitingApproval.cardColumnLabel') }}</th>
+                    <th scope="col">{{ t('portfolio.awaitingApproval.localeColumnLabel') }}</th>
+                    <th scope="col">{{ t('portfolio.awaitingApproval.stateColumnLabel') }}</th>
+                    <th scope="col">{{ t('portfolio.awaitingApproval.verificationRequestedAtColumnLabel') }}</th>
+                    <th scope="col">{{ t('portfolio.awaitingApproval.actionsColumnLabel') }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for entry in group.entries %}
+                    <tr>
+                      <td><div class="portfolio-table-primary">{{ entry.boardTitle }}</div></td>
+                      <td>
+                        <div class="portfolio-table-primary">{{ entry.cardTitle }}</div>
+                        {% if entry.localizedTitle %}
+                          <p class="portfolio-table-secondary">{{ entry.localizedTitle }}</p>
+                        {% endif %}
+                      </td>
+                      <td><div class="portfolio-table-primary">{{ entry.locale }}</div></td>
+                      <td><div class="portfolio-table-primary">{{ entry.stateLabel }}</div></td>
+                      <td>
+                        <p class="portfolio-table-secondary">{{ entry.timestampLabel }}</p>
+                        <div class="portfolio-table-primary">{{ entry.timestamp }}</div>
+                      </td>
+                      <td>
+                        <a href="{{ entry.openBoardHref }}" class="touch-button-secondary">{{ t('portfolio.awaitingApproval.openBoardAction') }}</a>
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </article>
+        {% endfor %}
       </div>
     {% else %}
       <div class="portfolio-empty-state">
@@ -347,52 +355,60 @@
         {{ t('portfolio.filters.resultsLabel', { count: agentProposalCount }) }}
       </p>
 
-      <div class="portfolio-table-wrap">
-        <table class="portfolio-table">
-          <thead>
-            <tr>
-              <th scope="col">{{ t('portfolio.agentProposals.workspaceColumnLabel') }}</th>
-              <th scope="col">{{ t('portfolio.agentProposals.boardColumnLabel') }}</th>
-              <th scope="col">{{ t('portfolio.agentProposals.cardColumnLabel') }}</th>
-              <th scope="col">{{ t('portfolio.agentProposals.localeColumnLabel') }}</th>
-              <th scope="col">{{ t('portfolio.agentProposals.stateColumnLabel') }}</th>
-              <th scope="col">{{ t('portfolio.agentProposals.proposedAtColumnLabel') }}</th>
-              <th scope="col">{{ t('portfolio.agentProposals.actionsColumnLabel') }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for entry in agentProposalEntries %}
-              <tr>
-                <td>
-                  <div
-                    class="portfolio-table-primary"
-                    data-portfolio-field="workspace-label"
-                    data-portfolio-workspace-id="{{ entry.workspaceId }}"
-                    data-portfolio-workspace-fallback-label="{{ entry.workspaceId }}"
-                  >
-                    {{ entry.workspaceLabel }}
-                  </div>
-                </td>
-                <td><div class="portfolio-table-primary">{{ entry.boardTitle }}</div></td>
-                <td>
-                  <div class="portfolio-table-primary">{{ entry.cardTitle }}</div>
-                  {% if entry.localizedTitle %}
-                    <p class="portfolio-table-secondary">{{ entry.localizedTitle }}</p>
-                  {% endif %}
-                </td>
-                <td><div class="portfolio-table-primary">{{ entry.locale }}</div></td>
-                <td><div class="portfolio-table-primary">{{ entry.stateLabel }}</div></td>
-                <td>
-                  <p class="portfolio-table-secondary">{{ entry.timestampLabel }}</p>
-                  <div class="portfolio-table-primary">{{ entry.timestamp }}</div>
-                </td>
-                <td>
-                  <a href="{{ entry.openBoardHref }}" class="touch-button-secondary">{{ t('portfolio.agentProposals.openBoardAction') }}</a>
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+      <div class="portfolio-workspace-groups">
+        {% for group in agentProposalWorkspaceGroups %}
+          <article class="portfolio-workspace-group paper-panel">
+            <div class="portfolio-workspace-header">
+              <div class="portfolio-workspace-header-copy">
+                <h3
+                  class="font-serif text-2xl text-strong"
+                  data-portfolio-field="workspace-label"
+                  data-portfolio-workspace-id="{{ group.workspaceId }}"
+                  data-portfolio-workspace-fallback-label="{{ group.workspaceId }}"
+                >
+                  {{ group.workspaceLabel }}
+                </h3>
+              </div>
+            </div>
+
+            <div class="portfolio-table-wrap">
+              <table class="portfolio-table">
+                <thead>
+                  <tr>
+                    <th scope="col">{{ t('portfolio.agentProposals.boardColumnLabel') }}</th>
+                    <th scope="col">{{ t('portfolio.agentProposals.cardColumnLabel') }}</th>
+                    <th scope="col">{{ t('portfolio.agentProposals.localeColumnLabel') }}</th>
+                    <th scope="col">{{ t('portfolio.agentProposals.stateColumnLabel') }}</th>
+                    <th scope="col">{{ t('portfolio.agentProposals.proposedAtColumnLabel') }}</th>
+                    <th scope="col">{{ t('portfolio.agentProposals.actionsColumnLabel') }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for entry in group.entries %}
+                    <tr>
+                      <td><div class="portfolio-table-primary">{{ entry.boardTitle }}</div></td>
+                      <td>
+                        <div class="portfolio-table-primary">{{ entry.cardTitle }}</div>
+                        {% if entry.localizedTitle %}
+                          <p class="portfolio-table-secondary">{{ entry.localizedTitle }}</p>
+                        {% endif %}
+                      </td>
+                      <td><div class="portfolio-table-primary">{{ entry.locale }}</div></td>
+                      <td><div class="portfolio-table-primary">{{ entry.stateLabel }}</div></td>
+                      <td>
+                        <p class="portfolio-table-secondary">{{ entry.timestampLabel }}</p>
+                        <div class="portfolio-table-primary">{{ entry.timestamp }}</div>
+                      </td>
+                      <td>
+                        <a href="{{ entry.openBoardHref }}" class="touch-button-secondary">{{ t('portfolio.agentProposals.openBoardAction') }}</a>
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </article>
+        {% endfor %}
       </div>
     {% else %}
       <div class="portfolio-empty-state">
@@ -418,42 +434,50 @@
         {{ t('portfolio.filters.resultsLabel', { count: missingRequiredLocalizationCount }) }}
       </p>
 
-      <div class="portfolio-table-wrap">
-        <table class="portfolio-table">
-          <thead>
-            <tr>
-              <th scope="col">{{ t('portfolio.missingRequiredLocalizations.workspaceColumnLabel') }}</th>
-              <th scope="col">{{ t('portfolio.missingRequiredLocalizations.boardColumnLabel') }}</th>
-              <th scope="col">{{ t('portfolio.missingRequiredLocalizations.cardColumnLabel') }}</th>
-              <th scope="col">{{ t('portfolio.missingRequiredLocalizations.missingLocalesColumnLabel') }}</th>
-              <th scope="col">{{ t('portfolio.missingRequiredLocalizations.updatedAtColumnLabel') }}</th>
-              <th scope="col">{{ t('portfolio.missingRequiredLocalizations.actionsColumnLabel') }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for entry in missingRequiredLocalizationEntries %}
-              <tr>
-                <td>
-                  <div
-                    class="portfolio-table-primary"
-                    data-portfolio-field="workspace-label"
-                    data-portfolio-workspace-id="{{ entry.workspaceId }}"
-                    data-portfolio-workspace-fallback-label="{{ entry.workspaceId }}"
-                  >
-                    {{ entry.workspaceLabel }}
-                  </div>
-                </td>
-                <td><div class="portfolio-table-primary">{{ entry.boardTitle }}</div></td>
-                <td><div class="portfolio-table-primary">{{ entry.cardTitle }}</div></td>
-                <td><div class="portfolio-table-primary">{{ entry.missingLocales }}</div></td>
-                <td><div class="portfolio-table-primary">{{ entry.cardUpdatedAt }}</div></td>
-                <td>
-                  <a href="{{ entry.openBoardHref }}" class="touch-button-secondary">{{ t('portfolio.missingRequiredLocalizations.openBoardAction') }}</a>
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+      <div class="portfolio-workspace-groups">
+        {% for group in missingRequiredLocalizationWorkspaceGroups %}
+          <article class="portfolio-workspace-group paper-panel">
+            <div class="portfolio-workspace-header">
+              <div class="portfolio-workspace-header-copy">
+                <h3
+                  class="font-serif text-2xl text-strong"
+                  data-portfolio-field="workspace-label"
+                  data-portfolio-workspace-id="{{ group.workspaceId }}"
+                  data-portfolio-workspace-fallback-label="{{ group.workspaceId }}"
+                >
+                  {{ group.workspaceLabel }}
+                </h3>
+              </div>
+            </div>
+
+            <div class="portfolio-table-wrap">
+              <table class="portfolio-table">
+                <thead>
+                  <tr>
+                    <th scope="col">{{ t('portfolio.missingRequiredLocalizations.boardColumnLabel') }}</th>
+                    <th scope="col">{{ t('portfolio.missingRequiredLocalizations.cardColumnLabel') }}</th>
+                    <th scope="col">{{ t('portfolio.missingRequiredLocalizations.missingLocalesColumnLabel') }}</th>
+                    <th scope="col">{{ t('portfolio.missingRequiredLocalizations.updatedAtColumnLabel') }}</th>
+                    <th scope="col">{{ t('portfolio.missingRequiredLocalizations.actionsColumnLabel') }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for entry in group.entries %}
+                    <tr>
+                      <td><div class="portfolio-table-primary">{{ entry.boardTitle }}</div></td>
+                      <td><div class="portfolio-table-primary">{{ entry.cardTitle }}</div></td>
+                      <td><div class="portfolio-table-primary">{{ entry.missingLocales }}</div></td>
+                      <td><div class="portfolio-table-primary">{{ entry.cardUpdatedAt }}</div></td>
+                      <td>
+                        <a href="{{ entry.openBoardHref }}" class="touch-button-secondary">{{ t('portfolio.missingRequiredLocalizations.openBoardAction') }}</a>
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </article>
+        {% endfor %}
       </div>
     {% else %}
       <div class="portfolio-empty-state">
@@ -479,42 +503,52 @@
         {{ t('portfolio.filters.resultsLabel', { count: incompleteCoverageCount }) }}
       </p>
 
-      <div class="portfolio-table-wrap">
-        <table class="portfolio-table">
-          <thead>
-            <tr>
-              <th scope="col">{{ t('portfolio.incompleteCoverage.workspaceColumnLabel') }}</th>
-              <th scope="col">{{ t('portfolio.incompleteCoverage.boardColumnLabel') }}</th>
-              <th scope="col">{{ t('portfolio.incompleteCoverage.statusColumnLabel') }}</th>
-              <th scope="col">{{ t('portfolio.incompleteCoverage.cardsMissingRequiredLocalesColumnLabel') }}</th>
-              <th scope="col">{{ t('portfolio.incompleteCoverage.oldestMissingRequiredLocaleUpdatedAtColumnLabel') }}</th>
-              <th scope="col">{{ t('portfolio.incompleteCoverage.actionsColumnLabel') }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for entry in incompleteCoverageEntries %}
-              <tr>
-                <td>
-                  <div
-                    class="portfolio-table-primary"
-                    data-portfolio-field="workspace-label"
-                    data-portfolio-workspace-id="{{ entry.workspaceId }}"
-                    data-portfolio-workspace-fallback-label="{{ entry.workspaceId }}"
-                  >
-                    {{ entry.workspaceLabel }}
-                  </div>
-                </td>
-                <td><div class="portfolio-table-primary">{{ entry.boardTitle }}</div></td>
-                <td><div class="portfolio-table-primary">{{ entry.statusLabel }}</div></td>
-                <td><div class="portfolio-table-primary">{{ entry.cardsMissingRequiredLocales }}</div></td>
-                <td><div class="portfolio-table-primary">{{ entry.oldestMissingRequiredLocaleUpdatedAt }}</div></td>
-                <td>
-                  <a href="{{ entry.openBoardHref }}" class="touch-button-secondary">{{ t('portfolio.incompleteCoverage.openBoardAction') }}</a>
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+      <div class="portfolio-workspace-groups">
+        {% for group in incompleteCoverageWorkspaceGroups %}
+          <article class="portfolio-workspace-group paper-panel">
+            <div class="portfolio-workspace-header">
+              <div class="portfolio-workspace-header-copy">
+                <h3
+                  class="font-serif text-2xl text-strong"
+                  data-portfolio-field="workspace-label"
+                  data-portfolio-workspace-id="{{ group.workspaceId }}"
+                  data-portfolio-workspace-fallback-label="{{ group.workspaceId }}"
+                >
+                  {{ group.workspaceLabel }}
+                </h3>
+              </div>
+            </div>
+
+            <div class="portfolio-table-wrap">
+              <table class="portfolio-table">
+                <thead>
+                  <tr>
+                    <th scope="col">{{ t('portfolio.incompleteCoverage.boardColumnLabel') }}</th>
+                    <th scope="col">{{ t('portfolio.incompleteCoverage.statusColumnLabel') }}</th>
+                    <th scope="col">{{ t('portfolio.incompleteCoverage.cardsMissingRequiredLocalesColumnLabel') }}</th>
+                    <th scope="col">{{ t('portfolio.incompleteCoverage.oldestMissingRequiredLocaleUpdatedAtColumnLabel') }}</th>
+                    <th scope="col">{{ t('portfolio.incompleteCoverage.actionsColumnLabel') }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for entry in group.entries %}
+                    <tr>
+                      <td><div class="portfolio-table-primary">{{ entry.boardTitle }}</div></td>
+                      <td>
+                        <span class="portfolio-status-badge portfolio-status-badge--warning">{{ entry.statusLabel }}</span>
+                      </td>
+                      <td><div class="portfolio-table-primary">{{ entry.cardsMissingRequiredLocales }}</div></td>
+                      <td><div class="portfolio-table-primary">{{ entry.oldestMissingRequiredLocaleUpdatedAt }}</div></td>
+                      <td>
+                        <a href="{{ entry.openBoardHref }}" class="touch-button-secondary">{{ t('portfolio.incompleteCoverage.openBoardAction') }}</a>
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </article>
+        {% endfor %}
       </div>
     {% else %}
       <div class="portfolio-empty-state">
@@ -548,40 +582,48 @@
               {{ t('portfolio.filters.resultsLabel', { count: section.count }) }}
             </p>
 
-            <div class="portfolio-table-wrap">
-              <table class="portfolio-table">
-                <thead>
-                  <tr>
-                    <th scope="col">{{ t('portfolio.aging.workspaceColumnLabel') }}</th>
-                    <th scope="col">{{ t('portfolio.aging.boardColumnLabel') }}</th>
-                    <th scope="col">{{ section.countLabel }}</th>
-                    <th scope="col">{{ section.timestampLabel }}</th>
-                    <th scope="col">{{ section.actionsLabel }}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for entry in section.entries %}
-                    <tr>
-                  <td>
-                    <div
-                      class="portfolio-table-primary"
-                      data-portfolio-field="workspace-label"
-                      data-portfolio-workspace-id="{{ entry.workspaceId }}"
-                      data-portfolio-workspace-fallback-label="{{ entry.workspaceId }}"
-                    >
-                      {{ entry.workspaceLabel }}
+            <div class="portfolio-workspace-groups">
+              {% for group in section.workspaceGroups %}
+                <article class="portfolio-workspace-group paper-panel">
+                  <div class="portfolio-workspace-header">
+                    <div class="portfolio-workspace-header-copy">
+                      <h4
+                        class="font-serif text-2xl text-strong"
+                        data-portfolio-field="workspace-label"
+                        data-portfolio-workspace-id="{{ group.workspaceId }}"
+                        data-portfolio-workspace-fallback-label="{{ group.workspaceId }}"
+                      >
+                        {{ group.workspaceLabel }}
+                      </h4>
                     </div>
-                  </td>
-                  <td><div class="portfolio-table-primary">{{ entry.boardTitle }}</div></td>
-                      <td><div class="portfolio-table-primary">{{ entry.count }}</div></td>
-                      <td><div class="portfolio-table-primary">{{ entry.timestamp }}</div></td>
-                      <td>
-                        <a href="{{ entry.openBoardHref }}" class="touch-button-secondary">{{ section.openBoardAction }}</a>
-                      </td>
-                    </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
+                  </div>
+
+                  <div class="portfolio-table-wrap">
+                    <table class="portfolio-table">
+                      <thead>
+                        <tr>
+                          <th scope="col">{{ t('portfolio.aging.boardColumnLabel') }}</th>
+                          <th scope="col">{{ section.countLabel }}</th>
+                          <th scope="col">{{ section.timestampLabel }}</th>
+                          <th scope="col">{{ section.actionsLabel }}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {% for entry in group.entries %}
+                          <tr>
+                            <td><div class="portfolio-table-primary">{{ entry.boardTitle }}</div></td>
+                            <td><div class="portfolio-table-primary">{{ entry.count }}</div></td>
+                            <td><div class="portfolio-table-primary">{{ entry.timestamp }}</div></td>
+                            <td>
+                              <a href="{{ entry.openBoardHref }}" class="touch-button-secondary">{{ section.openBoardAction }}</a>
+                            </td>
+                          </tr>
+                        {% endfor %}
+                      </tbody>
+                    </table>
+                  </div>
+                </article>
+              {% endfor %}
             </div>
           {% else %}
             <div class="portfolio-empty-state">

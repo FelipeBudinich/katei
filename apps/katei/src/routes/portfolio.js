@@ -48,6 +48,20 @@ export function buildPortfolioPageModel({ viewer, t, portfolio = createEmptyPort
   const incompleteCoverageBoards = filteredBoardDirectory.filter(
     (entry) => normalizeNonNegativeInteger(entry?.localizationSummary?.cardsMissingRequiredLocales) > 0
   );
+  const awaitingApprovalEntries = filteredAwaitingHumanVerificationItems.map((entry) => createReviewQueueEntryViewModel(entry, t, {
+    stateKey: 'cardViewDialog.reviewState.needs-human-verification',
+    timestampLabel: t('portfolio.awaitingApproval.verificationRequestedAtColumnLabel'),
+    timestamp: entry?.verificationRequestedAt
+  }));
+  const agentProposalEntries = filteredAgentProposalItems.map((entry) => createReviewQueueEntryViewModel(entry, t, {
+    stateKey: 'cardViewDialog.reviewState.ai',
+    timestampLabel: t('portfolio.agentProposals.proposedAtColumnLabel'),
+    timestamp: entry?.proposedAt
+  }));
+  const missingRequiredLocalizationEntries = filteredMissingRequiredLocalizationItems.map((entry) =>
+    createMissingRequiredLocalizationEntryViewModel(entry)
+  );
+  const incompleteCoverageEntries = incompleteCoverageBoards.map((entry) => createIncompleteCoverageEntryViewModel(entry, t));
   const agingSections = [
     createAgingSectionViewModel(filteredBoardDirectory, t, {
       heading: t('portfolio.aging.awaitingApproval.heading'),
@@ -125,22 +139,18 @@ export function buildPortfolioPageModel({ viewer, t, portfolio = createEmptyPort
     boardDirectoryEntries,
     boardDirectoryWorkspaceGroups: createBoardDirectoryWorkspaceGroupsViewModels(boardDirectoryEntries),
     boardDirectoryCount: boardDirectoryEntries.length,
-    awaitingApprovalEntries: filteredAwaitingHumanVerificationItems.map((entry) => createReviewQueueEntryViewModel(entry, t, {
-      stateKey: 'cardViewDialog.reviewState.needs-human-verification',
-      timestampLabel: t('portfolio.awaitingApproval.verificationRequestedAtColumnLabel'),
-      timestamp: entry?.verificationRequestedAt
-    })),
-    awaitingApprovalCount: filteredAwaitingHumanVerificationItems.length,
-    agentProposalEntries: filteredAgentProposalItems.map((entry) => createReviewQueueEntryViewModel(entry, t, {
-      stateKey: 'cardViewDialog.reviewState.ai',
-      timestampLabel: t('portfolio.agentProposals.proposedAtColumnLabel'),
-      timestamp: entry?.proposedAt
-    })),
-    agentProposalCount: filteredAgentProposalItems.length,
-    missingRequiredLocalizationEntries: filteredMissingRequiredLocalizationItems.map((entry) => createMissingRequiredLocalizationEntryViewModel(entry)),
-    missingRequiredLocalizationCount: filteredMissingRequiredLocalizationItems.length,
-    incompleteCoverageEntries: incompleteCoverageBoards.map((entry) => createIncompleteCoverageEntryViewModel(entry, t)),
-    incompleteCoverageCount: incompleteCoverageBoards.length,
+    awaitingApprovalEntries,
+    awaitingApprovalWorkspaceGroups: createWorkspaceGroupsViewModels(awaitingApprovalEntries),
+    awaitingApprovalCount: awaitingApprovalEntries.length,
+    agentProposalEntries,
+    agentProposalWorkspaceGroups: createWorkspaceGroupsViewModels(agentProposalEntries),
+    agentProposalCount: agentProposalEntries.length,
+    missingRequiredLocalizationEntries,
+    missingRequiredLocalizationWorkspaceGroups: createWorkspaceGroupsViewModels(missingRequiredLocalizationEntries),
+    missingRequiredLocalizationCount: missingRequiredLocalizationEntries.length,
+    incompleteCoverageEntries,
+    incompleteCoverageWorkspaceGroups: createWorkspaceGroupsViewModels(incompleteCoverageEntries),
+    incompleteCoverageCount: incompleteCoverageEntries.length,
     agingSections
   };
 }
@@ -276,6 +286,48 @@ function createBoardDirectoryWorkspaceGroupsViewModels(entries) {
   return Array.from(groups.values());
 }
 
+function createWorkspaceGroupsViewModels(entries) {
+  const groups = new Map();
+
+  for (const entry of entries) {
+    const workspaceId = normalizeOptionalString(entry?.workspaceId);
+
+    if (!workspaceId) {
+      continue;
+    }
+
+    const workspaceTitle = normalizeOptionalString(entry?.workspaceTitle);
+    const workspaceLabel =
+      normalizeOptionalString(entry?.workspaceLabel) || workspaceTitle || workspaceId;
+
+    if (!groups.has(workspaceId)) {
+      groups.set(workspaceId, {
+        workspaceId,
+        workspaceTitle,
+        workspaceLabel,
+        entries: []
+      });
+    }
+
+    const currentGroup = groups.get(workspaceId);
+
+    if (workspaceTitle) {
+      currentGroup.workspaceTitle = workspaceTitle;
+    }
+
+    if (workspaceLabel) {
+      currentGroup.workspaceLabel = workspaceLabel;
+    }
+
+    currentGroup.entries.push(entry);
+  }
+
+  return Array.from(groups.values()).sort((left, right) => (
+    normalizeOptionalString(left?.workspaceLabel).localeCompare(normalizeOptionalString(right?.workspaceLabel))
+    || normalizeOptionalString(left?.workspaceId).localeCompare(normalizeOptionalString(right?.workspaceId))
+  ));
+}
+
 function createReviewQueueEntryViewModel(entry, t, { stateKey, timestampLabel, timestamp }) {
   const workspaceId = normalizeOptionalString(entry?.workspaceId);
   const workspaceTitle = normalizeOptionalString(entry?.workspaceTitle);
@@ -363,6 +415,7 @@ function createAgingSectionViewModel(entries, t, {
     emptyHeading,
     emptyDescription,
     entries: sectionEntries,
+    workspaceGroups: createWorkspaceGroupsViewModels(sectionEntries),
     count: sectionEntries.length,
     actionsLabel: t('portfolio.aging.actionsColumnLabel'),
     openBoardAction: t('portfolio.aging.openBoardAction')

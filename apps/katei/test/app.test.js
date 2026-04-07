@@ -545,6 +545,8 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
   assert.match(response.text, /Open board/);
   assert.match(response.text, /Needs locales/);
   assert.match(response.text, /3 cards/);
+  assert.match(response.text, /class="portfolio-workspace-group portfolio-directory-card paper-panel"/);
+  assert.ok(countMatches(response.text, /class="portfolio-workspace-group paper-panel"/g) >= 7);
   assert.match(response.text, /href="\/boards\?workspaceId=workspace_portfolio_alpha&amp;boardId=main"/);
   assert.match(response.text, /Tester/);
   assert.match(
@@ -833,9 +835,189 @@ test('buildPortfolioPageModel falls back to workspaceId labels when workspaceTit
   assert.equal(viewModel.boardDirectoryEntries[0].workspaceLabel, 'workspace_portfolio_untitled');
   assert.equal(viewModel.boardDirectoryWorkspaceGroups[0].workspaceLabel, 'workspace_portfolio_untitled');
   assert.equal(viewModel.awaitingApprovalEntries[0].workspaceLabel, 'workspace_portfolio_untitled');
+  assert.equal(viewModel.awaitingApprovalWorkspaceGroups[0].workspaceLabel, 'workspace_portfolio_untitled');
   assert.equal(viewModel.missingRequiredLocalizationEntries[0].workspaceLabel, 'workspace_portfolio_untitled');
+  assert.equal(viewModel.missingRequiredLocalizationWorkspaceGroups[0].workspaceLabel, 'workspace_portfolio_untitled');
   assert.equal(viewModel.incompleteCoverageEntries[0].workspaceLabel, 'workspace_portfolio_untitled');
+  assert.equal(viewModel.incompleteCoverageWorkspaceGroups[0].workspaceLabel, 'workspace_portfolio_untitled');
+  assert.equal(viewModel.agingSections[0].workspaceGroups[0].workspaceLabel, 'workspace_portfolio_untitled');
+  assert.equal(viewModel.agingSections[2].workspaceGroups[0].workspaceLabel, 'workspace_portfolio_untitled');
   assert.match(html, /workspace_portfolio_untitled/);
+});
+
+test('buildPortfolioPageModel groups non-directory portfolio sections by workspace', () => {
+  const viewModel = buildPortfolioPageModel({
+    viewer: {
+      sub: 'sub_123',
+      name: 'Tester',
+      email: 'tester@example.com',
+      isSuperAdmin: true
+    },
+    t: createTranslator('en'),
+    portfolio: {
+      totals: {
+        workspaces: 2,
+        boards: 2,
+        cards: 6,
+        cardsMissingRequiredLocales: 3,
+        openLocaleRequestCount: 1,
+        awaitingHumanVerificationCount: 2,
+        agentProposalCount: 1
+      },
+      workspaces: [
+        {
+          workspaceId: 'workspace_portfolio_alpha',
+          workspaceTitle: 'Studio HQ'
+        },
+        {
+          workspaceId: 'workspace_portfolio_beta',
+          workspaceTitle: null
+        }
+      ],
+      boardDirectory: [
+        {
+          workspaceId: 'workspace_portfolio_alpha',
+          workspaceTitle: 'Studio HQ',
+          boardId: 'main',
+          boardTitle: 'Executive roadmap',
+          localePolicy: {
+            sourceLocale: 'en',
+            defaultLocale: 'ja',
+            supportedLocales: ['en', 'ja'],
+            requiredLocales: ['ja']
+          },
+          cardCounts: {
+            total: 3,
+            byStage: null
+          },
+          localizationSummary: {
+            cardsMissingRequiredLocales: 2,
+            openLocaleRequestCount: 1,
+            awaitingHumanVerificationCount: 1,
+            agentProposalCount: 0
+          },
+          aging: {
+            oldestMissingRequiredLocaleUpdatedAt: '2026-04-03T10:30:00.000Z',
+            oldestOpenLocaleRequestAt: '2026-04-03T10:15:00.000Z',
+            oldestAwaitingHumanVerificationAt: '2026-04-03T10:45:00.000Z'
+          }
+        },
+        {
+          workspaceId: 'workspace_portfolio_beta',
+          workspaceTitle: null,
+          boardId: 'research',
+          boardTitle: 'Research board',
+          localePolicy: {
+            sourceLocale: 'en',
+            defaultLocale: 'fr',
+            supportedLocales: ['en', 'fr'],
+            requiredLocales: ['fr']
+          },
+          cardCounts: {
+            total: 3,
+            byStage: null
+          },
+          localizationSummary: {
+            cardsMissingRequiredLocales: 1,
+            openLocaleRequestCount: 0,
+            awaitingHumanVerificationCount: 1,
+            agentProposalCount: 1
+          },
+          aging: {
+            oldestMissingRequiredLocaleUpdatedAt: '2026-04-03T11:00:00.000Z',
+            oldestOpenLocaleRequestAt: null,
+            oldestAwaitingHumanVerificationAt: '2026-04-03T10:50:00.000Z'
+          }
+        }
+      ],
+      awaitingHumanVerificationItems: [
+        {
+          workspaceId: 'workspace_portfolio_alpha',
+          workspaceTitle: 'Studio HQ',
+          boardId: 'main',
+          boardTitle: 'Executive roadmap',
+          cardId: 'card_alpha_awaiting',
+          cardTitle: 'Await approval',
+          locale: 'ja',
+          verificationRequestedAt: '2026-04-03T10:45:00.000Z'
+        },
+        {
+          workspaceId: 'workspace_portfolio_beta',
+          workspaceTitle: null,
+          boardId: 'research',
+          boardTitle: 'Research board',
+          cardId: 'card_beta_awaiting',
+          cardTitle: 'Await translation review',
+          locale: 'fr',
+          verificationRequestedAt: '2026-04-03T10:50:00.000Z'
+        }
+      ],
+      agentProposalItems: [
+        {
+          workspaceId: 'workspace_portfolio_beta',
+          workspaceTitle: null,
+          boardId: 'research',
+          boardTitle: 'Research board',
+          cardId: 'card_beta_agent',
+          cardTitle: 'Check terminology',
+          locale: 'fr',
+          proposedAt: '2026-04-03T09:30:00.000Z'
+        }
+      ],
+      missingRequiredLocalizationItems: [
+        {
+          workspaceId: 'workspace_portfolio_alpha',
+          workspaceTitle: 'Studio HQ',
+          boardId: 'main',
+          boardTitle: 'Executive roadmap',
+          cardId: 'card_alpha_missing',
+          cardTitle: 'Translate hero copy',
+          cardUpdatedAt: '2026-04-03T10:30:00.000Z',
+          missingLocales: ['ja']
+        },
+        {
+          workspaceId: 'workspace_portfolio_beta',
+          workspaceTitle: null,
+          boardId: 'research',
+          boardTitle: 'Research board',
+          cardId: 'card_beta_missing',
+          cardTitle: 'Translate findings',
+          cardUpdatedAt: '2026-04-03T11:00:00.000Z',
+          missingLocales: ['fr']
+        }
+      ]
+    }
+  });
+
+  assert.deepEqual(
+    viewModel.awaitingApprovalWorkspaceGroups.map((group) => [group.workspaceId, group.entries.length]),
+    [
+      ['workspace_portfolio_alpha', 1],
+      ['workspace_portfolio_beta', 1]
+    ]
+  );
+  assert.deepEqual(
+    viewModel.agentProposalWorkspaceGroups.map((group) => [group.workspaceId, group.entries.length]),
+    [['workspace_portfolio_beta', 1]]
+  );
+  assert.deepEqual(
+    viewModel.missingRequiredLocalizationWorkspaceGroups.map((group) => [group.workspaceId, group.entries.length]),
+    [
+      ['workspace_portfolio_alpha', 1],
+      ['workspace_portfolio_beta', 1]
+    ]
+  );
+  assert.deepEqual(
+    viewModel.incompleteCoverageWorkspaceGroups.map((group) => [group.workspaceId, group.entries.length]),
+    [
+      ['workspace_portfolio_alpha', 1],
+      ['workspace_portfolio_beta', 1]
+    ]
+  );
+  assert.deepEqual(
+    viewModel.agingSections.map((section) => section.workspaceGroups.length),
+    [2, 1, 2]
+  );
 });
 
 test('GET /portfolio renders the empty state cleanly for super admins when no summaries exist', async () => {
