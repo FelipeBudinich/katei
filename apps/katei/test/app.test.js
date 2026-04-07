@@ -545,6 +545,14 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
   assert.match(response.text, /Open board/);
   assert.match(response.text, /Needs locales/);
   assert.match(response.text, /3 cards/);
+  assert.match(response.text, /<section class="portfolio-hero paper-panel grid gap-4 px-5 py-4">/);
+  assert.match(response.text, /<header class="top-bar border-0 bg-transparent px-0 py-0 shadow-none">/);
+  assert.match(response.text, /<div class="top-bar-heading-group items-start">/);
+  assert.match(response.text, /<p class="field-label text-sm font-semibold">Super admin portfolio<\/p>/);
+  assert.match(response.text, /<h1 class="top-bar-title font-serif text-3xl leading-tight text-strong">Portfolio<\/h1>/);
+  assert.match(response.text, /<div class="top-bar-actions">/);
+  assert.doesNotMatch(response.text, /class="portfolio-header"/);
+  assert.doesNotMatch(response.text, /class="portfolio-actions"/);
   assert.match(response.text, /class="portfolio-workspace-group portfolio-directory-card paper-panel"/);
   assert.ok(countMatches(response.text, /class="portfolio-workspace-group paper-panel"/g) >= 7);
   assert.match(response.text, /href="\/boards\?workspaceId=workspace_portfolio_alpha&amp;boardId=main"/);
