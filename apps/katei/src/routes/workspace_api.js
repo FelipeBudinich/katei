@@ -1175,6 +1175,7 @@ function createWorkspaceApiResponse(record, result = undefined, pendingWorkspace
     workspace,
     activeWorkspace: {
       workspaceId: normalizeOptionalString(record?.workspaceId) || normalizeOptionalString(workspace?.workspaceId) || null,
+      workspaceTitle: normalizeOptionalString(workspace?.title) || null,
       isHomeWorkspace: record?.isHomeWorkspace === true
     },
     meta: {

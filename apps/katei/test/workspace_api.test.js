@@ -40,12 +40,14 @@ function createReview(origin) {
 
 test('GET /api/workspace returns normalized actor-filtered shared workspace data', async () => {
   const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_api_get', {
+    workspaceTitle: 'Shared API workspace',
     memberRole: 'viewer',
     includeInvite: true
   });
   seedBoardOpenAiKey(sharedRecord.workspace.boards.member, 'sk-member-9876');
   const homeRecord = createHomeWorkspaceRecordFixture({
-    viewerSub: 'sub_member'
+    viewerSub: 'sub_member',
+    workspaceTitle: 'Member home'
   });
   const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([
     homeRecord,
@@ -70,6 +72,11 @@ test('GET /api/workspace returns normalized actor-filtered shared workspace data
     apiKeyLast4: '9876'
   });
   assert.equal(response.body.workspace.boards.member.aiLocalizationSecrets, undefined);
+  assert.deepEqual(response.body.activeWorkspace, {
+    workspaceId: 'workspace_shared_api_get',
+    workspaceTitle: 'Shared API workspace',
+    isHomeWorkspace: false
+  });
   assert.deepEqual(response.body.workspace.boards.invite.cards, {});
   assert.equal(response.body.workspace.boards.invite.collaboration.invites[0].email, 'member@example.com');
   assert.deepEqual(response.body.pendingWorkspaceInvites, [
@@ -103,6 +110,7 @@ test('GET /api/workspace returns normalized actor-filtered shared workspace data
   assert.deepEqual(response.body.accessibleWorkspaces, [
     {
       workspaceId: homeRecord.workspaceId,
+      workspaceTitle: 'Member home',
       isHomeWorkspace: true,
       boards: [
         {
@@ -145,6 +153,7 @@ test('GET /api/workspace treats another viewer home workspace as an external acc
   assert.deepEqual(response.body.accessibleWorkspaces, [
     {
       workspaceId: foreignHomeRecord.workspaceId,
+      workspaceTitle: null,
       isHomeWorkspace: false,
       boards: [
         {
@@ -197,6 +206,7 @@ test('POST /api/workspace/commands returns the filtered resulting workspace', as
   assert.deepEqual(response.body.accessibleWorkspaces, [
     {
       workspaceId: homeRecord.workspaceId,
+      workspaceTitle: null,
       isHomeWorkspace: true,
       boards: [
         {
@@ -1322,6 +1332,7 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = [], { allowInval
 
 function createHomeWorkspaceRecordFixture({
   viewerSub = 'sub_member',
+  workspaceTitle = null,
   boardTitle = 'Home board'
 } = {}) {
   const initialRecord = createInitialWorkspaceRecord(viewerSub, {
@@ -1331,6 +1342,7 @@ function createHomeWorkspaceRecordFixture({
   const workspace = structuredClone(initialRecord.workspace);
 
   workspace.boards.main.title = boardTitle;
+  workspace.title = workspaceTitle;
 
   return createUpdatedWorkspaceRecord(initialRecord, {
     workspace,
@@ -1342,7 +1354,10 @@ function createHomeWorkspaceRecordFixture({
   });
 }
 
-function createSharedWorkspaceRecordFixture(workspaceId, { memberRole = 'viewer', includeInvite = true } = {}) {
+function createSharedWorkspaceRecordFixture(
+  workspaceId,
+  { workspaceTitle = null, memberRole = 'viewer', includeInvite = true } = {}
+) {
   let workspace = createCard(
     createEmptyWorkspace({
       workspaceId,
@@ -1406,6 +1421,7 @@ function createSharedWorkspaceRecordFixture(workspaceId, { memberRole = 'viewer'
 
   workspace.boardOrder = includeInvite ? ['main', 'member', 'invite'] : ['main', 'member'];
   workspace.ui.activeBoardId = 'main';
+  workspace.title = workspaceTitle;
 
   const record = createUpdatedWorkspaceRecord(
     createInitialWorkspaceRecord('sub_owner', {
@@ -1573,6 +1589,10 @@ function listAccessibleWorkspaces(records, { viewerSub, viewerEmail = null, excl
     seenWorkspaceIds.add(projectedRecord.workspaceId);
     summaries.push({
       workspaceId: projectedRecord.workspaceId,
+      workspaceTitle:
+        typeof projectedWorkspace?.title === 'string' && projectedWorkspace.title.trim()
+          ? projectedWorkspace.title.trim()
+          : null,
       isHomeWorkspace: projectedRecord.workspaceId === createHomeWorkspaceId(viewerSub),
       boards
     });

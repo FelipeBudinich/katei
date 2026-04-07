@@ -89,7 +89,7 @@ export class MongoPortfolioReadModel {
 function createWorkspaceSummary(record, boardIds) {
   return {
     workspaceId: record.workspaceId,
-    workspaceTitle: null,
+    workspaceTitle: resolveWorkspaceTitle(record.workspace),
     boardCount: boardIds.length,
     timestamps: {
       createdAt: record.createdAt,
@@ -101,7 +101,7 @@ function createWorkspaceSummary(record, boardIds) {
 function createBoardSummary(record, board, boardId, localePolicy, boardPortfolioDetails) {
   return {
     workspaceId: record.workspaceId,
-    workspaceTitle: null,
+    workspaceTitle: resolveWorkspaceTitle(record.workspace),
     boardId,
     boardTitle: normalizeOptionalString(board.title) || boardId,
     localePolicy: {
@@ -250,7 +250,7 @@ function createLocalizedPortfolioItemBase({
 
   return {
     workspaceId: record.workspaceId,
-    workspaceTitle: null,
+    workspaceTitle: resolveWorkspaceTitle(record.workspace),
     boardId,
     boardTitle,
     cardId,
@@ -264,7 +264,7 @@ function createLocalizedPortfolioItemBase({
 function createCardPortfolioItemBase({ record, boardId, boardTitle, cardId, card, localePolicy }) {
   return {
     workspaceId: record.workspaceId,
-    workspaceTitle: null,
+    workspaceTitle: resolveWorkspaceTitle(record.workspace),
     boardId,
     boardTitle,
     cardId,
@@ -449,4 +449,8 @@ function normalizeOptionalIsoTimestamp(value) {
 
 function normalizeOptionalString(value) {
   return typeof value === 'string' ? value.trim() : '';
+}
+
+function resolveWorkspaceTitle(workspace) {
+  return normalizeOptionalString(workspace?.title) || null;
 }

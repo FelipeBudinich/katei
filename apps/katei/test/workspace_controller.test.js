@@ -3206,11 +3206,13 @@ function createViewerWorkspace(workspaceId, actor) {
 
 function createAccessibleWorkspaceSummary({
   workspaceId,
+  workspaceTitle = null,
   isHomeWorkspace = false,
   boards = []
 } = {}) {
   return {
     workspaceId,
+    workspaceTitle,
     isHomeWorkspace,
     boards: boards.map((board) => ({ ...board }))
   };

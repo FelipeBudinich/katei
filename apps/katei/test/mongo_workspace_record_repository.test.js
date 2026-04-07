@@ -388,6 +388,7 @@ test('listPendingWorkspaceInvitesForViewer ignores malformed or non-matching inv
 test('listAccessibleWorkspacesForViewer returns readable shared workspaces plus home, sorted and excluding the active workspace', async () => {
   const foreignHomeRecord = createHomeWorkspaceRecordFixture({
     viewerSub: 'sub_owner_casa',
+    workspaceTitle: 'Casa workspace',
     boardTitle: 'Casa'
   });
   foreignHomeRecord.workspace.boards.main.collaboration.memberships.push({
@@ -398,11 +399,14 @@ test('listAccessibleWorkspacesForViewer returns readable shared workspaces plus 
   const collection = createWorkspaceRecordCollectionDouble([
     toWorkspaceRecordDocument(createHomeWorkspaceRecordFixture({
       viewerSub: 'sub_member',
+      workspaceTitle: 'Member home',
       boardTitle: 'Home board'
     })),
     toWorkspaceRecordDocument(foreignHomeRecord),
     toWorkspaceRecordDocument(createSharedWorkspaceRecordFixture('workspace_shared_beta')),
-    toWorkspaceRecordDocument(createSharedWorkspaceRecordFixture('workspace_shared_alpha'))
+    toWorkspaceRecordDocument(createSharedWorkspaceRecordFixture('workspace_shared_alpha', {
+      workspaceTitle: 'Alpha workspace'
+    }))
   ]);
   const repository = new MongoWorkspaceRecordRepository({ collection });
 
@@ -415,6 +419,7 @@ test('listAccessibleWorkspacesForViewer returns readable shared workspaces plus 
   assert.deepEqual(accessibleWorkspaces, [
     {
       workspaceId: createHomeWorkspaceId('sub_member'),
+      workspaceTitle: 'Member home',
       isHomeWorkspace: true,
       boards: [
         {
@@ -426,6 +431,7 @@ test('listAccessibleWorkspacesForViewer returns readable shared workspaces plus 
     },
     {
       workspaceId: createHomeWorkspaceId('sub_owner_casa'),
+      workspaceTitle: 'Casa workspace',
       isHomeWorkspace: false,
       boards: [
         {
@@ -437,6 +443,7 @@ test('listAccessibleWorkspacesForViewer returns readable shared workspaces plus 
     },
     {
       workspaceId: 'workspace_shared_alpha',
+      workspaceTitle: 'Alpha workspace',
       isHomeWorkspace: false,
       boards: [
         {
@@ -925,6 +932,7 @@ function firstCardTitle(board) {
 
 function createHomeWorkspaceRecordFixture({
   viewerSub = 'sub_member',
+  workspaceTitle = null,
   boardTitle = 'Home board'
 } = {}) {
   const initialRecord = createInitialWorkspaceRecord(viewerSub, {
@@ -934,6 +942,7 @@ function createHomeWorkspaceRecordFixture({
   const workspace = structuredClone(initialRecord.workspace);
 
   workspace.boards.main.title = boardTitle;
+  workspace.title = workspaceTitle;
 
   return createUpdatedWorkspaceRecord(initialRecord, {
     workspace,
@@ -945,7 +954,7 @@ function createHomeWorkspaceRecordFixture({
   });
 }
 
-function createSharedWorkspaceRecordFixture(workspaceId) {
+function createSharedWorkspaceRecordFixture(workspaceId, { workspaceTitle = null } = {}) {
   let workspace = createCard(
     createEmptyWorkspace({
       workspaceId,
@@ -1006,6 +1015,7 @@ function createSharedWorkspaceRecordFixture(workspaceId) {
 
   workspace.boardOrder = ['main', 'member', 'invite'];
   workspace.ui.activeBoardId = 'main';
+  workspace.title = workspaceTitle;
 
   const record = createUpdatedWorkspaceRecord(
     createInitialWorkspaceRecord('sub_owner', {

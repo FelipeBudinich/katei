@@ -453,6 +453,7 @@ function normalizeActiveWorkspace(activeWorkspace, workspace) {
 
   return {
     workspaceId,
+    workspaceTitle: normalizeOptionalString(activeWorkspace?.workspaceTitle) || normalizeOptionalString(workspace?.title) || null,
     isHomeWorkspace: typeof activeWorkspace?.isHomeWorkspace === 'boolean' ? activeWorkspace.isHomeWorkspace : false
   };
 }
@@ -570,6 +571,7 @@ function normalizeAccessibleWorkspace(summary) {
 
   return {
     workspaceId,
+    workspaceTitle: normalizeOptionalString(summary.workspaceTitle) || null,
     isHomeWorkspace: summary.isHomeWorkspace === true,
     boards
   };

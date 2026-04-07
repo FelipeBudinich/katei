@@ -35,6 +35,7 @@ export function createBoardOptionsState(
 ) {
   const normalizedActor = normalizeBoardActor(actor);
   const activeBoardId = normalizeOptionalString(workspace?.ui?.activeBoardId);
+  const normalizedActiveWorkspaceTitle = normalizeOptionalString(workspace?.title) || null;
   const normalizedActiveWorkspaceId = normalizeOptionalString(activeWorkspaceId)
     || normalizeOptionalString(workspace?.workspaceId);
   const normalizedActiveWorkspaceIsHome = activeWorkspaceIsHome === true;
@@ -70,6 +71,7 @@ export function createBoardOptionsState(
     boardStates,
     workspaceSections: createWorkspaceSections(boardStates, accessibleWorkspaces, {
       activeWorkspaceId: normalizedActiveWorkspaceId,
+      activeWorkspaceTitle: normalizedActiveWorkspaceTitle,
       activeWorkspaceIsHome: normalizedActiveWorkspaceIsHome
     }),
     incomingInvites: createIncomingInviteViewModels(pendingWorkspaceInvites, {
@@ -233,14 +235,17 @@ export function createActorDisplay(actor) {
 
 function createWorkspaceSections(boardStates, accessibleWorkspaces, {
   activeWorkspaceId = '',
+  activeWorkspaceTitle = null,
   activeWorkspaceIsHome = false
 } = {}) {
   const sections = [];
   const normalizedActiveWorkspaceId = normalizeOptionalString(activeWorkspaceId);
+  const normalizedActiveWorkspaceTitle = normalizeOptionalString(activeWorkspaceTitle) || null;
 
   if (Array.isArray(boardStates) && boardStates.length > 0) {
     sections.push({
       workspaceId: normalizedActiveWorkspaceId,
+      workspaceTitle: normalizedActiveWorkspaceTitle,
       isHomeWorkspace: activeWorkspaceIsHome === true,
       isCurrentWorkspace: true,
       boardStates
@@ -279,6 +284,7 @@ function createAccessibleWorkspaceSection(summary) {
 
   return {
     workspaceId,
+    workspaceTitle: normalizeOptionalString(summary.workspaceTitle) || null,
     isHomeWorkspace: summary.isHomeWorkspace === true,
     isCurrentWorkspace: false,
     boardStates
@@ -363,6 +369,7 @@ function createIncomingInviteViewModel(invite) {
   }
 
   const workspaceId = normalizeOptionalString(invite.workspaceId);
+  const workspaceTitle = normalizeOptionalString(invite.workspaceTitle) || null;
   const boardId = normalizeOptionalString(invite.boardId);
   const boardTitle = normalizeOptionalString(invite.boardTitle);
   const inviteId = normalizeOptionalString(invite.inviteId);
@@ -376,7 +383,8 @@ function createIncomingInviteViewModel(invite) {
 
   return {
     workspaceId,
-    workspaceLabel: workspaceId,
+    workspaceTitle,
+    workspaceLabel: workspaceTitle || workspaceId,
     boardId,
     boardTitle,
     inviteId,

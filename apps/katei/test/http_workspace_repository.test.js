@@ -377,6 +377,7 @@ test('HttpWorkspaceRepository bootstraps accessibleWorkspaces from the server-re
   const accessibleWorkspaces = [
     createAccessibleWorkspaceSummary({
       workspaceId: 'workspace_shared',
+      workspaceTitle: 'Shared notes',
       boards: [
         {
           boardId: 'notes',
@@ -1244,6 +1245,7 @@ function createWorkspaceApiPayload(
     workspace,
     activeWorkspace: {
       workspaceId: meta.workspaceId ?? workspace?.workspaceId ?? null,
+      workspaceTitle: meta.workspaceTitle ?? workspace?.title ?? null,
       isHomeWorkspace: meta.isHomeWorkspace ?? true
     },
     meta: {
@@ -1285,6 +1287,7 @@ function createPendingWorkspaceInvitePayload() {
 
 function createAccessibleWorkspaceSummary({
   workspaceId = 'workspace_shared',
+  workspaceTitle = null,
   isHomeWorkspace = false,
   boards = [
     {
@@ -1296,6 +1299,7 @@ function createAccessibleWorkspaceSummary({
 } = {}) {
   return {
     workspaceId,
+    workspaceTitle,
     isHomeWorkspace,
     boards: boards.map((board) => ({ ...board }))
   };

@@ -372,6 +372,61 @@ test('loadPortfolioSummary handles an empty database cleanly', async () => {
   });
 });
 
+test('loadPortfolioSummary projects workspace titles when present and leaves untitled workspaces nullable', async () => {
+  const titledRecord = createPortfolioRecordFixture({
+    workspaceId: 'workspace_titled',
+    workspaceTitle: 'Studio workspace',
+    viewerSub: 'sub_titled',
+    recordCreatedAt: '2026-04-03T09:00:00.000Z',
+    recordUpdatedAt: '2026-04-03T10:00:00.000Z',
+    boards: [
+      {
+        boardId: 'main',
+        title: 'Main board',
+        createdAt: '2026-04-03T09:05:00.000Z',
+        updatedAt: '2026-04-03T09:55:00.000Z',
+        cards: []
+      }
+    ]
+  });
+  const untitledRecord = createPortfolioRecordFixture({
+    workspaceId: 'workspace_untitled',
+    viewerSub: 'sub_untitled',
+    recordCreatedAt: '2026-04-04T09:00:00.000Z',
+    recordUpdatedAt: '2026-04-04T10:00:00.000Z',
+    boards: [
+      {
+        boardId: 'main',
+        title: 'Untitled board',
+        createdAt: '2026-04-04T09:05:00.000Z',
+        updatedAt: '2026-04-04T09:55:00.000Z',
+        cards: []
+      }
+    ]
+  });
+  const readModel = new MongoPortfolioReadModel({
+    collection: createCollectionDouble([
+      toWorkspaceRecordDocument(titledRecord),
+      toWorkspaceRecordDocument(untitledRecord)
+    ])
+  });
+
+  const summary = await readModel.loadPortfolioSummary();
+
+  assert.equal(
+    summary.workspaces.find((workspace) => workspace.workspaceId === 'workspace_titled')?.workspaceTitle,
+    'Studio workspace'
+  );
+  assert.equal(
+    summary.workspaces.find((workspace) => workspace.workspaceId === 'workspace_untitled')?.workspaceTitle,
+    null
+  );
+  assert.equal(
+    summary.boardDirectory.find((entry) => entry.workspaceId === 'workspace_titled')?.workspaceTitle,
+    'Studio workspace'
+  );
+});
+
 test('loadPortfolioSummary keeps workspace and board grouping stable and sorts queue items by the expected timestamps', async () => {
   const alphaRecord = createPortfolioRecordFixture({
     workspaceId: 'workspace_alpha',
@@ -620,6 +675,7 @@ test('loadPortfolioSummary keeps workspace and board grouping stable and sorts q
 
 function createPortfolioRecordFixture({
   workspaceId,
+  workspaceTitle = null,
   viewerSub,
   recordCreatedAt,
   recordUpdatedAt,
@@ -637,6 +693,8 @@ function createPortfolioRecordFixture({
       id: viewerSub
     }
   });
+
+  workspace.title = workspaceTitle;
 
   workspace.boards = {};
   workspace.boardOrder = [];

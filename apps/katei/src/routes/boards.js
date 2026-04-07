@@ -209,6 +209,7 @@ function createWorkspaceBootstrapMeta(record) {
     lastChangedBy: record.lastChangedBy,
     isPristine: record.revision === 0,
     workspaceId: record.workspaceId,
+    workspaceTitle: normalizeOptionalString(record?.workspace?.title) || null,
     isHomeWorkspace: record.isHomeWorkspace
   };
 }
@@ -216,6 +217,7 @@ function createWorkspaceBootstrapMeta(record) {
 function createActiveWorkspaceDescriptor(workspace, workspaceMeta) {
   return {
     workspaceId: workspaceMeta?.workspaceId ?? workspace?.workspaceId ?? null,
+    workspaceTitle: normalizeOptionalString(workspaceMeta?.workspaceTitle) || normalizeOptionalString(workspace?.title) || null,
     isHomeWorkspace: workspaceMeta?.isHomeWorkspace ?? false
   };
 }

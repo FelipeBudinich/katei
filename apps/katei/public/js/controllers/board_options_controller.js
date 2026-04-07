@@ -381,6 +381,12 @@ function getInviterLabel(invitedBy) {
 }
 
 function getWorkspaceLabel(section, t) {
+  const workspaceTitle = normalizeOptionalString(section?.workspaceTitle);
+
+  if (workspaceTitle) {
+    return workspaceTitle;
+  }
+
   return section?.isHomeWorkspace === true
     ? t('boardOptionsDialog.homeWorkspaceLabel')
     : normalizeOptionalString(section?.workspaceId);

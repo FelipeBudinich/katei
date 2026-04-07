@@ -667,6 +667,7 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
     detailsMarkdown: 'Owner: Mina </script><img src=x onerror=1>',
     priority: 'urgent'
   });
+  workspace.title = 'Operations HQ';
   workspace.boards.main.title = 'Roadmap alpha';
   const record = createUpdatedWorkspaceRecord(
     createInitialWorkspaceRecord('sub_123', {
@@ -708,6 +709,7 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
     workspace: normalizedWorkspace,
     activeWorkspace: {
       workspaceId: record.workspaceId,
+      workspaceTitle: 'Operations HQ',
       isHomeWorkspace: true
     },
     meta: {
@@ -716,6 +718,7 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
       lastChangedBy: 'sub_123',
       isPristine: false,
       workspaceId: record.workspaceId,
+      workspaceTitle: 'Operations HQ',
       isHomeWorkspace: true
     },
     pendingWorkspaceInvites: [],
@@ -1558,9 +1561,11 @@ test('GET /boards bootstrap includes pendingWorkspaceInvites and matches the API
 test('GET /boards bootstrap includes accessibleWorkspaces and matches the API payload field', async () => {
   const homeRecord = createHomeWorkspaceRecordFixture({
     viewerSub: 'sub_member',
+    workspaceTitle: 'Member home',
     boardTitle: 'Home board'
   });
   const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_notes', {
+    workspaceTitle: 'Shared notes workspace',
     viewerSub: 'sub_owner_notes',
     memberSub: 'sub_member',
     memberEmail: 'member@example.com',
@@ -1588,10 +1593,12 @@ test('GET /boards bootstrap includes accessibleWorkspaces and matches the API pa
 
   assert.equal(boardsResponse.status, 200);
   assert.equal(apiResponse.status, 200);
+  assert.equal(bootstrapPayload.activeWorkspace.workspaceTitle, 'Member home');
   assert.deepEqual(bootstrapPayload.accessibleWorkspaces, apiResponse.body.accessibleWorkspaces);
   assert.deepEqual(bootstrapPayload.accessibleWorkspaces, [
     {
       workspaceId: 'workspace_shared_notes',
+      workspaceTitle: 'Shared notes workspace',
       isHomeWorkspace: false,
       boards: [
         {
@@ -1641,6 +1648,7 @@ test('GET /boards bootstrap treats another viewer home workspace as an external 
   assert.deepEqual(bootstrapPayload.accessibleWorkspaces, [
     {
       workspaceId: foreignHomeRecord.workspaceId,
+      workspaceTitle: null,
       isHomeWorkspace: false,
       boards: [
         {
@@ -1693,6 +1701,7 @@ test('GET /boards loads an accessible shared workspace by workspaceId and reject
   assert.deepEqual(accessibleBootstrap.accessibleWorkspaces, [
     {
       workspaceId: createHomeWorkspaceId('sub_collab'),
+      workspaceTitle: null,
       isHomeWorkspace: true,
       boards: [
         {
@@ -1770,6 +1779,7 @@ test('GET /api/workspace returns the authenticated viewer workspace JSON', async
   assert.equal(validateWorkspaceShape(response.body.workspace), true);
   assert.deepEqual(response.body.activeWorkspace, {
     workspaceId: createHomeWorkspaceId('sub_123'),
+    workspaceTitle: null,
     isHomeWorkspace: true
   });
   assert.deepEqual(response.body.meta, {
@@ -1813,6 +1823,7 @@ test('GET /api/workspace normalizes older persisted snapshots before returning t
   assert.equal(validateWorkspaceShape(response.body.workspace), true);
   assert.deepEqual(response.body.activeWorkspace, {
     workspaceId: createHomeWorkspaceId('sub_123'),
+    workspaceTitle: null,
     isHomeWorkspace: true
   });
   assert.equal(response.body.workspace.boards.main.columnOrder, undefined);
@@ -3201,6 +3212,7 @@ function createLegacyWorkspaceRecord({
 
 function createHomeWorkspaceRecordFixture({
   viewerSub = 'sub_123',
+  workspaceTitle = null,
   boardTitle = 'Home board'
 } = {}) {
   const initialRecord = createInitialWorkspaceRecord(viewerSub, {
@@ -3210,6 +3222,7 @@ function createHomeWorkspaceRecordFixture({
   const workspace = structuredClone(initialRecord.workspace);
 
   workspace.boards.main.title = boardTitle;
+  workspace.title = workspaceTitle;
 
   return createUpdatedWorkspaceRecord(initialRecord, {
     workspace,
@@ -3466,6 +3479,10 @@ function listAccessibleWorkspaces(records, { viewerSub, viewerEmail = null, excl
     seenWorkspaceIds.add(normalizedRecord.workspaceId);
     summaries.push({
       workspaceId: normalizedRecord.workspaceId,
+      workspaceTitle:
+        typeof projectedWorkspace?.title === 'string' && projectedWorkspace.title.trim()
+          ? projectedWorkspace.title.trim()
+          : null,
       isHomeWorkspace: normalizedRecord.workspaceId === createHomeWorkspaceId(viewerSub),
       boards
     });
@@ -3487,6 +3504,7 @@ function listAccessibleWorkspaces(records, { viewerSub, viewerEmail = null, excl
 function createSharedWorkspaceRecordFixture(
   workspaceId,
   {
+    workspaceTitle = null,
     viewerSub = 'sub_owner',
     memberSub = 'sub_member',
     memberEmail = 'member@example.com',
@@ -3559,6 +3577,7 @@ function createSharedWorkspaceRecordFixture(
 
   workspace.boardOrder = includeInvite ? ['main', memberBoardId, 'invite'] : ['main', memberBoardId];
   workspace.ui.activeBoardId = 'main';
+  workspace.title = workspaceTitle;
 
   const record = createUpdatedWorkspaceRecord(
     createInitialWorkspaceRecord(viewerSub, {

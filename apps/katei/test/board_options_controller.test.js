@@ -147,6 +147,55 @@ test('board options state groups accessible boards from other workspaces separat
   );
 });
 
+test('board options controller prefers workspace titles and falls back only when titles are missing', () => {
+  const controller = createBoardOptionsControllerDouble();
+  const viewerActor = createActor('viewer_1', 'viewer@example.com', 'Viewer');
+  const workspace = createEmptyWorkspace({
+    workspaceId: 'workspace_shared',
+    title: 'Studio workspace',
+    creator: viewerActor
+  });
+
+  workspace.boards.main.collaboration.memberships = [
+    {
+      actor: viewerActor,
+      role: 'admin',
+      joinedAt: workspace.boards.main.createdAt
+    }
+  ];
+
+  controller.syncWorkspace(workspace, viewerActor, {
+    activeWorkspaceId: workspace.workspaceId,
+    accessibleWorkspaces: [
+      createAccessibleWorkspaceSummary({
+        workspaceId: 'workspace_partner',
+        workspaceTitle: 'Partner workspace',
+        boards: [
+          {
+            boardId: 'roadmap',
+            boardTitle: 'Roadmap',
+            role: 'viewer'
+          }
+        ]
+      }),
+      createAccessibleWorkspaceSummary({
+        workspaceId: 'workspace_fallback',
+        boards: [
+          {
+            boardId: 'notes',
+            boardTitle: 'Notes',
+            role: 'viewer'
+          }
+        ]
+      })
+    ]
+  });
+
+  assert.equal(controller.boardListTarget.children[0].fields.workspaceTitle.textContent, 'Studio workspace');
+  assert.equal(controller.boardListTarget.children[1].fields.workspaceTitle.textContent, 'Partner workspace');
+  assert.equal(controller.boardListTarget.children[2].fields.workspaceTitle.textContent, 'workspace_fallback');
+});
+
 test('board list action state keeps switch and invite responses mutually exclusive', () => {
   const { optionsState } = createSharedBoardOptionsFixture();
   const activeBoardActions = createBoardListActionState(optionsState.boardStates[0]);
@@ -704,6 +753,7 @@ function createActor(id, email, displayName) {
 
 function createPendingWorkspaceInvite({
   workspaceId = 'workspace_invited_casa',
+  workspaceTitle = null,
   boardId = 'casa',
   boardTitle = 'Casa',
   inviteId = 'invite_casa_1',
@@ -716,6 +766,7 @@ function createPendingWorkspaceInvite({
 } = {}) {
   return {
     workspaceId,
+    workspaceTitle,
     boardId,
     boardTitle,
     inviteId,
@@ -727,6 +778,7 @@ function createPendingWorkspaceInvite({
 
 function createAccessibleWorkspaceSummary({
   workspaceId = 'workspace_shared_other',
+  workspaceTitle = null,
   isHomeWorkspace = false,
   boards = [
     {
@@ -738,6 +790,7 @@ function createAccessibleWorkspaceSummary({
 } = {}) {
   return {
     workspaceId,
+    workspaceTitle,
     isHomeWorkspace,
     boards
   };

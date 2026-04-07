@@ -566,6 +566,7 @@ function createAccessibleWorkspaceSummary(record, { viewerSub, viewerEmail = nul
 
   return {
     workspaceId,
+    workspaceTitle: resolveWorkspaceTitle(record?.workspace),
     isHomeWorkspace: Boolean(normalizedViewerSub && workspaceId === createHomeWorkspaceId(normalizedViewerSub)),
     boards
   };
@@ -647,6 +648,10 @@ function inviteMatchesViewer(invite, { viewerSub, viewerEmail = null } = {}) {
 
 function normalizeOptionalString(value) {
   return typeof value === 'string' ? value.trim() : '';
+}
+
+function resolveWorkspaceTitle(workspace) {
+  return normalizeOptionalString(workspace?.title) || null;
 }
 
 function normalizeOptionalEmail(value) {
