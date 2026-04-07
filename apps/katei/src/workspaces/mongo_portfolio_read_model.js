@@ -32,6 +32,8 @@ export class MongoPortfolioReadModel {
     const totals = createEmptyPortfolioTotals();
     const workspaces = [];
     const boardDirectory = [];
+    const awaitingHumanVerificationItems = [];
+    const agentProposalItems = [];
 
     for (const record of records) {
       const boardIds = listWorkspaceBoardIds(record.workspace);
@@ -45,9 +47,13 @@ export class MongoPortfolioReadModel {
           continue;
         }
 
-        const boardSummary = createBoardSummary(record, board, boardId);
+        const localePolicy = normalizeBoardLanguagePolicy(board.languagePolicy) ?? createDefaultBoardLanguagePolicy();
+        const boardPortfolioDetails = createBoardPortfolioDetails(record, board, boardId, localePolicy);
+        const boardSummary = createBoardSummary(record, board, boardId, localePolicy, boardPortfolioDetails);
 
         boardDirectory.push(boardSummary);
+        awaitingHumanVerificationItems.push(...boardPortfolioDetails.awaitingHumanVerificationItems);
+        agentProposalItems.push(...boardPortfolioDetails.agentProposalItems);
         accumulatePortfolioTotals(totals, boardSummary);
       }
     }
@@ -58,7 +64,9 @@ export class MongoPortfolioReadModel {
     return {
       totals,
       workspaces,
-      boardDirectory
+      boardDirectory,
+      awaitingHumanVerificationItems: awaitingHumanVerificationItems.sort(compareAwaitingHumanVerificationItems),
+      agentProposalItems: agentProposalItems.sort(compareAgentProposalItems)
     };
   }
 
@@ -87,10 +95,7 @@ function createWorkspaceSummary(record, boardIds) {
   };
 }
 
-function createBoardSummary(record, board, boardId) {
-  const localePolicy = normalizeBoardLanguagePolicy(board.languagePolicy) ?? createDefaultBoardLanguagePolicy();
-  const localizationSummary = createBoardLocalizationSummary(board);
-
+function createBoardSummary(record, board, boardId, localePolicy, boardPortfolioDetails) {
   return {
     workspaceId: record.workspaceId,
     workspaceTitle: null,
@@ -106,8 +111,8 @@ function createBoardSummary(record, board, boardId) {
       total: countBoardCards(board),
       byStage: null
     },
-    localizationSummary: localizationSummary.summary,
-    aging: localizationSummary.aging,
+    localizationSummary: boardPortfolioDetails.summary,
+    aging: boardPortfolioDetails.aging,
     timestamps: {
       workspaceCreatedAt: record.createdAt,
       workspaceUpdatedAt: record.updatedAt,
@@ -117,48 +122,14 @@ function createBoardSummary(record, board, boardId) {
   };
 }
 
-function compareWorkspaceRecords(left, right) {
-  return normalizeOptionalString(left?.workspaceId).localeCompare(normalizeOptionalString(right?.workspaceId));
-}
-
-function listWorkspaceBoardIds(workspace) {
-  const boardIds = [];
-  const seenBoardIds = new Set();
-
-  for (const boardId of Array.isArray(workspace?.boardOrder) ? workspace.boardOrder : []) {
-    if (typeof boardId !== 'string' || seenBoardIds.has(boardId) || !workspace?.boards?.[boardId]) {
-      continue;
-    }
-
-    seenBoardIds.add(boardId);
-    boardIds.push(boardId);
-  }
-
-  for (const boardId of Object.keys(workspace?.boards ?? {})) {
-    if (seenBoardIds.has(boardId) || !workspace.boards?.[boardId]) {
-      continue;
-    }
-
-    seenBoardIds.add(boardId);
-    boardIds.push(boardId);
-  }
-
-  return boardIds;
-}
-
-function countBoardCards(board) {
-  if (!board?.cards || typeof board.cards !== 'object') {
-    return 0;
-  }
-
-  return Object.keys(board.cards).length;
-}
-
-function createBoardLocalizationSummary(board) {
+function createBoardPortfolioDetails(record, board, boardId, localePolicy) {
   const summary = createEmptyBoardLocalizationSummary();
   const aging = createEmptyBoardAging();
+  const awaitingHumanVerificationItems = [];
+  const agentProposalItems = [];
+  const boardTitle = normalizeOptionalString(board?.title) || boardId;
 
-  for (const card of Object.values(board?.cards ?? {})) {
+  for (const [cardId, card] of Object.entries(board?.cards ?? {}).sort(compareCardEntries)) {
     if (!card || typeof card !== 'object') {
       continue;
     }
@@ -193,25 +164,181 @@ function createBoardLocalizationSummary(board) {
       const reviewState = getCardContentReviewState(variant.review ?? null);
 
       if (reviewState.status === 'needs-human-verification') {
+        const verificationRequestedAt = normalizeOptionalIsoTimestamp(variant.review?.verificationRequestedAt);
+
         summary.awaitingHumanVerificationCount += 1;
         aging.oldestAwaitingHumanVerificationAt = pickEarlierIsoTimestamp(
           aging.oldestAwaitingHumanVerificationAt,
-          variant.review?.verificationRequestedAt
+          verificationRequestedAt
         );
+        awaitingHumanVerificationItems.push({
+          ...createLocalizedPortfolioItemBase({
+            record,
+            boardId,
+            boardTitle,
+            cardId,
+            card,
+            locale,
+            variant,
+            localePolicy
+          }),
+          verificationRequestedAt
+        });
       } else if (reviewState.status === 'ai') {
+        const proposedAt = normalizeOptionalIsoTimestamp(variant.provenance?.timestamp);
+
         summary.agentProposalCount += 1;
         aging.oldestAgentProposalAt = pickEarlierIsoTimestamp(
           aging.oldestAgentProposalAt,
-          variant.provenance?.timestamp
+          proposedAt
         );
+        agentProposalItems.push({
+          ...createLocalizedPortfolioItemBase({
+            record,
+            boardId,
+            boardTitle,
+            cardId,
+            card,
+            locale,
+            variant,
+            localePolicy
+          }),
+          proposedAt
+        });
       }
     }
   }
 
   return {
     summary,
-    aging
+    aging,
+    awaitingHumanVerificationItems,
+    agentProposalItems
   };
+}
+
+function createLocalizedPortfolioItemBase({
+  record,
+  boardId,
+  boardTitle,
+  cardId,
+  card,
+  locale,
+  variant,
+  localePolicy
+}) {
+  const cardTitle = resolvePortfolioCardTitle(card, localePolicy);
+  const localizedTitle = normalizeOptionalString(variant?.title) || cardTitle;
+
+  return {
+    workspaceId: record.workspaceId,
+    workspaceTitle: null,
+    boardId,
+    boardTitle,
+    cardId,
+    cardTitle,
+    localizedTitle,
+    locale,
+    cardUpdatedAt: normalizeOptionalIsoTimestamp(card?.updatedAt)
+  };
+}
+
+function resolvePortfolioCardTitle(card, localePolicy) {
+  const sourceVariant = localePolicy?.sourceLocale
+    ? getStoredCardContentVariant(card, localePolicy.sourceLocale)
+    : null;
+  const sourceTitle = normalizeOptionalString(sourceVariant?.title);
+
+  if (sourceTitle) {
+    return sourceTitle;
+  }
+
+  for (const locale of listCardLocales(card)) {
+    const variantTitle = normalizeOptionalString(getStoredCardContentVariant(card, locale)?.title);
+
+    if (variantTitle) {
+      return variantTitle;
+    }
+  }
+
+  return normalizeOptionalString(card?.id);
+}
+
+function compareWorkspaceRecords(left, right) {
+  return normalizeOptionalString(left?.workspaceId).localeCompare(normalizeOptionalString(right?.workspaceId));
+}
+
+function compareCardEntries(left, right) {
+  return normalizeOptionalString(left?.[0]).localeCompare(normalizeOptionalString(right?.[0]));
+}
+
+function compareAwaitingHumanVerificationItems(left, right) {
+  return comparePortfolioItemsByTimestamp(left?.verificationRequestedAt, right?.verificationRequestedAt, left, right);
+}
+
+function compareAgentProposalItems(left, right) {
+  return comparePortfolioItemsByTimestamp(left?.proposedAt, right?.proposedAt, left, right);
+}
+
+function comparePortfolioItemsByTimestamp(leftTimestamp, rightTimestamp, left, right) {
+  const normalizedLeftTimestamp = normalizeOptionalIsoTimestamp(leftTimestamp);
+  const normalizedRightTimestamp = normalizeOptionalIsoTimestamp(rightTimestamp);
+
+  if (normalizedLeftTimestamp && normalizedRightTimestamp && normalizedLeftTimestamp !== normalizedRightTimestamp) {
+    return normalizedLeftTimestamp.localeCompare(normalizedRightTimestamp);
+  }
+
+  if (normalizedLeftTimestamp && !normalizedRightTimestamp) {
+    return -1;
+  }
+
+  if (!normalizedLeftTimestamp && normalizedRightTimestamp) {
+    return 1;
+  }
+
+  return comparePortfolioItemsByIdentity(left, right);
+}
+
+function comparePortfolioItemsByIdentity(left, right) {
+  return (
+    normalizeOptionalString(left?.workspaceId).localeCompare(normalizeOptionalString(right?.workspaceId))
+    || normalizeOptionalString(left?.boardId).localeCompare(normalizeOptionalString(right?.boardId))
+    || normalizeOptionalString(left?.cardId).localeCompare(normalizeOptionalString(right?.cardId))
+    || normalizeOptionalString(left?.locale).localeCompare(normalizeOptionalString(right?.locale))
+  );
+}
+
+function listWorkspaceBoardIds(workspace) {
+  const boardIds = [];
+  const seenBoardIds = new Set();
+
+  for (const boardId of Array.isArray(workspace?.boardOrder) ? workspace.boardOrder : []) {
+    if (typeof boardId !== 'string' || seenBoardIds.has(boardId) || !workspace?.boards?.[boardId]) {
+      continue;
+    }
+
+    seenBoardIds.add(boardId);
+    boardIds.push(boardId);
+  }
+
+  for (const boardId of Object.keys(workspace?.boards ?? {})) {
+    if (seenBoardIds.has(boardId) || !workspace.boards?.[boardId]) {
+      continue;
+    }
+
+    seenBoardIds.add(boardId);
+    boardIds.push(boardId);
+  }
+
+  return boardIds;
+}
+
+function countBoardCards(board) {
+  if (!board?.cards || typeof board.cards !== 'object') {
+    return 0;
+  }
+
+  return Object.keys(board.cards).length;
 }
 
 function createEmptyPortfolioTotals() {

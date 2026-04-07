@@ -103,6 +103,46 @@ const EN_MESSAGES = freezeCatalog({
         description: 'Try another workspace, board, or locale term.'
       }
     },
+    awaitingApproval: {
+      heading: 'Awaiting approval',
+      description: 'AI-origin localized variants that already need human verification are listed across boards here.',
+      workspaceColumnLabel: 'Workspace',
+      boardColumnLabel: 'Board',
+      cardColumnLabel: 'Card',
+      localeColumnLabel: 'Locale',
+      stateColumnLabel: 'State',
+      verificationRequestedAtColumnLabel: 'Verification requested',
+      actionsColumnLabel: 'Actions',
+      openBoardAction: 'Open board',
+      empty: {
+        heading: 'No items awaiting approval',
+        description: 'Nothing currently needs human verification.'
+      },
+      emptyFiltered: {
+        heading: 'No approval items match this search',
+        description: 'Try another workspace, board, card, or locale term.'
+      }
+    },
+    agentProposals: {
+      heading: 'Agent proposals',
+      description: 'AI-origin localized variants without a human verification request yet are listed here.',
+      workspaceColumnLabel: 'Workspace',
+      boardColumnLabel: 'Board',
+      cardColumnLabel: 'Card',
+      localeColumnLabel: 'Locale',
+      stateColumnLabel: 'State',
+      proposedAtColumnLabel: 'Proposed',
+      actionsColumnLabel: 'Actions',
+      openBoardAction: 'Open board',
+      empty: {
+        heading: 'No agent proposals',
+        description: 'Nothing is waiting in the AI-origin proposal state right now.'
+      },
+      emptyFiltered: {
+        heading: 'No proposals match this search',
+        description: 'Try another workspace, board, card, or locale term.'
+      }
+    },
     empty: {
       heading: 'No portfolio data yet',
       description: 'No workspace summaries are available yet.'
@@ -567,6 +607,46 @@ const ES_CL_MESSAGES = freezeCatalog({
       emptyFiltered: {
         heading: 'Ningún tablero coincide con esta búsqueda',
         description: 'Prueba con otro espacio, tablero o término de locale.'
+      }
+    },
+    awaitingApproval: {
+      heading: 'Esperando aprobación',
+      description: 'Aquí se listan entre tableros las variantes localizadas de origen IA que ya necesitan verificación humana.',
+      workspaceColumnLabel: 'Espacio',
+      boardColumnLabel: 'Tablero',
+      cardColumnLabel: 'Tarjeta',
+      localeColumnLabel: 'Locale',
+      stateColumnLabel: 'Estado',
+      verificationRequestedAtColumnLabel: 'Verificación solicitada',
+      actionsColumnLabel: 'Acciones',
+      openBoardAction: 'Abrir tablero',
+      empty: {
+        heading: 'No hay elementos esperando aprobación',
+        description: 'Actualmente nada necesita verificación humana.'
+      },
+      emptyFiltered: {
+        heading: 'Ningún elemento de aprobación coincide con esta búsqueda',
+        description: 'Prueba con otro espacio, tablero, tarjeta o término de locale.'
+      }
+    },
+    agentProposals: {
+      heading: 'Propuestas de agente',
+      description: 'Aquí se listan las variantes localizadas de origen IA que todavía no tienen solicitud de verificación humana.',
+      workspaceColumnLabel: 'Espacio',
+      boardColumnLabel: 'Tablero',
+      cardColumnLabel: 'Tarjeta',
+      localeColumnLabel: 'Locale',
+      stateColumnLabel: 'Estado',
+      proposedAtColumnLabel: 'Propuesta',
+      actionsColumnLabel: 'Acciones',
+      openBoardAction: 'Abrir tablero',
+      empty: {
+        heading: 'No hay propuestas de agente',
+        description: 'Ahora mismo no hay nada esperando en el estado de propuesta de origen IA.'
+      },
+      emptyFiltered: {
+        heading: 'Ninguna propuesta coincide con esta búsqueda',
+        description: 'Prueba con otro espacio, tablero, tarjeta o término de locale.'
       }
     },
     empty: {
@@ -1034,6 +1114,46 @@ const JA_MESSAGES = freezeCatalog({
       emptyFiltered: {
         heading: '検索条件に一致するボードはありません',
         description: '別のワークスペース名、ボード名、または locale で試してください。'
+      }
+    },
+    awaitingApproval: {
+      heading: '承認待ち',
+      description: 'すでに人の確認が必要になっている AI 由来のローカライズ項目を、ボード横断で一覧表示します。',
+      workspaceColumnLabel: 'ワークスペース',
+      boardColumnLabel: 'ボード',
+      cardColumnLabel: 'カード',
+      localeColumnLabel: 'locale',
+      stateColumnLabel: '状態',
+      verificationRequestedAtColumnLabel: '確認依頼日時',
+      actionsColumnLabel: '操作',
+      openBoardAction: 'ボードを開く',
+      empty: {
+        heading: '承認待ちの項目はありません',
+        description: '現在、人の確認が必要な項目はありません。'
+      },
+      emptyFiltered: {
+        heading: '検索条件に一致する承認待ち項目はありません',
+        description: '別のワークスペース名、ボード名、カード名、または locale で試してください。'
+      }
+    },
+    agentProposals: {
+      heading: 'エージェント提案',
+      description: 'まだ人の確認依頼が出ていない AI 由来のローカライズ項目を一覧表示します。',
+      workspaceColumnLabel: 'ワークスペース',
+      boardColumnLabel: 'ボード',
+      cardColumnLabel: 'カード',
+      localeColumnLabel: 'locale',
+      stateColumnLabel: '状態',
+      proposedAtColumnLabel: '提案日時',
+      actionsColumnLabel: '操作',
+      openBoardAction: 'ボードを開く',
+      empty: {
+        heading: 'エージェント提案はありません',
+        description: '現在、AI 由来の提案状態で止まっている項目はありません。'
+      },
+      emptyFiltered: {
+        heading: '検索条件に一致する提案はありません',
+        description: '別のワークスペース名、ボード名、カード名、または locale で試してください。'
       }
     },
     empty: {

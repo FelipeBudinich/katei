@@ -28,7 +28,15 @@ export function createPortfolioRouter({ requireSession, requireSuperAdmin, portf
 export function buildPortfolioPageModel({ viewer, t, portfolio = createEmptyPortfolioData(), searchQuery = '' }) {
   const normalizedPortfolio = normalizePortfolio(portfolio);
   const normalizedSearchQuery = normalizeOptionalString(searchQuery);
-  const filteredBoardDirectory = filterBoardDirectory(normalizedPortfolio.boardDirectory, normalizedSearchQuery);
+  const filteredBoardDirectory = filterPortfolioEntries(normalizedPortfolio.boardDirectory, normalizedSearchQuery);
+  const filteredAwaitingHumanVerificationItems = filterPortfolioEntries(
+    normalizedPortfolio.awaitingHumanVerificationItems,
+    normalizedSearchQuery
+  );
+  const filteredAgentProposalItems = filterPortfolioEntries(
+    normalizedPortfolio.agentProposalItems,
+    normalizedSearchQuery
+  );
 
   return {
     pageTitle: t('pageTitles.portfolio', { appTitle: APP_TITLE }),
@@ -70,7 +78,19 @@ export function buildPortfolioPageModel({ viewer, t, portfolio = createEmptyPort
       }
     ],
     boardDirectoryEntries: filteredBoardDirectory.map((entry) => createBoardDirectoryEntryViewModel(entry, t)),
-    boardDirectoryCount: filteredBoardDirectory.length
+    boardDirectoryCount: filteredBoardDirectory.length,
+    awaitingApprovalEntries: filteredAwaitingHumanVerificationItems.map((entry) => createReviewQueueEntryViewModel(entry, t, {
+      stateKey: 'cardViewDialog.reviewState.needs-human-verification',
+      timestampLabel: t('portfolio.awaitingApproval.verificationRequestedAtColumnLabel'),
+      timestamp: entry?.verificationRequestedAt
+    })),
+    awaitingApprovalCount: filteredAwaitingHumanVerificationItems.length,
+    agentProposalEntries: filteredAgentProposalItems.map((entry) => createReviewQueueEntryViewModel(entry, t, {
+      stateKey: 'cardViewDialog.reviewState.ai',
+      timestampLabel: t('portfolio.agentProposals.proposedAtColumnLabel'),
+      timestamp: entry?.proposedAt
+    })),
+    agentProposalCount: filteredAgentProposalItems.length
   };
 }
 
@@ -78,18 +98,26 @@ function createEmptyPortfolioData() {
   return {
     totals: createEmptyPortfolioTotals(),
     workspaces: [],
-    boardDirectory: []
+    boardDirectory: [],
+    awaitingHumanVerificationItems: [],
+    agentProposalItems: []
   };
 }
 
 function normalizePortfolio(portfolio) {
   const workspaces = Array.isArray(portfolio?.workspaces) ? portfolio.workspaces : [];
   const boardDirectory = Array.isArray(portfolio?.boardDirectory) ? portfolio.boardDirectory : [];
+  const awaitingHumanVerificationItems = Array.isArray(portfolio?.awaitingHumanVerificationItems)
+    ? portfolio.awaitingHumanVerificationItems
+    : [];
+  const agentProposalItems = Array.isArray(portfolio?.agentProposalItems) ? portfolio.agentProposalItems : [];
 
   return {
     totals: normalizePortfolioTotals(portfolio?.totals, { workspaces, boardDirectory }),
     workspaces,
-    boardDirectory
+    boardDirectory,
+    awaitingHumanVerificationItems,
+    agentProposalItems
   };
 }
 
@@ -145,29 +173,26 @@ function createBoardDirectoryEntryViewModel(entry, t) {
         label: t('portfolio.directory.agentProposalCountLabel'),
         value: String(agentProposalCount)
       }
-    ],
-    metadata: [
-      {
-        label: t('portfolio.directory.boardIdLabel'),
-        value: normalizeOptionalString(entry?.boardId)
-      },
-      {
-        label: t('portfolio.directory.sourceLocaleLabel'),
-        value: normalizeOptionalString(localePolicy.sourceLocale)
-      },
-      {
-        label: t('portfolio.directory.defaultLocaleLabel'),
-        value: normalizeOptionalString(localePolicy.defaultLocale)
-      },
-      {
-        label: t('portfolio.directory.supportedLocalesLabel'),
-        value: joinValues(localePolicy.supportedLocales)
-      },
-      {
-        label: t('portfolio.directory.requiredLocalesLabel'),
-        value: requiredLocales
-      }
-    ].filter((field) => field.value)
+    ]
+  };
+}
+
+function createReviewQueueEntryViewModel(entry, t, { stateKey, timestampLabel, timestamp }) {
+  const workspaceTitle = normalizeOptionalString(entry?.workspaceTitle) || normalizeOptionalString(entry?.workspaceId);
+  const boardTitle = normalizeOptionalString(entry?.boardTitle) || normalizeOptionalString(entry?.boardId);
+  const cardTitle = normalizeOptionalString(entry?.cardTitle) || normalizeOptionalString(entry?.cardId);
+  const localizedTitle = normalizeOptionalString(entry?.localizedTitle);
+
+  return {
+    workspaceTitle,
+    boardTitle,
+    cardTitle,
+    localizedTitle: localizedTitle && localizedTitle !== cardTitle ? localizedTitle : '',
+    locale: normalizeOptionalString(entry?.locale),
+    stateLabel: t(stateKey),
+    timestampLabel,
+    timestamp: normalizeOptionalString(timestamp),
+    openBoardHref: buildBoardHref(entry)
   };
 }
 
@@ -201,22 +226,26 @@ function normalizePortfolioTotals(totals, { workspaces = [], boardDirectory = []
   };
 }
 
-function filterBoardDirectory(entries, searchQuery) {
+function filterPortfolioEntries(entries, searchQuery) {
   if (!searchQuery) {
     return entries;
   }
 
   const normalizedSearchQuery = searchQuery.toLowerCase();
 
-  return entries.filter((entry) => getBoardDirectoryEntrySearchValue(entry).includes(normalizedSearchQuery));
+  return entries.filter((entry) => getPortfolioEntrySearchValue(entry).includes(normalizedSearchQuery));
 }
 
-function getBoardDirectoryEntrySearchValue(entry) {
+function getPortfolioEntrySearchValue(entry) {
   return [
     entry?.workspaceTitle,
     entry?.workspaceId,
     entry?.boardTitle,
     entry?.boardId,
+    entry?.cardTitle,
+    entry?.cardId,
+    entry?.localizedTitle,
+    entry?.locale,
     entry?.localePolicy?.sourceLocale,
     entry?.localePolicy?.defaultLocale,
     ...(Array.isArray(entry?.localePolicy?.supportedLocales) ? entry.localePolicy.supportedLocales : []),

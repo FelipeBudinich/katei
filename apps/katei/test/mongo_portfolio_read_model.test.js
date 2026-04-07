@@ -281,6 +281,50 @@ test('loadPortfolioSummary returns deterministic summary rollups with localizati
   assert.equal(Object.hasOwn(summary.boardDirectory[1], 'collaboration'), false);
   assert.equal(Object.hasOwn(summary.boardDirectory[1], 'templates'), false);
   assert.equal(Object.hasOwn(summary.boardDirectory[1], 'aiLocalization'), false);
+  assert.deepEqual(
+    summary.awaitingHumanVerificationItems.map((item) => ({
+      workspaceId: item.workspaceId,
+      boardId: item.boardId,
+      boardTitle: item.boardTitle,
+      cardTitle: item.cardTitle,
+      localizedTitle: item.localizedTitle,
+      locale: item.locale,
+      verificationRequestedAt: item.verificationRequestedAt
+    })),
+    [
+      {
+        workspaceId: 'workspace_zeta_shared',
+        boardId: 'secondary',
+        boardTitle: 'Client localization',
+        cardTitle: 'Await approval',
+        localizedTitle: '確認待ち',
+        locale: 'ja',
+        verificationRequestedAt: '2026-04-02T09:25:00.000Z'
+      }
+    ]
+  );
+  assert.deepEqual(
+    summary.agentProposalItems.map((item) => ({
+      workspaceId: item.workspaceId,
+      boardId: item.boardId,
+      boardTitle: item.boardTitle,
+      cardTitle: item.cardTitle,
+      localizedTitle: item.localizedTitle,
+      locale: item.locale,
+      proposedAt: item.proposedAt
+    })),
+    [
+      {
+        workspaceId: 'workspace_zeta_shared',
+        boardId: 'secondary',
+        boardTitle: 'Client localization',
+        cardTitle: 'Check glossaries',
+        localizedTitle: '用語集を確認',
+        locale: 'ja',
+        proposedAt: '2026-04-02T09:20:00.000Z'
+      }
+    ]
+  );
 });
 
 test('loadPortfolioSummary handles an empty database cleanly', async () => {
@@ -301,7 +345,9 @@ test('loadPortfolioSummary handles an empty database cleanly', async () => {
       agentProposalCount: 0
     },
     workspaces: [],
-    boardDirectory: []
+    boardDirectory: [],
+    awaitingHumanVerificationItems: [],
+    agentProposalItems: []
   });
 });
 

@@ -362,6 +362,34 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
             boardUpdatedAt: '2026-04-03T11:45:00.000Z'
           }
         }
+      ],
+      awaitingHumanVerificationItems: [
+        {
+          workspaceId: 'workspace_portfolio_alpha',
+          workspaceTitle: null,
+          boardId: 'main',
+          boardTitle: 'Executive roadmap',
+          cardId: 'card_awaiting',
+          cardTitle: 'Await approval',
+          localizedTitle: '確認待ち',
+          locale: 'ja',
+          cardUpdatedAt: '2026-04-03T10:40:00.000Z',
+          verificationRequestedAt: '2026-04-03T10:45:00.000Z'
+        }
+      ],
+      agentProposalItems: [
+        {
+          workspaceId: 'workspace_portfolio_alpha',
+          workspaceTitle: null,
+          boardId: 'main',
+          boardTitle: 'Executive roadmap',
+          cardId: 'card_agent',
+          cardTitle: 'Check glossaries',
+          localizedTitle: '用語集を確認',
+          locale: 'ja',
+          cardUpdatedAt: '2026-04-03T09:20:00.000Z',
+          proposedAt: '2026-04-03T09:30:00.000Z'
+        }
       ]
     }
   });
@@ -392,6 +420,15 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
   assert.match(response.text, /Executive roadmap/);
   assert.match(response.text, /workspace_portfolio_alpha/);
   assert.match(response.text, /1 matching boards/);
+  assert.match(response.text, /Awaiting approval/);
+  assert.match(response.text, /Verification requested/);
+  assert.match(response.text, /Await approval/);
+  assert.match(response.text, /確認待ち/);
+  assert.match(response.text, /2026-04-03T10:45:00.000Z/);
+  assert.match(response.text, /Proposed/);
+  assert.match(response.text, /Check glossaries/);
+  assert.match(response.text, /用語集を確認/);
+  assert.match(response.text, /2026-04-03T09:30:00.000Z/);
   assert.match(response.text, /Board ID/);
   assert.match(response.text, /Locale coverage/);
   assert.match(response.text, /Key counts/);
