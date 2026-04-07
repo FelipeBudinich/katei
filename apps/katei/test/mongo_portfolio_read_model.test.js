@@ -214,6 +214,7 @@ test('loadPortfolioSummary returns deterministic summary rollups with localizati
     workspaceTitle: null,
     boardId: 'main',
     boardTitle: 'Owner roadmap',
+    viewerRole: null,
     localePolicy: {
       sourceLocale: 'en',
       defaultLocale: 'en',
@@ -248,6 +249,7 @@ test('loadPortfolioSummary returns deterministic summary rollups with localizati
     workspaceTitle: null,
     boardId: 'secondary',
     boardTitle: 'Client localization',
+    viewerRole: null,
     localePolicy: {
       sourceLocale: 'en',
       defaultLocale: 'ja',
@@ -404,6 +406,57 @@ test('loadPortfolioSummary projects workspaceTitle when workspace.title exists',
   assert.equal(
     summary.boardDirectory.find((entry) => entry.workspaceId === 'workspace_titled')?.workspaceTitle,
     'Studio workspace'
+  );
+});
+
+test('loadPortfolioSummary includes the viewer board role when viewerSub is provided', async () => {
+  const sharedRecord = createPortfolioRecordFixture({
+    workspaceId: 'workspace_shared',
+    viewerSub: 'sub_owner_shared',
+    recordCreatedAt: '2026-04-03T09:00:00.000Z',
+    recordUpdatedAt: '2026-04-03T10:00:00.000Z',
+    boards: [
+      {
+        boardId: 'main',
+        title: 'Shared board',
+        createdAt: '2026-04-03T09:05:00.000Z',
+        updatedAt: '2026-04-03T09:55:00.000Z',
+        memberships: [
+          {
+            actor: { type: 'human', id: 'sub_member_shared', email: 'member@example.com' },
+            role: 'editor',
+            joinedAt: '2026-04-03T09:10:00.000Z'
+          }
+        ],
+        cards: []
+      },
+      {
+        boardId: 'ops',
+        title: 'Ops board',
+        createdAt: '2026-04-03T09:06:00.000Z',
+        updatedAt: '2026-04-03T09:56:00.000Z',
+        cards: []
+      }
+    ],
+    boardOrder: ['main', 'ops']
+  });
+  const readModel = new MongoPortfolioReadModel({
+    collection: createCollectionDouble([
+      toWorkspaceRecordDocument(sharedRecord)
+    ])
+  });
+
+  const summary = await readModel.loadPortfolioSummary({
+    viewerSub: 'sub_member_shared'
+  });
+
+  assert.equal(
+    summary.boardDirectory.find((entry) => entry.boardId === 'main')?.viewerRole,
+    'editor'
+  );
+  assert.equal(
+    summary.boardDirectory.find((entry) => entry.boardId === 'ops')?.viewerRole,
+    null
   );
 });
 

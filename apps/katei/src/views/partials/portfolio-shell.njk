@@ -2,7 +2,7 @@
   class="portfolio-page"
   data-controller="portfolio"
   data-portfolio-viewer-sub-value="{{ viewer.sub or '' }}"
-  data-portfolio-viewer-super-admin-value="{{ 'true' if canManageWorkspaceTitles else 'false' }}"
+  data-portfolio-viewer-super-admin-value="{{ 'true' if canManageBoardSelfRoles else 'false' }}"
 >
   <p class="sr-only" role="status" aria-live="polite" data-portfolio-target="announcer"></p>
   <section class="portfolio-hero paper-panel">
@@ -172,7 +172,77 @@
                         </ul>
                       </td>
                       <td>
-                        <a href="{{ entry.openBoardHref }}" class="touch-button-secondary">{{ t('portfolio.directory.openBoardAction') }}</a>
+                        {% if canManageBoardSelfRoles %}
+                          {% set selfRoleSelectId = 'portfolio-self-role-' ~ entry.workspaceId ~ '-' ~ entry.boardId %}
+                          <form
+                            class="portfolio-board-role-form"
+                            data-portfolio-board-role-form
+                            data-workspace-id="{{ entry.workspaceId }}"
+                            data-board-id="{{ entry.boardId }}"
+                            data-board-title="{{ entry.title }}"
+                            data-current-role="{{ entry.selfRole.key }}"
+                            data-action="change->portfolio#handleBoardSelfRoleInput submit->portfolio#saveBoardSelfRole"
+                          >
+                            <label for="{{ selfRoleSelectId }}" class="field-label text-sm font-semibold">
+                              {{ t('portfolio.boardSelfRole.fieldLabel') }}
+                            </label>
+                            <p
+                              class="portfolio-table-secondary"
+                              data-portfolio-field="board-self-role-current-value"
+                              data-role="{{ entry.selfRole.key }}"
+                            >
+                              {{ t('collaborators.currentRoleValue', { role: entry.selfRole.label }) }}
+                            </p>
+                            <div class="portfolio-board-role-controls">
+                              <select
+                                id="{{ selfRoleSelectId }}"
+                                class="field-control portfolio-board-role-select"
+                                data-portfolio-field="board-self-role-select"
+                              >
+                                <option value="" disabled {% if not entry.selfRole.selectValue %}selected{% endif %}>
+                                  {{ t('portfolio.boardSelfRole.selectPlaceholder') }}
+                                </option>
+                                <option value="viewer" {% if entry.selfRole.selectValue == 'viewer' %}selected{% endif %}>
+                                  {{ t('collaborators.roles.viewer') }}
+                                </option>
+                                <option value="editor" {% if entry.selfRole.selectValue == 'editor' %}selected{% endif %}>
+                                  {{ t('collaborators.roles.editor') }}
+                                </option>
+                                <option value="admin" {% if entry.selfRole.selectValue == 'admin' %}selected{% endif %}>
+                                  {{ t('collaborators.roles.admin') }}
+                                </option>
+                              </select>
+                              <button
+                                type="submit"
+                                class="touch-button-secondary"
+                                data-portfolio-field="board-self-role-save"
+                                {% if not entry.selfRole.selectValue %}disabled{% endif %}
+                              >
+                                {{ t('portfolio.boardSelfRole.saveAction') }}
+                              </button>
+                            </div>
+                            <p
+                              class="portfolio-table-secondary"
+                              data-portfolio-field="board-open-hint"
+                              {% if entry.canOpenBoard %}hidden{% endif %}
+                            >
+                              {{ t('portfolio.boardSelfRole.openBoardHelp') }}
+                            </p>
+                            <p class="portfolio-dialog-status text-sm" hidden data-portfolio-field="board-self-role-error"></p>
+                            <a
+                              href="{{ entry.openBoardHref }}"
+                              class="touch-button-secondary{% if not entry.canOpenBoard %} portfolio-link-disabled{% endif %}"
+                              data-portfolio-open-board-link
+                              data-action="portfolio#openBoardFromPortfolio"
+                              aria-disabled="{{ 'false' if entry.canOpenBoard else 'true' }}"
+                              {% if not entry.canOpenBoard %}tabindex="-1"{% endif %}
+                            >
+                              {{ t('portfolio.directory.openBoardAction') }}
+                            </a>
+                          </form>
+                        {% else %}
+                          <a href="{{ entry.openBoardHref }}" class="touch-button-secondary">{{ t('portfolio.directory.openBoardAction') }}</a>
+                        {% endif %}
                       </td>
                     </tr>
                   {% endfor %}

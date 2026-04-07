@@ -1,8 +1,11 @@
 import { Controller } from '../../vendor/stimulus/stimulus.js';
+import { canonicalizeBoardRole } from '../domain/board_collaboration.js';
+import { getBoardMembershipForActor } from '../domain/board_permissions.js';
 import { getBrowserTranslator } from '../i18n/browser.js';
 import { localizeErrorMessage } from '../i18n/errors.js';
 import { HttpWorkspaceRepository } from '../repositories/http_workspace_repository.js';
 import { WorkspaceService } from '../services/workspace_service.js';
+import { createWorkspaceViewerActor, getBoardRoleTranslationKey } from './board_collaboration_state.js';
 import { openDialogWithInitialFocus } from './dialog_initial_focus.js';
 
 export default class extends Controller {
@@ -31,6 +34,7 @@ export default class extends Controller {
     this.currentWorkspaceFallbackLabel = null;
     this.isSubmitting = false;
     this.resetDialogState();
+    this.syncBoardSelfRoleForms();
   }
 
   openRenameDialog(event) {
@@ -116,6 +120,76 @@ export default class extends Controller {
       this.showError(localizeErrorMessage(error, this.t));
     } finally {
       this.setSubmittingState(false);
+    }
+  }
+
+  handleBoardSelfRoleInput(event) {
+    const form = this.resolveBoardRoleFormElement(event?.currentTarget ?? event?.target ?? null);
+
+    if (!form) {
+      return;
+    }
+
+    this.hideBoardRoleError(form);
+    this.syncBoardSelfRoleForm(form);
+  }
+
+  openBoardFromPortfolio(event) {
+    const link = event?.currentTarget ?? null;
+
+    if (readElementBooleanAttribute(link, 'aria-disabled')) {
+      event?.preventDefault?.();
+    }
+  }
+
+  async saveBoardSelfRole(event) {
+    if (event) {
+      event.preventDefault();
+    }
+
+    if (!this.canManageWorkspaceTitles() || !this.service) {
+      return;
+    }
+
+    const form = this.resolveBoardRoleFormElement(event?.currentTarget ?? null);
+
+    if (!form || this.isBoardRoleSubmitting(form)) {
+      return;
+    }
+
+    const workspaceId = normalizeOptionalString(form?.dataset?.workspaceId);
+    const boardId = normalizeOptionalString(form?.dataset?.boardId);
+    const select = this.getBoardRoleSelect(form);
+    const requestedRole = canonicalizeBoardRole(select?.value);
+
+    if (!workspaceId || !boardId || !select) {
+      return;
+    }
+
+    if (!requestedRole) {
+      this.showBoardRoleError(form, this.t('portfolio.boardSelfRole.requiredError'));
+      this.syncBoardSelfRoleForm(form);
+      return;
+    }
+
+    this.hideBoardRoleError(form);
+    this.setBoardRoleSubmitting(form, true);
+
+    try {
+      const result = await this.service.setBoardSelfRole(boardId, requestedRole, { workspaceId });
+      const effectiveRole = this.resolveEffectiveBoardRole(result, boardId) ?? requestedRole;
+      const boardTitle = normalizeOptionalString(form?.dataset?.boardTitle) || boardId;
+
+      this.applyBoardSelfRoleResult(form, effectiveRole);
+      this.announce(this.t('portfolio.boardSelfRole.savedStatus', {
+        board: boardTitle,
+        role: this.getBoardRoleLabel(effectiveRole)
+      }));
+    } catch (error) {
+      console.error(error);
+      this.showBoardRoleError(form, localizeErrorMessage(error, this.t));
+    } finally {
+      this.setBoardRoleSubmitting(form, false);
     }
   }
 
@@ -266,6 +340,144 @@ export default class extends Controller {
     }
   }
 
+  syncBoardSelfRoleForms() {
+    for (const form of this.getBoardRoleForms()) {
+      this.syncBoardSelfRoleForm(form);
+    }
+  }
+
+  syncBoardSelfRoleForm(form) {
+    const select = this.getBoardRoleSelect(form);
+    const saveButton = this.getBoardRoleSaveButton(form);
+
+    if (!saveButton) {
+      return;
+    }
+
+    const canSubmit = Boolean(canonicalizeBoardRole(select?.value));
+
+    saveButton.disabled = this.isBoardRoleSubmitting(form) || !canSubmit;
+    saveButton.textContent = this.t(
+      this.isBoardRoleSubmitting(form)
+        ? 'portfolio.boardSelfRole.savingAction'
+        : 'portfolio.boardSelfRole.saveAction'
+    );
+  }
+
+  applyBoardSelfRoleResult(form, role) {
+    const normalizedRole = canonicalizeBoardRole(role) ?? 'none';
+    const currentRoleValue = this.getBoardRoleCurrentValue(form);
+    const select = this.getBoardRoleSelect(form);
+
+    form.dataset.currentRole = normalizedRole;
+
+    if (currentRoleValue) {
+      currentRoleValue.dataset.role = normalizedRole;
+      currentRoleValue.textContent = this.t('collaborators.currentRoleValue', {
+        role: this.getBoardRoleLabel(normalizedRole)
+      });
+    }
+
+    if (select) {
+      select.value = normalizedRole === 'none' ? '' : normalizedRole;
+    }
+
+    this.updateBoardOpenState(form, normalizedRole !== 'none');
+    this.hideBoardRoleError(form);
+    this.syncBoardSelfRoleForm(form);
+  }
+
+  resolveEffectiveBoardRole(workspace, boardId) {
+    const viewerActor = this.getViewerActor();
+    const normalizedBoardId = normalizeOptionalString(boardId);
+    const board = normalizedBoardId ? workspace?.boards?.[normalizedBoardId] ?? null : null;
+
+    if (!viewerActor || !board) {
+      return null;
+    }
+
+    return canonicalizeBoardRole(getBoardMembershipForActor(board, viewerActor)?.role);
+  }
+
+  getViewerActor() {
+    if (!this.hasViewerSubValue) {
+      return null;
+    }
+
+    return createWorkspaceViewerActor({
+      sub: normalizeOptionalString(this.viewerSubValue)
+    });
+  }
+
+  getBoardRoleLabel(roleOrStatus) {
+    return this.t(getBoardRoleTranslationKey(roleOrStatus));
+  }
+
+  setBoardRoleSubmitting(form, isSubmitting) {
+    if (!form?.dataset) {
+      return;
+    }
+
+    form.dataset.submitting = isSubmitting === true ? 'true' : 'false';
+
+    const select = this.getBoardRoleSelect(form);
+
+    if (select) {
+      select.disabled = isSubmitting === true;
+    }
+
+    this.syncBoardSelfRoleForm(form);
+  }
+
+  isBoardRoleSubmitting(form) {
+    return form?.dataset?.submitting === 'true';
+  }
+
+  showBoardRoleError(form, message) {
+    const error = this.getBoardRoleError(form);
+
+    if (!error) {
+      return;
+    }
+
+    error.hidden = false;
+    error.textContent = message;
+  }
+
+  hideBoardRoleError(form) {
+    const error = this.getBoardRoleError(form);
+
+    if (!error) {
+      return;
+    }
+
+    error.hidden = true;
+    error.textContent = '';
+  }
+
+  updateBoardOpenState(form, canOpen) {
+    const link = this.getBoardOpenLink(form);
+    const hint = this.getBoardOpenHint(form);
+
+    if (hint) {
+      hint.hidden = canOpen;
+    }
+
+    if (!link) {
+      return;
+    }
+
+    writeElementBooleanAttribute(link, 'aria-disabled', !canOpen);
+
+    if (canOpen) {
+      clearElementAttribute(link, 'tabindex');
+    } else {
+      writeElementAttribute(link, 'tabindex', '-1');
+    }
+
+    toggleClassToken(link, 'portfolio-link-disabled', !canOpen);
+  }
+
   getWorkspaceLabelElements(workspaceId) {
     return Array.from(this.element?.querySelectorAll?.('[data-portfolio-workspace-id]') ?? [])
       .filter((element) => (
@@ -278,8 +490,147 @@ export default class extends Controller {
     return Array.from(this.element?.querySelectorAll?.('[data-portfolio-action="rename-workspace-title"]') ?? [])
       .filter((element) => normalizeOptionalString(element?.dataset?.workspaceId) === workspaceId);
   }
+
+  getBoardRoleForms() {
+    return Array.from(this.element?.querySelectorAll?.('[data-portfolio-board-role-form]') ?? []);
+  }
+
+  resolveBoardRoleFormElement(element) {
+    if (!element) {
+      return null;
+    }
+
+    if (element?.dataset && Object.hasOwn(element.dataset, 'portfolioBoardRoleForm')) {
+      return element;
+    }
+
+    if (typeof element?.closest === 'function') {
+      return element.closest('[data-portfolio-board-role-form]');
+    }
+
+    return null;
+  }
+
+  getBoardRoleCurrentValue(form) {
+    return form?.querySelector?.('[data-portfolio-field="board-self-role-current-value"]') ?? null;
+  }
+
+  getBoardRoleSelect(form) {
+    return form?.querySelector?.('[data-portfolio-field="board-self-role-select"]') ?? null;
+  }
+
+  getBoardRoleSaveButton(form) {
+    return form?.querySelector?.('[data-portfolio-field="board-self-role-save"]') ?? null;
+  }
+
+  getBoardRoleError(form) {
+    return form?.querySelector?.('[data-portfolio-field="board-self-role-error"]') ?? null;
+  }
+
+  getBoardOpenHint(form) {
+    return form?.querySelector?.('[data-portfolio-field="board-open-hint"]') ?? null;
+  }
+
+  getBoardOpenLink(form) {
+    return form?.querySelector?.('[data-portfolio-open-board-link]') ?? null;
+  }
 }
 
 function normalizeOptionalString(value) {
   return typeof value === 'string' ? value.trim() : '';
+}
+
+function readElementBooleanAttribute(element, name) {
+  const value = readElementAttribute(element, name);
+  return value === 'true';
+}
+
+function writeElementBooleanAttribute(element, name, value) {
+  writeElementAttribute(element, name, value ? 'true' : 'false');
+}
+
+function readElementAttribute(element, name) {
+  if (!element) {
+    return '';
+  }
+
+  if (typeof element.getAttribute === 'function') {
+    return normalizeOptionalString(element.getAttribute(name));
+  }
+
+  if (typeof element[name] === 'string') {
+    return normalizeOptionalString(element[name]);
+  }
+
+  if (isPlainObject(element.attributes) && typeof element.attributes[name] === 'string') {
+    return normalizeOptionalString(element.attributes[name]);
+  }
+
+  return '';
+}
+
+function writeElementAttribute(element, name, value) {
+  if (!element) {
+    return;
+  }
+
+  if (typeof element.setAttribute === 'function') {
+    element.setAttribute(name, value);
+  }
+
+  if (isPlainObject(element.attributes)) {
+    element.attributes[name] = value;
+  } else {
+    element.attributes = {
+      [name]: value
+    };
+  }
+
+  element[name] = value;
+}
+
+function clearElementAttribute(element, name) {
+  if (!element) {
+    return;
+  }
+
+  if (typeof element.removeAttribute === 'function') {
+    element.removeAttribute(name);
+  }
+
+  if (isPlainObject(element.attributes)) {
+    delete element.attributes[name];
+  }
+
+  if (Object.hasOwn(element, name)) {
+    delete element[name];
+  }
+}
+
+function toggleClassToken(element, token, enabled) {
+  if (!element || !token) {
+    return;
+  }
+
+  if (element.classList && typeof element.classList.toggle === 'function') {
+    element.classList.toggle(token, enabled);
+    return;
+  }
+
+  const classNames = normalizeOptionalString(element.className)
+    .split(/\s+/u)
+    .filter(Boolean);
+  const nextClassNames = new Set(classNames);
+
+  if (enabled) {
+    nextClassNames.add(token);
+  } else {
+    nextClassNames.delete(token);
+  }
+
+  element.className = Array.from(nextClassNames).join(' ');
+}
+
+function isPlainObject(value) {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }

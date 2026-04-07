@@ -148,10 +148,139 @@ test('portfolio controller clears a workspace title back to the workspaceId fall
   });
 });
 
+test('portfolio controller saves a board self-role, updates the current role, and enables open board access', async () => {
+  await withMockDocument(async () => {
+    const controller = createPortfolioControllerDouble({
+      workspaceId: 'workspace_alpha',
+      workspaceTitle: 'Studio HQ',
+      boardRoleRows: [
+        {
+          workspaceId: 'workspace_alpha',
+          boardId: 'main',
+          boardTitle: 'Executive roadmap',
+          currentRole: 'none'
+        }
+      ]
+    });
+    const serviceCalls = [];
+    const roleForm = controller.boardRoleForms[0];
+    const roleSelect = roleForm.elements.select;
+
+    controller.service = {
+      async setBoardSelfRole(boardId, role, options) {
+        serviceCalls.push({ boardId, role, options });
+        return {
+          boards: {
+            main: {
+              collaboration: {
+                memberships: [
+                  {
+                    actor: { type: 'human', id: 'sub_123' },
+                    role: 'viewer',
+                    joinedAt: '2026-04-07T09:00:00.000Z'
+                  }
+                ]
+              }
+            }
+          }
+        };
+      }
+    };
+    roleSelect.value = 'viewer';
+    PortfolioController.prototype.handleBoardSelfRoleInput.call(controller, {
+      currentTarget: roleForm,
+      target: roleSelect
+    });
+
+    await PortfolioController.prototype.saveBoardSelfRole.call(controller, {
+      currentTarget: roleForm,
+      preventDefault() {}
+    });
+
+    assert.deepEqual(serviceCalls, [
+      {
+        boardId: 'main',
+        role: 'viewer',
+        options: {
+          workspaceId: 'workspace_alpha'
+        }
+      }
+    ]);
+    assert.equal(roleForm.dataset.currentRole, 'viewer');
+    assert.equal(
+      roleForm.elements.currentRoleValue.textContent,
+      'Current role: Viewer'
+    );
+    assert.equal(roleSelect.value, 'viewer');
+    assert.equal(roleForm.elements.error.hidden, true);
+    assert.equal(roleForm.elements.openHint.hidden, true);
+    assert.equal(roleForm.elements.openLink.attributes['aria-disabled'], 'false');
+    assert.equal(roleForm.elements.openLink.className.includes('portfolio-link-disabled'), false);
+    assert.equal(roleForm.elements.saveButton.disabled, false);
+    assert.equal(roleForm.elements.saveButton.textContent, 'Save role');
+    assert.equal(
+      controller.announcerTarget.textContent,
+      'Executive roadmap: role saved as Viewer.'
+    );
+  });
+});
+
+test('portfolio controller shows an inline error when a board self-role save fails', async () => {
+  await withMockDocument(async () => {
+    const controller = createPortfolioControllerDouble({
+      workspaceId: 'workspace_alpha',
+      workspaceTitle: 'Studio HQ',
+      boardRoleRows: [
+        {
+          workspaceId: 'workspace_alpha',
+          boardId: 'main',
+          boardTitle: 'Executive roadmap',
+          currentRole: 'none'
+        }
+      ]
+    });
+    const roleForm = controller.boardRoleForms[0];
+    const roleSelect = roleForm.elements.select;
+
+    controller.service = {
+      async setBoardSelfRole() {
+        throw new Error('Unable to save board role.');
+      }
+    };
+    const originalConsoleError = console.error;
+
+    console.error = () => {};
+    roleSelect.value = 'editor';
+    PortfolioController.prototype.handleBoardSelfRoleInput.call(controller, {
+      currentTarget: roleForm,
+      target: roleSelect
+    });
+
+    try {
+      await PortfolioController.prototype.saveBoardSelfRole.call(controller, {
+        currentTarget: roleForm,
+        preventDefault() {}
+      });
+    } finally {
+      console.error = originalConsoleError;
+    }
+
+    assert.equal(roleForm.dataset.currentRole, 'none');
+    assert.equal(roleForm.elements.currentRoleValue.textContent, 'Current role: No board role');
+    assert.equal(roleForm.elements.error.hidden, false);
+    assert.equal(roleForm.elements.error.textContent, 'Unable to save board role.');
+    assert.equal(roleForm.elements.openHint.hidden, false);
+    assert.equal(roleForm.elements.openLink.attributes['aria-disabled'], 'true');
+    assert.equal(roleForm.elements.saveButton.disabled, false);
+    assert.equal(roleForm.elements.saveButton.textContent, 'Save role');
+  });
+});
+
 function createPortfolioControllerDouble({
   workspaceId,
   workspaceTitle,
-  extraWorkspaceLabels = []
+  extraWorkspaceLabels = [],
+  boardRoleRows = []
 }) {
   const controller = Object.create(PortfolioController.prototype);
   const renameButton = createRenameButtonElement(workspaceId, workspaceTitle);
@@ -160,6 +289,7 @@ function createPortfolioControllerDouble({
     createWorkspaceLabelElement(workspaceId, workspaceTitle || workspaceId),
     ...extraWorkspaceLabels
   ];
+  const boardRoleForms = boardRoleRows.map((row) => createBoardRoleFormElement(row));
 
   controller.t = createTranslator('en');
   controller.hasViewerSuperAdminValue = true;
@@ -179,6 +309,7 @@ function createPortfolioControllerDouble({
   controller.isSubmitting = false;
   controller.renameButtons = [renameButton];
   controller.workspaceLabelElements = workspaceLabelElements;
+  controller.boardRoleForms = boardRoleForms;
   Object.defineProperty(controller, 'element', {
     configurable: true,
     value: {
@@ -189,6 +320,10 @@ function createPortfolioControllerDouble({
 
         if (selector === '[data-portfolio-action="rename-workspace-title"]') {
           return [renameButton];
+        }
+
+        if (selector === '[data-portfolio-board-role-form]') {
+          return boardRoleForms;
         }
 
         return [];
@@ -214,6 +349,7 @@ function createPortfolioControllerDouble({
   controller.hasAnnouncerTarget = true;
 
   PortfolioController.prototype.resetDialogState.call(controller);
+  PortfolioController.prototype.syncBoardSelfRoleForms.call(controller);
 
   return controller;
 }
@@ -259,6 +395,73 @@ function createWorkspaceLabelElement(workspaceId, textContent = workspaceId) {
   };
 }
 
+function createBoardRoleFormElement({
+  workspaceId,
+  boardId,
+  boardTitle,
+  currentRole = 'none'
+}) {
+  const normalizedCurrentRole = currentRole === 'none' ? 'none' : currentRole;
+  const currentRoleLabel = normalizedCurrentRole === 'none'
+    ? 'Current role: No board role'
+    : `Current role: ${capitalize(normalizedCurrentRole)}`;
+  const select = createSelectElement(normalizedCurrentRole === 'none' ? '' : normalizedCurrentRole);
+  const saveButton = createButtonElement();
+  const error = createErrorTarget();
+  const currentRoleValue = createTextTarget();
+  const openHint = {
+    hidden: normalizedCurrentRole !== 'none',
+    textContent: 'Assign yourself a role to open this board.'
+  };
+  const openLink = createAnchorElement({
+    href: `/boards?workspaceId=${workspaceId}&boardId=${boardId}`,
+    disabled: normalizedCurrentRole === 'none'
+  });
+
+  currentRoleValue.textContent = currentRoleLabel;
+  saveButton.textContent = 'Save role';
+  saveButton.disabled = normalizedCurrentRole === 'none';
+
+  const elements = {
+    currentRoleValue,
+    select,
+    saveButton,
+    error,
+    openHint,
+    openLink
+  };
+
+  return {
+    dataset: {
+      portfolioBoardRoleForm: '',
+      workspaceId,
+      boardId,
+      boardTitle,
+      currentRole: normalizedCurrentRole,
+      submitting: 'false'
+    },
+    elements,
+    querySelector(selector) {
+      switch (selector) {
+        case '[data-portfolio-field="board-self-role-current-value"]':
+          return currentRoleValue;
+        case '[data-portfolio-field="board-self-role-select"]':
+          return select;
+        case '[data-portfolio-field="board-self-role-save"]':
+          return saveButton;
+        case '[data-portfolio-field="board-self-role-error"]':
+          return error;
+        case '[data-portfolio-field="board-open-hint"]':
+          return openHint;
+        case '[data-portfolio-open-board-link]':
+          return openLink;
+        default:
+          return null;
+      }
+    }
+  };
+}
+
 function createButtonElement() {
   return {
     dataset: {},
@@ -268,6 +471,34 @@ function createButtonElement() {
     textContent: '',
     focus() {
       this.focusCalls += 1;
+    }
+  };
+}
+
+function createSelectElement(value = '') {
+  return {
+    value,
+    disabled: false
+  };
+}
+
+function createAnchorElement({ href, disabled = false }) {
+  return {
+    href,
+    className: disabled ? 'touch-button-secondary portfolio-link-disabled' : 'touch-button-secondary',
+    attributes: {
+      href,
+      'aria-disabled': disabled ? 'true' : 'false',
+      ...(disabled ? { tabindex: '-1' } : {})
+    },
+    getAttribute(name) {
+      return this.attributes[name] ?? null;
+    },
+    setAttribute(name, value) {
+      this.attributes[name] = value;
+    },
+    removeAttribute(name) {
+      delete this.attributes[name];
     }
   };
 }
@@ -289,7 +520,8 @@ function createInputTarget() {
 
 function createTextTarget() {
   return {
-    textContent: ''
+    textContent: '',
+    dataset: {}
   };
 }
 
@@ -312,4 +544,10 @@ async function withMockDocument(callback) {
   } finally {
     globalThis.document = originalDocument;
   }
+}
+
+function capitalize(value) {
+  return typeof value === 'string' && value.length > 0
+    ? `${value.slice(0, 1).toUpperCase()}${value.slice(1)}`
+    : value;
 }

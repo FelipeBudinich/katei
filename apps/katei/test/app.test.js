@@ -406,6 +406,7 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
           workspaceTitle: null,
           boardId: 'main',
           boardTitle: 'Executive roadmap',
+          viewerRole: null,
           localePolicy: {
             sourceLocale: 'en',
             defaultLocale: 'ja',
@@ -536,6 +537,11 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
   assert.match(response.text, /Open locale requests/);
   assert.match(response.text, /Awaiting human verification/);
   assert.match(response.text, /Agent proposals/);
+  assert.match(response.text, /My role on this board/);
+  assert.match(response.text, /Choose role/);
+  assert.match(response.text, /Assign yourself a role to open this board\./);
+  assert.match(response.text, /data-portfolio-board-role-form/);
+  assert.match(response.text, /aria-disabled="true"/);
   assert.match(response.text, /Open board/);
   assert.match(response.text, /Needs locales/);
   assert.match(response.text, /3 cards/);
@@ -548,7 +554,7 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
   assert.doesNotMatch(response.text, /data-controller="workspace"/);
   assert.doesNotMatch(response.text, /id="workspace-bootstrap"/);
   assert.deepEqual(workspaceRecordRepository.loadCalls, []);
-  assert.deepEqual(portfolioReadModel.loadCalls, [{}]);
+  assert.deepEqual(portfolioReadModel.loadCalls, [{ viewerSub: 'sub_123' }]);
 });
 
 test('GET /portfolio renders one workspace title action per workspace group for super admins', async () => {
@@ -580,6 +586,7 @@ test('GET /portfolio renders one workspace title action per workspace group for 
           workspaceTitle: 'Studio HQ',
           boardId: 'main',
           boardTitle: 'Executive roadmap',
+          viewerRole: 'viewer',
           localePolicy: {
             sourceLocale: 'en',
             defaultLocale: 'ja',
@@ -602,6 +609,7 @@ test('GET /portfolio renders one workspace title action per workspace group for 
           workspaceTitle: 'Studio HQ',
           boardId: 'ops',
           boardTitle: 'Operations',
+          viewerRole: 'editor',
           localePolicy: {
             sourceLocale: 'en',
             defaultLocale: 'en',
@@ -649,6 +657,7 @@ test('GET /portfolio renders one workspace title action per workspace group for 
   assert.match(response.text, /Workspace ID: workspace_portfolio_alpha/);
   assert.equal(countMatches(response.text, /data-portfolio-action="rename-workspace-title"/g), 1);
   assert.match(response.text, /data-portfolio-target="dialog"/);
+  assert.equal(countMatches(response.text, /data-portfolio-board-role-form/g), 2);
 });
 
 test('portfolio template hides workspace title editing controls for non-super-admin viewers', () => {
@@ -683,16 +692,17 @@ test('portfolio template hides workspace title editing controls for non-super-ad
           }
         ],
         boardDirectory: [
-          {
-            workspaceId: 'workspace_portfolio_alpha',
-            workspaceTitle: null,
-            boardId: 'main',
-            boardTitle: 'Executive roadmap',
-            localePolicy: {
-              sourceLocale: 'en',
-              defaultLocale: 'ja',
-              supportedLocales: ['en', 'ja'],
-              requiredLocales: ['ja']
+        {
+          workspaceId: 'workspace_portfolio_alpha',
+          workspaceTitle: null,
+          boardId: 'main',
+          boardTitle: 'Executive roadmap',
+          viewerRole: null,
+          localePolicy: {
+            sourceLocale: 'en',
+            defaultLocale: 'ja',
+            supportedLocales: ['en', 'ja'],
+            requiredLocales: ['ja']
             },
             cardCounts: {
               total: 3,
@@ -716,6 +726,8 @@ test('portfolio template hides workspace title editing controls for non-super-ad
   assert.match(html, /data-controller="portfolio"/);
   assert.match(html, /workspace_portfolio_alpha/);
   assert.doesNotMatch(html, /data-portfolio-action="rename-workspace-title"/);
+  assert.doesNotMatch(html, /data-portfolio-board-role-form/);
+  assert.doesNotMatch(html, /My role on this board/);
   assert.doesNotMatch(html, /data-portfolio-target="dialog"/);
 });
 
@@ -848,7 +860,7 @@ test('GET /portfolio renders the empty state cleanly for super admins when no su
   assert.match(response.text, /No portfolio data yet/);
   assert.doesNotMatch(response.text, /portfolio-directory-card/);
   assert.deepEqual(workspaceRecordRepository.loadCalls, []);
-  assert.deepEqual(portfolioReadModel.loadCalls, [{}]);
+  assert.deepEqual(portfolioReadModel.loadCalls, [{ viewerSub: 'sub_123' }]);
 });
 
 test('GET /portfolio filters the board directory by the search query', async () => {
@@ -4049,8 +4061,8 @@ function createPortfolioReadModelDouble({
   return {
     loadCalls: [],
 
-    async loadPortfolioSummary() {
-      this.loadCalls.push({});
+    async loadPortfolioSummary(options = {}) {
+      this.loadCalls.push(structuredClone(options));
       return structuredClone(summary);
     }
   };

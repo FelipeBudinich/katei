@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { APP_TITLE } from '../../public/js/domain/workspace_read_model.js';
+import { canonicalizeBoardRole } from '../../public/js/domain/board_collaboration.js';
 import { setPortfolioSurfaceCookie } from '../auth/last_surface_cookie.js';
 
 export function createPortfolioRouter({ requireSession, requireSuperAdmin, portfolioReadModel, config }) {
@@ -7,7 +8,9 @@ export function createPortfolioRouter({ requireSession, requireSuperAdmin, portf
 
   router.get('/portfolio', requireSession, requireSuperAdmin, async (request, response, next) => {
     try {
-      const portfolio = await portfolioReadModel.loadPortfolioSummary();
+      const portfolio = await portfolioReadModel.loadPortfolioSummary({
+        viewerSub: request?.viewer?.sub ?? null
+      });
       const searchQuery = normalizeOptionalString(request?.query?.q);
 
       setPortfolioSurfaceCookie(response, config);
@@ -83,6 +86,7 @@ export function buildPortfolioPageModel({ viewer, t, portfolio = createEmptyPort
     bodyClass: 'app-shell portfolio-shell',
     viewer,
     canManageWorkspaceTitles: viewer?.isSuperAdmin === true,
+    canManageBoardSelfRoles: viewer?.isSuperAdmin === true,
     portfolio: normalizedPortfolio,
     portfolioFilters: {
       searchQuery: normalizedSearchQuery,
@@ -187,6 +191,7 @@ function createBoardDirectoryEntryViewModel(entry, t) {
   const requiredLocales = joinValues(localePolicy.requiredLocales);
   const supportedLocales = joinValues(localePolicy.supportedLocales);
   const hasIncompleteLocaleCoverage = cardsMissingRequiredLocales > 0;
+  const selfRoleKey = normalizeBoardSelfRole(entry?.viewerRole);
 
   return {
     workspaceId,
@@ -195,6 +200,12 @@ function createBoardDirectoryEntryViewModel(entry, t) {
     title: boardTitle,
     boardId: normalizeOptionalString(entry?.boardId),
     openBoardHref: buildBoardHref(entry),
+    canOpenBoard: selfRoleKey !== 'none',
+    selfRole: {
+      key: selfRoleKey,
+      label: t(getBoardRoleTranslationKey(selfRoleKey)),
+      selectValue: selfRoleKey === 'none' ? '' : selfRoleKey
+    },
     localeCoverage: {
       statusLabel: hasIncompleteLocaleCoverage
         ? t('portfolio.coverage.incomplete')
@@ -453,6 +464,23 @@ function buildBoardHref(entry) {
   const queryString = searchParams.toString();
 
   return queryString ? `/boards?${queryString}` : '/boards';
+}
+
+function normalizeBoardSelfRole(role) {
+  return canonicalizeBoardRole(role) ?? 'none';
+}
+
+function getBoardRoleTranslationKey(roleOrStatus) {
+  switch (normalizeOptionalString(roleOrStatus).toLowerCase()) {
+    case 'admin':
+      return 'collaborators.roles.admin';
+    case 'editor':
+      return 'collaborators.roles.editor';
+    case 'viewer':
+      return 'collaborators.roles.viewer';
+    default:
+      return 'collaborators.roles.none';
+  }
 }
 
 function normalizeNonNegativeInteger(value, fallback = 0) {

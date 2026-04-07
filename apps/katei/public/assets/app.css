@@ -1716,6 +1716,28 @@
     line-height: var(--text-sm--line-height);
     color: var(--color-text-muted);
   }
+  .portfolio-board-role-form {
+    display: grid;
+    gap: 0.75rem;
+    min-width: 15rem;
+  }
+  .portfolio-board-role-controls {
+    display: grid;
+    gap: 0.75rem;
+  }
+  .portfolio-board-role-select {
+    min-width: 12rem;
+  }
+  .portfolio-link-disabled {
+    opacity: 0.55;
+    pointer-events: none;
+  }
+  @media (min-width: 52rem) {
+    .portfolio-board-role-controls {
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: end;
+    }
+  }
   .portfolio-empty-state {
     padding: 1.25rem;
     border: 1px dashed var(--color-border-subtle);

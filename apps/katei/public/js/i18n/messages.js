@@ -115,6 +115,15 @@ const EN_MESSAGES = freezeCatalog({
       savingAction: 'Saving...',
       savedStatus: 'Workspace title saved.'
     },
+    boardSelfRole: {
+      fieldLabel: 'My role on this board',
+      selectPlaceholder: 'Choose role',
+      saveAction: 'Save role',
+      savingAction: 'Saving...',
+      savedStatus: '{board}: role saved as {role}.',
+      openBoardHelp: 'Assign yourself a role to open this board.',
+      requiredError: 'Choose a role before saving.'
+    },
     awaitingApproval: {
       heading: 'Awaiting approval',
       description: 'AI-origin localized variants that already need human verification are listed across boards here.',
@@ -712,6 +721,15 @@ const ES_CL_MESSAGES = freezeCatalog({
       help: 'Borra el título para volver a usar el ID del espacio.',
       savingAction: 'Guardando...',
       savedStatus: 'Título del espacio guardado.'
+    },
+    boardSelfRole: {
+      fieldLabel: 'Mi rol en este tablero',
+      selectPlaceholder: 'Elige un rol',
+      saveAction: 'Guardar rol',
+      savingAction: 'Guardando...',
+      savedStatus: '{board}: rol guardado como {role}.',
+      openBoardHelp: 'Asígnate un rol para abrir este tablero.',
+      requiredError: 'Elige un rol antes de guardar.'
     },
     awaitingApproval: {
       heading: 'Esperando aprobación',
@@ -1311,6 +1329,15 @@ const JA_MESSAGES = freezeCatalog({
       help: 'タイトルを消すとワークスペース ID 表示に戻ります。',
       savingAction: '保存しています...',
       savedStatus: 'ワークスペース名を保存しました。'
+    },
+    boardSelfRole: {
+      fieldLabel: 'このボードでの自分の権限',
+      selectPlaceholder: '権限を選択',
+      saveAction: '権限を保存',
+      savingAction: '保存しています...',
+      savedStatus: '{board}: 権限を{role}に保存しました。',
+      openBoardHelp: 'このボードを開くには自分に権限を割り当ててください。',
+      requiredError: '保存する前に権限を選択してください。'
     },
     awaitingApproval: {
       heading: '承認待ち',

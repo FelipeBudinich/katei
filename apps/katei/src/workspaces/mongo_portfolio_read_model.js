@@ -2,6 +2,8 @@ import { getMongoDb } from '../data/mongo_client.js';
 import { getWorkspaceRecordCollection } from './mongo_workspace_record_repository.js';
 import { fromWorkspaceRecordDocument } from './workspace_record.js';
 import { createDefaultBoardLanguagePolicy, normalizeBoardLanguagePolicy } from '../../public/js/domain/board_language_policy.js';
+import { canonicalizeBoardRole, normalizeBoardActor } from '../../public/js/domain/board_collaboration.js';
+import { getBoardMembershipForActor } from '../../public/js/domain/board_permissions.js';
 import {
   getCardContentReviewState,
   getMissingRequiredLocales,
@@ -22,13 +24,14 @@ export class MongoPortfolioReadModel {
     this.getDb = getDb;
   }
 
-  async loadPortfolioSummary() {
+  async loadPortfolioSummary({ viewerSub = null } = {}) {
     const collection = this.#getCollection();
     const documents = await collection.find({}).toArray();
     const records = documents
       .map((document) => fromWorkspaceRecordDocument(document))
       .filter(Boolean)
       .sort(compareWorkspaceRecords);
+    const viewerActor = createPortfolioViewerActor(viewerSub);
     const totals = createEmptyPortfolioTotals();
     const workspaces = [];
     const boardDirectory = [];
@@ -50,7 +53,7 @@ export class MongoPortfolioReadModel {
 
         const localePolicy = normalizeBoardLanguagePolicy(board.languagePolicy) ?? createDefaultBoardLanguagePolicy();
         const boardPortfolioDetails = createBoardPortfolioDetails(record, board, boardId, localePolicy);
-        const boardSummary = createBoardSummary(record, board, boardId, localePolicy, boardPortfolioDetails);
+        const boardSummary = createBoardSummary(record, board, boardId, localePolicy, boardPortfolioDetails, viewerActor);
 
         boardDirectory.push(boardSummary);
         awaitingHumanVerificationItems.push(...boardPortfolioDetails.awaitingHumanVerificationItems);
@@ -98,12 +101,13 @@ function createWorkspaceSummary(record, boardIds) {
   };
 }
 
-function createBoardSummary(record, board, boardId, localePolicy, boardPortfolioDetails) {
+function createBoardSummary(record, board, boardId, localePolicy, boardPortfolioDetails, viewerActor) {
   return {
     workspaceId: record.workspaceId,
     workspaceTitle: resolveWorkspaceTitle(record.workspace),
     boardId,
     boardTitle: normalizeOptionalString(board.title) || boardId,
+    viewerRole: resolveViewerBoardRole(board, viewerActor),
     localePolicy: {
       sourceLocale: localePolicy.sourceLocale,
       defaultLocale: localePolicy.defaultLocale,
@@ -123,6 +127,21 @@ function createBoardSummary(record, board, boardId, localePolicy, boardPortfolio
       boardUpdatedAt: normalizeOptionalString(board.updatedAt) || null
     }
   };
+}
+
+function createPortfolioViewerActor(viewerSub) {
+  return normalizeBoardActor({
+    type: 'human',
+    id: normalizeOptionalString(viewerSub)
+  });
+}
+
+function resolveViewerBoardRole(board, viewerActor) {
+  if (!viewerActor) {
+    return null;
+  }
+
+  return canonicalizeBoardRole(getBoardMembershipForActor(board, viewerActor)?.role);
 }
 
 function createBoardPortfolioDetails(record, board, boardId, localePolicy) {
