@@ -54,31 +54,102 @@
       <p class="text-sm leading-6 text-muted">{{ t('portfolio.directory.description') }}</p>
     </div>
 
+    <div class="portfolio-toolbar">
+      <form method="get" action="/portfolio" class="portfolio-search-form">
+        <label for="portfolio-search" class="field-label text-sm font-semibold">
+          {{ t('portfolio.filters.searchLabel') }}
+        </label>
+        <input
+          id="portfolio-search"
+          name="q"
+          type="search"
+          value="{{ portfolioFilters.searchQuery }}"
+          class="portfolio-search-input"
+          placeholder="{{ t('portfolio.filters.searchPlaceholder') }}"
+        >
+        <div class="portfolio-search-actions">
+          <button type="submit" class="touch-button-secondary">{{ t('portfolio.filters.applyAction') }}</button>
+          {% if portfolioFilters.hasSearchQuery %}
+            <a href="/portfolio" class="touch-button-secondary">{{ t('portfolio.filters.clearAction') }}</a>
+          {% endif %}
+        </div>
+      </form>
+
+      {% if boardDirectoryEntries.length %}
+        <p class="portfolio-results-label">
+          {{ t('portfolio.filters.resultsLabel', { count: boardDirectoryCount }) }}
+        </p>
+      {% endif %}
+    </div>
+
     {% if boardDirectoryEntries.length %}
-      <div class="portfolio-directory-list">
-        {% for entry in boardDirectoryEntries %}
-          <article class="portfolio-directory-card">
-            <h3 class="text-lg font-semibold text-strong">{{ entry.title }}</h3>
-            <p class="text-sm leading-6 text-muted">
-              {{ t('portfolio.directory.workspaceLabel') }}: {{ entry.workspaceTitle }}
-            </p>
-            {% if entry.metadata.length %}
-              <div class="mt-4 space-y-2 text-sm leading-6 text-muted">
-                {% for field in entry.metadata %}
-                  <p>
-                    <span class="field-label text-sm font-semibold">{{ field.label }}</span>
-                    <span>{{ field.value }}</span>
-                  </p>
-                {% endfor %}
-              </div>
-            {% endif %}
-          </article>
-        {% endfor %}
+      <div class="portfolio-table-wrap">
+        <table class="portfolio-table">
+          <thead>
+            <tr>
+              <th scope="col">{{ t('portfolio.directory.workspaceColumnLabel') }}</th>
+              <th scope="col">{{ t('portfolio.directory.boardColumnLabel') }}</th>
+              <th scope="col">{{ t('portfolio.directory.localeCoverageColumnLabel') }}</th>
+              <th scope="col">{{ t('portfolio.directory.keyCountsColumnLabel') }}</th>
+              <th scope="col">{{ t('portfolio.directory.actionsColumnLabel') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for entry in boardDirectoryEntries %}
+              <tr>
+                <td>
+                  <div class="portfolio-table-primary">{{ entry.workspaceTitle }}</div>
+                </td>
+                <td>
+                  <div class="portfolio-table-primary">{{ entry.title }}</div>
+                  <p class="portfolio-table-secondary">{{ t('portfolio.directory.boardIdLabel') }}: {{ entry.boardId }}</p>
+                </td>
+                <td>
+                  <div class="portfolio-locale-coverage">
+                    <span class="portfolio-status-badge {{ entry.localeCoverage.statusModifierClass }}">
+                      {{ entry.localeCoverage.statusLabel }}
+                    </span>
+                    <p class="portfolio-table-secondary">
+                      {{ t('portfolio.directory.sourceLocaleLabel') }}: {{ entry.localeCoverage.sourceLocale }}
+                    </p>
+                    <p class="portfolio-table-secondary">
+                      {{ t('portfolio.directory.defaultLocaleLabel') }}: {{ entry.localeCoverage.defaultLocale }}
+                    </p>
+                    <p class="portfolio-table-secondary">
+                      {{ t('portfolio.directory.supportedLocalesLabel') }}: {{ entry.localeCoverage.supportedLocales }}
+                    </p>
+                    <p class="portfolio-table-secondary">
+                      {{ t('portfolio.directory.requiredLocalesLabel') }}: {{ entry.localeCoverage.requiredLocales }}
+                    </p>
+                  </div>
+                </td>
+                <td>
+                  <ul class="portfolio-count-list">
+                    {% for count in entry.counts %}
+                      <li class="portfolio-count-item">
+                        <span>{{ count.label }}</span>
+                        <strong class="text-strong">{{ count.value }}</strong>
+                      </li>
+                    {% endfor %}
+                  </ul>
+                </td>
+                <td>
+                  <a href="{{ entry.openBoardHref }}" class="touch-button-secondary">{{ t('portfolio.directory.openBoardAction') }}</a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
       </div>
     {% else %}
       <div class="portfolio-empty-state">
-        <h3 class="font-serif text-2xl text-strong">{{ t('portfolio.empty.heading') }}</h3>
-        <p class="text-sm leading-6 text-muted">{{ t('portfolio.empty.description') }}</p>
+        {% if portfolioFilters.hasSearchQuery %}
+          <h3 class="font-serif text-2xl text-strong">{{ t('portfolio.directory.emptyFiltered.heading') }}</h3>
+          <p class="text-sm leading-6 text-muted">{{ t('portfolio.directory.emptyFiltered.description') }}</p>
+        {% else %}
+          <h3 class="font-serif text-2xl text-strong">{{ t('portfolio.empty.heading') }}</h3>
+          <p class="text-sm leading-6 text-muted">{{ t('portfolio.empty.description') }}</p>
+        {% endif %}
       </div>
     {% endif %}
   </section>

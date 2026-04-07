@@ -49,6 +49,17 @@ const EN_MESSAGES = freezeCatalog({
     openBoards: 'Back to boards',
     superAdminBadge: 'Super admin',
     readOnlyBadge: 'Read only',
+    coverage: {
+      complete: 'Complete',
+      incomplete: 'Needs locales'
+    },
+    filters: {
+      searchLabel: 'Search portfolio',
+      searchPlaceholder: 'Search by workspace, board, or locale',
+      applyAction: 'Apply',
+      clearAction: 'Clear',
+      resultsLabel: '{count} matching boards'
+    },
     summary: {
       heading: 'Summary',
       description: 'Portfolio totals are rendered from a dedicated server-side summary read model.',
@@ -63,6 +74,11 @@ const EN_MESSAGES = freezeCatalog({
     directory: {
       heading: 'Board directory',
       description: 'Cross-workspace board summaries are listed here without exposing full editable board payloads.',
+      workspaceColumnLabel: 'Workspace',
+      boardColumnLabel: 'Board',
+      localeCoverageColumnLabel: 'Locale coverage',
+      keyCountsColumnLabel: 'Key counts',
+      actionsColumnLabel: 'Actions',
       workspaceLabel: 'Workspace',
       boardIdLabel: 'Board ID',
       sourceLocaleLabel: 'Source locale',
@@ -74,13 +90,18 @@ const EN_MESSAGES = freezeCatalog({
       openLocaleRequestCountLabel: 'Open locale requests',
       awaitingHumanVerificationCountLabel: 'Awaiting human verification',
       agentProposalCountLabel: 'Agent proposals',
+      openBoardAction: 'Open board',
       boardCreatedAtLabel: 'Board created',
       boardUpdatedAtLabel: 'Board updated',
       workspaceUpdatedAtLabel: 'Workspace updated',
       oldestMissingRequiredLocaleUpdatedAtLabel: 'Oldest missing required locale',
       oldestOpenLocaleRequestAtLabel: 'Oldest open locale request',
       oldestAwaitingHumanVerificationAtLabel: 'Oldest awaiting human verification',
-      oldestAgentProposalAtLabel: 'Oldest agent proposal'
+      oldestAgentProposalAtLabel: 'Oldest agent proposal',
+      emptyFiltered: {
+        heading: 'No boards match this search',
+        description: 'Try another workspace, board, or locale term.'
+      }
     },
     empty: {
       heading: 'No portfolio data yet',
@@ -494,6 +515,17 @@ const ES_CL_MESSAGES = freezeCatalog({
     openBoards: 'Volver a tableros',
     superAdminBadge: 'Super admin',
     readOnlyBadge: 'Solo lectura',
+    coverage: {
+      complete: 'Completo',
+      incomplete: 'Faltan locales'
+    },
+    filters: {
+      searchLabel: 'Buscar en portafolio',
+      searchPlaceholder: 'Busca por espacio, tablero o locale',
+      applyAction: 'Aplicar',
+      clearAction: 'Limpiar',
+      resultsLabel: '{count} tableros coincidentes'
+    },
     summary: {
       heading: 'Resumen',
       description: 'Los totales del portafolio se renderizan desde un read model resumido dedicado del servidor.',
@@ -508,6 +540,11 @@ const ES_CL_MESSAGES = freezeCatalog({
     directory: {
       heading: 'Directorio de tableros',
       description: 'Aquí se listan resúmenes de tableros entre espacios sin exponer payloads editables completos.',
+      workspaceColumnLabel: 'Espacio',
+      boardColumnLabel: 'Tablero',
+      localeCoverageColumnLabel: 'Cobertura de locales',
+      keyCountsColumnLabel: 'Conteos clave',
+      actionsColumnLabel: 'Acciones',
       workspaceLabel: 'Espacio',
       boardIdLabel: 'ID del tablero',
       sourceLocaleLabel: 'Locale fuente',
@@ -519,13 +556,18 @@ const ES_CL_MESSAGES = freezeCatalog({
       openLocaleRequestCountLabel: 'Solicitudes de locale abiertas',
       awaitingHumanVerificationCountLabel: 'Esperando verificación humana',
       agentProposalCountLabel: 'Propuestas de agente',
+      openBoardAction: 'Abrir tablero',
       boardCreatedAtLabel: 'Tablero creado',
       boardUpdatedAtLabel: 'Tablero actualizado',
       workspaceUpdatedAtLabel: 'Espacio actualizado',
       oldestMissingRequiredLocaleUpdatedAtLabel: 'Falta más antigua de locale requerido',
       oldestOpenLocaleRequestAtLabel: 'Solicitud de locale abierta más antigua',
       oldestAwaitingHumanVerificationAtLabel: 'Espera más antigua de verificación humana',
-      oldestAgentProposalAtLabel: 'Propuesta de agente más antigua'
+      oldestAgentProposalAtLabel: 'Propuesta de agente más antigua',
+      emptyFiltered: {
+        heading: 'Ningún tablero coincide con esta búsqueda',
+        description: 'Prueba con otro espacio, tablero o término de locale.'
+      }
     },
     empty: {
       heading: 'Todavía no hay datos de portafolio',
@@ -940,6 +982,17 @@ const JA_MESSAGES = freezeCatalog({
     openBoards: 'ボードに戻る',
     superAdminBadge: 'スーパー管理者',
     readOnlyBadge: '読み取り専用',
+    coverage: {
+      complete: '完了',
+      incomplete: 'locale不足あり'
+    },
+    filters: {
+      searchLabel: 'ポートフォリオを検索',
+      searchPlaceholder: 'ワークスペース、ボード、localeで検索',
+      applyAction: '適用',
+      clearAction: 'クリア',
+      resultsLabel: '{count} 件の一致するボード'
+    },
     summary: {
       heading: '概要',
       description: 'ポートフォリオの合計値は、専用のサーバー側要約 read model から描画されます。',
@@ -954,6 +1007,11 @@ const JA_MESSAGES = freezeCatalog({
     directory: {
       heading: 'ボード一覧',
       description: '編集可能な完全なボード payload を公開せずに、ワークスペース横断のボード要約を表示します。',
+      workspaceColumnLabel: 'ワークスペース',
+      boardColumnLabel: 'ボード',
+      localeCoverageColumnLabel: 'locale カバレッジ',
+      keyCountsColumnLabel: '主要件数',
+      actionsColumnLabel: '操作',
       workspaceLabel: 'ワークスペース',
       boardIdLabel: 'ボード ID',
       sourceLocaleLabel: 'ソース locale',
@@ -965,13 +1023,18 @@ const JA_MESSAGES = freezeCatalog({
       openLocaleRequestCountLabel: '未対応の locale リクエスト',
       awaitingHumanVerificationCountLabel: '人の確認待ち',
       agentProposalCountLabel: 'エージェント提案',
+      openBoardAction: 'ボードを開く',
       boardCreatedAtLabel: 'ボード作成日時',
       boardUpdatedAtLabel: 'ボード更新日時',
       workspaceUpdatedAtLabel: 'ワークスペース更新日時',
       oldestMissingRequiredLocaleUpdatedAtLabel: '最も古い必須 locale 未対応',
       oldestOpenLocaleRequestAtLabel: '最も古い locale リクエスト',
       oldestAwaitingHumanVerificationAtLabel: '最も古い人の確認待ち',
-      oldestAgentProposalAtLabel: '最も古いエージェント提案'
+      oldestAgentProposalAtLabel: '最も古いエージェント提案',
+      emptyFiltered: {
+        heading: '検索条件に一致するボードはありません',
+        description: '別のワークスペース名、ボード名、または locale で試してください。'
+      }
     },
     empty: {
       heading: 'ポートフォリオデータはまだありません',

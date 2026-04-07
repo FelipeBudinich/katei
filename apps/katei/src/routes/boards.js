@@ -46,17 +46,25 @@ export function createBoardsRouter({ requireSession, workspaceRecordRepository, 
         excludeWorkspaceId: record.workspaceId,
         debugLog
       });
+      const workspaceForPage = applyRequestedBoardSelection(record.workspace, resolveRequestedBoardId(request));
 
       const pageModel = buildWorkspacePageModel(
         request.viewer,
         response.locals.t,
         request.uiLocale ?? null,
-        record.workspace,
+        workspaceForPage,
         createWorkspaceBootstrapMeta(record),
         pendingWorkspaceInvites,
         accessibleWorkspaces
       );
-      setBoardSurfaceCookie(response, record, config);
+      setBoardSurfaceCookie(
+        response,
+        {
+          ...record,
+          workspace: workspaceForPage
+        },
+        config
+      );
 
       debugLog('invite.response.summary', buildInviteResponseDebugFields({
         route: 'GET /boards',
@@ -204,6 +212,32 @@ function resolveRequestedWorkspaceId(request) {
   return typeof request?.query?.workspaceId === 'string' && request.query.workspaceId.trim()
     ? request.query.workspaceId.trim()
     : null;
+}
+
+function resolveRequestedBoardId(request) {
+  return typeof request?.query?.boardId === 'string' && request.query.boardId.trim()
+    ? request.query.boardId.trim()
+    : null;
+}
+
+function applyRequestedBoardSelection(workspace, requestedBoardId) {
+  const normalizedBoardId = normalizeOptionalString(requestedBoardId);
+
+  if (!normalizedBoardId || !workspace?.boards?.[normalizedBoardId]) {
+    return workspace;
+  }
+
+  const nextWorkspace = structuredClone(workspace);
+  nextWorkspace.ui = {
+    ...(nextWorkspace.ui ?? {}),
+    activeBoardId: normalizedBoardId
+  };
+
+  return nextWorkspace;
+}
+
+function normalizeOptionalString(value) {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
 function normalizeBuildWorkspacePageModelArgs(

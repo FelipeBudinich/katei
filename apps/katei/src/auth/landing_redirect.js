@@ -22,7 +22,8 @@ export async function resolveAuthenticatedLandingDestination({
     const rememberedBoardDestination = await resolveRememberedBoardDestination({
       viewer,
       workspaceRecordRepository,
-      workspaceId: lastSurface.workspaceId
+      workspaceId: lastSurface.workspaceId,
+      boardId: lastSurface.boardId ?? null
     });
 
     if (rememberedBoardDestination) {
@@ -36,7 +37,8 @@ export async function resolveAuthenticatedLandingDestination({
 async function resolveRememberedBoardDestination({
   viewer,
   workspaceRecordRepository,
-  workspaceId
+  workspaceId,
+  boardId = null
 } = {}) {
   const normalizedWorkspaceId = normalizeOptionalString(workspaceId);
 
@@ -51,13 +53,21 @@ async function resolveRememberedBoardDestination({
       workspaceId: normalizedWorkspaceId
     });
     const resolvedWorkspaceId = normalizeOptionalString(record?.workspaceId ?? record?.workspace?.workspaceId);
+    const resolvedBoardId = normalizeOptionalString(boardId);
+    const hasRequestedBoard = Boolean(resolvedBoardId && record?.workspace?.boards?.[resolvedBoardId]);
 
     if (!resolvedWorkspaceId) {
       return null;
     }
 
-    return record?.isHomeWorkspace === true
-      ? '/boards'
+    if (record?.isHomeWorkspace === true) {
+      return hasRequestedBoard
+        ? `/boards?boardId=${encodeURIComponent(resolvedBoardId)}`
+        : '/boards';
+    }
+
+    return hasRequestedBoard
+      ? `/boards?workspaceId=${encodeURIComponent(resolvedWorkspaceId)}&boardId=${encodeURIComponent(resolvedBoardId)}`
       : `/boards?workspaceId=${encodeURIComponent(resolvedWorkspaceId)}`;
   } catch (error) {
     if (error instanceof WorkspaceAccessDeniedError || error?.code === 'WORKSPACE_ACCESS_DENIED') {

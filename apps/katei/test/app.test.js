@@ -232,7 +232,7 @@ test('GET / redirects authenticated super admins to a remembered board workspace
     ]);
 
   assert.equal(response.status, 302);
-  assert.equal(response.headers.location, '/boards?workspaceId=workspace_shared_portfolio_redirect');
+  assert.equal(response.headers.location, '/boards?workspaceId=workspace_shared_portfolio_redirect&boardId=notes');
   assert.deepEqual(workspaceRecordRepository.loadCalls, [
     {
       viewerSub: 'sub_123',
@@ -388,9 +388,13 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
   assert.match(response.text, /Back to boards/);
   assert.match(response.text, /Summary/);
   assert.match(response.text, /Board directory/);
+  assert.match(response.text, /Search portfolio/);
   assert.match(response.text, /Executive roadmap/);
-  assert.match(response.text, /Workspace:\s*workspace_portfolio_alpha/);
+  assert.match(response.text, /workspace_portfolio_alpha/);
+  assert.match(response.text, /1 matching boards/);
   assert.match(response.text, /Board ID/);
+  assert.match(response.text, /Locale coverage/);
+  assert.match(response.text, /Key counts/);
   assert.match(response.text, /Source locale/);
   assert.match(response.text, /Default locale/);
   assert.match(response.text, /Supported locales/);
@@ -399,12 +403,10 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
   assert.match(response.text, /Open locale requests/);
   assert.match(response.text, /Awaiting human verification/);
   assert.match(response.text, /Agent proposals/);
+  assert.match(response.text, /Open board/);
+  assert.match(response.text, /Needs locales/);
   assert.match(response.text, /3 cards/);
-  assert.match(response.text, /2026-04-03T10:30:00.000Z/);
-  assert.match(response.text, /2026-04-03T10:15:00.000Z/);
-  assert.match(response.text, /2026-04-03T10:45:00.000Z/);
-  assert.match(response.text, /2026-04-03T09:30:00.000Z/);
-  assert.match(response.text, /2026-04-03T11:45:00.000Z/);
+  assert.match(response.text, /href="\/boards\?workspaceId=workspace_portfolio_alpha&amp;boardId=main"/);
   assert.match(response.text, /Tester/);
   assert.match(
     findSetCookie(response, KATEI_LAST_SURFACE_COOKIE_NAME) ?? '',
@@ -441,6 +443,92 @@ test('GET /portfolio renders the empty state cleanly for super admins when no su
   assert.doesNotMatch(response.text, /portfolio-directory-card/);
   assert.deepEqual(workspaceRecordRepository.loadCalls, []);
   assert.deepEqual(portfolioReadModel.loadCalls, [{}]);
+});
+
+test('GET /portfolio filters the board directory by the search query', async () => {
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble();
+  const portfolioReadModel = createPortfolioReadModelDouble({
+    summary: {
+      totals: {
+        workspaces: 1,
+        boards: 2,
+        cards: 5,
+        cardsMissingRequiredLocales: 1,
+        openLocaleRequestCount: 1,
+        awaitingHumanVerificationCount: 0,
+        agentProposalCount: 0
+      },
+      workspaces: [],
+      boardDirectory: [
+        {
+          workspaceId: 'workspace_portfolio_alpha',
+          workspaceTitle: 'Alpha workspace',
+          boardId: 'main',
+          boardTitle: 'Executive roadmap',
+          localePolicy: {
+            sourceLocale: 'en',
+            defaultLocale: 'ja',
+            supportedLocales: ['en', 'ja'],
+            requiredLocales: ['ja']
+          },
+          cardCounts: {
+            total: 3,
+            byStage: null
+          },
+          localizationSummary: {
+            cardsMissingRequiredLocales: 1,
+            openLocaleRequestCount: 1,
+            awaitingHumanVerificationCount: 0,
+            agentProposalCount: 0
+          }
+        },
+        {
+          workspaceId: 'workspace_portfolio_alpha',
+          workspaceTitle: 'Alpha workspace',
+          boardId: 'research',
+          boardTitle: 'Research board',
+          localePolicy: {
+            sourceLocale: 'en',
+            defaultLocale: 'en',
+            supportedLocales: ['en'],
+            requiredLocales: ['en']
+          },
+          cardCounts: {
+            total: 2,
+            byStage: null
+          },
+          localizationSummary: {
+            cardsMissingRequiredLocales: 0,
+            openLocaleRequestCount: 0,
+            awaitingHumanVerificationCount: 0,
+            agentProposalCount: 0
+          }
+        }
+      ]
+    }
+  });
+  const app = createTestApp({
+    env: {
+      SUPER_ADMINS: 'tester@example.com'
+    },
+    googleTokenVerifier: async () => ({ sub: 'sub_123' }),
+    workspaceRecordRepository,
+    portfolioReadModel
+  });
+
+  const response = await request(app)
+    .get('/portfolio?q=ja')
+    .set('Cookie', createSessionCookieHeader({
+      sub: 'sub_123',
+      name: 'Tester',
+      email: 'tester@example.com'
+    }));
+
+  assert.equal(response.status, 200);
+  assert.match(response.text, /value="ja"/);
+  assert.match(response.text, /1 matching boards/);
+  assert.match(response.text, /Executive roadmap/);
+  assert.doesNotMatch(response.text, /Research board/);
 });
 
 test('GET /boards renders the server workspace and bootstrap payload for authenticated users', async () => {
@@ -615,6 +703,42 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
   assert.match(response.text, /data-session-target="confirmMessage"/);
   assert.match(response.text, /data-session-target="confirmButton"/);
   assert.match(response.text, /session#confirmLogout/);
+});
+
+test('GET /boards selects the requested board from the query string for first paint and last-surface memory', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_board_query', {
+    memberSub: 'sub_123',
+    memberEmail: 'tester@example.com',
+    memberBoardId: 'notes',
+    memberBoardTitle: 'Shared notes',
+    includeInvite: false
+  });
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord]);
+  const app = createTestApp({
+    googleTokenVerifier: async () => ({ sub: 'sub_123' }),
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .get('/boards?workspaceId=workspace_shared_board_query&boardId=notes')
+    .set('Cookie', createSessionCookieHeader({
+      sub: 'sub_123',
+      name: 'Tester',
+      email: 'tester@example.com'
+    }));
+  const bootstrapPayload = readWorkspaceBootstrapPayload(response.text);
+
+  assert.equal(response.status, 200);
+  assert.match(response.text, /<h1 class="top-bar-title[\s\S]*?>Shared notes<\/h1>/);
+  assert.equal(bootstrapPayload.workspace.ui.activeBoardId, 'notes');
+  assert.match(
+    findSetCookie(response, KATEI_LAST_SURFACE_COOKIE_NAME) ?? '',
+    new RegExp(escapeForRegex(createLastSurfaceCookieValue({
+      surface: 'board',
+      workspaceId: 'workspace_shared_board_query',
+      boardId: 'notes'
+    })))
+  );
 });
 
 test('GET /boards renders the Portfolio action in board options for super admins', async () => {
@@ -2406,7 +2530,7 @@ test('POST /auth/google resumes the remembered board workspace for super admins 
   assert.equal(response.status, 200);
   assert.deepEqual(response.body, {
     ok: true,
-    redirectTo: '/boards?workspaceId=workspace_shared_login_resume'
+    redirectTo: '/boards?workspaceId=workspace_shared_login_resume&boardId=notes'
   });
   assert.deepEqual(workspaceRecordRepository.loadCalls, [
     {

@@ -8,12 +8,14 @@ export function createPortfolioRouter({ requireSession, requireSuperAdmin, portf
   router.get('/portfolio', requireSession, requireSuperAdmin, async (request, response, next) => {
     try {
       const portfolio = await portfolioReadModel.loadPortfolioSummary();
+      const searchQuery = normalizeOptionalString(request?.query?.q);
 
       setPortfolioSurfaceCookie(response, config);
       response.render('pages/portfolio', buildPortfolioPageModel({
         viewer: request.viewer,
         t: response.locals.t,
-        portfolio
+        portfolio,
+        searchQuery
       }));
     } catch (error) {
       next(error);
@@ -23,14 +25,20 @@ export function createPortfolioRouter({ requireSession, requireSuperAdmin, portf
   return router;
 }
 
-export function buildPortfolioPageModel({ viewer, t, portfolio = createEmptyPortfolioData() }) {
+export function buildPortfolioPageModel({ viewer, t, portfolio = createEmptyPortfolioData(), searchQuery = '' }) {
   const normalizedPortfolio = normalizePortfolio(portfolio);
+  const normalizedSearchQuery = normalizeOptionalString(searchQuery);
+  const filteredBoardDirectory = filterBoardDirectory(normalizedPortfolio.boardDirectory, normalizedSearchQuery);
 
   return {
     pageTitle: t('pageTitles.portfolio', { appTitle: APP_TITLE }),
     bodyClass: 'app-shell portfolio-shell',
     viewer,
     portfolio: normalizedPortfolio,
+    portfolioFilters: {
+      searchQuery: normalizedSearchQuery,
+      hasSearchQuery: Boolean(normalizedSearchQuery)
+    },
     summaryItems: [
       {
         label: t('portfolio.summary.workspacesLabel'),
@@ -61,7 +69,8 @@ export function buildPortfolioPageModel({ viewer, t, portfolio = createEmptyPort
         value: normalizedPortfolio.totals.agentProposalCount
       }
     ],
-    boardDirectoryEntries: normalizedPortfolio.boardDirectory.map((entry) => createBoardDirectoryEntryViewModel(entry, t))
+    boardDirectoryEntries: filteredBoardDirectory.map((entry) => createBoardDirectoryEntryViewModel(entry, t)),
+    boardDirectoryCount: filteredBoardDirectory.length
   };
 }
 
@@ -88,18 +97,55 @@ function createBoardDirectoryEntryViewModel(entry, t) {
   const workspaceTitle = normalizeOptionalString(entry?.workspaceTitle) || normalizeOptionalString(entry?.workspaceId);
   const boardTitle = normalizeOptionalString(entry?.boardTitle) || normalizeOptionalString(entry?.boardId);
   const localePolicy = entry?.localePolicy ?? {};
-  const timestamps = entry?.timestamps ?? {};
   const localizationSummary = entry?.localizationSummary ?? {};
-  const aging = entry?.aging ?? {};
   const totalCards = Number.isInteger(entry?.cardCounts?.total) ? entry.cardCounts.total : 0;
   const cardsMissingRequiredLocales = normalizeNonNegativeInteger(localizationSummary.cardsMissingRequiredLocales);
   const openLocaleRequestCount = normalizeNonNegativeInteger(localizationSummary.openLocaleRequestCount);
   const awaitingHumanVerificationCount = normalizeNonNegativeInteger(localizationSummary.awaitingHumanVerificationCount);
   const agentProposalCount = normalizeNonNegativeInteger(localizationSummary.agentProposalCount);
+  const requiredLocales = joinValues(localePolicy.requiredLocales);
+  const supportedLocales = joinValues(localePolicy.supportedLocales);
+  const hasIncompleteLocaleCoverage = cardsMissingRequiredLocales > 0;
 
   return {
     title: boardTitle,
     workspaceTitle,
+    boardId: normalizeOptionalString(entry?.boardId),
+    openBoardHref: buildBoardHref(entry),
+    localeCoverage: {
+      statusLabel: hasIncompleteLocaleCoverage
+        ? t('portfolio.coverage.incomplete')
+        : t('portfolio.coverage.complete'),
+      statusModifierClass: hasIncompleteLocaleCoverage
+        ? 'portfolio-status-badge--warning'
+        : 'portfolio-status-badge--success',
+      sourceLocale: normalizeOptionalString(localePolicy.sourceLocale),
+      defaultLocale: normalizeOptionalString(localePolicy.defaultLocale),
+      supportedLocales,
+      requiredLocales
+    },
+    counts: [
+      {
+        label: t('portfolio.directory.cardCountLabel'),
+        value: t('workspace.cardCount', { count: totalCards })
+      },
+      {
+        label: t('portfolio.directory.cardsMissingRequiredLocalesLabel'),
+        value: String(cardsMissingRequiredLocales)
+      },
+      {
+        label: t('portfolio.directory.openLocaleRequestCountLabel'),
+        value: String(openLocaleRequestCount)
+      },
+      {
+        label: t('portfolio.directory.awaitingHumanVerificationCountLabel'),
+        value: String(awaitingHumanVerificationCount)
+      },
+      {
+        label: t('portfolio.directory.agentProposalCountLabel'),
+        value: String(agentProposalCount)
+      }
+    ],
     metadata: [
       {
         label: t('portfolio.directory.boardIdLabel'),
@@ -119,55 +165,7 @@ function createBoardDirectoryEntryViewModel(entry, t) {
       },
       {
         label: t('portfolio.directory.requiredLocalesLabel'),
-        value: joinValues(localePolicy.requiredLocales)
-      },
-      {
-        label: t('portfolio.directory.cardCountLabel'),
-        value: t('workspace.cardCount', { count: totalCards })
-      },
-      {
-        label: t('portfolio.directory.cardsMissingRequiredLocalesLabel'),
-        value: formatOptionalCount(cardsMissingRequiredLocales)
-      },
-      {
-        label: t('portfolio.directory.openLocaleRequestCountLabel'),
-        value: formatOptionalCount(openLocaleRequestCount)
-      },
-      {
-        label: t('portfolio.directory.awaitingHumanVerificationCountLabel'),
-        value: formatOptionalCount(awaitingHumanVerificationCount)
-      },
-      {
-        label: t('portfolio.directory.agentProposalCountLabel'),
-        value: formatOptionalCount(agentProposalCount)
-      },
-      {
-        label: t('portfolio.directory.boardCreatedAtLabel'),
-        value: normalizeOptionalString(timestamps.boardCreatedAt)
-      },
-      {
-        label: t('portfolio.directory.boardUpdatedAtLabel'),
-        value: normalizeOptionalString(timestamps.boardUpdatedAt)
-      },
-      {
-        label: t('portfolio.directory.workspaceUpdatedAtLabel'),
-        value: normalizeOptionalString(timestamps.workspaceUpdatedAt)
-      },
-      {
-        label: t('portfolio.directory.oldestMissingRequiredLocaleUpdatedAtLabel'),
-        value: normalizeOptionalString(aging.oldestMissingRequiredLocaleUpdatedAt)
-      },
-      {
-        label: t('portfolio.directory.oldestOpenLocaleRequestAtLabel'),
-        value: normalizeOptionalString(aging.oldestOpenLocaleRequestAt)
-      },
-      {
-        label: t('portfolio.directory.oldestAwaitingHumanVerificationAtLabel'),
-        value: normalizeOptionalString(aging.oldestAwaitingHumanVerificationAt)
-      },
-      {
-        label: t('portfolio.directory.oldestAgentProposalAtLabel'),
-        value: normalizeOptionalString(aging.oldestAgentProposalAt)
+        value: requiredLocales
       }
     ].filter((field) => field.value)
   };
@@ -203,8 +201,48 @@ function normalizePortfolioTotals(totals, { workspaces = [], boardDirectory = []
   };
 }
 
-function formatOptionalCount(value) {
-  return value > 0 ? String(value) : '';
+function filterBoardDirectory(entries, searchQuery) {
+  if (!searchQuery) {
+    return entries;
+  }
+
+  const normalizedSearchQuery = searchQuery.toLowerCase();
+
+  return entries.filter((entry) => getBoardDirectoryEntrySearchValue(entry).includes(normalizedSearchQuery));
+}
+
+function getBoardDirectoryEntrySearchValue(entry) {
+  return [
+    entry?.workspaceTitle,
+    entry?.workspaceId,
+    entry?.boardTitle,
+    entry?.boardId,
+    entry?.localePolicy?.sourceLocale,
+    entry?.localePolicy?.defaultLocale,
+    ...(Array.isArray(entry?.localePolicy?.supportedLocales) ? entry.localePolicy.supportedLocales : []),
+    ...(Array.isArray(entry?.localePolicy?.requiredLocales) ? entry.localePolicy.requiredLocales : [])
+  ]
+    .filter((value) => typeof value === 'string' && value.trim())
+    .join(' ')
+    .toLowerCase();
+}
+
+function buildBoardHref(entry) {
+  const workspaceId = normalizeOptionalString(entry?.workspaceId);
+  const boardId = normalizeOptionalString(entry?.boardId);
+  const searchParams = new URLSearchParams();
+
+  if (workspaceId) {
+    searchParams.set('workspaceId', workspaceId);
+  }
+
+  if (boardId) {
+    searchParams.set('boardId', boardId);
+  }
+
+  const queryString = searchParams.toString();
+
+  return queryString ? `/boards?${queryString}` : '/boards';
 }
 
 function normalizeNonNegativeInteger(value, fallback = 0) {
