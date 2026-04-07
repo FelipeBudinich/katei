@@ -17,6 +17,7 @@ export const WORKSPACE_COMMAND_TYPES = Object.freeze([
   'board.invite.revoke',
   'board.invite.accept',
   'board.invite.decline',
+  'board.self.role.set',
   'board.member.role.set',
   'board.member.remove',
   'card.create',
@@ -112,6 +113,8 @@ function validatePayload(type, payload) {
     case 'board.invite.accept':
     case 'board.invite.decline':
       return validateBoardInviteIdentityPayload(type, payload);
+    case 'board.self.role.set':
+      return validateBoardSelfRoleSetPayload(payload);
     case 'board.member.role.set':
       return validateBoardMemberRoleSetPayload(payload);
     case 'board.member.remove':
@@ -233,6 +236,16 @@ function validateBoardInviteIdentityPayload(type, payload) {
   }
 
   return requireNonEmptyString(payload?.inviteId, `${type} payload.inviteId is required.`);
+}
+
+function validateBoardSelfRoleSetPayload(payload) {
+  const boardIdValidation = requireBoardId(payload, 'board.self.role.set payload.boardId is required.');
+
+  if (!boardIdValidation.isValid) {
+    return boardIdValidation;
+  }
+
+  return requireBoardRole(payload?.role, 'board.self.role.set payload.role must be admin, editor, or viewer.');
 }
 
 function validateBoardMemberRoleSetPayload(payload) {

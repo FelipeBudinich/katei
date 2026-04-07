@@ -468,38 +468,24 @@ test('WorkspaceService setBoardMemberRole calls repository.applyCommand and retu
         email: 'viewer@example.com'
       },
       role: 'viewer'
-    },
-    expectedContext: {
-      workspaceId: null,
-      expectedRevision: null
     }
   });
 });
 
-test('WorkspaceService setBoardMemberRole can target a specific workspace revision for board-scoped self-role assignment', async () => {
+test('WorkspaceService setBoardSelfRole calls repository.applyCommand and returns workspace', async () => {
   await assertServiceCommand({
     action: (service) =>
-      service.setBoardMemberRole(
+      service.setBoardSelfRole(
         'main',
-        {
-          type: 'human',
-          id: 'viewer_123',
-          email: 'viewer@example.com'
-        },
         'editor',
         {
           workspaceId: 'workspace_shared',
           expectedRevision: 12
         }
       ),
-    expectedType: 'board.member.role.set',
+    expectedType: 'board.self.role.set',
     expectedPayload: {
       boardId: 'main',
-      targetActor: {
-        type: 'human',
-        id: 'viewer_123',
-        email: 'viewer@example.com'
-      },
       role: 'editor'
     },
     expectedContext: {

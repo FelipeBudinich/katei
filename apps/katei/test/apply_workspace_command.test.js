@@ -2097,7 +2097,7 @@ test('board admin can change a member role', () => {
   assert.equal(nextWorkspace.boards.main.collaboration.memberships[1].role, 'editor');
 });
 
-test('super admin can assign themself an existing board role and downstream helpers treat it as a normal membership', () => {
+test('super admin can assign themself an existing board role through board.self.role.set and downstream helpers treat it as a normal membership', () => {
   for (const [role, permissions] of [
     ['viewer', { canRead: true, canEdit: false, canAdmin: false }],
     ['editor', { canRead: true, canEdit: true, canAdmin: false }],
@@ -2112,10 +2112,9 @@ test('super admin can assign themself an existing board role and downstream help
       record: createRecord(workspace, 0),
       command: {
         clientMutationId: `member_role_self_${role}`,
-        type: 'board.member.role.set',
+        type: 'board.self.role.set',
         payload: {
           boardId: 'main',
-          targetActor: actor,
           role
         }
       },
@@ -2140,7 +2139,7 @@ test('super admin can assign themself an existing board role and downstream help
   }
 });
 
-test('super admin board self-role assignment does not allow changing another actor role without board admin access', () => {
+test('board.self.role.set rejects non-super-admin actors', () => {
   const workspace = createWorkspaceWithMainCollaboration({
     memberships: [createMembership({ id: 'viewer_owner', role: 'admin' })]
   });
@@ -2150,11 +2149,38 @@ test('super admin board self-role assignment does not allow changing another act
       applyWorkspaceCommand({
         record: createRecord(workspace, 0),
         command: {
-          clientMutationId: 'member_role_other_actor_forbidden',
+          clientMutationId: 'member_role_self_forbidden',
+          type: 'board.self.role.set',
+          payload: {
+            boardId: 'main',
+            role: 'viewer'
+          }
+        },
+        expectedRevision: 0,
+        context: createContext({
+          actor: createActor({ id: 'viewer_member', email: 'member@example.com' }),
+          viewerIsSuperAdmin: false
+        })
+      }),
+    WorkspaceCommandPermissionError
+  );
+});
+
+test('board.member.role.set does not allow super admins to self-assign without board admin access', () => {
+  const workspace = createWorkspaceWithMainCollaboration({
+    memberships: [createMembership({ id: 'viewer_owner', role: 'admin' })]
+  });
+
+  assert.throws(
+    () =>
+      applyWorkspaceCommand({
+        record: createRecord(workspace, 0),
+        command: {
+          clientMutationId: 'member_role_self_via_member_command_forbidden',
           type: 'board.member.role.set',
           payload: {
             boardId: 'main',
-            targetActor: createActor({ id: 'viewer_member' }),
+            targetActor: createActor({ id: 'viewer_super_admin', email: 'admin@example.com' }),
             role: 'viewer'
           }
         },

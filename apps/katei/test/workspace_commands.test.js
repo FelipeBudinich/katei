@@ -15,6 +15,7 @@ test('isWorkspaceCommandType accepts known command types and rejects unknown one
   assert.equal(isWorkspaceCommandType('board.create'), true);
   assert.equal(isWorkspaceCommandType('board.update'), true);
   assert.equal(isWorkspaceCommandType('board.invite.create'), true);
+  assert.equal(isWorkspaceCommandType('board.self.role.set'), true);
   assert.equal(isWorkspaceCommandType('board.member.remove'), true);
   assert.equal(isWorkspaceCommandType('card.locale.upsert'), true);
   assert.equal(isWorkspaceCommandType('card.locale.discard'), true);
@@ -133,6 +134,14 @@ test('validateWorkspaceCommand accepts valid command envelopes', () => {
     },
     {
       clientMutationId: 'm10',
+      type: 'board.self.role.set',
+      payload: {
+        boardId: 'main',
+        role: ' Editor '
+      }
+    },
+    {
+      clientMutationId: 'm10b',
       type: 'board.member.role.set',
       payload: {
         boardId: 'main',
@@ -415,6 +424,52 @@ test('validateWorkspaceCommand rejects invalid collaboration payloads', () => {
   assert.equal(
     validateWorkspaceCommand({
       clientMutationId: 'c4',
+      type: 'board.self.role.set',
+      payload: {
+        role: 'admin'
+      }
+    }),
+    false
+  );
+
+  assert.equal(
+    validateWorkspaceCommand({
+      clientMutationId: 'c4b',
+      type: 'board.self.role.set',
+      payload: {
+        boardId: 'main'
+      }
+    }),
+    false
+  );
+
+  assert.equal(
+    validateWorkspaceCommand({
+      clientMutationId: 'c4c',
+      type: 'board.self.role.set',
+      payload: {
+        boardId: 'main',
+        role: null
+      }
+    }),
+    false
+  );
+
+  assert.equal(
+    validateWorkspaceCommand({
+      clientMutationId: 'c4d',
+      type: 'board.self.role.set',
+      payload: {
+        boardId: 'main',
+        role: 'owner'
+      }
+    }),
+    false
+  );
+
+  assert.equal(
+    validateWorkspaceCommand({
+      clientMutationId: 'c5',
       type: 'board.member.role.set',
       payload: {
         boardId: 'main',
@@ -426,7 +481,7 @@ test('validateWorkspaceCommand rejects invalid collaboration payloads', () => {
 
   assert.equal(
     validateWorkspaceCommand({
-      clientMutationId: 'c5',
+      clientMutationId: 'c6',
       type: 'board.member.remove',
       payload: {
         boardId: 'main',

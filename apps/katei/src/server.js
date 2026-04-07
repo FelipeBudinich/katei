@@ -1,6 +1,5 @@
 import { createServer } from 'node:http';
 import { createApp } from './app.js';
-import { APP_TITLE } from '../public/js/domain/workspace_read_model.js';
 
 const DEFAULT_PORT = 3000;
 const SERVER_KEEP_ALIVE_TIMEOUT_MS = 95_000;
@@ -83,5 +82,5 @@ server.on('error', (error) => {
 installShutdownHandlers(server);
 
 server.listen(port, () => {
-  console.info(`${APP_TITLE} listening on port ${port}`);
+  console.info(`Katei listening on port ${port}`);
 });

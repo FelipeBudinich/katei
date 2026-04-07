@@ -1295,9 +1295,9 @@ async function loadWorkspaceRecordForCommandRoute({
   // This targeted load is intentionally limited to super admins assigning themselves a normal
   // board role on one board. Workspace visibility still comes from the readable-board projection
   // after the membership is written; we are not introducing workspace membership here.
-  if (isSuperAdminBoardSelfRoleSetCommand(command, request.viewer)) {
+  if (isBoardSelfRoleSetCommand(command)) {
     return workspaceRecordRepository.loadWorkspaceRecordForSuperAdminBoardRoleAssignment({
-      viewerIsSuperAdmin: true,
+      viewerIsSuperAdmin: request.viewer?.isSuperAdmin === true,
       workspaceId: requestedWorkspaceId ?? createHomeWorkspaceId(request.viewer.sub)
     });
   }
@@ -1314,15 +1314,8 @@ function isWorkspaceTitleSetCommand(command) {
   return command?.type === WORKSPACE_TITLE_SET_COMMAND_TYPE;
 }
 
-function isSuperAdminBoardSelfRoleSetCommand(command, viewer) {
-  if (viewer?.isSuperAdmin !== true || command?.type !== 'board.member.role.set') {
-    return false;
-  }
-
-  const targetActor = command?.payload?.targetActor;
-
-  return normalizeOptionalString(targetActor?.type).toLowerCase() === 'human'
-    && normalizeOptionalString(targetActor?.id) === normalizeOptionalString(viewer?.sub);
+function isBoardSelfRoleSetCommand(command) {
+  return command?.type === 'board.self.role.set';
 }
 
 function normalizeOptionalString(value) {

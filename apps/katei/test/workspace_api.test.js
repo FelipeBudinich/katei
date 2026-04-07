@@ -351,7 +351,7 @@ test('POST /api/workspace/commands keeps unrelated commands on the normal author
   assert.equal(workspaceRecordRepository.replaceRecordCalls.length, 1);
 });
 
-test('POST /api/workspace/commands loads super-admin self-role assignment through the board-level seam and keeps workspace visibility board-derived', async () => {
+test('POST /api/workspace/commands loads board.self.role.set through the board-level seam and keeps workspace visibility board-derived', async () => {
   const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_api_self_role_assign', {
     includeInvite: false
   });
@@ -370,14 +370,9 @@ test('POST /api/workspace/commands loads super-admin self-role assignment throug
       workspaceId: sharedRecord.workspaceId,
       command: {
         clientMutationId: 'board_self_role_assign_1',
-        type: 'board.member.role.set',
+        type: 'board.self.role.set',
         payload: {
           boardId: 'main',
-          targetActor: {
-            type: 'human',
-            id: 'sub_admin',
-            email: 'admin@example.com'
-          },
           role: 'viewer'
         }
       },
@@ -390,13 +385,14 @@ test('POST /api/workspace/commands loads super-admin self-role assignment throug
   assert.equal(response.body.workspace.boards.member, undefined);
   assert.deepEqual(response.body.result, {
     clientMutationId: 'board_self_role_assign_1',
-    type: 'board.member.role.set',
+    type: 'board.self.role.set',
     noOp: false,
     boardId: 'main',
     targetActor: {
       type: 'human',
       id: 'sub_admin',
-      email: 'admin@example.com'
+      email: 'admin@example.com',
+      displayName: 'Admin'
     },
     role: 'viewer'
   });
@@ -405,6 +401,44 @@ test('POST /api/workspace/commands loads super-admin self-role assignment throug
   assert.deepEqual(workspaceRecordRepository.loadSuperAdminBoardRoleAssignmentCalls, [
     {
       viewerIsSuperAdmin: true,
+      workspaceId: sharedRecord.workspaceId
+    }
+  ]);
+});
+
+test('POST /api/workspace/commands rejects board.self.role.set for non-super-admin callers before membership checks', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_api_self_role_forbidden', {
+    memberRole: 'viewer',
+    includeInvite: false
+  });
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord]);
+  const app = createTestApp({ workspaceRecordRepository });
+
+  const response = await request(app)
+    .post('/api/workspace/commands')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_member', email: 'member@example.com', name: 'Member' }))
+    .send({
+      workspaceId: sharedRecord.workspaceId,
+      command: {
+        clientMutationId: 'board_self_role_forbidden_1',
+        type: 'board.self.role.set',
+        payload: {
+          boardId: 'main',
+          role: 'viewer'
+        }
+      },
+      expectedRevision: sharedRecord.revision
+    });
+
+  assert.equal(response.status, 403);
+  assert.deepEqual(response.body, {
+    ok: false,
+    error: 'Board self-role assignment is only available to super admins.'
+  });
+  assert.deepEqual(workspaceRecordRepository.loadAuthoritativeCalls, []);
+  assert.deepEqual(workspaceRecordRepository.loadSuperAdminBoardRoleAssignmentCalls, [
+    {
+      viewerIsSuperAdmin: false,
       workspaceId: sharedRecord.workspaceId
     }
   ]);
