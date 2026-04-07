@@ -494,6 +494,36 @@ test('validateWorkspaceCommand rejects invalid collaboration payloads', () => {
   );
 });
 
+test('validateWorkspaceCommand accepts only viewer, editor, and admin for board.self.role.set', () => {
+  for (const role of ['viewer', 'editor', 'admin']) {
+    assert.equal(
+      validateWorkspaceCommand({
+        clientMutationId: `self_role_${role}`,
+        type: 'board.self.role.set',
+        payload: {
+          boardId: 'main',
+          role
+        }
+      }),
+      true
+    );
+  }
+
+  for (const role of ['', 'owner', 'super-admin']) {
+    assert.equal(
+      validateWorkspaceCommand({
+        clientMutationId: `self_role_invalid_${role || 'blank'}`,
+        type: 'board.self.role.set',
+        payload: {
+          boardId: 'main',
+          role
+        }
+      }),
+      false
+    );
+  }
+});
+
 test('validateWorkspaceCommand rejects invalid localized card payloads', () => {
   assert.equal(
     validateWorkspaceCommand({

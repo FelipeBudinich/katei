@@ -654,6 +654,8 @@ test('GET /portfolio renders one workspace title action per workspace group for 
   assert.match(response.text, /Studio HQ/);
   assert.match(response.text, /Executive roadmap/);
   assert.match(response.text, /Operations/);
+  assert.match(response.text, /Current role: Viewer/);
+  assert.match(response.text, /Current role: Editor/);
   assert.match(response.text, /Workspace ID: workspace_portfolio_alpha/);
   assert.equal(countMatches(response.text, /data-portfolio-action="rename-workspace-title"/g), 1);
   assert.match(response.text, /data-portfolio-target="dialog"/);
