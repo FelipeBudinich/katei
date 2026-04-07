@@ -192,6 +192,71 @@ test('GET /boards redirects anonymous users to /', async () => {
   assert.equal(response.headers.location, '/');
 });
 
+test('GET /portfolio redirects anonymous users to /', async () => {
+  const app = createTestApp({
+    googleTokenVerifier: async () => ({ sub: 'sub_123' })
+  });
+
+  const response = await request(app).get('/portfolio');
+
+  assert.equal(response.status, 302);
+  assert.equal(response.headers.location, '/');
+});
+
+test('GET /portfolio redirects authenticated non-super-admin users to /boards', async () => {
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble();
+  const app = createTestApp({
+    env: {
+      SUPER_ADMINS: 'admin@example.com'
+    },
+    googleTokenVerifier: async () => ({ sub: 'sub_123' }),
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .get('/portfolio')
+    .set('Cookie', createSessionCookieHeader({
+      sub: 'sub_123',
+      name: 'Tester',
+      email: 'tester@example.com'
+    }));
+
+  assert.equal(response.status, 302);
+  assert.equal(response.headers.location, '/boards');
+  assert.deepEqual(workspaceRecordRepository.loadCalls, []);
+});
+
+test('GET /portfolio renders the dedicated portfolio shell for super admins', async () => {
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble();
+  const app = createTestApp({
+    env: {
+      SUPER_ADMINS: 'tester@example.com'
+    },
+    googleTokenVerifier: async () => ({ sub: 'sub_123' }),
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .get('/portfolio')
+    .set('Cookie', createSessionCookieHeader({
+      sub: 'sub_123',
+      name: 'Tester',
+      email: 'tester@example.com'
+    }));
+
+  assert.equal(response.status, 200);
+  assert.match(response.text, /<title>過程 \(katei\) · Portfolio<\/title>/);
+  assert.match(response.text, /Super admin portfolio/);
+  assert.match(response.text, /Back to boards/);
+  assert.match(response.text, /Summary/);
+  assert.match(response.text, /Board directory/);
+  assert.match(response.text, /No portfolio data yet/);
+  assert.match(response.text, /Tester/);
+  assert.doesNotMatch(response.text, /data-controller="workspace"/);
+  assert.doesNotMatch(response.text, /id="workspace-bootstrap"/);
+  assert.deepEqual(workspaceRecordRepository.loadCalls, []);
+});
+
 test('GET /boards renders the server workspace and bootstrap payload for authenticated users', async () => {
   const workspace = createCard(createEmptyWorkspace(), 'main', {
     title: 'Ship launch checklist',

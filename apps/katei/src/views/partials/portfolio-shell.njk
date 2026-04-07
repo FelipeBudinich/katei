@@ -1,0 +1,72 @@
+<main class="portfolio-page">
+  <section class="portfolio-hero paper-panel">
+    <div class="landing-utility-row">
+      {% include "partials/ui-locale-badge.njk" %}
+      {% set uiLocalePickerId = 'portfolio-ui-locale-picker' %}
+      {% include "partials/ui-locale-picker.njk" %}
+    </div>
+
+    <div class="portfolio-header">
+      <div class="portfolio-copy">
+        <p class="landing-eyebrow">{{ t('portfolio.eyebrow') }}</p>
+        <h1 class="font-serif text-5xl leading-none text-strong sm:text-6xl">{{ t('portfolio.title') }}</h1>
+        <p class="max-w-3xl text-base leading-7 text-muted sm:text-lg">
+          {{ t('portfolio.description') }}
+        </p>
+      </div>
+
+      <div class="portfolio-actions">
+        <a href="/boards" class="touch-button-secondary">{{ t('portfolio.openBoards') }}</a>
+      </div>
+    </div>
+
+    <div class="portfolio-meta-row">
+      {% include "partials/viewer-chip.njk" %}
+
+      <div class="portfolio-badge-row">
+        {% if viewer.isSuperAdmin %}
+          <span class="portfolio-badge portfolio-badge--accent">{{ t('portfolio.superAdminBadge') }}</span>
+        {% endif %}
+        <span class="portfolio-badge">{{ t('portfolio.readOnlyBadge') }}</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="paper-panel portfolio-section">
+    <div class="portfolio-section-header">
+      <h2 class="font-serif text-3xl text-strong">{{ t('portfolio.summary.heading') }}</h2>
+      <p class="text-sm leading-6 text-muted">{{ t('portfolio.summary.description') }}</p>
+    </div>
+
+    <div class="portfolio-summary-grid">
+      {% for item in summaryItems %}
+        <article class="portfolio-summary-card">
+          <span class="portfolio-summary-label">{{ item.label }}</span>
+          <strong class="portfolio-summary-value">{{ item.value }}</strong>
+        </article>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="paper-panel portfolio-section">
+    <div class="portfolio-section-header">
+      <h2 class="font-serif text-3xl text-strong">{{ t('portfolio.directory.heading') }}</h2>
+      <p class="text-sm leading-6 text-muted">{{ t('portfolio.directory.description') }}</p>
+    </div>
+
+    {% if portfolio.boardDirectory.length %}
+      <div class="portfolio-directory-list">
+        {% for entry in portfolio.boardDirectory %}
+          <article class="portfolio-directory-card">
+            <h3 class="text-lg font-semibold text-strong">{{ entry.title }}</h3>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="portfolio-empty-state">
+        <h3 class="font-serif text-2xl text-strong">{{ t('portfolio.empty.heading') }}</h3>
+        <p class="text-sm leading-6 text-muted">{{ t('portfolio.empty.description') }}</p>
+      </div>
+    {% endif %}
+  </section>
+</main>

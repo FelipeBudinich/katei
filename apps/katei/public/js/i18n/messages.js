@@ -11,7 +11,8 @@ const EN_MESSAGES = freezeCatalog({
   },
   pageTitles: {
     landing: '{appTitle} · Sign in',
-    workspace: '{appTitle} · Boards'
+    workspace: '{appTitle} · Boards',
+    portfolio: '{appTitle} · Portfolio'
   },
   landing: {
     eyebrow: 'Private tester preview',
@@ -39,6 +40,29 @@ const EN_MESSAGES = freezeCatalog({
   },
   uiLocale: {
     label: 'UI language'
+  },
+  portfolio: {
+    eyebrow: 'Super admin portfolio',
+    title: 'Portfolio',
+    description:
+      'A dedicated read-only surface for super admins. Portfolio rollups will appear here once aggregated server queries are connected.',
+    openBoards: 'Back to boards',
+    superAdminBadge: 'Super admin',
+    readOnlyBadge: 'Read only',
+    summary: {
+      heading: 'Summary',
+      description: 'Server-rendered placeholders keep this route available before portfolio aggregation ships.',
+      workspacesLabel: 'Workspaces',
+      boardsLabel: 'Boards'
+    },
+    directory: {
+      heading: 'Board directory',
+      description: 'Cross-workspace board listings will appear here in a future server-backed pass.'
+    },
+    empty: {
+      heading: 'No portfolio data yet',
+      description: 'This first version is intentionally empty until aggregated portfolio data is wired in.'
+    }
   },
   workspace: {
     viewerSignedIn: 'Signed in',
@@ -406,7 +430,8 @@ const ES_CL_MESSAGES = freezeCatalog({
   },
   pageTitles: {
     landing: '{appTitle} · Iniciar sesión',
-    workspace: '{appTitle} · Tableros'
+    workspace: '{appTitle} · Tableros',
+    portfolio: '{appTitle} · Portafolio'
   },
   landing: {
     eyebrow: 'Vista previa privada para testers',
@@ -435,6 +460,29 @@ const ES_CL_MESSAGES = freezeCatalog({
   },
   uiLocale: {
     label: 'Idioma de la interfaz'
+  },
+  portfolio: {
+    eyebrow: 'Portafolio de super admin',
+    title: 'Portafolio',
+    description:
+      'Una superficie dedicada y de solo lectura para super admins. Los resúmenes del portafolio aparecerán aquí cuando se conecten las consultas agregadas del servidor.',
+    openBoards: 'Volver a tableros',
+    superAdminBadge: 'Super admin',
+    readOnlyBadge: 'Solo lectura',
+    summary: {
+      heading: 'Resumen',
+      description: 'Los placeholders renderizados por el servidor mantienen esta ruta disponible antes de que exista la agregación del portafolio.',
+      workspacesLabel: 'Espacios',
+      boardsLabel: 'Tableros'
+    },
+    directory: {
+      heading: 'Directorio de tableros',
+      description: 'Los listados de tableros entre espacios aparecerán aquí en una siguiente pasada conectada al servidor.'
+    },
+    empty: {
+      heading: 'Todavía no hay datos de portafolio',
+      description: 'Esta primera versión permanece vacía a propósito hasta que se conecten los datos agregados del portafolio.'
+    }
   },
   workspace: {
     viewerSignedIn: 'Sesión iniciada',
@@ -803,7 +851,8 @@ const JA_MESSAGES = freezeCatalog({
   },
   pageTitles: {
     landing: '{appTitle} ・サインイン',
-    workspace: '{appTitle} ・ボード'
+    workspace: '{appTitle} ・ボード',
+    portfolio: '{appTitle} ・ポートフォリオ'
   },
   landing: {
     eyebrow: '限定テスタープレビュー',
@@ -832,6 +881,29 @@ const JA_MESSAGES = freezeCatalog({
   },
   uiLocale: {
     label: 'UI言語'
+  },
+  portfolio: {
+    eyebrow: 'スーパー管理者ポートフォリオ',
+    title: 'ポートフォリオ',
+    description:
+      'スーパー管理者向けの専用読み取り専用画面です。集約済みサーバークエリが接続されると、ポートフォリオの集計がここに表示されます。',
+    openBoards: 'ボードに戻る',
+    superAdminBadge: 'スーパー管理者',
+    readOnlyBadge: '読み取り専用',
+    summary: {
+      heading: '概要',
+      description: 'ポートフォリオ集約が未実装でも、このルートはサーバー描画プレースホルダーで表示されます。',
+      workspacesLabel: 'ワークスペース',
+      boardsLabel: 'ボード'
+    },
+    directory: {
+      heading: 'ボード一覧',
+      description: 'ワークスペースをまたいだボード一覧は、今後のサーバー連携でここに表示されます。'
+    },
+    empty: {
+      heading: 'ポートフォリオデータはまだありません',
+      description: 'この最初のバージョンは、集約済みポートフォリオデータが接続されるまで意図的に空のままです。'
+    }
   },
   workspace: {
     viewerSignedIn: 'サインイン済み',
