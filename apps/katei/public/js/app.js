@@ -9,6 +9,7 @@ import CardEditorController from '/js/controllers/card_editor_controller.js';
 import LandingController from '/js/controllers/landing_controller.js';
 import SessionController from '/js/controllers/session_controller.js';
 import UiLocalePickerController from '/js/controllers/ui_locale_picker_controller.js';
+import PortfolioController from '/js/controllers/portfolio_controller.js';
 
 const application = Application.start();
 
@@ -22,5 +23,6 @@ application.register('card-editor', CardEditorController);
 application.register('landing', LandingController);
 application.register('session', SessionController);
 application.register('ui-locale-picker', UiLocalePickerController);
+application.register('portfolio', PortfolioController);
 
 window.Stimulus = application;

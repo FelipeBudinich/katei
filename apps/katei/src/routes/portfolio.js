@@ -29,6 +29,7 @@ export function buildPortfolioPageModel({ viewer, t, portfolio = createEmptyPort
   const normalizedPortfolio = normalizePortfolio(portfolio);
   const normalizedSearchQuery = normalizeOptionalString(searchQuery);
   const filteredBoardDirectory = filterPortfolioEntries(normalizedPortfolio.boardDirectory, normalizedSearchQuery);
+  const boardDirectoryEntries = filteredBoardDirectory.map((entry) => createBoardDirectoryEntryViewModel(entry, t));
   const filteredAwaitingHumanVerificationItems = filterPortfolioEntries(
     normalizedPortfolio.awaitingHumanVerificationItems,
     normalizedSearchQuery
@@ -81,6 +82,7 @@ export function buildPortfolioPageModel({ viewer, t, portfolio = createEmptyPort
     pageTitle: t('pageTitles.portfolio', { appTitle: APP_TITLE }),
     bodyClass: 'app-shell portfolio-shell',
     viewer,
+    canManageWorkspaceTitles: viewer?.isSuperAdmin === true,
     portfolio: normalizedPortfolio,
     portfolioFilters: {
       searchQuery: normalizedSearchQuery,
@@ -116,8 +118,9 @@ export function buildPortfolioPageModel({ viewer, t, portfolio = createEmptyPort
         value: normalizedPortfolio.totals.agentProposalCount
       }
     ],
-    boardDirectoryEntries: filteredBoardDirectory.map((entry) => createBoardDirectoryEntryViewModel(entry, t)),
-    boardDirectoryCount: filteredBoardDirectory.length,
+    boardDirectoryEntries,
+    boardDirectoryWorkspaceGroups: createBoardDirectoryWorkspaceGroupsViewModels(boardDirectoryEntries),
+    boardDirectoryCount: boardDirectoryEntries.length,
     awaitingApprovalEntries: filteredAwaitingHumanVerificationItems.map((entry) => createReviewQueueEntryViewModel(entry, t, {
       stateKey: 'cardViewDialog.reviewState.needs-human-verification',
       timestampLabel: t('portfolio.awaitingApproval.verificationRequestedAtColumnLabel'),
@@ -171,7 +174,8 @@ function normalizePortfolio(portfolio) {
 }
 
 function createBoardDirectoryEntryViewModel(entry, t) {
-  const workspaceTitle = normalizeOptionalString(entry?.workspaceTitle) || normalizeOptionalString(entry?.workspaceId);
+  const workspaceId = normalizeOptionalString(entry?.workspaceId);
+  const workspaceTitle = normalizeOptionalString(entry?.workspaceTitle);
   const boardTitle = normalizeOptionalString(entry?.boardTitle) || normalizeOptionalString(entry?.boardId);
   const localePolicy = entry?.localePolicy ?? {};
   const localizationSummary = entry?.localizationSummary ?? {};
@@ -185,8 +189,10 @@ function createBoardDirectoryEntryViewModel(entry, t) {
   const hasIncompleteLocaleCoverage = cardsMissingRequiredLocales > 0;
 
   return {
-    title: boardTitle,
+    workspaceId,
     workspaceTitle,
+    workspaceLabel: workspaceTitle || workspaceId,
+    title: boardTitle,
     boardId: normalizeOptionalString(entry?.boardId),
     openBoardHref: buildBoardHref(entry),
     localeCoverage: {
@@ -226,14 +232,50 @@ function createBoardDirectoryEntryViewModel(entry, t) {
   };
 }
 
+function createBoardDirectoryWorkspaceGroupsViewModels(entries) {
+  const groups = new Map();
+
+  for (const entry of entries) {
+    const workspaceId = normalizeOptionalString(entry?.workspaceId) || normalizeOptionalString(entry?.workspaceLabel);
+
+    if (!workspaceId) {
+      continue;
+    }
+
+    if (!groups.has(workspaceId)) {
+      groups.set(workspaceId, {
+        workspaceId,
+        workspaceTitle: normalizeOptionalString(entry?.workspaceTitle),
+        workspaceLabel: normalizeOptionalString(entry?.workspaceLabel) || workspaceId,
+        entries: []
+      });
+    }
+
+    const currentGroup = groups.get(workspaceId);
+    const nextWorkspaceTitle = normalizeOptionalString(entry?.workspaceTitle);
+
+    if (nextWorkspaceTitle) {
+      currentGroup.workspaceTitle = nextWorkspaceTitle;
+      currentGroup.workspaceLabel = nextWorkspaceTitle;
+    }
+
+    currentGroup.entries.push(entry);
+  }
+
+  return Array.from(groups.values());
+}
+
 function createReviewQueueEntryViewModel(entry, t, { stateKey, timestampLabel, timestamp }) {
-  const workspaceTitle = normalizeOptionalString(entry?.workspaceTitle) || normalizeOptionalString(entry?.workspaceId);
+  const workspaceId = normalizeOptionalString(entry?.workspaceId);
+  const workspaceTitle = normalizeOptionalString(entry?.workspaceTitle);
   const boardTitle = normalizeOptionalString(entry?.boardTitle) || normalizeOptionalString(entry?.boardId);
   const cardTitle = normalizeOptionalString(entry?.cardTitle) || normalizeOptionalString(entry?.cardId);
   const localizedTitle = normalizeOptionalString(entry?.localizedTitle);
 
   return {
+    workspaceId,
     workspaceTitle,
+    workspaceLabel: workspaceTitle || workspaceId,
     boardTitle,
     cardTitle,
     localizedTitle: localizedTitle && localizedTitle !== cardTitle ? localizedTitle : '',
@@ -246,12 +288,15 @@ function createReviewQueueEntryViewModel(entry, t, { stateKey, timestampLabel, t
 }
 
 function createMissingRequiredLocalizationEntryViewModel(entry) {
-  const workspaceTitle = normalizeOptionalString(entry?.workspaceTitle) || normalizeOptionalString(entry?.workspaceId);
+  const workspaceId = normalizeOptionalString(entry?.workspaceId);
+  const workspaceTitle = normalizeOptionalString(entry?.workspaceTitle);
   const boardTitle = normalizeOptionalString(entry?.boardTitle) || normalizeOptionalString(entry?.boardId);
   const cardTitle = normalizeOptionalString(entry?.cardTitle) || normalizeOptionalString(entry?.cardId);
 
   return {
+    workspaceId,
     workspaceTitle,
+    workspaceLabel: workspaceTitle || workspaceId,
     boardTitle,
     cardTitle,
     missingLocales: joinValues(entry?.missingLocales),
@@ -261,12 +306,15 @@ function createMissingRequiredLocalizationEntryViewModel(entry) {
 }
 
 function createIncompleteCoverageEntryViewModel(entry, t) {
-  const workspaceTitle = normalizeOptionalString(entry?.workspaceTitle) || normalizeOptionalString(entry?.workspaceId);
+  const workspaceId = normalizeOptionalString(entry?.workspaceId);
+  const workspaceTitle = normalizeOptionalString(entry?.workspaceTitle);
   const boardTitle = normalizeOptionalString(entry?.boardTitle) || normalizeOptionalString(entry?.boardId);
   const cardsMissingRequiredLocales = normalizeNonNegativeInteger(entry?.localizationSummary?.cardsMissingRequiredLocales);
 
   return {
+    workspaceId,
     workspaceTitle,
+    workspaceLabel: workspaceTitle || workspaceId,
     boardTitle,
     cardsMissingRequiredLocales,
     oldestMissingRequiredLocaleUpdatedAt: normalizeOptionalString(entry?.aging?.oldestMissingRequiredLocaleUpdatedAt),
@@ -318,7 +366,10 @@ function createAgingBoardEntryViewModel(entry, { timestampAccessor, countAccesso
   }
 
   return {
-    workspaceTitle: normalizeOptionalString(entry?.workspaceTitle) || normalizeOptionalString(entry?.workspaceId),
+    workspaceId: normalizeOptionalString(entry?.workspaceId),
+    workspaceTitle: normalizeOptionalString(entry?.workspaceTitle),
+    workspaceLabel:
+      normalizeOptionalString(entry?.workspaceTitle) || normalizeOptionalString(entry?.workspaceId),
     boardTitle: normalizeOptionalString(entry?.boardTitle) || normalizeOptionalString(entry?.boardId),
     count: normalizeNonNegativeInteger(countAccessor(entry)),
     timestamp,

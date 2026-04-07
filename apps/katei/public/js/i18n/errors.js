@@ -68,6 +68,7 @@ const KNOWN_ERROR_KEY_BY_MESSAGE = Object.freeze({
   'You do not have permission to administer this board.': 'errors.boardAdminPermissionDenied',
   'You do not have permission to manage this board.': 'errors.boardAdminPermissionDenied',
   'You do not have permission to respond to this invite.': 'errors.inviteResponsePermissionDenied',
+  'This workspace changed elsewhere. Refresh to continue.': 'errors.workspaceConflict',
   'Unable to complete the request.': 'errors.requestUnavailable'
 });
 

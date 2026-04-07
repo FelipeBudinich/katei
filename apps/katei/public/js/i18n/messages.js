@@ -45,10 +45,10 @@ const EN_MESSAGES = freezeCatalog({
     eyebrow: 'Super admin portfolio',
     title: 'Portfolio',
     description:
-      'A dedicated read-only surface for super admins with server-rendered cross-workspace portfolio summaries.',
+      'A dedicated super-admin surface for cross-workspace portfolio summaries and workspace title management.',
     openBoards: 'Back to boards',
     superAdminBadge: 'Super admin',
-    readOnlyBadge: 'Read only',
+    readOnlyBadge: 'Board data read-only',
     coverage: {
       complete: 'Complete',
       incomplete: 'Needs locales'
@@ -80,6 +80,7 @@ const EN_MESSAGES = freezeCatalog({
       keyCountsColumnLabel: 'Key counts',
       actionsColumnLabel: 'Actions',
       workspaceLabel: 'Workspace',
+      workspaceIdLabel: 'Workspace ID',
       boardIdLabel: 'Board ID',
       sourceLocaleLabel: 'Source locale',
       defaultLocaleLabel: 'Default locale',
@@ -102,6 +103,17 @@ const EN_MESSAGES = freezeCatalog({
         heading: 'No boards match this search',
         description: 'Try another workspace, board, or locale term.'
       }
+    },
+    workspaceTitleEditor: {
+      assignAction: 'Assign title',
+      editAction: 'Edit title',
+      assignHeading: 'Assign workspace title',
+      editHeading: 'Edit workspace title',
+      fieldLabel: 'Workspace title',
+      placeholder: 'Leave blank to show the workspace ID',
+      help: 'Clear the title to fall back to the workspace ID.',
+      savingAction: 'Saving...',
+      savedStatus: 'Workspace title saved.'
     },
     awaitingApproval: {
       heading: 'Awaiting approval',
@@ -575,6 +587,7 @@ const EN_MESSAGES = freezeCatalog({
     stagePromptActionDisabled: 'This stage does not allow prompt runs.',
     stagePromptActionConfigMissing: 'This stage needs a valid prompt action configuration first.',
     stagePromptRunFailed: 'Unable to run the stage prompt right now.',
+    workspaceConflict: 'This workspace changed elsewhere. Refresh to continue.',
     requestUnavailable: 'Unable to complete the request.'
   }
 });
@@ -627,10 +640,10 @@ const ES_CL_MESSAGES = freezeCatalog({
     eyebrow: 'Portafolio de super admin',
     title: 'Portafolio',
     description:
-      'Una superficie dedicada y de solo lectura para super admins con resúmenes de portafolio entre espacios renderizados por el servidor.',
+      'Una superficie dedicada para super admins con resúmenes de portafolio entre espacios y gestión de títulos de espacio.',
     openBoards: 'Volver a tableros',
     superAdminBadge: 'Super admin',
-    readOnlyBadge: 'Solo lectura',
+    readOnlyBadge: 'Datos de tableros en solo lectura',
     coverage: {
       complete: 'Completo',
       incomplete: 'Faltan locales'
@@ -662,6 +675,7 @@ const ES_CL_MESSAGES = freezeCatalog({
       keyCountsColumnLabel: 'Conteos clave',
       actionsColumnLabel: 'Acciones',
       workspaceLabel: 'Espacio',
+      workspaceIdLabel: 'ID del espacio',
       boardIdLabel: 'ID del tablero',
       sourceLocaleLabel: 'Locale fuente',
       defaultLocaleLabel: 'Locale por defecto',
@@ -684,6 +698,17 @@ const ES_CL_MESSAGES = freezeCatalog({
         heading: 'Ningún tablero coincide con esta búsqueda',
         description: 'Prueba con otro espacio, tablero o término de locale.'
       }
+    },
+    workspaceTitleEditor: {
+      assignAction: 'Asignar título',
+      editAction: 'Editar título',
+      assignHeading: 'Asignar título del espacio',
+      editHeading: 'Editar título del espacio',
+      fieldLabel: 'Título del espacio',
+      placeholder: 'Déjalo vacío para mostrar el ID del espacio',
+      help: 'Borra el título para volver a usar el ID del espacio.',
+      savingAction: 'Guardando...',
+      savedStatus: 'Título del espacio guardado.'
     },
     awaitingApproval: {
       heading: 'Esperando aprobación',
@@ -1158,6 +1183,7 @@ const ES_CL_MESSAGES = freezeCatalog({
     stagePromptActionDisabled: 'Esta etapa no permite ejecutar prompts.',
     stagePromptActionConfigMissing: 'Esta etapa necesita primero una configuración de prompt válida.',
     stagePromptRunFailed: 'No se pudo ejecutar el prompt de la etapa en este momento.',
+    workspaceConflict: 'Este espacio cambió en otro lugar. Actualiza para continuar.',
     requestUnavailable: 'No se pudo completar la solicitud.'
   }
 });
@@ -1210,10 +1236,10 @@ const JA_MESSAGES = freezeCatalog({
     eyebrow: 'スーパー管理者ポートフォリオ',
     title: 'ポートフォリオ',
     description:
-      'スーパー管理者向けの専用読み取り専用画面です。ワークスペース横断のポートフォリオ要約をサーバー描画で表示します。',
+      'スーパー管理者向けの専用画面です。ワークスペース横断のポートフォリオ要約とワークスペース名の管理を行えます。',
     openBoards: 'ボードに戻る',
     superAdminBadge: 'スーパー管理者',
-    readOnlyBadge: '読み取り専用',
+    readOnlyBadge: 'ボードデータは読み取り専用',
     coverage: {
       complete: '完了',
       incomplete: 'locale不足あり'
@@ -1245,6 +1271,7 @@ const JA_MESSAGES = freezeCatalog({
       keyCountsColumnLabel: '主要件数',
       actionsColumnLabel: '操作',
       workspaceLabel: 'ワークスペース',
+      workspaceIdLabel: 'ワークスペース ID',
       boardIdLabel: 'ボード ID',
       sourceLocaleLabel: 'ソース locale',
       defaultLocaleLabel: 'デフォルト locale',
@@ -1267,6 +1294,17 @@ const JA_MESSAGES = freezeCatalog({
         heading: '検索条件に一致するボードはありません',
         description: '別のワークスペース名、ボード名、または locale で試してください。'
       }
+    },
+    workspaceTitleEditor: {
+      assignAction: 'タイトルを付ける',
+      editAction: 'タイトルを編集',
+      assignHeading: 'ワークスペース名を設定',
+      editHeading: 'ワークスペース名を編集',
+      fieldLabel: 'ワークスペース名',
+      placeholder: '空欄にするとワークスペース ID を表示します',
+      help: 'タイトルを消すとワークスペース ID 表示に戻ります。',
+      savingAction: '保存しています...',
+      savedStatus: 'ワークスペース名を保存しました。'
     },
     awaitingApproval: {
       heading: '承認待ち',
@@ -1741,6 +1779,7 @@ const JA_MESSAGES = freezeCatalog({
     stagePromptActionDisabled: 'このステージではプロンプト実行を使えません。',
     stagePromptActionConfigMissing: 'このステージには有効なプロンプト設定が必要です。',
     stagePromptRunFailed: '現在ステージのプロンプトを実行できません。',
+    workspaceConflict: 'このワークスペースは別の場所で変更されました。更新して続行してください。',
     requestUnavailable: 'リクエストを完了できませんでした。'
   }
 });

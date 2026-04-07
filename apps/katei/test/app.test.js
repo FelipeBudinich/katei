@@ -23,6 +23,7 @@ import {
 import { KATEI_UI_LOCALE_COOKIE_NAME } from '../src/i18n/request_ui_locale.js';
 import { createTranslator } from '../public/js/i18n/translate.js';
 import { buildWorkspacePageModel } from '../src/routes/boards.js';
+import { buildPortfolioPageModel } from '../src/routes/portfolio.js';
 import { encryptBoardSecret } from '../src/security/board_secret_crypto.js';
 import {
   createHomeWorkspaceId,
@@ -547,6 +548,174 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
   assert.doesNotMatch(response.text, /id="workspace-bootstrap"/);
   assert.deepEqual(workspaceRecordRepository.loadCalls, []);
   assert.deepEqual(portfolioReadModel.loadCalls, [{}]);
+});
+
+test('GET /portfolio renders one workspace title action per workspace group for super admins', async () => {
+  const portfolioReadModel = createPortfolioReadModelDouble({
+    summary: {
+      totals: {
+        workspaces: 1,
+        boards: 2,
+        cards: 4,
+        cardsMissingRequiredLocales: 0,
+        openLocaleRequestCount: 0,
+        awaitingHumanVerificationCount: 0,
+        agentProposalCount: 0
+      },
+      workspaces: [
+        {
+          workspaceId: 'workspace_portfolio_alpha',
+          workspaceTitle: 'Studio HQ',
+          boardCount: 2,
+          timestamps: {
+            createdAt: '2026-04-01T09:00:00.000Z',
+            updatedAt: '2026-04-03T12:00:00.000Z'
+          }
+        }
+      ],
+      boardDirectory: [
+        {
+          workspaceId: 'workspace_portfolio_alpha',
+          workspaceTitle: 'Studio HQ',
+          boardId: 'main',
+          boardTitle: 'Executive roadmap',
+          localePolicy: {
+            sourceLocale: 'en',
+            defaultLocale: 'ja',
+            supportedLocales: ['en', 'ja'],
+            requiredLocales: ['ja']
+          },
+          cardCounts: {
+            total: 3,
+            byStage: null
+          },
+          localizationSummary: {
+            cardsMissingRequiredLocales: 0,
+            openLocaleRequestCount: 0,
+            awaitingHumanVerificationCount: 0,
+            agentProposalCount: 0
+          }
+        },
+        {
+          workspaceId: 'workspace_portfolio_alpha',
+          workspaceTitle: 'Studio HQ',
+          boardId: 'ops',
+          boardTitle: 'Operations',
+          localePolicy: {
+            sourceLocale: 'en',
+            defaultLocale: 'en',
+            supportedLocales: ['en'],
+            requiredLocales: []
+          },
+          cardCounts: {
+            total: 1,
+            byStage: null
+          },
+          localizationSummary: {
+            cardsMissingRequiredLocales: 0,
+            openLocaleRequestCount: 0,
+            awaitingHumanVerificationCount: 0,
+            agentProposalCount: 0
+          }
+        }
+      ],
+      awaitingHumanVerificationItems: [],
+      agentProposalItems: [],
+      missingRequiredLocalizationItems: []
+    }
+  });
+  const app = createTestApp({
+    env: {
+      SUPER_ADMINS: 'tester@example.com'
+    },
+    googleTokenVerifier: async () => ({ sub: 'sub_123' }),
+    portfolioReadModel
+  });
+
+  const response = await request(app)
+    .get('/portfolio')
+    .set('Cookie', createSessionCookieHeader({
+      sub: 'sub_123',
+      name: 'Tester',
+      email: 'tester@example.com'
+    }));
+
+  assert.equal(response.status, 200);
+  assert.match(response.text, /data-controller="portfolio"/);
+  assert.match(response.text, /Studio HQ/);
+  assert.match(response.text, /Executive roadmap/);
+  assert.match(response.text, /Operations/);
+  assert.match(response.text, /Workspace ID: workspace_portfolio_alpha/);
+  assert.equal(countMatches(response.text, /data-portfolio-action="rename-workspace-title"/g), 1);
+  assert.match(response.text, /data-portfolio-target="dialog"/);
+});
+
+test('portfolio template hides workspace title editing controls for non-super-admin viewers', () => {
+  const html = renderPortfolioPage(
+    buildPortfolioPageModel({
+      viewer: {
+        sub: 'sub_123',
+        name: 'Tester',
+        email: 'tester@example.com',
+        isSuperAdmin: false
+      },
+      t: createTranslator('en'),
+      portfolio: {
+        totals: {
+          workspaces: 1,
+          boards: 1,
+          cards: 3,
+          cardsMissingRequiredLocales: 0,
+          openLocaleRequestCount: 0,
+          awaitingHumanVerificationCount: 0,
+          agentProposalCount: 0
+        },
+        workspaces: [
+          {
+            workspaceId: 'workspace_portfolio_alpha',
+            workspaceTitle: null,
+            boardCount: 1,
+            timestamps: {
+              createdAt: '2026-04-01T09:00:00.000Z',
+              updatedAt: '2026-04-03T12:00:00.000Z'
+            }
+          }
+        ],
+        boardDirectory: [
+          {
+            workspaceId: 'workspace_portfolio_alpha',
+            workspaceTitle: null,
+            boardId: 'main',
+            boardTitle: 'Executive roadmap',
+            localePolicy: {
+              sourceLocale: 'en',
+              defaultLocale: 'ja',
+              supportedLocales: ['en', 'ja'],
+              requiredLocales: ['ja']
+            },
+            cardCounts: {
+              total: 3,
+              byStage: null
+            },
+            localizationSummary: {
+              cardsMissingRequiredLocales: 0,
+              openLocaleRequestCount: 0,
+              awaitingHumanVerificationCount: 0,
+              agentProposalCount: 0
+            }
+          }
+        ],
+        awaitingHumanVerificationItems: [],
+        agentProposalItems: [],
+        missingRequiredLocalizationItems: []
+      }
+    })
+  );
+
+  assert.match(html, /data-controller="portfolio"/);
+  assert.match(html, /workspace_portfolio_alpha/);
+  assert.doesNotMatch(html, /data-portfolio-action="rename-workspace-title"/);
+  assert.doesNotMatch(html, /data-portfolio-target="dialog"/);
 });
 
 test('GET /portfolio renders the empty state cleanly for super admins when no summaries exist', async () => {
@@ -3153,6 +3322,45 @@ function extractDialogByTarget(html, targetName) {
   return match[0];
 }
 
+function renderPortfolioPage(viewModel, { uiLocale = 'en' } = {}) {
+  const environment = new nunjucks.Environment(new nunjucks.FileSystemLoader(WORKSPACE_VIEWS_PATH), {
+    autoescape: true
+  });
+  const uiLocaleLabels = {
+    en: 'English',
+    'es-CL': 'Español (Chile)',
+    ja: '日本語'
+  };
+
+  return environment.render('pages/portfolio.njk', {
+    uiLocale,
+    uiLocaleCurrent: {
+      value: uiLocale,
+      label: uiLocaleLabels[uiLocale] ?? uiLocale
+    },
+    uiLocaleOptions: [
+      {
+        value: 'en',
+        label: 'English',
+        selected: uiLocale === 'en'
+      },
+      {
+        value: 'es-CL',
+        label: 'Español (Chile)',
+        selected: uiLocale === 'es-CL'
+      },
+      {
+        value: 'ja',
+        label: '日本語',
+        selected: uiLocale === 'ja'
+      }
+    ],
+    uiLocalePickerAction: '/portfolio',
+    t: createTranslator(uiLocale),
+    ...viewModel
+  });
+}
+
 function renderWorkspacePage(viewModel, { uiLocale = 'en' } = {}) {
   const environment = new nunjucks.Environment(new nunjucks.FileSystemLoader(WORKSPACE_VIEWS_PATH), {
     autoescape: true
@@ -3190,6 +3398,10 @@ function renderWorkspacePage(viewModel, { uiLocale = 'en' } = {}) {
     t: createTranslator(uiLocale),
     ...viewModel
   });
+}
+
+function countMatches(value, pattern) {
+  return Array.from(value.matchAll(pattern)).length;
 }
 
 function createLegacyWorkspaceSnapshot({

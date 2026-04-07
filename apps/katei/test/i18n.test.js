@@ -126,6 +126,10 @@ test('localizeErrorMessage translates known current UI errors and falls back saf
     localizeErrorMessage(localizationConflictError, translate),
     'No se puede sobrescribir una localización editada por una persona con contenido generado por IA.'
   );
+  assert.equal(
+    localizeErrorMessage(new Error('This workspace changed elsewhere. Refresh to continue.'), translate),
+    'Este espacio cambió en otro lugar. Actualiza para continuar.'
+  );
   assert.equal(localizeErrorMessage(new Error('Custom exploded.'), translate), 'Custom exploded.');
   assert.equal(localizeErrorMessage(null, translate), 'Algo salió mal.');
 });

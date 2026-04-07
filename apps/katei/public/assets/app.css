@@ -1575,6 +1575,22 @@
     display: grid;
     gap: 0.75rem;
   }
+  .portfolio-directory-groups {
+    display: grid;
+    gap: 1rem;
+  }
+  .portfolio-workspace-group {
+    gap: 1rem;
+  }
+  .portfolio-workspace-header, .portfolio-workspace-header-copy {
+    display: grid;
+    gap: 0.5rem;
+  }
+  .portfolio-workspace-title-row {
+    display: grid;
+    gap: 0.75rem;
+    align-items: start;
+  }
   .portfolio-toolbar {
     align-items: end;
     justify-content: space-between;
@@ -1706,6 +1722,10 @@
     border-radius: var(--radius-2xl);
     background-color: var(--color-bg-muted);
   }
+  .portfolio-dialog-status {
+    min-height: 1.5rem;
+    color: var(--color-danger);
+  }
   .google-button-slot {
     min-height: 44px;
   }
@@ -1727,6 +1747,10 @@
   }
   @media (min-width: 40rem) {
     .portfolio-meta-row {
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+    }
+    .portfolio-workspace-title-row {
       grid-template-columns: minmax(0, 1fr) auto;
       align-items: center;
     }

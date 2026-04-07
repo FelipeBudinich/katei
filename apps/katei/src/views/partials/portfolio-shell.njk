@@ -1,4 +1,10 @@
-<main class="portfolio-page">
+<main
+  class="portfolio-page"
+  data-controller="portfolio"
+  data-portfolio-viewer-sub-value="{{ viewer.sub or '' }}"
+  data-portfolio-viewer-super-admin-value="{{ 'true' if canManageWorkspaceTitles else 'false' }}"
+>
+  <p class="sr-only" role="status" aria-live="polite" data-portfolio-target="announcer"></p>
   <section class="portfolio-hero paper-panel">
     <div class="landing-utility-row">
       {% include "partials/ui-locale-badge.njk" %}
@@ -83,63 +89,98 @@
     </div>
 
     {% if boardDirectoryEntries.length %}
-      <div class="portfolio-table-wrap">
-        <table class="portfolio-table">
-          <thead>
-            <tr>
-              <th scope="col">{{ t('portfolio.directory.workspaceColumnLabel') }}</th>
-              <th scope="col">{{ t('portfolio.directory.boardColumnLabel') }}</th>
-              <th scope="col">{{ t('portfolio.directory.localeCoverageColumnLabel') }}</th>
-              <th scope="col">{{ t('portfolio.directory.keyCountsColumnLabel') }}</th>
-              <th scope="col">{{ t('portfolio.directory.actionsColumnLabel') }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for entry in boardDirectoryEntries %}
-              <tr>
-                <td>
-                  <div class="portfolio-table-primary">{{ entry.workspaceTitle }}</div>
-                </td>
-                <td>
-                  <div class="portfolio-table-primary">{{ entry.title }}</div>
-                  <p class="portfolio-table-secondary">{{ t('portfolio.directory.boardIdLabel') }}: {{ entry.boardId }}</p>
-                </td>
-                <td>
-                  <div class="portfolio-locale-coverage">
-                    <span class="portfolio-status-badge {{ entry.localeCoverage.statusModifierClass }}">
-                      {{ entry.localeCoverage.statusLabel }}
-                    </span>
-                    <p class="portfolio-table-secondary">
-                      {{ t('portfolio.directory.sourceLocaleLabel') }}: {{ entry.localeCoverage.sourceLocale }}
-                    </p>
-                    <p class="portfolio-table-secondary">
-                      {{ t('portfolio.directory.defaultLocaleLabel') }}: {{ entry.localeCoverage.defaultLocale }}
-                    </p>
-                    <p class="portfolio-table-secondary">
-                      {{ t('portfolio.directory.supportedLocalesLabel') }}: {{ entry.localeCoverage.supportedLocales }}
-                    </p>
-                    <p class="portfolio-table-secondary">
-                      {{ t('portfolio.directory.requiredLocalesLabel') }}: {{ entry.localeCoverage.requiredLocales }}
-                    </p>
-                  </div>
-                </td>
-                <td>
-                  <ul class="portfolio-count-list">
-                    {% for count in entry.counts %}
-                      <li class="portfolio-count-item">
-                        <span>{{ count.label }}</span>
-                        <strong class="text-strong">{{ count.value }}</strong>
-                      </li>
-                    {% endfor %}
-                  </ul>
-                </td>
-                <td>
-                  <a href="{{ entry.openBoardHref }}" class="touch-button-secondary">{{ t('portfolio.directory.openBoardAction') }}</a>
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+      <div class="portfolio-directory-groups">
+        {% for group in boardDirectoryWorkspaceGroups %}
+          <article class="portfolio-workspace-group portfolio-directory-card">
+            <div class="portfolio-workspace-header">
+              <div class="portfolio-workspace-header-copy">
+                <div class="portfolio-workspace-title-row">
+                  <h3
+                    class="font-serif text-2xl text-strong"
+                    data-portfolio-field="workspace-label"
+                    data-portfolio-workspace-id="{{ group.workspaceId }}"
+                    data-portfolio-workspace-fallback-label="{{ group.workspaceId }}"
+                  >
+                    {{ group.workspaceLabel }}
+                  </h3>
+
+                  {% if canManageWorkspaceTitles %}
+                    <button
+                      type="button"
+                      class="touch-button-secondary"
+                      data-action="portfolio#openRenameDialog"
+                      data-portfolio-action="rename-workspace-title"
+                      data-workspace-id="{{ group.workspaceId }}"
+                      data-workspace-title="{{ group.workspaceTitle }}"
+                      data-workspace-fallback-label="{{ group.workspaceId }}"
+                    >
+                      {{ t(group.workspaceTitle and 'portfolio.workspaceTitleEditor.editAction' or 'portfolio.workspaceTitleEditor.assignAction') }}
+                    </button>
+                  {% endif %}
+                </div>
+
+                <p class="portfolio-table-secondary">
+                  {{ t('portfolio.directory.workspaceIdLabel') }}: {{ group.workspaceId }}
+                </p>
+              </div>
+            </div>
+
+            <div class="portfolio-table-wrap">
+              <table class="portfolio-table">
+                <thead>
+                  <tr>
+                    <th scope="col">{{ t('portfolio.directory.boardColumnLabel') }}</th>
+                    <th scope="col">{{ t('portfolio.directory.localeCoverageColumnLabel') }}</th>
+                    <th scope="col">{{ t('portfolio.directory.keyCountsColumnLabel') }}</th>
+                    <th scope="col">{{ t('portfolio.directory.actionsColumnLabel') }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for entry in group.entries %}
+                    <tr>
+                      <td>
+                        <div class="portfolio-table-primary">{{ entry.title }}</div>
+                        <p class="portfolio-table-secondary">{{ t('portfolio.directory.boardIdLabel') }}: {{ entry.boardId }}</p>
+                      </td>
+                      <td>
+                        <div class="portfolio-locale-coverage">
+                          <span class="portfolio-status-badge {{ entry.localeCoverage.statusModifierClass }}">
+                            {{ entry.localeCoverage.statusLabel }}
+                          </span>
+                          <p class="portfolio-table-secondary">
+                            {{ t('portfolio.directory.sourceLocaleLabel') }}: {{ entry.localeCoverage.sourceLocale }}
+                          </p>
+                          <p class="portfolio-table-secondary">
+                            {{ t('portfolio.directory.defaultLocaleLabel') }}: {{ entry.localeCoverage.defaultLocale }}
+                          </p>
+                          <p class="portfolio-table-secondary">
+                            {{ t('portfolio.directory.supportedLocalesLabel') }}: {{ entry.localeCoverage.supportedLocales }}
+                          </p>
+                          <p class="portfolio-table-secondary">
+                            {{ t('portfolio.directory.requiredLocalesLabel') }}: {{ entry.localeCoverage.requiredLocales }}
+                          </p>
+                        </div>
+                      </td>
+                      <td>
+                        <ul class="portfolio-count-list">
+                          {% for count in entry.counts %}
+                            <li class="portfolio-count-item">
+                              <span>{{ count.label }}</span>
+                              <strong class="text-strong">{{ count.value }}</strong>
+                            </li>
+                          {% endfor %}
+                        </ul>
+                      </td>
+                      <td>
+                        <a href="{{ entry.openBoardHref }}" class="touch-button-secondary">{{ t('portfolio.directory.openBoardAction') }}</a>
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </article>
+        {% endfor %}
       </div>
     {% else %}
       <div class="portfolio-empty-state">
@@ -181,7 +222,16 @@
           <tbody>
             {% for entry in awaitingApprovalEntries %}
               <tr>
-                <td><div class="portfolio-table-primary">{{ entry.workspaceTitle }}</div></td>
+                <td>
+                  <div
+                    class="portfolio-table-primary"
+                    data-portfolio-field="workspace-label"
+                    data-portfolio-workspace-id="{{ entry.workspaceId }}"
+                    data-portfolio-workspace-fallback-label="{{ entry.workspaceId }}"
+                  >
+                    {{ entry.workspaceLabel }}
+                  </div>
+                </td>
                 <td><div class="portfolio-table-primary">{{ entry.boardTitle }}</div></td>
                 <td>
                   <div class="portfolio-table-primary">{{ entry.cardTitle }}</div>
@@ -243,7 +293,16 @@
           <tbody>
             {% for entry in agentProposalEntries %}
               <tr>
-                <td><div class="portfolio-table-primary">{{ entry.workspaceTitle }}</div></td>
+                <td>
+                  <div
+                    class="portfolio-table-primary"
+                    data-portfolio-field="workspace-label"
+                    data-portfolio-workspace-id="{{ entry.workspaceId }}"
+                    data-portfolio-workspace-fallback-label="{{ entry.workspaceId }}"
+                  >
+                    {{ entry.workspaceLabel }}
+                  </div>
+                </td>
                 <td><div class="portfolio-table-primary">{{ entry.boardTitle }}</div></td>
                 <td>
                   <div class="portfolio-table-primary">{{ entry.cardTitle }}</div>
@@ -304,7 +363,16 @@
           <tbody>
             {% for entry in missingRequiredLocalizationEntries %}
               <tr>
-                <td><div class="portfolio-table-primary">{{ entry.workspaceTitle }}</div></td>
+                <td>
+                  <div
+                    class="portfolio-table-primary"
+                    data-portfolio-field="workspace-label"
+                    data-portfolio-workspace-id="{{ entry.workspaceId }}"
+                    data-portfolio-workspace-fallback-label="{{ entry.workspaceId }}"
+                  >
+                    {{ entry.workspaceLabel }}
+                  </div>
+                </td>
                 <td><div class="portfolio-table-primary">{{ entry.boardTitle }}</div></td>
                 <td><div class="portfolio-table-primary">{{ entry.cardTitle }}</div></td>
                 <td><div class="portfolio-table-primary">{{ entry.missingLocales }}</div></td>
@@ -356,7 +424,16 @@
           <tbody>
             {% for entry in incompleteCoverageEntries %}
               <tr>
-                <td><div class="portfolio-table-primary">{{ entry.workspaceTitle }}</div></td>
+                <td>
+                  <div
+                    class="portfolio-table-primary"
+                    data-portfolio-field="workspace-label"
+                    data-portfolio-workspace-id="{{ entry.workspaceId }}"
+                    data-portfolio-workspace-fallback-label="{{ entry.workspaceId }}"
+                  >
+                    {{ entry.workspaceLabel }}
+                  </div>
+                </td>
                 <td><div class="portfolio-table-primary">{{ entry.boardTitle }}</div></td>
                 <td><div class="portfolio-table-primary">{{ entry.statusLabel }}</div></td>
                 <td><div class="portfolio-table-primary">{{ entry.cardsMissingRequiredLocales }}</div></td>
@@ -415,8 +492,17 @@
                 <tbody>
                   {% for entry in section.entries %}
                     <tr>
-                      <td><div class="portfolio-table-primary">{{ entry.workspaceTitle }}</div></td>
-                      <td><div class="portfolio-table-primary">{{ entry.boardTitle }}</div></td>
+                  <td>
+                    <div
+                      class="portfolio-table-primary"
+                      data-portfolio-field="workspace-label"
+                      data-portfolio-workspace-id="{{ entry.workspaceId }}"
+                      data-portfolio-workspace-fallback-label="{{ entry.workspaceId }}"
+                    >
+                      {{ entry.workspaceLabel }}
+                    </div>
+                  </td>
+                  <td><div class="portfolio-table-primary">{{ entry.boardTitle }}</div></td>
                       <td><div class="portfolio-table-primary">{{ entry.count }}</div></td>
                       <td><div class="portfolio-table-primary">{{ entry.timestamp }}</div></td>
                       <td>
@@ -437,4 +523,58 @@
       {% endfor %}
     </div>
   </section>
+
+  {% if canManageWorkspaceTitles %}
+    <dialog
+      class="sheet-dialog"
+      data-portfolio-target="dialog"
+      data-action="click->portfolio#backdropClose cancel->portfolio#close"
+    >
+      <div class="sheet-panel">
+        <div class="dialog-handle mx-auto h-1.5 w-16 rounded-full lg:hidden"></div>
+
+        <div class="dialog-header-row mt-4">
+          <div>
+            <h2 class="font-serif text-3xl text-strong" data-portfolio-target="heading">
+              {{ t('portfolio.workspaceTitleEditor.assignHeading') }}
+            </h2>
+          </div>
+          <button
+            type="button"
+            class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--close"
+            aria-label="{{ t('common.close') }}"
+            data-action="portfolio#close"
+            data-portfolio-target="closeButton"
+          >
+            <span class="sr-only">{{ t('common.close') }}</span>
+          </button>
+        </div>
+
+        <form class="mt-6 space-y-5" data-action="submit->portfolio#saveWorkspaceTitle">
+          <label class="block space-y-2">
+            <span class="field-label text-sm font-semibold">{{ t('portfolio.workspaceTitleEditor.fieldLabel') }}</span>
+            <input
+              type="text"
+              class="field-control"
+              placeholder="{{ t('portfolio.workspaceTitleEditor.placeholder') }}"
+              data-action="input->portfolio#handleTitleInput"
+              data-portfolio-target="titleInput"
+            >
+          </label>
+
+          <p class="text-xs leading-5 text-muted">{{ t('portfolio.workspaceTitleEditor.help') }}</p>
+          <p class="portfolio-dialog-status text-sm" hidden data-portfolio-target="error"></p>
+
+          <div class="dialog-actions board-options-actions mt-6">
+            <button type="button" class="touch-button-secondary" data-action="portfolio#close" data-portfolio-target="cancelButton">
+              {{ t('common.cancel') }}
+            </button>
+            <button type="submit" class="touch-button-primary" data-portfolio-target="saveButton">
+              {{ t('common.save') }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </dialog>
+  {% endif %}
 </main>
