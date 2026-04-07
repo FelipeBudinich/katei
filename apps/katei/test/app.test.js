@@ -34,6 +34,7 @@ import {
 import {
   WorkspaceAccessDeniedError,
   WorkspaceImportConflictError,
+  WorkspaceBoardRoleAssignmentPermissionError,
   WorkspaceRevisionConflictError,
   WorkspaceTitleManagementPermissionError
 } from '../src/workspaces/workspace_record_repository.js';
@@ -2356,6 +2357,82 @@ test('POST /api/workspace/commands applies workspace.title.set through the comma
   });
 });
 
+test('POST /api/workspace/commands applies board.self.role.set through the dedicated super-admin board role seam', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_self_role_command', {
+    includeInvite: false
+  });
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord]);
+  const app = createTestApp({
+    env: {
+      SUPER_ADMINS: 'admin@example.com'
+    },
+    googleTokenVerifier: async () => ({ sub: 'sub_admin', email: 'admin@example.com' }),
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .post('/api/workspace/commands')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_admin', email: 'admin@example.com', name: 'Admin' }))
+    .send({
+      workspaceId: sharedRecord.workspaceId,
+      command: {
+        clientMutationId: 'board_self_role_command_1',
+        type: 'board.self.role.set',
+        payload: {
+          boardId: 'main',
+          role: 'viewer'
+        }
+      },
+      expectedRevision: sharedRecord.revision
+    });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(response.body.workspace.boardOrder, ['main']);
+  assert.deepEqual(Object.keys(response.body.workspace.boards), ['main']);
+  assert.equal(response.body.workspace.boards.member, undefined);
+  assert.deepEqual(response.body.result, {
+    clientMutationId: 'board_self_role_command_1',
+    type: 'board.self.role.set',
+    noOp: false,
+    boardId: 'main',
+    targetActor: {
+      type: 'human',
+      id: 'sub_admin',
+      email: 'admin@example.com',
+      displayName: 'Admin'
+    },
+    role: 'viewer'
+  });
+  assert.deepEqual(workspaceRecordRepository.loadAuthoritativeCalls, []);
+  assert.deepEqual(workspaceRecordRepository.loadSuperAdminTitleManagementCalls, []);
+  assert.deepEqual(workspaceRecordRepository.loadSuperAdminBoardRoleAssignmentCalls, [
+    {
+      viewerIsSuperAdmin: true,
+      workspaceId: sharedRecord.workspaceId
+    }
+  ]);
+  assert.equal(workspaceRecordRepository.replaceRecordCalls.length, 1);
+  assert.equal(
+    workspaceRecordRepository.replaceRecordCalls[0].record.commandReceipts.at(-1)?.commandType,
+    'board.self.role.set'
+  );
+  assert.deepEqual(
+    workspaceRecordRepository.replaceRecordCalls[0].record.workspace.boards.main.collaboration.memberships.find(
+      (membership) => membership.actor.id === 'sub_admin'
+    ),
+    {
+      actor: {
+        type: 'human',
+        id: 'sub_admin',
+        email: 'admin@example.com',
+        displayName: 'Admin'
+      },
+      role: 'viewer',
+      joinedAt: workspaceRecordRepository.replaceRecordCalls[0].record.updatedAt
+    }
+  );
+});
+
 test('POST /api/workspace/commands persists locale review activity for viewer verification requests', async () => {
   const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_review_request', {
     memberRole: 'viewer',
@@ -3706,10 +3783,22 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = []) {
     return createWorkspaceRecord(record);
   }
 
+  async function loadRecordForSuperAdminBoardRoleAssignment(workspaceId) {
+    const normalizedWorkspaceId = typeof workspaceId === 'string' ? workspaceId.trim() : '';
+    const record = normalizedWorkspaceId ? records.get(normalizedWorkspaceId) : null;
+
+    if (!record) {
+      throw new WorkspaceAccessDeniedError();
+    }
+
+    return createWorkspaceRecord(record);
+  }
+
   return {
     loadCalls: [],
     loadAuthoritativeCalls: [],
     loadSuperAdminTitleManagementCalls: [],
+    loadSuperAdminBoardRoleAssignmentCalls: [],
     replaceCalls: [],
     replaceRecordCalls: [],
     importCalls: [],
@@ -3748,6 +3837,19 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = []) {
       }
 
       return loadRecordForSuperAdminTitleManagement(workspaceId);
+    },
+
+    async loadWorkspaceRecordForSuperAdminBoardRoleAssignment({ viewerIsSuperAdmin = false, workspaceId } = {}) {
+      this.loadSuperAdminBoardRoleAssignmentCalls.push({
+        viewerIsSuperAdmin,
+        workspaceId
+      });
+
+      if (viewerIsSuperAdmin !== true) {
+        throw new WorkspaceBoardRoleAssignmentPermissionError();
+      }
+
+      return loadRecordForSuperAdminBoardRoleAssignment(workspaceId);
     },
 
     async listPendingWorkspaceInvitesForViewer({ viewerSub, viewerEmail = null } = {}) {
