@@ -372,7 +372,7 @@ test('loadPortfolioSummary handles an empty database cleanly', async () => {
   });
 });
 
-test('loadPortfolioSummary projects workspace titles when present and leaves untitled workspaces nullable', async () => {
+test('loadPortfolioSummary projects workspaceTitle when workspace.title exists', async () => {
   const titledRecord = createPortfolioRecordFixture({
     workspaceId: 'workspace_titled',
     workspaceTitle: 'Studio workspace',
@@ -389,6 +389,25 @@ test('loadPortfolioSummary projects workspace titles when present and leaves unt
       }
     ]
   });
+  const readModel = new MongoPortfolioReadModel({
+    collection: createCollectionDouble([
+      toWorkspaceRecordDocument(titledRecord)
+    ])
+  });
+
+  const summary = await readModel.loadPortfolioSummary();
+
+  assert.equal(
+    summary.workspaces.find((workspace) => workspace.workspaceId === 'workspace_titled')?.workspaceTitle,
+    'Studio workspace'
+  );
+  assert.equal(
+    summary.boardDirectory.find((entry) => entry.workspaceId === 'workspace_titled')?.workspaceTitle,
+    'Studio workspace'
+  );
+});
+
+test('loadPortfolioSummary leaves workspaceTitle nullable for untitled workspaces', async () => {
   const untitledRecord = createPortfolioRecordFixture({
     workspaceId: 'workspace_untitled',
     viewerSub: 'sub_untitled',
@@ -406,7 +425,6 @@ test('loadPortfolioSummary projects workspace titles when present and leaves unt
   });
   const readModel = new MongoPortfolioReadModel({
     collection: createCollectionDouble([
-      toWorkspaceRecordDocument(titledRecord),
       toWorkspaceRecordDocument(untitledRecord)
     ])
   });
@@ -414,16 +432,12 @@ test('loadPortfolioSummary projects workspace titles when present and leaves unt
   const summary = await readModel.loadPortfolioSummary();
 
   assert.equal(
-    summary.workspaces.find((workspace) => workspace.workspaceId === 'workspace_titled')?.workspaceTitle,
-    'Studio workspace'
-  );
-  assert.equal(
     summary.workspaces.find((workspace) => workspace.workspaceId === 'workspace_untitled')?.workspaceTitle,
     null
   );
   assert.equal(
-    summary.boardDirectory.find((entry) => entry.workspaceId === 'workspace_titled')?.workspaceTitle,
-    'Studio workspace'
+    summary.boardDirectory.find((entry) => entry.workspaceId === 'workspace_untitled')?.workspaceTitle,
+    null
   );
 });
 

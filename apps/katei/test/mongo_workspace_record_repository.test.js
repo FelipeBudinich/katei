@@ -262,20 +262,28 @@ test('loadOrCreateAuthoritativeWorkspaceRecord still rejects inaccessible shared
   );
 });
 
-test('loadWorkspaceRecordForSuperAdminTitleManagement loads an existing workspace by workspaceId for super admins', async () => {
-  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_title_admin');
+test('loadWorkspaceRecordForSuperAdminTitleManagement loads a targeted workspace for super admins without changing normal membership access rules', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_title_admin_target');
   const collection = createWorkspaceRecordCollectionDouble([toWorkspaceRecordDocument(sharedRecord)]);
   const repository = new MongoWorkspaceRecordRepository({ collection });
 
   const record = await repository.loadWorkspaceRecordForSuperAdminTitleManagement({
     viewerIsSuperAdmin: true,
-    workspaceId: 'workspace_shared_title_admin'
+    workspaceId: 'workspace_shared_title_admin_target'
   });
 
-  assert.equal(record.workspaceId, 'workspace_shared_title_admin');
+  assert.equal(record.workspaceId, 'workspace_shared_title_admin_target');
   assert.deepEqual(record.workspace.boardOrder, ['main', 'member', 'invite']);
   assert.equal(record.workspace.ui.activeBoardId, 'main');
   assert.equal(firstCardTitle(record.workspace.boards.main), 'Owner board card');
+
+  await assert.rejects(
+    repository.loadOrCreateAuthoritativeWorkspaceRecord({
+      viewerSub: 'sub_blocked',
+      workspaceId: 'workspace_shared_title_admin_target'
+    }),
+    WorkspaceAccessDeniedError
+  );
 });
 
 test('loadWorkspaceRecordForSuperAdminTitleManagement rejects non-super-admin callers', async () => {

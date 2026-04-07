@@ -65,22 +65,28 @@ test('validateWorkspaceShape accepts cards that use detailsMarkdown', () => {
   assert.equal(validateWorkspaceShape(workspace), true);
 });
 
-test('createEmptyWorkspace keeps workspace titles optional and trims them when provided', () => {
-  const titledWorkspace = createEmptyWorkspace({
-    title: '  Writers Room  '
+test('validateWorkspaceShape accepts titled workspaces', () => {
+  const workspace = createEmptyWorkspace({
+    title: '  Shared planning  '
   });
-  const untitledWorkspace = createEmptyWorkspace({
+
+  assert.equal(workspace.title, 'Shared planning');
+  assert.equal(validateWorkspaceShape(workspace), true);
+});
+
+test('validateWorkspaceShape accepts untitled workspaces', () => {
+  const workspace = createEmptyWorkspace();
+
+  assert.equal(Object.hasOwn(workspace, 'title'), false);
+  assert.equal(validateWorkspaceShape(workspace), true);
+});
+
+test('createEmptyWorkspace normalizes blank workspace titles to an unset field', () => {
+  const workspace = createEmptyWorkspace({
     title: '   '
   });
 
-  assert.equal(titledWorkspace.title, 'Writers Room');
-  assert.equal(Object.hasOwn(untitledWorkspace, 'title'), false);
-});
-
-test('validateWorkspaceShape accepts a non-empty optional workspace title', () => {
-  const workspace = createEmptyWorkspace();
-  workspace.title = 'Shared planning';
-
+  assert.equal(Object.hasOwn(workspace, 'title'), false);
   assert.equal(validateWorkspaceShape(workspace), true);
 });
 

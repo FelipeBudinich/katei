@@ -718,6 +718,111 @@ test('portfolio template hides workspace title editing controls for non-super-ad
   assert.doesNotMatch(html, /data-portfolio-target="dialog"/);
 });
 
+test('buildPortfolioPageModel falls back to workspaceId labels when workspaceTitle is absent', () => {
+  const viewModel = buildPortfolioPageModel({
+    viewer: {
+      sub: 'sub_123',
+      name: 'Tester',
+      email: 'tester@example.com',
+      isSuperAdmin: true
+    },
+    t: createTranslator('en'),
+    portfolio: {
+      totals: {
+        workspaces: 1,
+        boards: 1,
+        cards: 2,
+        cardsMissingRequiredLocales: 1,
+        openLocaleRequestCount: 0,
+        awaitingHumanVerificationCount: 1,
+        agentProposalCount: 0
+      },
+      workspaces: [
+        {
+          workspaceId: 'workspace_portfolio_untitled',
+          workspaceTitle: null,
+          boardCount: 1,
+          timestamps: {
+            createdAt: '2026-04-01T09:00:00.000Z',
+            updatedAt: '2026-04-03T12:00:00.000Z'
+          }
+        }
+      ],
+      boardDirectory: [
+        {
+          workspaceId: 'workspace_portfolio_untitled',
+          workspaceTitle: null,
+          boardId: 'main',
+          boardTitle: 'Operations',
+          localePolicy: {
+            sourceLocale: 'en',
+            defaultLocale: 'ja',
+            supportedLocales: ['en', 'ja'],
+            requiredLocales: ['ja']
+          },
+          cardCounts: {
+            total: 2,
+            byStage: null
+          },
+          localizationSummary: {
+            cardsMissingRequiredLocales: 1,
+            openLocaleRequestCount: 0,
+            awaitingHumanVerificationCount: 1,
+            agentProposalCount: 0
+          },
+          aging: {
+            oldestMissingRequiredLocaleUpdatedAt: '2026-04-03T10:30:00.000Z',
+            oldestOpenLocaleRequestAt: null,
+            oldestAwaitingHumanVerificationAt: '2026-04-03T10:45:00.000Z',
+            oldestAgentProposalAt: null
+          },
+          timestamps: {
+            workspaceCreatedAt: '2026-04-01T09:00:00.000Z',
+            workspaceUpdatedAt: '2026-04-03T12:00:00.000Z',
+            boardCreatedAt: '2026-04-01T09:05:00.000Z',
+            boardUpdatedAt: '2026-04-03T11:45:00.000Z'
+          }
+        }
+      ],
+      awaitingHumanVerificationItems: [
+        {
+          workspaceId: 'workspace_portfolio_untitled',
+          workspaceTitle: null,
+          boardId: 'main',
+          boardTitle: 'Operations',
+          cardId: 'card_awaiting',
+          cardTitle: 'Await approval',
+          localizedTitle: '確認待ち',
+          locale: 'ja',
+          cardUpdatedAt: '2026-04-03T10:40:00.000Z',
+          verificationRequestedAt: '2026-04-03T10:45:00.000Z'
+        }
+      ],
+      agentProposalItems: [],
+      missingRequiredLocalizationItems: [
+        {
+          workspaceId: 'workspace_portfolio_untitled',
+          workspaceTitle: null,
+          boardId: 'main',
+          boardTitle: 'Operations',
+          cardId: 'card_missing',
+          cardTitle: 'Translate hero copy',
+          cardUpdatedAt: '2026-04-03T10:30:00.000Z',
+          missingLocales: ['ja']
+        }
+      ]
+    }
+  });
+  const html = renderPortfolioPage(viewModel);
+
+  assert.equal(viewModel.boardDirectoryEntries[0].workspaceLabel, 'workspace_portfolio_untitled');
+  assert.equal(viewModel.boardDirectoryWorkspaceGroups[0].workspaceLabel, 'workspace_portfolio_untitled');
+  assert.equal(viewModel.awaitingApprovalEntries[0].workspaceLabel, 'workspace_portfolio_untitled');
+  assert.equal(viewModel.missingRequiredLocalizationEntries[0].workspaceLabel, 'workspace_portfolio_untitled');
+  assert.equal(viewModel.incompleteCoverageEntries[0].workspaceLabel, 'workspace_portfolio_untitled');
+  assert.match(html, /workspace_portfolio_untitled/);
+});
+
 test('GET /portfolio renders the empty state cleanly for super admins when no summaries exist', async () => {
   const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble();
   const portfolioReadModel = createPortfolioReadModelDouble();

@@ -274,6 +274,42 @@ test('workspace.title.set adds a trimmed title to an untitled workspace without 
   });
 });
 
+test('workspace.title.set preserves unrelated workspace fields', () => {
+  const workspace = addBoardToWorkspace(createWorkspaceForActor(), {
+    boardId: 'notes',
+    title: 'Notes board'
+  });
+
+  workspace.ui.activeBoardId = 'notes';
+  workspace.ownership.owner.displayName = 'Viewer';
+  const snapshot = {
+    access: structuredClone(workspace.access),
+    ownership: structuredClone(workspace.ownership),
+    ui: structuredClone(workspace.ui),
+    boardOrder: structuredClone(workspace.boardOrder),
+    boards: structuredClone(workspace.boards)
+  };
+
+  const { workspace: nextWorkspace } = applyWorkspaceCommand({
+    record: createRecord(workspace, 0),
+    command: {
+      clientMutationId: 'workspace_title_set_preserve_fields',
+      type: 'workspace.title.set',
+      payload: {
+        title: 'Studio workspace'
+      }
+    },
+    expectedRevision: 0,
+    context: createContext({ viewerIsSuperAdmin: true })
+  });
+
+  assert.deepEqual(nextWorkspace.access, snapshot.access);
+  assert.deepEqual(nextWorkspace.ownership, snapshot.ownership);
+  assert.deepEqual(nextWorkspace.ui, snapshot.ui);
+  assert.deepEqual(nextWorkspace.boardOrder, snapshot.boardOrder);
+  assert.deepEqual(nextWorkspace.boards, snapshot.boards);
+});
+
 test('workspace.title.set renames an existing workspace title', () => {
   const workspace = createWorkspaceForActor();
   workspace.title = 'Old workspace name';
