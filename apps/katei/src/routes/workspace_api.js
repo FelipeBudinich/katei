@@ -29,6 +29,7 @@ import {
 } from '../ai/openai_stage_prompt_runner.js';
 import { applyWorkspaceCommand, WorkspaceCommandPermissionError } from '../workspaces/apply_workspace_command.js';
 import { buildInviteResponseDebugFields, createInviteAcceptDebugLogger, createInviteDebugLogger } from '../lib/invite_debug.js';
+import { setBoardSurfaceCookie } from '../auth/last_surface_cookie.js';
 import { decryptBoardSecret } from '../security/board_secret_crypto.js';
 import { createDefaultMutationContext } from '../workspaces/mutation_context.js';
 import {
@@ -60,6 +61,8 @@ export function createWorkspaceApiRouter({
   const router = Router();
   const resolvedOpenAiLocalizer = openAiLocalizer ?? createOpenAiLocalizer();
   const resolvedOpenAiStagePromptRunner = openAiStagePromptRunner ?? createOpenAiStagePromptRunner();
+  const sendActorFacingWorkspaceApiResponse = (response, options = {}) =>
+    sendWorkspaceApiResponse(response, { ...options, config });
 
   router.get('/api/workspace', requireSession, async (request, response, next) => {
     const debugLog = createInviteDebugLogger({ request });
@@ -78,7 +81,7 @@ export function createWorkspaceApiRouter({
         record.workspaceId,
         debugLog
       );
-      sendWorkspaceApiResponse(response, {
+      sendActorFacingWorkspaceApiResponse(response, {
         debugLog,
         request,
         route: 'GET /api/workspace',
@@ -163,7 +166,7 @@ export function createWorkspaceApiRouter({
         debugLog
       );
 
-      sendWorkspaceApiResponse(response, {
+      sendActorFacingWorkspaceApiResponse(response, {
         debugLog,
         request,
         route: 'PUT /api/workspace',
@@ -241,7 +244,7 @@ export function createWorkspaceApiRouter({
           projectedCurrentRecord.workspaceId,
           debugLog
         );
-        sendWorkspaceApiResponse(response, {
+        sendActorFacingWorkspaceApiResponse(response, {
           debugLog,
           request,
           route: 'POST /api/workspace/commands',
@@ -279,7 +282,7 @@ export function createWorkspaceApiRouter({
           projectedCurrentRecord.workspaceId,
           debugLog
         );
-        sendWorkspaceApiResponse(response, {
+        sendActorFacingWorkspaceApiResponse(response, {
           debugLog,
           request,
           route: 'POST /api/workspace/commands',
@@ -324,7 +327,7 @@ export function createWorkspaceApiRouter({
         debugLog
       );
 
-      sendWorkspaceApiResponse(response, {
+      sendActorFacingWorkspaceApiResponse(response, {
         debugLog,
         request,
         route: 'POST /api/workspace/commands',
@@ -446,7 +449,7 @@ export function createWorkspaceApiRouter({
           projectedCurrentRecord.workspaceId,
           debugLog
         );
-        sendWorkspaceApiResponse(response, {
+        sendActorFacingWorkspaceApiResponse(response, {
           debugLog,
           request,
           route: 'POST /api/workspace/localizations/generate',
@@ -497,7 +500,7 @@ export function createWorkspaceApiRouter({
         debugLog
       );
 
-      sendWorkspaceApiResponse(response, {
+      sendActorFacingWorkspaceApiResponse(response, {
         debugLog,
         request,
         route: 'POST /api/workspace/localizations/generate',
@@ -600,7 +603,7 @@ export function createWorkspaceApiRouter({
           projectedCurrentRecord.workspaceId,
           debugLog
         );
-        sendWorkspaceApiResponse(response, {
+        sendActorFacingWorkspaceApiResponse(response, {
           debugLog,
           request,
           route: 'POST /api/workspace/stage-prompts/run',
@@ -649,7 +652,7 @@ export function createWorkspaceApiRouter({
         debugLog
       );
 
-      sendWorkspaceApiResponse(response, {
+      sendActorFacingWorkspaceApiResponse(response, {
         debugLog,
         request,
         route: 'POST /api/workspace/stage-prompts/run',
@@ -738,7 +741,7 @@ export function createWorkspaceApiRouter({
         debugLog
       );
 
-      sendWorkspaceApiResponse(response, {
+      sendActorFacingWorkspaceApiResponse(response, {
         debugLog,
         request,
         route: 'POST /api/workspace/import',
@@ -1192,6 +1195,7 @@ function createWorkspaceApiResponse(record, result = undefined, pendingWorkspace
 }
 
 function sendWorkspaceApiResponse(response, {
+  config = null,
   debugLog = null,
   request = null,
   route = null,
@@ -1212,6 +1216,7 @@ function sendWorkspaceApiResponse(response, {
     }));
   }
 
+  setBoardSurfaceCookie(response, record, config);
   response.json(payload);
 }
 

@@ -1,10 +1,12 @@
 import { Router } from 'express';
 import { APP_TITLE } from '../../public/js/domain/workspace_read_model.js';
+import { setPortfolioSurfaceCookie } from '../auth/last_surface_cookie.js';
 
-export function createPortfolioRouter({ requireSession, requireSuperAdmin }) {
+export function createPortfolioRouter({ requireSession, requireSuperAdmin, config }) {
   const router = Router();
 
   router.get('/portfolio', requireSession, requireSuperAdmin, (request, response) => {
+    setPortfolioSurfaceCookie(response, config);
     response.render('pages/portfolio', buildPortfolioPageModel({
       viewer: request.viewer,
       t: response.locals.t

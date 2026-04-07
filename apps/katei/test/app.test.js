@@ -11,6 +11,10 @@ import {
   createSignedSessionCookieValue
 } from '../src/auth/session_cookie.js';
 import {
+  KATEI_LAST_SURFACE_COOKIE_NAME,
+  createLastSurfaceCookieValue
+} from '../src/auth/last_surface_cookie.js';
+import {
   createCard,
   createEmptyWorkspace,
   migrateWorkspaceSnapshot,
@@ -63,6 +67,10 @@ function createSessionCookieHeader(viewer, { ttlSeconds = 300, now = '2099-01-01
   const payload = createSessionPayload(viewer, ttlSeconds, new Date(now));
   const value = createSignedSessionCookieValue(payload, 'test-session-secret');
   return `${KATEI_SESSION_COOKIE_NAME}=${value}`;
+}
+
+function createLastSurfaceCookieHeader(memory) {
+  return `${KATEI_LAST_SURFACE_COOKIE_NAME}=${createLastSurfaceCookieValue(memory)}`;
 }
 
 test('GET / renders the landing page for anonymous users', async () => {
@@ -166,6 +174,71 @@ test('GET / redirects authenticated users to /boards', async () => {
 
   assert.equal(response.status, 302);
   assert.equal(response.headers.location, '/boards');
+});
+
+test('GET / redirects authenticated super admins to /portfolio when no remembered board destination exists', async () => {
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble();
+  const app = createTestApp({
+    env: {
+      SUPER_ADMINS: 'tester@example.com'
+    },
+    googleTokenVerifier: async () => ({ sub: 'sub_123' }),
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .get('/')
+    .set('Cookie', createSessionCookieHeader({
+      sub: 'sub_123',
+      name: 'Tester',
+      email: 'tester@example.com'
+    }));
+
+  assert.equal(response.status, 302);
+  assert.equal(response.headers.location, '/portfolio');
+  assert.deepEqual(workspaceRecordRepository.loadCalls, []);
+});
+
+test('GET / redirects authenticated super admins to a remembered board workspace when it remains accessible', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_portfolio_redirect', {
+    memberSub: 'sub_123',
+    memberEmail: 'tester@example.com',
+    memberBoardId: 'notes',
+    memberBoardTitle: 'Shared notes'
+  });
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord]);
+  const app = createTestApp({
+    env: {
+      SUPER_ADMINS: 'tester@example.com'
+    },
+    googleTokenVerifier: async () => ({ sub: 'sub_123' }),
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .get('/')
+    .set('Cookie', [
+      createSessionCookieHeader({
+        sub: 'sub_123',
+        name: 'Tester',
+        email: 'tester@example.com'
+      }),
+      createLastSurfaceCookieHeader({
+        surface: 'board',
+        workspaceId: 'workspace_shared_portfolio_redirect',
+        boardId: 'notes'
+      })
+    ]);
+
+  assert.equal(response.status, 302);
+  assert.equal(response.headers.location, '/boards?workspaceId=workspace_shared_portfolio_redirect');
+  assert.deepEqual(workspaceRecordRepository.loadCalls, [
+    {
+      viewerSub: 'sub_123',
+      viewerEmail: 'tester@example.com',
+      workspaceId: 'workspace_shared_portfolio_redirect'
+    }
+  ]);
 });
 
 test('GET /vendor/stimulus/stimulus.js serves the vendored library asset', async () => {
@@ -2132,6 +2205,112 @@ test('POST /auth/google allows the matching localhost origin under the developme
   });
 });
 
+test('POST /auth/google lands super admins on /portfolio when no remembered board destination exists', async () => {
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble();
+  const app = createTestApp({
+    env: {
+      SUPER_ADMINS: 'tester@example.com'
+    },
+    googleTokenVerifier: async () => ({
+      sub: 'sub_123',
+      email: 'tester@example.com',
+      name: 'Tester'
+    }),
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .post('/auth/google')
+    .send({ credential: 'valid-token' });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(response.body, {
+    ok: true,
+    redirectTo: '/portfolio'
+  });
+  assert.deepEqual(workspaceRecordRepository.loadCalls, []);
+});
+
+test('POST /auth/google resumes the remembered board workspace for super admins when it remains accessible', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_login_resume', {
+    memberSub: 'sub_123',
+    memberEmail: 'tester@example.com',
+    memberBoardId: 'notes',
+    memberBoardTitle: 'Shared notes'
+  });
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord]);
+  const app = createTestApp({
+    env: {
+      SUPER_ADMINS: 'tester@example.com'
+    },
+    googleTokenVerifier: async () => ({
+      sub: 'sub_123',
+      email: 'tester@example.com',
+      name: 'Tester'
+    }),
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .post('/auth/google')
+    .set('Cookie', createLastSurfaceCookieHeader({
+      surface: 'board',
+      workspaceId: 'workspace_shared_login_resume',
+      boardId: 'notes'
+    }))
+    .send({ credential: 'valid-token' });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(response.body, {
+    ok: true,
+    redirectTo: '/boards?workspaceId=workspace_shared_login_resume'
+  });
+  assert.deepEqual(workspaceRecordRepository.loadCalls, [
+    {
+      viewerSub: 'sub_123',
+      viewerEmail: 'tester@example.com',
+      workspaceId: 'workspace_shared_login_resume'
+    }
+  ]);
+});
+
+test('POST /auth/google falls back to /portfolio for super admins when the remembered board workspace is invalid', async () => {
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble();
+  const app = createTestApp({
+    env: {
+      SUPER_ADMINS: 'tester@example.com'
+    },
+    googleTokenVerifier: async () => ({
+      sub: 'sub_123',
+      email: 'tester@example.com',
+      name: 'Tester'
+    }),
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .post('/auth/google')
+    .set('Cookie', createLastSurfaceCookieHeader({
+      surface: 'board',
+      workspaceId: 'workspace_missing_resume_target',
+      boardId: 'notes'
+    }))
+    .send({ credential: 'valid-token' });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(response.body, {
+    ok: true,
+    redirectTo: '/portfolio'
+  });
+  assert.deepEqual(workspaceRecordRepository.loadCalls, [
+    {
+      viewerSub: 'sub_123',
+      viewerEmail: 'tester@example.com',
+      workspaceId: 'workspace_missing_resume_target'
+    }
+  ]);
+});
+
 test('POST /auth/google returns 403 when the verified tester sub is not on the allowlist', async () => {
   const app = createTestApp({
     env: {
@@ -2204,6 +2383,55 @@ test('POST /auth/logout clears the Katei session and returns /', async () => {
     redirectTo: '/'
   });
   assert.match(response.headers['set-cookie'][0], /katei_session=;/);
+});
+
+test('POST /auth/logout clears last-surface memory so the next super-admin login lands on /portfolio', async () => {
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble();
+  const app = createTestApp({
+    env: {
+      SUPER_ADMINS: 'tester@example.com'
+    },
+    googleTokenVerifier: async () => ({
+      sub: 'sub_123',
+      email: 'tester@example.com',
+      name: 'Tester'
+    }),
+    workspaceRecordRepository
+  });
+
+  const logoutResponse = await request(app)
+    .post('/auth/logout')
+    .set('Cookie', [
+      createSessionCookieHeader({
+        sub: 'sub_123',
+        name: 'Tester',
+        email: 'tester@example.com'
+      }),
+      createLastSurfaceCookieHeader({
+        surface: 'board',
+        workspaceId: 'workspace_shared_login_resume',
+        boardId: 'notes'
+      })
+    ]);
+
+  assert.equal(logoutResponse.status, 200);
+  assert.deepEqual(logoutResponse.body, {
+    ok: true,
+    redirectTo: '/'
+  });
+  assert.match(findSetCookie(logoutResponse, KATEI_SESSION_COOKIE_NAME) ?? '', /katei_session=;/);
+  assert.match(findSetCookie(logoutResponse, KATEI_LAST_SURFACE_COOKIE_NAME) ?? '', /katei_last_surface=;/);
+
+  const loginResponse = await request(app)
+    .post('/auth/google')
+    .send({ credential: 'valid-token' });
+
+  assert.equal(loginResponse.status, 200);
+  assert.deepEqual(loginResponse.body, {
+    ok: true,
+    redirectTo: '/portfolio'
+  });
+  assert.deepEqual(workspaceRecordRepository.loadCalls, []);
 });
 
 test('GET /health still returns { ok: true }', async () => {

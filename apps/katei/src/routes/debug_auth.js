@@ -1,13 +1,14 @@
 import crypto from 'node:crypto';
 import { Router } from 'express';
+import { resolveAuthenticatedLandingDestination } from '../auth/landing_redirect.js';
 import { setKateiSessionCookie } from '../auth/session_cookie.js';
 
 const DEBUG_AUTH_HEADER_NAME = 'x-katei-debug-auth';
 
-export function createDebugAuthRouter({ config }) {
+export function createDebugAuthRouter({ config, workspaceRecordRepository }) {
   const router = Router();
 
-  router.post('/__debug/login', (request, response) => {
+  router.post('/__debug/login', async (request, response, next) => {
     response.set('Cache-Control', 'no-store');
 
     if (!config?.debugAuth?.enabled) {
@@ -31,12 +32,23 @@ export function createDebugAuthRouter({ config }) {
 
     const viewer = buildDebugViewer(config.debugAuth.viewer);
 
-    setKateiSessionCookie(response, viewer, config);
-    response.json({
-      ok: true,
-      redirectTo: '/boards',
-      viewer
-    });
+    try {
+      setKateiSessionCookie(response, viewer, config);
+      const redirectTo = await resolveAuthenticatedLandingDestination({
+        request,
+        viewer,
+        config,
+        workspaceRecordRepository
+      });
+
+      response.json({
+        ok: true,
+        redirectTo,
+        viewer
+      });
+    } catch (error) {
+      next(error);
+    }
   });
 
   return router;

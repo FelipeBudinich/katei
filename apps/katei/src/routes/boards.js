@@ -9,9 +9,10 @@ import {
 } from '../../public/js/domain/workspace_read_model.js';
 import { getColumnDisplayLabel, getPriorityDisplayLabel } from '../../public/js/i18n/workspace_labels.js';
 import { buildInviteResponseDebugFields, createInviteDebugLogger } from '../lib/invite_debug.js';
+import { setBoardSurfaceCookie } from '../auth/last_surface_cookie.js';
 import { WorkspaceAccessDeniedError } from '../workspaces/workspace_record_repository.js';
 
-export function createBoardsRouter({ requireSession, workspaceRecordRepository }) {
+export function createBoardsRouter({ requireSession, workspaceRecordRepository, config }) {
   const router = Router();
 
   router.get('/boards', requireSession, async (request, response, next) => {
@@ -55,6 +56,7 @@ export function createBoardsRouter({ requireSession, workspaceRecordRepository }
         pendingWorkspaceInvites,
         accessibleWorkspaces
       );
+      setBoardSurfaceCookie(response, record, config);
 
       debugLog('invite.response.summary', buildInviteResponseDebugFields({
         route: 'GET /boards',

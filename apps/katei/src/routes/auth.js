@@ -1,13 +1,15 @@
 import { Router } from 'express';
 import { isAllowedGoogleSub } from '../auth/allowlist.js';
+import { clearLastSurfaceCookie } from '../auth/last_surface_cookie.js';
+import { resolveAuthenticatedLandingDestination } from '../auth/landing_redirect.js';
 import { clearKateiSessionCookie, setKateiSessionCookie } from '../auth/session_cookie.js';
 
 const ACCESS_DENIED_MESSAGE = 'This Google account is not enabled for private testing.';
 
-export function createAuthRouter({ config, verifyGoogleIdToken, requireSession }) {
+export function createAuthRouter({ config, verifyGoogleIdToken, requireSession, workspaceRecordRepository }) {
   const router = Router();
 
-  router.post('/auth/google', async (request, response) => {
+  router.post('/auth/google', async (request, response, next) => {
     if (!isAllowedOrigin(request, config)) {
       response.status(403).json({
         ok: false,
@@ -46,15 +48,27 @@ export function createAuthRouter({ config, verifyGoogleIdToken, requireSession }
       return;
     }
 
-    setKateiSessionCookie(response, viewer, config);
-    response.json({
-      ok: true,
-      redirectTo: '/boards'
-    });
+    try {
+      setKateiSessionCookie(response, viewer, config);
+      const redirectTo = await resolveAuthenticatedLandingDestination({
+        request,
+        viewer,
+        config,
+        workspaceRecordRepository
+      });
+
+      response.json({
+        ok: true,
+        redirectTo
+      });
+    } catch (error) {
+      next(error);
+    }
   });
 
   router.post('/auth/logout', requireSession, (request, response) => {
     clearKateiSessionCookie(response, config);
+    clearLastSurfaceCookie(response, config);
     response.json({
       ok: true,
       redirectTo: '/'
@@ -85,4 +99,3 @@ function normalizeCredential(value) {
 
   return value.trim();
 }
-

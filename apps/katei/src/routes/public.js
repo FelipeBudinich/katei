@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Router } from 'express';
+import { resolveAuthenticatedLandingDestination } from '../auth/landing_redirect.js';
 import { APP_TITLE } from '../../public/js/domain/workspace_read_model.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -9,13 +10,24 @@ const appRoot = path.resolve(__dirname, '../..');
 const envInventoryPath = path.join(appRoot, 'docs', 'env-inventory.html');
 const filetreePath = path.join(appRoot, 'docs', 'filetree.html');
 
-export function createPublicRouter({ config }) {
+export function createPublicRouter({ config, workspaceRecordRepository }) {
   const router = Router();
 
-  router.get('/', (request, response) => {
+  router.get('/', async (request, response, next) => {
     if (request.viewer) {
-      response.redirect('/boards');
-      return;
+      try {
+        const redirectTo = await resolveAuthenticatedLandingDestination({
+          request,
+          viewer: request.viewer,
+          config,
+          workspaceRecordRepository
+        });
+        response.redirect(redirectTo);
+        return;
+      } catch (error) {
+        next(error);
+        return;
+      }
     }
 
     const { t } = response.locals;

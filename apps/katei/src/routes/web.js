@@ -24,10 +24,10 @@ export function createWebRouter({
   });
   const requireApiSession = createRequireSessionMiddleware();
 
-  router.use(createDebugAuthRouter({ config }));
-  router.use(createPublicRouter({ config }));
-  router.use(createPortfolioRouter({ requireSession: requireBoardSession, requireSuperAdmin }));
-  router.use(createBoardsRouter({ requireSession: requireBoardSession, workspaceRecordRepository }));
+  router.use(createDebugAuthRouter({ config, workspaceRecordRepository }));
+  router.use(createPublicRouter({ config, workspaceRecordRepository }));
+  router.use(createPortfolioRouter({ requireSession: requireBoardSession, requireSuperAdmin, config }));
+  router.use(createBoardsRouter({ requireSession: requireBoardSession, workspaceRecordRepository, config }));
   router.use(createWorkspaceApiRouter({
     config,
     requireSession: requireApiSession,
@@ -35,7 +35,12 @@ export function createWebRouter({
     openAiLocalizer,
     openAiStagePromptRunner
   }));
-  router.use(createAuthRouter({ config, verifyGoogleIdToken, requireSession: requireApiSession }));
+  router.use(createAuthRouter({
+    config,
+    verifyGoogleIdToken,
+    requireSession: requireApiSession,
+    workspaceRecordRepository
+  }));
 
   return router;
 }
