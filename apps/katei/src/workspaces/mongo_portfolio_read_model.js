@@ -2,6 +2,13 @@ import { getMongoDb } from '../data/mongo_client.js';
 import { getWorkspaceRecordCollection } from './mongo_workspace_record_repository.js';
 import { fromWorkspaceRecordDocument } from './workspace_record.js';
 import { createDefaultBoardLanguagePolicy, normalizeBoardLanguagePolicy } from '../../public/js/domain/board_language_policy.js';
+import {
+  getCardContentReviewState,
+  getMissingRequiredLocales,
+  getStoredCardContentVariant,
+  listCardLocales
+} from '../../public/js/domain/card_localization.js';
+import { listCardLocaleStatuses } from '../../public/js/domain/card_localization_requests.js';
 
 export function createMongoPortfolioReadModel(options = {}) {
   return new MongoPortfolioReadModel(options);
@@ -22,6 +29,7 @@ export class MongoPortfolioReadModel {
       .map((document) => fromWorkspaceRecordDocument(document))
       .filter(Boolean)
       .sort(compareWorkspaceRecords);
+    const totals = createEmptyPortfolioTotals();
     const workspaces = [];
     const boardDirectory = [];
 
@@ -37,11 +45,18 @@ export class MongoPortfolioReadModel {
           continue;
         }
 
-        boardDirectory.push(createBoardSummary(record, board, boardId));
+        const boardSummary = createBoardSummary(record, board, boardId);
+
+        boardDirectory.push(boardSummary);
+        accumulatePortfolioTotals(totals, boardSummary);
       }
     }
 
+    totals.workspaces = workspaces.length;
+    totals.boards = boardDirectory.length;
+
     return {
+      totals,
       workspaces,
       boardDirectory
     };
@@ -74,6 +89,7 @@ function createWorkspaceSummary(record, boardIds) {
 
 function createBoardSummary(record, board, boardId) {
   const localePolicy = normalizeBoardLanguagePolicy(board.languagePolicy) ?? createDefaultBoardLanguagePolicy();
+  const localizationSummary = createBoardLocalizationSummary(board);
 
   return {
     workspaceId: record.workspaceId,
@@ -90,6 +106,8 @@ function createBoardSummary(record, board, boardId) {
       total: countBoardCards(board),
       byStage: null
     },
+    localizationSummary: localizationSummary.summary,
+    aging: localizationSummary.aging,
     timestamps: {
       workspaceCreatedAt: record.createdAt,
       workspaceUpdatedAt: record.updatedAt,
@@ -134,6 +152,138 @@ function countBoardCards(board) {
   }
 
   return Object.keys(board.cards).length;
+}
+
+function createBoardLocalizationSummary(board) {
+  const summary = createEmptyBoardLocalizationSummary();
+  const aging = createEmptyBoardAging();
+
+  for (const card of Object.values(board?.cards ?? {})) {
+    if (!card || typeof card !== 'object') {
+      continue;
+    }
+
+    if (getMissingRequiredLocales(board, card).length > 0) {
+      summary.cardsMissingRequiredLocales += 1;
+      aging.oldestMissingRequiredLocaleUpdatedAt = pickEarlierIsoTimestamp(
+        aging.oldestMissingRequiredLocaleUpdatedAt,
+        card.updatedAt
+      );
+    }
+
+    for (const localeStatus of listCardLocaleStatuses(board, card)) {
+      if (!localeStatus?.isRequested || !localeStatus?.request?.requestedAt) {
+        continue;
+      }
+
+      summary.openLocaleRequestCount += 1;
+      aging.oldestOpenLocaleRequestAt = pickEarlierIsoTimestamp(
+        aging.oldestOpenLocaleRequestAt,
+        localeStatus.request.requestedAt
+      );
+    }
+
+    for (const locale of listCardLocales(card)) {
+      const variant = getStoredCardContentVariant(card, locale);
+
+      if (!variant) {
+        continue;
+      }
+
+      const reviewState = getCardContentReviewState(variant.review ?? null);
+
+      if (reviewState.status === 'needs-human-verification') {
+        summary.awaitingHumanVerificationCount += 1;
+        aging.oldestAwaitingHumanVerificationAt = pickEarlierIsoTimestamp(
+          aging.oldestAwaitingHumanVerificationAt,
+          variant.review?.verificationRequestedAt
+        );
+      } else if (reviewState.status === 'ai') {
+        summary.agentProposalCount += 1;
+        aging.oldestAgentProposalAt = pickEarlierIsoTimestamp(
+          aging.oldestAgentProposalAt,
+          variant.provenance?.timestamp
+        );
+      }
+    }
+  }
+
+  return {
+    summary,
+    aging
+  };
+}
+
+function createEmptyPortfolioTotals() {
+  return {
+    workspaces: 0,
+    boards: 0,
+    cards: 0,
+    cardsMissingRequiredLocales: 0,
+    openLocaleRequestCount: 0,
+    awaitingHumanVerificationCount: 0,
+    agentProposalCount: 0
+  };
+}
+
+function createEmptyBoardLocalizationSummary() {
+  return {
+    cardsMissingRequiredLocales: 0,
+    openLocaleRequestCount: 0,
+    awaitingHumanVerificationCount: 0,
+    agentProposalCount: 0
+  };
+}
+
+function createEmptyBoardAging() {
+  return {
+    oldestMissingRequiredLocaleUpdatedAt: null,
+    oldestOpenLocaleRequestAt: null,
+    oldestAwaitingHumanVerificationAt: null,
+    oldestAgentProposalAt: null
+  };
+}
+
+function accumulatePortfolioTotals(totals, boardSummary) {
+  totals.cards += Number.isInteger(boardSummary?.cardCounts?.total) ? boardSummary.cardCounts.total : 0;
+  totals.cardsMissingRequiredLocales += Number.isInteger(boardSummary?.localizationSummary?.cardsMissingRequiredLocales)
+    ? boardSummary.localizationSummary.cardsMissingRequiredLocales
+    : 0;
+  totals.openLocaleRequestCount += Number.isInteger(boardSummary?.localizationSummary?.openLocaleRequestCount)
+    ? boardSummary.localizationSummary.openLocaleRequestCount
+    : 0;
+  totals.awaitingHumanVerificationCount += Number.isInteger(boardSummary?.localizationSummary?.awaitingHumanVerificationCount)
+    ? boardSummary.localizationSummary.awaitingHumanVerificationCount
+    : 0;
+  totals.agentProposalCount += Number.isInteger(boardSummary?.localizationSummary?.agentProposalCount)
+    ? boardSummary.localizationSummary.agentProposalCount
+    : 0;
+}
+
+function pickEarlierIsoTimestamp(currentValue, nextValue) {
+  const normalizedCurrentValue = normalizeOptionalIsoTimestamp(currentValue);
+  const normalizedNextValue = normalizeOptionalIsoTimestamp(nextValue);
+
+  if (!normalizedCurrentValue) {
+    return normalizedNextValue;
+  }
+
+  if (!normalizedNextValue) {
+    return normalizedCurrentValue;
+  }
+
+  return normalizedNextValue < normalizedCurrentValue ? normalizedNextValue : normalizedCurrentValue;
+}
+
+function normalizeOptionalIsoTimestamp(value) {
+  const normalizedValue = normalizeOptionalString(value);
+
+  if (!normalizedValue) {
+    return null;
+  }
+
+  const parsedValue = new Date(normalizedValue);
+  return Number.isNaN(parsedValue.getTime()) ? null : parsedValue.toISOString();
 }
 
 function normalizeOptionalString(value) {

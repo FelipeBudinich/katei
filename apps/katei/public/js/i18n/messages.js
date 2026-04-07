@@ -53,7 +53,12 @@ const EN_MESSAGES = freezeCatalog({
       heading: 'Summary',
       description: 'Portfolio totals are rendered from a dedicated server-side summary read model.',
       workspacesLabel: 'Workspaces',
-      boardsLabel: 'Boards'
+      boardsLabel: 'Boards',
+      cardsLabel: 'Cards',
+      cardsMissingRequiredLocalesLabel: 'Cards missing required locales',
+      openLocaleRequestCountLabel: 'Open locale requests',
+      awaitingHumanVerificationCountLabel: 'Awaiting human verification',
+      agentProposalCountLabel: 'Agent proposals'
     },
     directory: {
       heading: 'Board directory',
@@ -65,9 +70,17 @@ const EN_MESSAGES = freezeCatalog({
       supportedLocalesLabel: 'Supported locales',
       requiredLocalesLabel: 'Required locales',
       cardCountLabel: 'Cards',
+      cardsMissingRequiredLocalesLabel: 'Cards missing required locales',
+      openLocaleRequestCountLabel: 'Open locale requests',
+      awaitingHumanVerificationCountLabel: 'Awaiting human verification',
+      agentProposalCountLabel: 'Agent proposals',
       boardCreatedAtLabel: 'Board created',
       boardUpdatedAtLabel: 'Board updated',
-      workspaceUpdatedAtLabel: 'Workspace updated'
+      workspaceUpdatedAtLabel: 'Workspace updated',
+      oldestMissingRequiredLocaleUpdatedAtLabel: 'Oldest missing required locale',
+      oldestOpenLocaleRequestAtLabel: 'Oldest open locale request',
+      oldestAwaitingHumanVerificationAtLabel: 'Oldest awaiting human verification',
+      oldestAgentProposalAtLabel: 'Oldest agent proposal'
     },
     empty: {
       heading: 'No portfolio data yet',
@@ -485,7 +498,12 @@ const ES_CL_MESSAGES = freezeCatalog({
       heading: 'Resumen',
       description: 'Los totales del portafolio se renderizan desde un read model resumido dedicado del servidor.',
       workspacesLabel: 'Espacios',
-      boardsLabel: 'Tableros'
+      boardsLabel: 'Tableros',
+      cardsLabel: 'Tarjetas',
+      cardsMissingRequiredLocalesLabel: 'Tarjetas con locales requeridos faltantes',
+      openLocaleRequestCountLabel: 'Solicitudes de locale abiertas',
+      awaitingHumanVerificationCountLabel: 'Esperando verificación humana',
+      agentProposalCountLabel: 'Propuestas de agente'
     },
     directory: {
       heading: 'Directorio de tableros',
@@ -497,9 +515,17 @@ const ES_CL_MESSAGES = freezeCatalog({
       supportedLocalesLabel: 'Locales soportados',
       requiredLocalesLabel: 'Locales requeridos',
       cardCountLabel: 'Tarjetas',
+      cardsMissingRequiredLocalesLabel: 'Tarjetas con locales requeridos faltantes',
+      openLocaleRequestCountLabel: 'Solicitudes de locale abiertas',
+      awaitingHumanVerificationCountLabel: 'Esperando verificación humana',
+      agentProposalCountLabel: 'Propuestas de agente',
       boardCreatedAtLabel: 'Tablero creado',
       boardUpdatedAtLabel: 'Tablero actualizado',
-      workspaceUpdatedAtLabel: 'Espacio actualizado'
+      workspaceUpdatedAtLabel: 'Espacio actualizado',
+      oldestMissingRequiredLocaleUpdatedAtLabel: 'Falta más antigua de locale requerido',
+      oldestOpenLocaleRequestAtLabel: 'Solicitud de locale abierta más antigua',
+      oldestAwaitingHumanVerificationAtLabel: 'Espera más antigua de verificación humana',
+      oldestAgentProposalAtLabel: 'Propuesta de agente más antigua'
     },
     empty: {
       heading: 'Todavía no hay datos de portafolio',
@@ -918,7 +944,12 @@ const JA_MESSAGES = freezeCatalog({
       heading: '概要',
       description: 'ポートフォリオの合計値は、専用のサーバー側要約 read model から描画されます。',
       workspacesLabel: 'ワークスペース',
-      boardsLabel: 'ボード'
+      boardsLabel: 'ボード',
+      cardsLabel: 'カード',
+      cardsMissingRequiredLocalesLabel: '必須 locale が不足しているカード',
+      openLocaleRequestCountLabel: '未対応の locale リクエスト',
+      awaitingHumanVerificationCountLabel: '人の確認待ち',
+      agentProposalCountLabel: 'エージェント提案'
     },
     directory: {
       heading: 'ボード一覧',
@@ -930,9 +961,17 @@ const JA_MESSAGES = freezeCatalog({
       supportedLocalesLabel: '対応 locale',
       requiredLocalesLabel: '必須 locale',
       cardCountLabel: 'カード',
+      cardsMissingRequiredLocalesLabel: '必須 locale が不足しているカード',
+      openLocaleRequestCountLabel: '未対応の locale リクエスト',
+      awaitingHumanVerificationCountLabel: '人の確認待ち',
+      agentProposalCountLabel: 'エージェント提案',
       boardCreatedAtLabel: 'ボード作成日時',
       boardUpdatedAtLabel: 'ボード更新日時',
-      workspaceUpdatedAtLabel: 'ワークスペース更新日時'
+      workspaceUpdatedAtLabel: 'ワークスペース更新日時',
+      oldestMissingRequiredLocaleUpdatedAtLabel: '最も古い必須 locale 未対応',
+      oldestOpenLocaleRequestAtLabel: '最も古い locale リクエスト',
+      oldestAwaitingHumanVerificationAtLabel: '最も古い人の確認待ち',
+      oldestAgentProposalAtLabel: '最も古いエージェント提案'
     },
     empty: {
       heading: 'ポートフォリオデータはまだありません',

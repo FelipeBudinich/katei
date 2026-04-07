@@ -307,6 +307,15 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
   const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble();
   const portfolioReadModel = createPortfolioReadModelDouble({
     summary: {
+      totals: {
+        workspaces: 1,
+        boards: 1,
+        cards: 3,
+        cardsMissingRequiredLocales: 1,
+        openLocaleRequestCount: 2,
+        awaitingHumanVerificationCount: 1,
+        agentProposalCount: 1
+      },
       workspaces: [
         {
           workspaceId: 'workspace_portfolio_alpha',
@@ -333,6 +342,18 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
           cardCounts: {
             total: 3,
             byStage: null
+          },
+          localizationSummary: {
+            cardsMissingRequiredLocales: 1,
+            openLocaleRequestCount: 2,
+            awaitingHumanVerificationCount: 1,
+            agentProposalCount: 1
+          },
+          aging: {
+            oldestMissingRequiredLocaleUpdatedAt: '2026-04-03T10:30:00.000Z',
+            oldestOpenLocaleRequestAt: '2026-04-03T10:15:00.000Z',
+            oldestAwaitingHumanVerificationAt: '2026-04-03T10:45:00.000Z',
+            oldestAgentProposalAt: '2026-04-03T09:30:00.000Z'
           },
           timestamps: {
             workspaceCreatedAt: '2026-04-01T09:00:00.000Z',
@@ -374,7 +395,15 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
   assert.match(response.text, /Default locale/);
   assert.match(response.text, /Supported locales/);
   assert.match(response.text, /Required locales/);
+  assert.match(response.text, /Cards missing required locales/);
+  assert.match(response.text, /Open locale requests/);
+  assert.match(response.text, /Awaiting human verification/);
+  assert.match(response.text, /Agent proposals/);
   assert.match(response.text, /3 cards/);
+  assert.match(response.text, /2026-04-03T10:30:00.000Z/);
+  assert.match(response.text, /2026-04-03T10:15:00.000Z/);
+  assert.match(response.text, /2026-04-03T10:45:00.000Z/);
+  assert.match(response.text, /2026-04-03T09:30:00.000Z/);
   assert.match(response.text, /2026-04-03T11:45:00.000Z/);
   assert.match(response.text, /Tester/);
   assert.match(
@@ -383,6 +412,33 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
   );
   assert.doesNotMatch(response.text, /data-controller="workspace"/);
   assert.doesNotMatch(response.text, /id="workspace-bootstrap"/);
+  assert.deepEqual(workspaceRecordRepository.loadCalls, []);
+  assert.deepEqual(portfolioReadModel.loadCalls, [{}]);
+});
+
+test('GET /portfolio renders the empty state cleanly for super admins when no summaries exist', async () => {
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble();
+  const portfolioReadModel = createPortfolioReadModelDouble();
+  const app = createTestApp({
+    env: {
+      SUPER_ADMINS: 'tester@example.com'
+    },
+    googleTokenVerifier: async () => ({ sub: 'sub_123' }),
+    workspaceRecordRepository,
+    portfolioReadModel
+  });
+
+  const response = await request(app)
+    .get('/portfolio')
+    .set('Cookie', createSessionCookieHeader({
+      sub: 'sub_123',
+      name: 'Tester',
+      email: 'tester@example.com'
+    }));
+
+  assert.equal(response.status, 200);
+  assert.match(response.text, /No portfolio data yet/);
+  assert.doesNotMatch(response.text, /portfolio-directory-card/);
   assert.deepEqual(workspaceRecordRepository.loadCalls, []);
   assert.deepEqual(portfolioReadModel.loadCalls, [{}]);
 });
@@ -2910,7 +2966,21 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = []) {
   };
 }
 
-function createPortfolioReadModelDouble({ summary = { workspaces: [], boardDirectory: [] } } = {}) {
+function createPortfolioReadModelDouble({
+  summary = {
+    totals: {
+      workspaces: 0,
+      boards: 0,
+      cards: 0,
+      cardsMissingRequiredLocales: 0,
+      openLocaleRequestCount: 0,
+      awaitingHumanVerificationCount: 0,
+      agentProposalCount: 0
+    },
+    workspaces: [],
+    boardDirectory: []
+  }
+} = {}) {
   return {
     loadCalls: [],
 
