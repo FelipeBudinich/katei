@@ -12,6 +12,7 @@ export function createWebRouter({
   config,
   verifyGoogleIdToken,
   workspaceRecordRepository,
+  portfolioReadModel,
   openAiLocalizer = null,
   openAiStagePromptRunner = null
 }) {
@@ -26,7 +27,12 @@ export function createWebRouter({
 
   router.use(createDebugAuthRouter({ config, workspaceRecordRepository }));
   router.use(createPublicRouter({ config, workspaceRecordRepository }));
-  router.use(createPortfolioRouter({ requireSession: requireBoardSession, requireSuperAdmin, config }));
+  router.use(createPortfolioRouter({
+    requireSession: requireBoardSession,
+    requireSuperAdmin,
+    portfolioReadModel,
+    config
+  }));
   router.use(createBoardsRouter({ requireSession: requireBoardSession, workspaceRecordRepository, config }));
   router.use(createWorkspaceApiRouter({
     config,

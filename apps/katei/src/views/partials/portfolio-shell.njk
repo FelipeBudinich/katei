@@ -54,11 +54,24 @@
       <p class="text-sm leading-6 text-muted">{{ t('portfolio.directory.description') }}</p>
     </div>
 
-    {% if portfolio.boardDirectory.length %}
+    {% if boardDirectoryEntries.length %}
       <div class="portfolio-directory-list">
-        {% for entry in portfolio.boardDirectory %}
+        {% for entry in boardDirectoryEntries %}
           <article class="portfolio-directory-card">
             <h3 class="text-lg font-semibold text-strong">{{ entry.title }}</h3>
+            <p class="text-sm leading-6 text-muted">
+              {{ t('portfolio.directory.workspaceLabel') }}: {{ entry.workspaceTitle }}
+            </p>
+            {% if entry.metadata.length %}
+              <div class="mt-4 space-y-2 text-sm leading-6 text-muted">
+                {% for field in entry.metadata %}
+                  <p>
+                    <span class="field-label text-sm font-semibold">{{ field.label }}</span>
+                    <span>{{ field.value }}</span>
+                  </p>
+                {% endfor %}
+              </div>
+            {% endif %}
           </article>
         {% endfor %}
       </div>

@@ -8,6 +8,7 @@ import { createGoogleIdTokenVerifier } from './auth/verify_google_id_token.js';
 import { createAttachSessionMiddleware } from './middleware/attach_session.js';
 import { createAttachUiLocaleMiddleware } from './middleware/attach_ui_locale.js';
 import { createWebRouter } from './routes/web.js';
+import { createMongoPortfolioReadModel } from './workspaces/mongo_portfolio_read_model.js';
 import { createMongoWorkspaceRecordRepository } from './workspaces/mongo_workspace_record_repository.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -18,6 +19,7 @@ export function createApp({
   env = process.env,
   googleTokenVerifier,
   workspaceRecordRepository,
+  portfolioReadModel,
   openAiLocalizer = null,
   openAiStagePromptRunner = null
 } = {}) {
@@ -29,6 +31,8 @@ export function createApp({
   });
   const resolvedWorkspaceRecordRepository =
     workspaceRecordRepository || createMongoWorkspaceRecordRepository({ config });
+  const resolvedPortfolioReadModel =
+    portfolioReadModel || createMongoPortfolioReadModel({ config });
 
   app.set('view engine', 'njk');
   app.set('views', viewsPath);
@@ -50,6 +54,7 @@ export function createApp({
     config,
     verifyGoogleIdToken,
     workspaceRecordRepository: resolvedWorkspaceRecordRepository,
+    portfolioReadModel: resolvedPortfolioReadModel,
     openAiLocalizer,
     openAiStagePromptRunner
   }));

@@ -45,23 +45,33 @@ const EN_MESSAGES = freezeCatalog({
     eyebrow: 'Super admin portfolio',
     title: 'Portfolio',
     description:
-      'A dedicated read-only surface for super admins. Portfolio rollups will appear here once aggregated server queries are connected.',
+      'A dedicated read-only surface for super admins with server-rendered cross-workspace portfolio summaries.',
     openBoards: 'Back to boards',
     superAdminBadge: 'Super admin',
     readOnlyBadge: 'Read only',
     summary: {
       heading: 'Summary',
-      description: 'Server-rendered placeholders keep this route available before portfolio aggregation ships.',
+      description: 'Portfolio totals are rendered from a dedicated server-side summary read model.',
       workspacesLabel: 'Workspaces',
       boardsLabel: 'Boards'
     },
     directory: {
       heading: 'Board directory',
-      description: 'Cross-workspace board listings will appear here in a future server-backed pass.'
+      description: 'Cross-workspace board summaries are listed here without exposing full editable board payloads.',
+      workspaceLabel: 'Workspace',
+      boardIdLabel: 'Board ID',
+      sourceLocaleLabel: 'Source locale',
+      defaultLocaleLabel: 'Default locale',
+      supportedLocalesLabel: 'Supported locales',
+      requiredLocalesLabel: 'Required locales',
+      cardCountLabel: 'Cards',
+      boardCreatedAtLabel: 'Board created',
+      boardUpdatedAtLabel: 'Board updated',
+      workspaceUpdatedAtLabel: 'Workspace updated'
     },
     empty: {
       heading: 'No portfolio data yet',
-      description: 'This first version is intentionally empty until aggregated portfolio data is wired in.'
+      description: 'No workspace summaries are available yet.'
     }
   },
   workspace: {
@@ -467,23 +477,33 @@ const ES_CL_MESSAGES = freezeCatalog({
     eyebrow: 'Portafolio de super admin',
     title: 'Portafolio',
     description:
-      'Una superficie dedicada y de solo lectura para super admins. Los resúmenes del portafolio aparecerán aquí cuando se conecten las consultas agregadas del servidor.',
+      'Una superficie dedicada y de solo lectura para super admins con resúmenes de portafolio entre espacios renderizados por el servidor.',
     openBoards: 'Volver a tableros',
     superAdminBadge: 'Super admin',
     readOnlyBadge: 'Solo lectura',
     summary: {
       heading: 'Resumen',
-      description: 'Los placeholders renderizados por el servidor mantienen esta ruta disponible antes de que exista la agregación del portafolio.',
+      description: 'Los totales del portafolio se renderizan desde un read model resumido dedicado del servidor.',
       workspacesLabel: 'Espacios',
       boardsLabel: 'Tableros'
     },
     directory: {
       heading: 'Directorio de tableros',
-      description: 'Los listados de tableros entre espacios aparecerán aquí en una siguiente pasada conectada al servidor.'
+      description: 'Aquí se listan resúmenes de tableros entre espacios sin exponer payloads editables completos.',
+      workspaceLabel: 'Espacio',
+      boardIdLabel: 'ID del tablero',
+      sourceLocaleLabel: 'Locale fuente',
+      defaultLocaleLabel: 'Locale por defecto',
+      supportedLocalesLabel: 'Locales soportados',
+      requiredLocalesLabel: 'Locales requeridos',
+      cardCountLabel: 'Tarjetas',
+      boardCreatedAtLabel: 'Tablero creado',
+      boardUpdatedAtLabel: 'Tablero actualizado',
+      workspaceUpdatedAtLabel: 'Espacio actualizado'
     },
     empty: {
       heading: 'Todavía no hay datos de portafolio',
-      description: 'Esta primera versión permanece vacía a propósito hasta que se conecten los datos agregados del portafolio.'
+      description: 'Todavía no hay resúmenes de espacios disponibles.'
     }
   },
   workspace: {
@@ -890,23 +910,33 @@ const JA_MESSAGES = freezeCatalog({
     eyebrow: 'スーパー管理者ポートフォリオ',
     title: 'ポートフォリオ',
     description:
-      'スーパー管理者向けの専用読み取り専用画面です。集約済みサーバークエリが接続されると、ポートフォリオの集計がここに表示されます。',
+      'スーパー管理者向けの専用読み取り専用画面です。ワークスペース横断のポートフォリオ要約をサーバー描画で表示します。',
     openBoards: 'ボードに戻る',
     superAdminBadge: 'スーパー管理者',
     readOnlyBadge: '読み取り専用',
     summary: {
       heading: '概要',
-      description: 'ポートフォリオ集約が未実装でも、このルートはサーバー描画プレースホルダーで表示されます。',
+      description: 'ポートフォリオの合計値は、専用のサーバー側要約 read model から描画されます。',
       workspacesLabel: 'ワークスペース',
       boardsLabel: 'ボード'
     },
     directory: {
       heading: 'ボード一覧',
-      description: 'ワークスペースをまたいだボード一覧は、今後のサーバー連携でここに表示されます。'
+      description: '編集可能な完全なボード payload を公開せずに、ワークスペース横断のボード要約を表示します。',
+      workspaceLabel: 'ワークスペース',
+      boardIdLabel: 'ボード ID',
+      sourceLocaleLabel: 'ソース locale',
+      defaultLocaleLabel: 'デフォルト locale',
+      supportedLocalesLabel: '対応 locale',
+      requiredLocalesLabel: '必須 locale',
+      cardCountLabel: 'カード',
+      boardCreatedAtLabel: 'ボード作成日時',
+      boardUpdatedAtLabel: 'ボード更新日時',
+      workspaceUpdatedAtLabel: 'ワークスペース更新日時'
     },
     empty: {
       heading: 'ポートフォリオデータはまだありません',
-      description: 'この最初のバージョンは、集約済みポートフォリオデータが接続されるまで意図的に空のままです。'
+      description: '利用できるワークスペース要約はまだありません。'
     }
   },
   workspace: {

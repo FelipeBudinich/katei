@@ -47,7 +47,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const WORKSPACE_VIEWS_PATH = path.join(__dirname, '../src/views');
 
-function createTestApp({ env = {}, googleTokenVerifier, workspaceRecordRepository } = {}) {
+function createTestApp({ env = {}, googleTokenVerifier, workspaceRecordRepository, portfolioReadModel } = {}) {
   return createApp({
     env: {
       NODE_ENV: 'test',
@@ -59,7 +59,8 @@ function createTestApp({ env = {}, googleTokenVerifier, workspaceRecordRepositor
       ...env
     },
     googleTokenVerifier,
-    workspaceRecordRepository: workspaceRecordRepository ?? createWorkspaceRecordRepositoryDouble()
+    workspaceRecordRepository: workspaceRecordRepository ?? createWorkspaceRecordRepositoryDouble(),
+    portfolioReadModel: portfolioReadModel ?? createPortfolioReadModelDouble()
   });
 }
 
@@ -278,12 +279,14 @@ test('GET /portfolio redirects anonymous users to /', async () => {
 
 test('GET /portfolio redirects authenticated non-super-admin users to /boards', async () => {
   const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble();
+  const portfolioReadModel = createPortfolioReadModelDouble();
   const app = createTestApp({
     env: {
       SUPER_ADMINS: 'admin@example.com'
     },
     googleTokenVerifier: async () => ({ sub: 'sub_123' }),
-    workspaceRecordRepository
+    workspaceRecordRepository,
+    portfolioReadModel
   });
 
   const response = await request(app)
@@ -297,16 +300,57 @@ test('GET /portfolio redirects authenticated non-super-admin users to /boards', 
   assert.equal(response.status, 302);
   assert.equal(response.headers.location, '/boards');
   assert.deepEqual(workspaceRecordRepository.loadCalls, []);
+  assert.deepEqual(portfolioReadModel.loadCalls, []);
 });
 
 test('GET /portfolio renders the dedicated portfolio shell for super admins', async () => {
   const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble();
+  const portfolioReadModel = createPortfolioReadModelDouble({
+    summary: {
+      workspaces: [
+        {
+          workspaceId: 'workspace_portfolio_alpha',
+          workspaceTitle: null,
+          boardCount: 2,
+          timestamps: {
+            createdAt: '2026-04-01T09:00:00.000Z',
+            updatedAt: '2026-04-03T12:00:00.000Z'
+          }
+        }
+      ],
+      boardDirectory: [
+        {
+          workspaceId: 'workspace_portfolio_alpha',
+          workspaceTitle: null,
+          boardId: 'main',
+          boardTitle: 'Executive roadmap',
+          localePolicy: {
+            sourceLocale: 'en',
+            defaultLocale: 'ja',
+            supportedLocales: ['en', 'ja'],
+            requiredLocales: ['ja']
+          },
+          cardCounts: {
+            total: 3,
+            byStage: null
+          },
+          timestamps: {
+            workspaceCreatedAt: '2026-04-01T09:00:00.000Z',
+            workspaceUpdatedAt: '2026-04-03T12:00:00.000Z',
+            boardCreatedAt: '2026-04-01T09:05:00.000Z',
+            boardUpdatedAt: '2026-04-03T11:45:00.000Z'
+          }
+        }
+      ]
+    }
+  });
   const app = createTestApp({
     env: {
       SUPER_ADMINS: 'tester@example.com'
     },
     googleTokenVerifier: async () => ({ sub: 'sub_123' }),
-    workspaceRecordRepository
+    workspaceRecordRepository,
+    portfolioReadModel
   });
 
   const response = await request(app)
@@ -323,7 +367,15 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
   assert.match(response.text, /Back to boards/);
   assert.match(response.text, /Summary/);
   assert.match(response.text, /Board directory/);
-  assert.match(response.text, /No portfolio data yet/);
+  assert.match(response.text, /Executive roadmap/);
+  assert.match(response.text, /Workspace:\s*workspace_portfolio_alpha/);
+  assert.match(response.text, /Board ID/);
+  assert.match(response.text, /Source locale/);
+  assert.match(response.text, /Default locale/);
+  assert.match(response.text, /Supported locales/);
+  assert.match(response.text, /Required locales/);
+  assert.match(response.text, /3 cards/);
+  assert.match(response.text, /2026-04-03T11:45:00.000Z/);
   assert.match(response.text, /Tester/);
   assert.match(
     findSetCookie(response, KATEI_LAST_SURFACE_COOKIE_NAME) ?? '',
@@ -332,6 +384,7 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
   assert.doesNotMatch(response.text, /data-controller="workspace"/);
   assert.doesNotMatch(response.text, /id="workspace-bootstrap"/);
   assert.deepEqual(workspaceRecordRepository.loadCalls, []);
+  assert.deepEqual(portfolioReadModel.loadCalls, [{}]);
 });
 
 test('GET /boards renders the server workspace and bootstrap payload for authenticated users', async () => {
@@ -2853,6 +2906,17 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = []) {
 
       records.set(record.workspaceId, structuredClone(record));
       return structuredClone(record);
+    }
+  };
+}
+
+function createPortfolioReadModelDouble({ summary = { workspaces: [], boardDirectory: [] } } = {}) {
+  return {
+    loadCalls: [],
+
+    async loadPortfolioSummary() {
+      this.loadCalls.push({});
+      return structuredClone(summary);
     }
   };
 }
