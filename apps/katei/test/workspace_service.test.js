@@ -468,6 +468,43 @@ test('WorkspaceService setBoardMemberRole calls repository.applyCommand and retu
         email: 'viewer@example.com'
       },
       role: 'viewer'
+    },
+    expectedContext: {
+      workspaceId: null,
+      expectedRevision: null
+    }
+  });
+});
+
+test('WorkspaceService setBoardMemberRole can target a specific workspace revision for board-scoped self-role assignment', async () => {
+  await assertServiceCommand({
+    action: (service) =>
+      service.setBoardMemberRole(
+        'main',
+        {
+          type: 'human',
+          id: 'viewer_123',
+          email: 'viewer@example.com'
+        },
+        'editor',
+        {
+          workspaceId: 'workspace_shared',
+          expectedRevision: 12
+        }
+      ),
+    expectedType: 'board.member.role.set',
+    expectedPayload: {
+      boardId: 'main',
+      targetActor: {
+        type: 'human',
+        id: 'viewer_123',
+        email: 'viewer@example.com'
+      },
+      role: 'editor'
+    },
+    expectedContext: {
+      workspaceId: 'workspace_shared',
+      expectedRevision: 12
     }
   });
 });
@@ -686,7 +723,7 @@ test('WorkspaceService moveCard calls repository.applyCommand and returns worksp
   });
 });
 
-async function assertServiceCommand({ action, expectedType, expectedPayload }) {
+async function assertServiceCommand({ action, expectedType, expectedPayload, expectedContext = undefined }) {
   const workspace = createEmptyWorkspace();
   const repository = createRepositoryDouble({ workspace });
   const service = new WorkspaceService(repository);
@@ -700,6 +737,10 @@ async function assertServiceCommand({ action, expectedType, expectedPayload }) {
   assert.match(repository.applyCommandCalls[0].clientMutationId, /^cmd_/);
   assert.equal(repository.applyCommandCalls[0].type, expectedType);
   assert.deepEqual(repository.applyCommandCalls[0].payload, expectedPayload);
+
+  if (expectedContext !== undefined) {
+    assert.deepEqual(repository.applyCommandContexts[0], expectedContext);
+  }
 }
 
 function createRepositoryDouble({

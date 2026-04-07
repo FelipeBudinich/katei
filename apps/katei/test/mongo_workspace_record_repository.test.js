@@ -20,6 +20,7 @@ import {
 } from '../src/workspaces/workspace_record.js';
 import {
   WorkspaceAccessDeniedError,
+  WorkspaceBoardRoleAssignmentPermissionError,
   WorkspaceImportConflictError,
   WorkspaceRevisionConflictError,
   WorkspaceTitleManagementPermissionError
@@ -309,6 +310,56 @@ test('loadWorkspaceRecordForSuperAdminTitleManagement returns not found when the
     repository.loadWorkspaceRecordForSuperAdminTitleManagement({
       viewerIsSuperAdmin: true,
       workspaceId: 'workspace_missing_title_admin'
+    }),
+    WorkspaceAccessDeniedError
+  );
+});
+
+test('loadWorkspaceRecordForSuperAdminBoardRoleAssignment loads a targeted workspace for super-admin board self-role assignment only', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_role_assign_target');
+  const collection = createWorkspaceRecordCollectionDouble([toWorkspaceRecordDocument(sharedRecord)]);
+  const repository = new MongoWorkspaceRecordRepository({ collection });
+
+  const record = await repository.loadWorkspaceRecordForSuperAdminBoardRoleAssignment({
+    viewerIsSuperAdmin: true,
+    workspaceId: 'workspace_shared_role_assign_target'
+  });
+
+  assert.equal(record.workspaceId, 'workspace_shared_role_assign_target');
+  assert.deepEqual(record.workspace.boardOrder, ['main', 'member', 'invite']);
+
+  await assert.rejects(
+    repository.loadOrCreateAuthoritativeWorkspaceRecord({
+      viewerSub: 'sub_blocked',
+      workspaceId: 'workspace_shared_role_assign_target'
+    }),
+    WorkspaceAccessDeniedError
+  );
+});
+
+test('loadWorkspaceRecordForSuperAdminBoardRoleAssignment rejects non-super-admin callers', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_role_assign_forbidden');
+  const collection = createWorkspaceRecordCollectionDouble([toWorkspaceRecordDocument(sharedRecord)]);
+  const repository = new MongoWorkspaceRecordRepository({ collection });
+
+  await assert.rejects(
+    repository.loadWorkspaceRecordForSuperAdminBoardRoleAssignment({
+      viewerIsSuperAdmin: false,
+      workspaceId: 'workspace_shared_role_assign_forbidden'
+    }),
+    WorkspaceBoardRoleAssignmentPermissionError
+  );
+});
+
+test('loadWorkspaceRecordForSuperAdminBoardRoleAssignment returns not found when the workspace does not exist', async () => {
+  const repository = new MongoWorkspaceRecordRepository({
+    collection: createWorkspaceRecordCollectionDouble()
+  });
+
+  await assert.rejects(
+    repository.loadWorkspaceRecordForSuperAdminBoardRoleAssignment({
+      viewerIsSuperAdmin: true,
+      workspaceId: 'workspace_missing_role_assign'
     }),
     WorkspaceAccessDeniedError
   );

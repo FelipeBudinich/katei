@@ -183,11 +183,17 @@ export class WorkspaceService {
     }, workspaceId);
   }
 
-  async setBoardMemberRole(boardId, actor, role) {
+  async setBoardMemberRole(boardId, actor, role, {
+    workspaceId = null,
+    expectedRevision = null
+  } = {}) {
     return this.#applyCommand('board.member.role.set', {
       boardId,
       targetActor: actor,
       role
+    }, {
+      workspaceId,
+      expectedRevision
     });
   }
 

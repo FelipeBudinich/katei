@@ -30,6 +30,14 @@ export class WorkspaceTitleManagementPermissionError extends Error {
   }
 }
 
+export class WorkspaceBoardRoleAssignmentPermissionError extends Error {
+  constructor(message = 'Board self-role assignment is only available to super admins.') {
+    super(message);
+    this.name = 'WorkspaceBoardRoleAssignmentPermissionError';
+    this.code = 'WORKSPACE_BOARD_ROLE_ASSIGNMENT_FORBIDDEN';
+  }
+}
+
 export class WorkspaceRecordRepository {
   async loadOrCreateWorkspaceRecord({ viewerSub, workspaceId, viewerEmail } = {}) {
     throw new Error('Not implemented');
@@ -48,6 +56,10 @@ export class WorkspaceRecordRepository {
   }
 
   async loadWorkspaceRecordForSuperAdminTitleManagement({ viewerIsSuperAdmin, workspaceId } = {}) {
+    throw new Error('Not implemented');
+  }
+
+  async loadWorkspaceRecordForSuperAdminBoardRoleAssignment({ viewerIsSuperAdmin, workspaceId } = {}) {
     throw new Error('Not implemented');
   }
 

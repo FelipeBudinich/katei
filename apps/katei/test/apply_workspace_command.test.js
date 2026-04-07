@@ -1,5 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {
+  canActorAdminBoard,
+  canActorEditBoard,
+  canActorReadBoard,
+  getBoardMembershipForActor
+} from '../public/js/domain/board_permissions.js';
 import { getCardContentReviewState } from '../public/js/domain/card_localization.js';
 import { createEmptyWorkspace, createWorkspaceBoard } from '../public/js/domain/workspace_read_model.js';
 import { validateWorkspaceShape } from '../public/js/domain/workspace_validation.js';
@@ -2089,6 +2095,77 @@ test('board admin can change a member role', () => {
   });
 
   assert.equal(nextWorkspace.boards.main.collaboration.memberships[1].role, 'editor');
+});
+
+test('super admin can assign themself an existing board role and downstream helpers treat it as a normal membership', () => {
+  for (const [role, permissions] of [
+    ['viewer', { canRead: true, canEdit: false, canAdmin: false }],
+    ['editor', { canRead: true, canEdit: true, canAdmin: false }],
+    ['admin', { canRead: true, canEdit: true, canAdmin: true }]
+  ]) {
+    const workspace = createWorkspaceWithMainCollaboration({
+      memberships: [createMembership({ id: 'viewer_owner', role: 'admin' })]
+    });
+    const actor = createActor({ id: 'viewer_super_admin', email: 'admin@example.com' });
+
+    const { workspace: nextWorkspace, result } = applyWorkspaceCommand({
+      record: createRecord(workspace, 0),
+      command: {
+        clientMutationId: `member_role_self_${role}`,
+        type: 'board.member.role.set',
+        payload: {
+          boardId: 'main',
+          targetActor: actor,
+          role
+        }
+      },
+      expectedRevision: 0,
+      context: createContext({
+        actor,
+        viewerIsSuperAdmin: true
+      })
+    });
+
+    const board = nextWorkspace.boards.main;
+
+    assert.equal(result.role, role);
+    assert.deepEqual(getBoardMembershipForActor(board, actor), {
+      actor,
+      role,
+      joinedAt: '2026-03-31T10:00:00.000Z'
+    });
+    assert.equal(canActorReadBoard(board, actor), permissions.canRead);
+    assert.equal(canActorEditBoard(board, actor), permissions.canEdit);
+    assert.equal(canActorAdminBoard(board, actor), permissions.canAdmin);
+  }
+});
+
+test('super admin board self-role assignment does not allow changing another actor role without board admin access', () => {
+  const workspace = createWorkspaceWithMainCollaboration({
+    memberships: [createMembership({ id: 'viewer_owner', role: 'admin' })]
+  });
+
+  assert.throws(
+    () =>
+      applyWorkspaceCommand({
+        record: createRecord(workspace, 0),
+        command: {
+          clientMutationId: 'member_role_other_actor_forbidden',
+          type: 'board.member.role.set',
+          payload: {
+            boardId: 'main',
+            targetActor: createActor({ id: 'viewer_member' }),
+            role: 'viewer'
+          }
+        },
+        expectedRevision: 0,
+        context: createContext({
+          actor: createActor({ id: 'viewer_super_admin', email: 'admin@example.com' }),
+          viewerIsSuperAdmin: true
+        })
+      }),
+    WorkspaceCommandPermissionError
+  );
 });
 
 test('board admin can remove a non-admin member', () => {

@@ -580,12 +580,20 @@ function applyBoardInviteDecline(workspace, command, context) {
 
 function applyBoardMemberRoleSet(workspace, command, context) {
   const currentBoard = getBoard(workspace, command.payload.boardId);
-  assertActorCanAdminBoard(currentBoard, context.actor);
+  const actor = assertAuthenticatedHumanActor(context.actor, 'You must be signed in to manage board roles.');
   const targetActor = normalizeTargetActor(command.payload.targetActor);
+  const isSuperAdminSelfRoleAssignment = canSuperAdminSelfAssignBoardRole(context, actor, targetActor);
   const currentMembership = getBoardMembershipForActor(currentBoard, targetActor);
   const nextRole = canonicalizeBoardRole(command.payload.role);
 
-  if (!currentMembership) {
+  // Super admins only get a narrow bootstrap seam here: they may set their own role on one board,
+  // but we still persist a normal board membership and rely on the existing admin/editor/viewer
+  // helpers afterward. This intentionally does not introduce workspace-level membership state.
+  if (!canActorAdminBoard(currentBoard, actor) && !isSuperAdminSelfRoleAssignment) {
+    throw new WorkspaceCommandPermissionError('You do not have permission to administer this board.');
+  }
+
+  if (!currentMembership && !isSuperAdminSelfRoleAssignment) {
     throw new Error('Board member not found.');
   }
 
@@ -593,7 +601,7 @@ function applyBoardMemberRoleSet(workspace, command, context) {
     throw new Error('Board member role is invalid.');
   }
 
-  if (currentMembership.role === nextRole) {
+  if (currentMembership?.role === nextRole) {
     return {
       workspace,
       result: createCommandResult(command, {
@@ -612,7 +620,10 @@ function applyBoardMemberRoleSet(workspace, command, context) {
   const nextWorkspace = cloneWorkspace(workspace);
   const board = getBoard(nextWorkspace, command.payload.boardId);
   upsertBoardMembership(board, {
-    ...currentMembership,
+    ...(currentMembership ?? {
+      actor: targetActor,
+      joinedAt: context.now
+    }),
     role: nextRole
   });
   board.updatedAt = context.now;
@@ -629,6 +640,8 @@ function applyBoardMemberRoleSet(workspace, command, context) {
 
 function applyBoardMemberRemove(workspace, command, context) {
   const currentBoard = getBoard(workspace, command.payload.boardId);
+  // Self-removal intentionally stays on the normal board-admin path. This rollout only adds the
+  // board.member.role.set bootstrap seam for super admins, not a parallel workspace-wide remove flow.
   assertActorCanAdminBoard(currentBoard, context.actor);
   const targetActor = normalizeTargetActor(command.payload.targetActor);
   const currentMembership = getBoardMembershipForActor(currentBoard, targetActor);
@@ -1364,6 +1377,10 @@ function assertActorCanAdminBoard(board, actor) {
   if (!canActorAdminBoard(board, actor)) {
     throw new WorkspaceCommandPermissionError('You do not have permission to administer this board.');
   }
+}
+
+function canSuperAdminSelfAssignBoardRole(context, actor, targetActor) {
+  return context?.viewerIsSuperAdmin === true && createBoardActorKey(actor) === createBoardActorKey(targetActor);
 }
 
 function normalizeTargetActor(actor) {

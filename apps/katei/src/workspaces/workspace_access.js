@@ -57,6 +57,9 @@ export function filterWorkspaceForViewer({ viewerSub, viewerEmail = null, ownerS
     return workspace;
   }
 
+  // Workspace visibility is intentionally derived from readable boards (plus pending-invite shells).
+  // Even when a super admin seeds their own board role, the resulting projection still comes from
+  // ordinary board memberships rather than any separate workspace membership model.
   const normalizedWorkspace = structuredClone(workspace);
   const normalizedViewerSub = normalizeOptionalString(viewerSub);
   const normalizedViewerEmail = normalizeOptionalEmail(viewerEmail);

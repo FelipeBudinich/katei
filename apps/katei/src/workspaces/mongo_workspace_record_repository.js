@@ -7,6 +7,7 @@ import {
 } from '../../public/js/domain/board_collaboration.js';
 import {
   WorkspaceAccessDeniedError,
+  WorkspaceBoardRoleAssignmentPermissionError,
   WorkspaceImportConflictError,
   WorkspaceRecordRepository,
   WorkspaceRevisionConflictError,
@@ -102,7 +103,13 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
   async loadWorkspaceRecordForSuperAdminTitleManagement({ viewerIsSuperAdmin = false, workspaceId } = {}) {
     assertSuperAdminTitleManagementAccess(viewerIsSuperAdmin);
 
-    return this.#loadWorkspaceRecordForSuperAdminTitleManagement(workspaceId);
+    return this.#loadWorkspaceRecordForSuperAdminTargetedAccess(workspaceId);
+  }
+
+  async loadWorkspaceRecordForSuperAdminBoardRoleAssignment({ viewerIsSuperAdmin = false, workspaceId } = {}) {
+    assertSuperAdminBoardRoleAssignmentAccess(viewerIsSuperAdmin);
+
+    return this.#loadWorkspaceRecordForSuperAdminTargetedAccess(workspaceId);
   }
 
   async saveWorkspaceTitleForSuperAdmin({
@@ -114,7 +121,7 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
   } = {}) {
     assertSuperAdminTitleManagementAccess(viewerIsSuperAdmin);
 
-    const currentRecord = await this.#loadWorkspaceRecordForSuperAdminTitleManagement(workspaceId);
+    const currentRecord = await this.#loadWorkspaceRecordForSuperAdminTargetedAccess(workspaceId);
 
     if (currentRecord.revision !== expectedRevision) {
       throw new WorkspaceRevisionConflictError();
@@ -382,7 +389,7 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
     return record;
   }
 
-  async #loadWorkspaceRecordForSuperAdminTitleManagement(workspaceId) {
+  async #loadWorkspaceRecordForSuperAdminTargetedAccess(workspaceId) {
     const normalizedWorkspaceId = normalizeWorkspaceId(workspaceId);
 
     try {
@@ -502,6 +509,12 @@ function createNowIsoString() {
 function assertSuperAdminTitleManagementAccess(viewerIsSuperAdmin) {
   if (viewerIsSuperAdmin !== true) {
     throw new WorkspaceTitleManagementPermissionError();
+  }
+}
+
+function assertSuperAdminBoardRoleAssignmentAccess(viewerIsSuperAdmin) {
+  if (viewerIsSuperAdmin !== true) {
+    throw new WorkspaceBoardRoleAssignmentPermissionError();
   }
 }
 

@@ -20,6 +20,7 @@ import {
 } from '../src/workspaces/workspace_record.js';
 import {
   WorkspaceAccessDeniedError,
+  WorkspaceBoardRoleAssignmentPermissionError,
   WorkspaceImportConflictError,
   WorkspaceRevisionConflictError,
   WorkspaceTitleManagementPermissionError
@@ -348,6 +349,107 @@ test('POST /api/workspace/commands keeps unrelated commands on the normal author
   ]);
   assert.deepEqual(workspaceRecordRepository.loadSuperAdminTitleManagementCalls, []);
   assert.equal(workspaceRecordRepository.replaceRecordCalls.length, 1);
+});
+
+test('POST /api/workspace/commands loads super-admin self-role assignment through the board-level seam and keeps workspace visibility board-derived', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_api_self_role_assign', {
+    includeInvite: false
+  });
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord]);
+  const app = createTestApp({
+    env: {
+      SUPER_ADMINS: 'admin@example.com'
+    },
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .post('/api/workspace/commands')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_admin', email: 'admin@example.com', name: 'Admin' }))
+    .send({
+      workspaceId: sharedRecord.workspaceId,
+      command: {
+        clientMutationId: 'board_self_role_assign_1',
+        type: 'board.member.role.set',
+        payload: {
+          boardId: 'main',
+          targetActor: {
+            type: 'human',
+            id: 'sub_admin',
+            email: 'admin@example.com'
+          },
+          role: 'viewer'
+        }
+      },
+      expectedRevision: sharedRecord.revision
+    });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(response.body.workspace.boardOrder, ['main']);
+  assert.deepEqual(Object.keys(response.body.workspace.boards), ['main']);
+  assert.equal(response.body.workspace.boards.member, undefined);
+  assert.deepEqual(response.body.result, {
+    clientMutationId: 'board_self_role_assign_1',
+    type: 'board.member.role.set',
+    noOp: false,
+    boardId: 'main',
+    targetActor: {
+      type: 'human',
+      id: 'sub_admin',
+      email: 'admin@example.com'
+    },
+    role: 'viewer'
+  });
+  assert.deepEqual(workspaceRecordRepository.loadAuthoritativeCalls, []);
+  assert.deepEqual(workspaceRecordRepository.loadSuperAdminTitleManagementCalls, []);
+  assert.deepEqual(workspaceRecordRepository.loadSuperAdminBoardRoleAssignmentCalls, [
+    {
+      viewerIsSuperAdmin: true,
+      workspaceId: sharedRecord.workspaceId
+    }
+  ]);
+});
+
+test('POST /api/workspace/commands does not add a super-admin self-removal seam', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_api_self_remove_forbidden', {
+    includeInvite: false
+  });
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord]);
+  const app = createTestApp({
+    env: {
+      SUPER_ADMINS: 'admin@example.com'
+    },
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .post('/api/workspace/commands')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_admin', email: 'admin@example.com', name: 'Admin' }))
+    .send({
+      workspaceId: sharedRecord.workspaceId,
+      command: {
+        clientMutationId: 'board_self_remove_1',
+        type: 'board.member.remove',
+        payload: {
+          boardId: 'main',
+          targetActor: {
+            type: 'human',
+            id: 'sub_admin'
+          }
+        }
+      },
+      expectedRevision: sharedRecord.revision
+    });
+
+  assert.equal(response.status, 404);
+  assert.deepEqual(workspaceRecordRepository.loadSuperAdminBoardRoleAssignmentCalls, []);
+  assert.deepEqual(workspaceRecordRepository.loadAuthoritativeCalls, [
+    {
+      viewerSub: 'sub_admin',
+      viewerEmail: 'admin@example.com',
+      workspaceId: sharedRecord.workspaceId
+    }
+  ]);
 });
 
 test('POST /api/workspace/commands redacts board OpenAI secrets from mutation responses', async () => {
@@ -1394,6 +1496,7 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = [], { allowInval
     replaceRecordCalls: [],
     loadAuthoritativeCalls: [],
     loadSuperAdminTitleManagementCalls: [],
+    loadSuperAdminBoardRoleAssignmentCalls: [],
 
     async loadOrCreateWorkspaceRecord({ viewerSub, viewerEmail = null, workspaceId = null } = {}) {
       return projectRecord(
@@ -1419,6 +1522,19 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = [], { allowInval
 
       if (viewerIsSuperAdmin !== true) {
         throw new WorkspaceTitleManagementPermissionError();
+      }
+
+      return loadRecordForSuperAdminTitleManagement(workspaceId);
+    },
+
+    async loadWorkspaceRecordForSuperAdminBoardRoleAssignment({ viewerIsSuperAdmin = false, workspaceId } = {}) {
+      this.loadSuperAdminBoardRoleAssignmentCalls.push({
+        viewerIsSuperAdmin,
+        workspaceId
+      });
+
+      if (viewerIsSuperAdmin !== true) {
+        throw new WorkspaceBoardRoleAssignmentPermissionError();
       }
 
       return loadRecordForSuperAdminTitleManagement(workspaceId);
