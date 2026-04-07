@@ -30,6 +30,24 @@ test('LocalWorkspaceRepository reads and writes only the viewer-scoped workspace
   assert.deepEqual(await repository.loadWorkspace(), workspace);
 });
 
+test('LocalWorkspaceRepository round-trips titled workspaces and keeps stored titles normalized', async () => {
+  const storage = createStorageDouble();
+  const repository = new LocalWorkspaceRepository(storage, 'sub_123');
+  const workspace = createEmptyWorkspace();
+  const workspaceStorageKey = createWorkspaceStorageKey('sub_123');
+
+  workspace.title = '  Team archive  ';
+
+  await repository.saveWorkspace(workspace);
+
+  assert.deepEqual(JSON.parse(storage.getItem(workspaceStorageKey)).title, 'Team archive');
+
+  const loadedWorkspace = await repository.loadWorkspace();
+
+  assert.equal(loadedWorkspace.title, 'Team archive');
+  assert.equal(validateWorkspaceShape(loadedWorkspace), true);
+});
+
 test('LocalWorkspaceRepository normalizes stored cards that still carry an unused legacy description field', async () => {
   const workspace = createEmptyWorkspace();
   const board = workspace.boards.main;

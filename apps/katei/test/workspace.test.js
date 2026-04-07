@@ -65,6 +65,32 @@ test('validateWorkspaceShape accepts cards that use detailsMarkdown', () => {
   assert.equal(validateWorkspaceShape(workspace), true);
 });
 
+test('createEmptyWorkspace keeps workspace titles optional and trims them when provided', () => {
+  const titledWorkspace = createEmptyWorkspace({
+    title: '  Writers Room  '
+  });
+  const untitledWorkspace = createEmptyWorkspace({
+    title: '   '
+  });
+
+  assert.equal(titledWorkspace.title, 'Writers Room');
+  assert.equal(Object.hasOwn(untitledWorkspace, 'title'), false);
+});
+
+test('validateWorkspaceShape accepts a non-empty optional workspace title', () => {
+  const workspace = createEmptyWorkspace();
+  workspace.title = 'Shared planning';
+
+  assert.equal(validateWorkspaceShape(workspace), true);
+});
+
+test('validateWorkspaceShape rejects a blank workspace title when it is present', () => {
+  const workspace = createEmptyWorkspace();
+  workspace.title = '   ';
+
+  assert.equal(validateWorkspaceShape(workspace), false);
+});
+
 test('validateWorkspaceShape rejects legacy cards that only use description', () => {
   const workspace = createEmptyWorkspace();
   const board = workspace.boards.main;

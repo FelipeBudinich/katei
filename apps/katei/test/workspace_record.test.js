@@ -10,7 +10,8 @@ import {
   createWorkspaceRecord,
   createHomeWorkspaceId,
   fromWorkspaceRecordDocument,
-  findCommandReceipt
+  findCommandReceipt,
+  toWorkspaceRecordDocument
 } from '../src/workspaces/workspace_record.js';
 
 function createRecord(overrides = {}) {
@@ -123,6 +124,34 @@ test('command receipts remain record metadata and do not pollute workspace JSON'
 
   assert.equal(Object.hasOwn(record.workspace, 'commandReceipts'), false);
   assert.equal(record.commandReceipts.length, 1);
+});
+
+test('workspace records round-trip titled and untitled workspaces without backfilling titles', () => {
+  const workspaceId = createHomeWorkspaceId('sub_123');
+  const creator = {
+    type: 'human',
+    id: 'sub_123'
+  };
+  const titledRecord = createRecord({
+    workspace: {
+      ...createEmptyWorkspace({
+        workspaceId,
+        creator
+      }),
+      title: '  Shared studio  '
+    }
+  });
+  const untitledRecord = createRecord({
+    workspace: createEmptyWorkspace({
+      workspaceId,
+      creator
+    })
+  });
+  const roundTrippedTitledRecord = fromWorkspaceRecordDocument(toWorkspaceRecordDocument(titledRecord));
+  const roundTrippedUntitledRecord = fromWorkspaceRecordDocument(toWorkspaceRecordDocument(untitledRecord));
+
+  assert.equal(roundTrippedTitledRecord.workspace.title, 'Shared studio');
+  assert.equal(Object.hasOwn(roundTrippedUntitledRecord.workspace, 'title'), false);
 });
 
 test('createActivityEvent supports semantic entity and compact details fields', () => {

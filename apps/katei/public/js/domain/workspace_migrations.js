@@ -25,7 +25,8 @@ import {
   WORKSPACE_ID,
   WORKSPACE_VERSION,
   createWorkspaceAccess,
-  createWorkspaceOwnership
+  createWorkspaceOwnership,
+  normalizeWorkspaceTitle
 } from './workspace_read_model.js';
 
 export const WORKSPACE_MIGRATIONS = Object.freeze([
@@ -64,6 +65,14 @@ export function normalizeWorkspaceToCurrentSchema(
   const migratedWorkspace = structuredClone(workspace);
   migratedWorkspace.version = version;
   migratedWorkspace.workspaceId = normalizeWorkspaceId(workspaceId ?? migratedWorkspace.workspaceId);
+  const normalizedWorkspaceTitle = normalizeWorkspaceTitle(migratedWorkspace.title);
+
+  if (normalizedWorkspaceTitle) {
+    migratedWorkspace.title = normalizedWorkspaceTitle;
+  } else {
+    delete migratedWorkspace.title;
+  }
+
   migratedWorkspace.ownership = migrateWorkspaceOwnership(migratedWorkspace, {
     ownerSub,
     ownerActor

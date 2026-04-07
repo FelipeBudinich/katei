@@ -22,6 +22,10 @@ export function validateWorkspaceShape(value) {
     return false;
   }
 
+  if (!isValidWorkspaceTitle(value.title)) {
+    return false;
+  }
+
   if (!value.ui || !isValidBoardId(value.ui.activeBoardId, value.boards)) {
     return false;
   }
@@ -193,6 +197,10 @@ function isValidCard(card, cardId, board) {
 
 function isValidWorkspaceId(workspaceId) {
   return typeof workspaceId === 'string' && workspaceId.trim().length > 0;
+}
+
+function isValidWorkspaceTitle(title) {
+  return title == null || (typeof title === 'string' && title.trim().length > 0);
 }
 
 function isPlainObject(value) {

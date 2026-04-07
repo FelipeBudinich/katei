@@ -119,6 +119,20 @@ test('migrateWorkspaceSnapshot canonicalizes legacy home-workspace ids when reco
   });
 });
 
+test('migrateWorkspaceSnapshot trims workspace titles and unsets blank titles', () => {
+  const titledWorkspace = migrateWorkspaceSnapshot({
+    ...createLegacyWorkspace(),
+    title: '  Shared planning  '
+  });
+  const untitledWorkspace = migrateWorkspaceSnapshot({
+    ...createLegacyWorkspace(),
+    title: '   '
+  });
+
+  assert.equal(titledWorkspace.title, 'Shared planning');
+  assert.equal(Object.hasOwn(untitledWorkspace, 'title'), false);
+});
+
 test('migrateWorkspaceSnapshot migrates multiple boards and preserves existing memberships without double-seeding owners', () => {
   const workspace = createLegacyWorkspace({
     workspaceId: 'workspace_shared_1',

@@ -29,7 +29,7 @@ export const PRIORITY_DEFINITIONS = Object.freeze(
 export const DEFAULT_PRIORITY = 'important';
 export const DEFAULT_WORKSPACE_STATE = Object.freeze(createEmptyWorkspace());
 
-export function createEmptyWorkspace({ workspaceId = WORKSPACE_ID, creator = undefined } = {}) {
+export function createEmptyWorkspace({ workspaceId = WORKSPACE_ID, title = undefined, creator = undefined } = {}) {
   const owner = normalizeWorkspaceActor(creator) ?? createDefaultWorkspaceCreator();
   const timestamp = createTimestamp();
   const board = createWorkspaceBoard({
@@ -39,10 +39,12 @@ export function createEmptyWorkspace({ workspaceId = WORKSPACE_ID, creator = und
     updatedAt: timestamp,
     creator: owner
   });
+  const normalizedTitle = normalizeWorkspaceTitle(title);
 
   return {
     version: WORKSPACE_VERSION,
     workspaceId: normalizeWorkspaceId(workspaceId),
+    ...(normalizedTitle ? { title: normalizedTitle } : {}),
     ownership: createWorkspaceOwnership({
       owner
     }),
@@ -97,6 +99,11 @@ export function createWorkspaceBoard({ id, title, createdAt, updatedAt, creator 
 
 export function cloneWorkspace(workspace) {
   return structuredClone(workspace);
+}
+
+export function normalizeWorkspaceTitle(title) {
+  const normalizedTitle = normalizeWorkspaceString(title);
+  return normalizedTitle || null;
 }
 
 function createTimestamp() {
