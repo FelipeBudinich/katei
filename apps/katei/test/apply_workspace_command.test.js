@@ -2139,6 +2139,109 @@ test('super admin can assign themself an existing board role through board.self.
   }
 });
 
+test('board.self.role.set updates the caller membership in place and preserves joinedAt metadata', () => {
+  const actor = createActor({ id: 'viewer_super_admin', email: 'admin@example.com' });
+  const workspace = createWorkspaceWithMainCollaboration({
+    memberships: [
+      createMembership({ id: 'viewer_owner', role: 'admin' }),
+      {
+        actor,
+        role: 'viewer',
+        joinedAt: '2026-03-31T09:15:00.000Z'
+      }
+    ]
+  });
+  const originalBoard = structuredClone(workspace.boards.main);
+
+  const { workspace: nextWorkspace, result, activityEvent } = applyWorkspaceCommand({
+    record: createRecord(workspace, 0),
+    command: {
+      clientMutationId: 'member_role_self_update_1',
+      type: 'board.self.role.set',
+      payload: {
+        boardId: 'main',
+        role: 'editor'
+      }
+    },
+    expectedRevision: 0,
+    context: createContext({
+      actor,
+      viewerIsSuperAdmin: true
+    })
+  });
+
+  assert.deepEqual(result, {
+    clientMutationId: 'member_role_self_update_1',
+    type: 'board.self.role.set',
+    noOp: false,
+    boardId: 'main',
+    targetActor: actor,
+    role: 'editor'
+  });
+  assert.deepEqual(getBoardMembershipForActor(nextWorkspace.boards.main, actor), {
+    actor,
+    role: 'editor',
+    joinedAt: '2026-03-31T09:15:00.000Z'
+  });
+  assert.equal(nextWorkspace.boards.main.updatedAt, '2026-03-31T10:00:00.000Z');
+  assert.deepEqual(getBoardMembershipForActor(nextWorkspace.boards.main, createActor({ id: 'viewer_owner' })), {
+    actor: {
+      type: 'human',
+      id: 'viewer_owner'
+    },
+    role: 'admin'
+  });
+  assert.deepEqual(originalBoard.cards, nextWorkspace.boards.main.cards);
+  assert.equal(activityEvent.type, 'workspace.command.applied');
+});
+
+test('board.self.role.set returns a no-op result when the caller already has the requested role', () => {
+  const actor = createActor({ id: 'viewer_super_admin', email: 'admin@example.com' });
+  const workspace = createWorkspaceWithMainCollaboration({
+    memberships: [
+      createMembership({ id: 'viewer_owner', role: 'admin' }),
+      {
+        actor,
+        role: 'viewer',
+        joinedAt: '2026-03-31T09:15:00.000Z'
+      }
+    ]
+  });
+
+  const { workspace: nextWorkspace, result, activityEvent } = applyWorkspaceCommand({
+    record: createRecord(workspace, 0),
+    command: {
+      clientMutationId: 'member_role_self_noop_1',
+      type: 'board.self.role.set',
+      payload: {
+        boardId: 'main',
+        role: 'viewer'
+      }
+    },
+    expectedRevision: 0,
+    context: createContext({
+      actor,
+      viewerIsSuperAdmin: true
+    })
+  });
+
+  assert.deepEqual(result, {
+    clientMutationId: 'member_role_self_noop_1',
+    type: 'board.self.role.set',
+    noOp: true,
+    boardId: 'main',
+    targetActor: actor,
+    role: 'viewer'
+  });
+  assert.equal(activityEvent, null);
+  assert.deepEqual(getBoardMembershipForActor(nextWorkspace.boards.main, actor), {
+    actor,
+    role: 'viewer',
+    joinedAt: '2026-03-31T09:15:00.000Z'
+  });
+  assert.equal(nextWorkspace.boards.main.updatedAt, workspace.boards.main.updatedAt);
+});
+
 test('board.self.role.set rejects non-super-admin actors', () => {
   const workspace = createWorkspaceWithMainCollaboration({
     memberships: [createMembership({ id: 'viewer_owner', role: 'admin' })]
