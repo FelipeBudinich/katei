@@ -273,6 +273,7 @@ test('POST /api/workspace/commands loads workspace.title.set through the super-a
       workspaceId: sharedRecord.workspaceId
     }
   ]);
+  assert.deepEqual(workspaceRecordRepository.loadSuperAdminBoardRoleAssignmentCalls, []);
   assert.equal(workspaceRecordRepository.replaceRecordCalls.length, 1);
 });
 
@@ -311,6 +312,7 @@ test('POST /api/workspace/commands rejects workspace.title.set for non-super-adm
       workspaceId: sharedRecord.workspaceId
     }
   ]);
+  assert.deepEqual(workspaceRecordRepository.loadSuperAdminBoardRoleAssignmentCalls, []);
   assert.equal(workspaceRecordRepository.replaceRecordCalls.length, 0);
 });
 
@@ -348,6 +350,7 @@ test('POST /api/workspace/commands keeps unrelated commands on the normal author
     }
   ]);
   assert.deepEqual(workspaceRecordRepository.loadSuperAdminTitleManagementCalls, []);
+  assert.deepEqual(workspaceRecordRepository.loadSuperAdminBoardRoleAssignmentCalls, []);
   assert.equal(workspaceRecordRepository.replaceRecordCalls.length, 1);
 });
 
@@ -442,6 +445,7 @@ test('POST /api/workspace/commands rejects board.self.role.set for non-super-adm
       workspaceId: sharedRecord.workspaceId
     }
   ]);
+  assert.deepEqual(workspaceRecordRepository.loadSuperAdminTitleManagementCalls, []);
 });
 
 test('POST /api/workspace/commands does not add a super-admin self-removal seam', async () => {
