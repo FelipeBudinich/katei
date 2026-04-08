@@ -7,14 +7,8 @@
   <p class="sr-only" role="status" aria-live="polite" data-portfolio-target="announcer"></p>
   <section class="portfolio-hero paper-panel grid gap-4 px-5 py-4">
     <header class="top-bar border-0 bg-transparent px-0 py-0 shadow-none">
-      <div class="top-bar-heading-group items-start">
-        <p class="field-label text-sm font-semibold">{{ t('portfolio.eyebrow') }}</p>
-        <div class="grid min-w-0 gap-2">
-          <h1 class="top-bar-title font-serif text-3xl leading-tight text-strong">{{ t('portfolio.title') }}</h1>
-          <p class="max-w-3xl text-base leading-7 text-muted sm:text-lg">
-            {{ t('portfolio.description') }}
-          </p>
-        </div>
+      <div class="top-bar-heading-group">
+        <h1 class="top-bar-title font-serif text-3xl leading-tight text-strong">{{ t('portfolio.title') }}</h1>
       </div>
 
       <div class="top-bar-actions">
@@ -29,15 +23,6 @@
         </button>
       </div>
     </header>
-
-    <div class="portfolio-meta-row flex flex-wrap items-start gap-3">
-      <div class="portfolio-badge-row flex flex-wrap gap-2">
-        {% if viewer.isSuperAdmin %}
-          <span class="portfolio-badge portfolio-badge--accent">{{ t('portfolio.superAdminBadge') }}</span>
-        {% endif %}
-        <span class="portfolio-badge">{{ t('portfolio.readOnlyBadge') }}</span>
-      </div>
-    </div>
   </section>
 
   <section class="paper-panel portfolio-section">

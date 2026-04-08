@@ -498,7 +498,6 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
 
   assert.equal(response.status, 200);
   assert.match(response.text, /<title>過程 \(katei\) · Portfolio<\/title>/);
-  assert.match(response.text, /Super admin portfolio/);
   assert.match(response.text, /Back to boards/);
   assert.match(response.text, /Summary/);
   assert.match(response.text, /Board directory/);
@@ -547,8 +546,7 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
   assert.match(response.text, /3 cards/);
   assert.match(response.text, /<section class="portfolio-hero paper-panel grid gap-4 px-5 py-4">/);
   assert.match(response.text, /<header class="top-bar border-0 bg-transparent px-0 py-0 shadow-none">/);
-  assert.match(response.text, /<div class="top-bar-heading-group items-start">/);
-  assert.match(response.text, /<p class="field-label text-sm font-semibold">Super admin portfolio<\/p>/);
+  assert.match(response.text, /<div class="top-bar-heading-group">/);
   assert.match(response.text, /<h1 class="top-bar-title font-serif text-3xl leading-tight text-strong">Portfolio<\/h1>/);
   assert.match(response.text, /<div class="top-bar-actions">/);
   assert.match(response.text, /data-action="portfolio#openProfileOptions"/);
@@ -579,8 +577,10 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
   const portfolioHero = response.text.match(/<section class="portfolio-hero[\s\S]*?<\/section>/)?.[0] ?? '';
   const profileOptionsDialog = extractDialogHtml(response.text, 'profile-options');
 
-  assert.match(portfolioHero, /class="portfolio-meta-row flex flex-wrap items-start gap-3"/);
-  assert.match(portfolioHero, /class="portfolio-badge-row flex flex-wrap gap-2"/);
+  assert.doesNotMatch(portfolioHero, /field-label text-sm font-semibold/);
+  assert.doesNotMatch(portfolioHero, /max-w-3xl text-base leading-7 text-muted sm:text-lg/);
+  assert.doesNotMatch(portfolioHero, /portfolio-meta-row/);
+  assert.doesNotMatch(portfolioHero, /portfolio-badge-row/);
   assert.doesNotMatch(portfolioHero, /class="viewer-chip"/);
   assert.match(profileOptionsDialog, /class="ui-locale-badge"/);
   assert.match(profileOptionsDialog, /<span class="ui-locale-badge-value">\s*English\s*<\/span>/);
