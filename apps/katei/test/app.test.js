@@ -503,7 +503,6 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
     /<main[\s\S]*?class="mx-auto grid min-h-screen w-full max-w-7xl content-start gap-4 px-4 pb-10 pt-4 sm:px-6 lg:px-8"[\s\S]*?data-controller="portfolio"/
   );
   assert.match(response.text, /Back to boards/);
-  assert.match(response.text, /Summary/);
   assert.match(response.text, /Board directory/);
   assert.match(response.text, /Search portfolio/);
   assert.match(response.text, /Executive roadmap/);
@@ -579,8 +578,8 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
   assert.deepEqual(portfolioReadModel.loadCalls, [{ viewerSub: 'sub_123' }]);
 
   const portfolioHero = response.text.match(/<section class="portfolio-hero[\s\S]*?<\/section>/)?.[0] ?? '';
-  const portfolioSummarySection = response.text.match(
-    /<section class="paper-panel portfolio-section">[\s\S]*?<h2 class="font-serif text-3xl text-strong">Summary<\/h2>[\s\S]*?<\/section>/
+  const portfolioSummaryGrid = response.text.match(
+    /<section class="env-inventory-status-grid">[\s\S]*?<\/section>/
   )?.[0] ?? '';
   const profileOptionsDialog = extractDialogHtml(response.text, 'profile-options');
 
@@ -589,12 +588,16 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
   assert.doesNotMatch(portfolioHero, /portfolio-meta-row/);
   assert.doesNotMatch(portfolioHero, /portfolio-badge-row/);
   assert.doesNotMatch(portfolioHero, /class="viewer-chip"/);
-  assert.match(portfolioSummarySection, /class="env-inventory-status-grid"/);
-  assert.ok(countMatches(portfolioSummarySection, /class="paper-panel env-inventory-status-card env-inventory-status-card--good"/g) >= 7);
-  assert.match(portfolioSummarySection, /class="env-inventory-status-label">Workspaces</);
-  assert.match(portfolioSummarySection, /class="env-inventory-status-value">1</);
-  assert.doesNotMatch(portfolioSummarySection, /portfolio-summary-grid/);
-  assert.doesNotMatch(portfolioSummarySection, /portfolio-summary-card/);
+  assert.match(
+    response.text,
+    /<section class="portfolio-hero[\s\S]*?<\/section>\s*<section class="env-inventory-status-grid">[\s\S]*?<\/section>\s*<section class="paper-panel portfolio-section">[\s\S]*?<h2 class="font-serif text-3xl text-strong">Board directory<\/h2>/
+  );
+  assert.ok(countMatches(portfolioSummaryGrid, /class="paper-panel env-inventory-status-card env-inventory-status-card--good"/g) >= 7);
+  assert.match(portfolioSummaryGrid, /class="env-inventory-status-label">Workspaces</);
+  assert.match(portfolioSummaryGrid, /class="env-inventory-status-value">1</);
+  assert.doesNotMatch(portfolioSummaryGrid, /Summary/);
+  assert.doesNotMatch(portfolioSummaryGrid, /portfolio-summary-grid/);
+  assert.doesNotMatch(portfolioSummaryGrid, /portfolio-summary-card/);
   assert.match(profileOptionsDialog, /class="ui-locale-badge"/);
   assert.match(profileOptionsDialog, /<span class="ui-locale-badge-value">\s*English\s*<\/span>/);
   assert.match(
