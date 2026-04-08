@@ -498,6 +498,10 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
 
   assert.equal(response.status, 200);
   assert.match(response.text, /<title>過程 \(katei\) · Portfolio<\/title>/);
+  assert.match(
+    response.text,
+    /<main[\s\S]*?class="mx-auto grid min-h-screen w-full max-w-7xl content-start gap-4 px-4 pb-10 pt-4 sm:px-6 lg:px-8"[\s\S]*?data-controller="portfolio"/
+  );
   assert.match(response.text, /Back to boards/);
   assert.match(response.text, /Summary/);
   assert.match(response.text, /Board directory/);
