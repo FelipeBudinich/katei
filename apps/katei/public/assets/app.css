@@ -292,9 +292,6 @@
   .w-full {
     width: 100%;
   }
-  .max-w-3xl {
-    max-width: var(--container-3xl);
-  }
   .max-w-7xl {
     max-width: var(--container-7xl);
   }
@@ -1768,11 +1765,11 @@
     gap: 0.5rem;
     min-width: 0;
   }
-  .env-inventory-panel {
+  .inventory-panel, .env-inventory-panel {
     padding-inline: calc(var(--spacing) * 5);
     padding-block: calc(var(--spacing) * 5);
   }
-  .paper-panel.env-inventory-panel {
+  .paper-panel.inventory-panel, .paper-panel.env-inventory-panel {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
   }

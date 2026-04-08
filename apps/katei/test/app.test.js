@@ -582,7 +582,7 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
     /<section class="env-inventory-status-grid">[\s\S]*?<\/section>/
   )?.[0] ?? '';
   const boardDirectorySection = response.text.match(
-    /<section class="paper-panel portfolio-section">[\s\S]*?<h2 class="font-serif text-3xl text-strong">Board directory<\/h2>[\s\S]*?<\/section>/
+    /<section class="paper-panel portfolio-section inventory-panel">[\s\S]*?<h2 class="font-serif text-3xl text-strong">Board directory<\/h2>[\s\S]*?<\/section>/
   )?.[0] ?? '';
   const profileOptionsDialog = extractDialogHtml(response.text, 'profile-options');
 
@@ -593,8 +593,9 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
   assert.doesNotMatch(portfolioHero, /class="viewer-chip"/);
   assert.match(
     response.text,
-    /<section class="portfolio-hero[\s\S]*?<\/section>\s*<section class="env-inventory-status-grid">[\s\S]*?<\/section>\s*<section class="paper-panel portfolio-section">[\s\S]*?<h2 class="font-serif text-3xl text-strong">Board directory<\/h2>/
+    /<section class="portfolio-hero[\s\S]*?<\/section>\s*<section class="env-inventory-status-grid">[\s\S]*?<\/section>\s*<section class="paper-panel portfolio-section inventory-panel">[\s\S]*?<h2 class="font-serif text-3xl text-strong">Board directory<\/h2>/
   );
+  assert.ok(countMatches(response.text, /class="paper-panel portfolio-section inventory-panel"/g) >= 6);
   assert.ok(countMatches(portfolioSummaryGrid, /class="paper-panel env-inventory-status-card env-inventory-status-card--good"/g) >= 7);
   assert.match(portfolioSummaryGrid, /class="env-inventory-status-label">Workspaces</);
   assert.match(portfolioSummaryGrid, /class="env-inventory-status-value">1</);

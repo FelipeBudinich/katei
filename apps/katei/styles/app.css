@@ -390,10 +390,12 @@
     min-width: 0;
   }
 
+  .inventory-panel,
   .env-inventory-panel {
     @apply px-5 py-5;
   }
 
+  .paper-panel.inventory-panel,
   .paper-panel.env-inventory-panel {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
