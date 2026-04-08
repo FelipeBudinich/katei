@@ -31,14 +31,14 @@
       <p class="text-sm leading-6 text-muted">{{ t('portfolio.summary.description') }}</p>
     </div>
 
-    <div class="portfolio-summary-grid">
+    <section class="env-inventory-status-grid">
       {% for item in summaryItems %}
-        <article class="portfolio-summary-card">
-          <span class="portfolio-summary-label">{{ item.label }}</span>
-          <strong class="portfolio-summary-value">{{ item.value }}</strong>
+        <article class="paper-panel env-inventory-status-card env-inventory-status-card--good">
+          <div class="env-inventory-status-label">{{ item.label }}</div>
+          <div class="env-inventory-status-value">{{ item.value }}</div>
         </article>
       {% endfor %}
-    </div>
+    </section>
   </section>
 
   <section class="paper-panel portfolio-section">
