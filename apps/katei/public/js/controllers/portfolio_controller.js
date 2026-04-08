@@ -72,6 +72,20 @@ export default class extends Controller {
     openDialogWithInitialFocus(this.dialogTarget, this.titleInputTarget);
   }
 
+  openProfileOptions(event) {
+    const browserWindow = this.browserWindow ?? globalThis.window;
+
+    if (typeof browserWindow?.dispatchEvent !== 'function') {
+      return;
+    }
+
+    browserWindow.dispatchEvent(new CustomEvent('workspace:open-profile-options', {
+      detail: {
+        triggerElement: event?.currentTarget ?? null
+      }
+    }));
+  }
+
   handleTitleInput() {
     this.hideError();
   }

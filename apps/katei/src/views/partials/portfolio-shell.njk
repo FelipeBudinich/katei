@@ -6,12 +6,6 @@
 >
   <p class="sr-only" role="status" aria-live="polite" data-portfolio-target="announcer"></p>
   <section class="portfolio-hero paper-panel grid gap-4 px-5 py-4">
-    <div class="landing-utility-row">
-      {% include "partials/ui-locale-badge.njk" %}
-      {% set uiLocalePickerId = 'portfolio-ui-locale-picker' %}
-      {% include "partials/ui-locale-picker.njk" %}
-    </div>
-
     <header class="top-bar border-0 bg-transparent px-0 py-0 shadow-none">
       <div class="top-bar-heading-group items-start">
         <p class="field-label text-sm font-semibold">{{ t('portfolio.eyebrow') }}</p>
@@ -25,6 +19,14 @@
 
       <div class="top-bar-actions">
         <a href="/boards" class="touch-button-secondary">{{ t('portfolio.openBoards') }}</a>
+        <button
+          type="button"
+          class="touch-button-secondary touch-button-secondary--icon"
+          data-action="portfolio#openProfileOptions"
+          aria-label="{{ t('workspace.profileOptions') }}"
+        >
+          <img src="/profile.svg" alt="" aria-hidden="true" class="touch-button-secondary__icon">
+        </button>
       </div>
     </header>
 
@@ -691,4 +693,9 @@
       </div>
     </dialog>
   {% endif %}
+
+  {% set profileOptionsShowLocaleBadge = true %}
+  {% set profileOptionsUiLocalePickerId = 'portfolio-ui-locale-picker' %}
+  {% set profileOptionsUiLocalePickerAction = '/portfolio' %}
+  {% include "partials/profile-options-dialog.njk" %}
 </main>

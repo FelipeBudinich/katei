@@ -3,6 +3,30 @@ import assert from 'node:assert/strict';
 import { createTranslator } from '../public/js/i18n/translate.js';
 import PortfolioController from '../public/js/controllers/portfolio_controller.js';
 
+test('portfolio controller dispatches the shared profile options event with the trigger element', () => {
+  withMockDocument(() => {
+    const controller = createPortfolioControllerDouble({
+      workspaceId: 'workspace_alpha',
+      workspaceTitle: 'Studio HQ'
+    });
+    const triggerElement = createButtonElement();
+    const dispatchedEvents = [];
+
+    controller.browserWindow.dispatchEvent = (event) => {
+      dispatchedEvents.push(event);
+      return true;
+    };
+
+    PortfolioController.prototype.openProfileOptions.call(controller, {
+      currentTarget: triggerElement
+    });
+
+    assert.equal(dispatchedEvents.length, 1);
+    assert.equal(dispatchedEvents[0].type, 'workspace:open-profile-options');
+    assert.equal(dispatchedEvents[0].detail?.triggerElement, triggerElement);
+  });
+});
+
 test('portfolio controller opens the workspace title dialog with the current title prefilled', () => {
   withMockDocument(() => {
     const controller = createPortfolioControllerDouble({

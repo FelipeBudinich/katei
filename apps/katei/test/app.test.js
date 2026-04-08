@@ -551,12 +551,22 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
   assert.match(response.text, /<p class="field-label text-sm font-semibold">Super admin portfolio<\/p>/);
   assert.match(response.text, /<h1 class="top-bar-title font-serif text-3xl leading-tight text-strong">Portfolio<\/h1>/);
   assert.match(response.text, /<div class="top-bar-actions">/);
+  assert.match(response.text, /data-action="portfolio#openProfileOptions"/);
+  assert.match(
+    response.text,
+    /class="touch-button-secondary touch-button-secondary--icon"[\s\S]*?data-action="portfolio#openProfileOptions"[\s\S]*?aria-label="Profile"[\s\S]*?<img src="\/profile\.svg" alt="" aria-hidden="true" class="touch-button-secondary__icon">/
+  );
   assert.doesNotMatch(response.text, /class="portfolio-header"/);
   assert.doesNotMatch(response.text, /class="portfolio-actions"/);
   assert.match(response.text, /class="portfolio-workspace-group portfolio-directory-card paper-panel"/);
   assert.ok(countMatches(response.text, /class="portfolio-workspace-group paper-panel"/g) >= 7);
   assert.match(response.text, /href="\/boards\?workspaceId=workspace_portfolio_alpha&amp;boardId=main"/);
   assert.match(response.text, /Tester/);
+  assert.match(response.text, /data-controller="profile-options"/);
+  assert.match(response.text, /data-controller="session"/);
+  assert.match(response.text, /data-session-target="logoutButton"/);
+  assert.match(response.text, /session#openLogoutConfirm/);
+  assert.match(response.text, /id="portfolio-ui-locale-picker"/);
   assert.match(
     findSetCookie(response, KATEI_LAST_SURFACE_COOKIE_NAME) ?? '',
     new RegExp(escapeForRegex(createLastSurfaceCookieValue({ surface: 'portfolio' })))
@@ -565,6 +575,18 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
   assert.doesNotMatch(response.text, /id="workspace-bootstrap"/);
   assert.deepEqual(workspaceRecordRepository.loadCalls, []);
   assert.deepEqual(portfolioReadModel.loadCalls, [{ viewerSub: 'sub_123' }]);
+
+  const profileOptionsDialog = extractDialogHtml(response.text, 'profile-options');
+
+  assert.match(profileOptionsDialog, /class="ui-locale-badge"/);
+  assert.match(profileOptionsDialog, /<span class="ui-locale-badge-value">\s*English\s*<\/span>/);
+  assert.match(
+    profileOptionsDialog,
+    /<form[\s\S]*?method="get"[\s\S]*?action="\/portfolio"[\s\S]*?class="ui-locale-picker ui-locale-picker--icon-menu"[\s\S]*?data-controller="ui-locale-picker"/
+  );
+  assert.match(profileOptionsDialog, /aria-haspopup="dialog"/);
+  assert.match(profileOptionsDialog, /data-ui-locale-picker-target="dialog"/);
+  assert.match(profileOptionsDialog, /class="viewer-chip"/);
 });
 
 test('GET /portfolio renders one workspace title action per workspace group for super admins', async () => {

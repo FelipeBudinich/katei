@@ -8,6 +8,8 @@
     cancel->profile-options#close
   "
 >
+  {% set profileUiLocalePickerId = profileOptionsUiLocalePickerId or 'profile-options-ui-locale-picker' %}
+  {% set profileUiLocalePickerAction = profileOptionsUiLocalePickerAction or uiLocalePickerAction or '/' %}
   <div class="sheet-panel">
     <div class="dialog-handle mx-auto h-1.5 w-16 rounded-full lg:hidden"></div>
 
@@ -33,16 +35,23 @@
       </div>
 
       <div class="profile-options-locale-slot">
-        {% set uiLocalePickerId = 'profile-options-ui-locale-picker' %}
-        {% set uiLocalePickerVariant = 'icon-modal' %}
-        {% include "partials/ui-locale-picker.njk" %}
+        <div class="grid gap-2">
+          {% if profileOptionsShowLocaleBadge %}
+            {% include "partials/ui-locale-badge.njk" %}
+          {% endif %}
+
+          {% set uiLocalePickerId = profileUiLocalePickerId %}
+          {% set uiLocalePickerAction = profileUiLocalePickerAction %}
+          {% set uiLocalePickerVariant = 'icon-modal' %}
+          {% include "partials/ui-locale-picker.njk" %}
+        </div>
       </div>
 
       <div
         class="dialog-actions"
         data-controller="session"
         data-session-auth-url-value="/auth/logout"
-        data-session-redirect-url-value="/"
+        data-session-redirect-url-value="{{ profileOptionsSessionRedirectUrl or '/' }}"
       >
         <button
           type="button"
