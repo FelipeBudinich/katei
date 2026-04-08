@@ -576,8 +576,12 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
   assert.deepEqual(workspaceRecordRepository.loadCalls, []);
   assert.deepEqual(portfolioReadModel.loadCalls, [{ viewerSub: 'sub_123' }]);
 
+  const portfolioHero = response.text.match(/<section class="portfolio-hero[\s\S]*?<\/section>/)?.[0] ?? '';
   const profileOptionsDialog = extractDialogHtml(response.text, 'profile-options');
 
+  assert.match(portfolioHero, /class="portfolio-meta-row flex flex-wrap items-start gap-3"/);
+  assert.match(portfolioHero, /class="portfolio-badge-row flex flex-wrap gap-2"/);
+  assert.doesNotMatch(portfolioHero, /class="viewer-chip"/);
   assert.match(profileOptionsDialog, /class="ui-locale-badge"/);
   assert.match(profileOptionsDialog, /<span class="ui-locale-badge-value">\s*English\s*<\/span>/);
   assert.match(

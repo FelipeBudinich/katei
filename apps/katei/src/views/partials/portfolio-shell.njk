@@ -30,9 +30,7 @@
       </div>
     </header>
 
-    <div class="portfolio-meta-row flex flex-wrap items-start justify-between gap-3">
-      {% include "partials/viewer-chip.njk" %}
-
+    <div class="portfolio-meta-row flex flex-wrap items-start gap-3">
       <div class="portfolio-badge-row flex flex-wrap gap-2">
         {% if viewer.isSuperAdmin %}
           <span class="portfolio-badge portfolio-badge--accent">{{ t('portfolio.superAdminBadge') }}</span>
