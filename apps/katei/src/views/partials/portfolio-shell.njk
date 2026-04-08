@@ -40,33 +40,31 @@
       <p class="text-sm leading-6 text-muted">{{ t('portfolio.directory.description') }}</p>
     </div>
 
-    <div class="portfolio-toolbar">
-      <form method="get" action="/portfolio" class="portfolio-search-form">
-        <label for="portfolio-search" class="field-label text-sm font-semibold">
-          {{ t('portfolio.filters.searchLabel') }}
-        </label>
+    <form method="get" action="/portfolio" class="env-inventory-controls">
+      <label class="env-inventory-field" for="portfolio-search">
+        <span class="field-label text-sm font-semibold">{{ t('portfolio.filters.searchLabel') }}</span>
         <input
           id="portfolio-search"
           name="q"
           type="search"
           value="{{ portfolioFilters.searchQuery }}"
-          class="portfolio-search-input"
+          class="field-control"
           placeholder="{{ t('portfolio.filters.searchPlaceholder') }}"
         >
-        <div class="portfolio-search-actions">
-          <button type="submit" class="touch-button-secondary">{{ t('portfolio.filters.applyAction') }}</button>
-          {% if portfolioFilters.hasSearchQuery %}
-            <a href="/portfolio" class="touch-button-secondary">{{ t('portfolio.filters.clearAction') }}</a>
-          {% endif %}
-        </div>
-      </form>
+      </label>
 
-      {% if boardDirectoryEntries.length %}
-        <p class="portfolio-results-label">
-          {{ t('portfolio.filters.resultsLabel', { count: boardDirectoryCount }) }}
-        </p>
-      {% endif %}
-    </div>
+      <div class="env-inventory-control-actions">
+        <button type="submit" class="touch-button-secondary">{{ t('portfolio.filters.applyAction') }}</button>
+        {% if portfolioFilters.hasSearchQuery %}
+          <a href="/portfolio" class="touch-button-secondary">{{ t('portfolio.filters.clearAction') }}</a>
+        {% endif %}
+        {% if boardDirectoryEntries.length %}
+          <div class="text-sm leading-6 text-muted">
+            {{ t('portfolio.filters.resultsLabel', { count: boardDirectoryCount }) }}
+          </div>
+        {% endif %}
+      </div>
+    </form>
 
     {% if boardDirectoryEntries.length %}
       <div class="portfolio-directory-groups">

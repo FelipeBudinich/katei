@@ -581,6 +581,9 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
   const portfolioSummaryGrid = response.text.match(
     /<section class="env-inventory-status-grid">[\s\S]*?<\/section>/
   )?.[0] ?? '';
+  const boardDirectorySection = response.text.match(
+    /<section class="paper-panel portfolio-section">[\s\S]*?<h2 class="font-serif text-3xl text-strong">Board directory<\/h2>[\s\S]*?<\/section>/
+  )?.[0] ?? '';
   const profileOptionsDialog = extractDialogHtml(response.text, 'profile-options');
 
   assert.doesNotMatch(portfolioHero, /field-label text-sm font-semibold/);
@@ -598,6 +601,16 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
   assert.doesNotMatch(portfolioSummaryGrid, /Summary/);
   assert.doesNotMatch(portfolioSummaryGrid, /portfolio-summary-grid/);
   assert.doesNotMatch(portfolioSummaryGrid, /portfolio-summary-card/);
+  assert.match(boardDirectorySection, /<form method="get" action="\/portfolio" class="env-inventory-controls">/);
+  assert.match(boardDirectorySection, /<label class="env-inventory-field" for="portfolio-search">/);
+  assert.match(boardDirectorySection, /id="portfolio-search"[\s\S]*?name="q"[\s\S]*?class="field-control"/);
+  assert.match(boardDirectorySection, /class="env-inventory-control-actions"/);
+  assert.match(boardDirectorySection, />\s*Apply\s*</);
+  assert.match(boardDirectorySection, /<div class="text-sm leading-6 text-muted">\s*1 matching boards\s*<\/div>/);
+  assert.doesNotMatch(boardDirectorySection, /portfolio-toolbar/);
+  assert.doesNotMatch(boardDirectorySection, /portfolio-search-form/);
+  assert.doesNotMatch(boardDirectorySection, /portfolio-search-input/);
+  assert.doesNotMatch(boardDirectorySection, /portfolio-search-actions/);
   assert.match(profileOptionsDialog, /class="ui-locale-badge"/);
   assert.match(profileOptionsDialog, /<span class="ui-locale-badge-value">\s*English\s*<\/span>/);
   assert.match(
