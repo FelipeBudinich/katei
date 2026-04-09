@@ -701,7 +701,6 @@ test('status trigger keyboard opens the menu and focuses the selected option', (
   assert.equal(controller.statusMenuTarget.options[0].focusCalls, 1);
   assert.equal(controller.statusMenuTarget.options[0].tabIndex, 0);
   assert.equal(controller.statusMenuTarget.options[1].tabIndex, -1);
-  assert.equal(controller.statusMenuTarget.options[2].tabIndex, -1);
 });
 
 test('selectPriority syncs the hidden select, updates aria-checked, and restores focus', () => {
@@ -723,22 +722,35 @@ test('selectPriority syncs the hidden select, updates aria-checked, and restores
   assert.equal(controller.priorityButtonTarget.focusCalls, 1);
 });
 
+test('syncStatusOptions keeps the current stage out of the actionable menu without auto-selecting a move', () => {
+  const controller = createStatusControllerDouble();
+
+  assert.equal(controller.targetStageIdInputTarget.value, 'doing');
+  assert.equal(controller.statusSelectTarget.value, '');
+  assert.equal(controller.statusSelectTarget.selectedIndex, -1);
+  assert.deepEqual(
+    controller.statusMenuTarget.options.map((option) => option.textContent),
+    ['Backlog', 'Done']
+  );
+  assert.equal(controller.statusButtonTarget.title, 'Doing');
+  assert.equal(controller.statusButtonTarget.attributes['aria-label'], 'Task Status: Doing');
+});
+
 test('selectStage syncs the hidden target stage input, status select, and trigger state', () => {
   const controller = createStatusControllerDouble();
   controller.statusMenuTarget.hidden = false;
 
   CardEditorController.prototype.selectStage.call(controller, {
     preventDefault() {},
-    currentTarget: controller.statusMenuTarget.options[1]
+    currentTarget: controller.statusMenuTarget.options[0]
   });
 
   assert.equal(controller.targetStageIdInputTarget.value, 'backlog');
   assert.equal(controller.statusSelectTarget.value, 'backlog');
-  assert.equal(controller.statusMenuTarget.options[0].attributes['aria-checked'], 'false');
-  assert.equal(controller.statusMenuTarget.options[1].attributes['aria-checked'], 'true');
-  assert.equal(controller.statusMenuTarget.options[2].attributes['aria-checked'], 'false');
-  assert.equal(controller.statusButtonTarget.title, 'Backlog (Selected)');
-  assert.equal(controller.statusButtonTarget.attributes['aria-label'], 'Task Status: Backlog (Selected)');
+  assert.equal(controller.statusMenuTarget.options[0].textContent, 'Backlog');
+  assert.equal(controller.statusMenuTarget.options[1].textContent, 'Done');
+  assert.equal(controller.statusButtonTarget.title, 'Doing');
+  assert.equal(controller.statusButtonTarget.attributes['aria-label'], 'Task Status: Doing');
   assert.equal(controller.statusMenuTarget.hidden, true);
   assert.equal(controller.statusButtonTarget.attributes['aria-expanded'], 'false');
   assert.equal(controller.statusButtonTarget.focusCalls, 1);
@@ -792,10 +804,9 @@ test('changeStatusFromSelect keeps the hidden target stage input and priority vi
 
   assert.equal(controller.targetStageIdInputTarget.value, 'done');
   assert.equal(controller.statusSelectTarget.value, 'done');
-  assert.equal(controller.statusMenuTarget.options[0].attributes['aria-checked'], 'false');
-  assert.equal(controller.statusMenuTarget.options[1].attributes['aria-checked'], 'false');
-  assert.equal(controller.statusMenuTarget.options[2].attributes['aria-checked'], 'true');
-  assert.equal(controller.statusButtonTarget.title, 'Done (Selected)');
+  assert.equal(controller.statusMenuTarget.options[0].textContent, 'Backlog');
+  assert.equal(controller.statusMenuTarget.options[1].textContent, 'Done');
+  assert.equal(controller.statusButtonTarget.title, 'Doing');
   assert.equal(controller.prioritySectionTarget.hidden, true);
 });
 
@@ -987,13 +998,20 @@ function createPriorityControllerDouble() {
 function createStatusControllerDouble(selectedStageId = 'doing') {
   const controller = Object.create(CardEditorController.prototype);
   const statusOptions = [
-    createStatusOptionTarget('doing', 'Doing', selectedStageId === 'doing'),
-    createStatusOptionTarget('backlog', 'Backlog', selectedStageId === 'backlog'),
-    createStatusOptionTarget('done', 'Done', selectedStageId === 'done')
+    createStatusOptionTarget('backlog', 'Backlog'),
+    createStatusOptionTarget('done', 'Done')
   ];
 
   controller.isReadOnlyLocaleView = false;
   controller.t = createTranslator('en');
+  controller.board = {
+    stageOrder: ['backlog', 'doing', 'done'],
+    stages: {
+      backlog: { id: 'backlog', title: 'Backlog' },
+      doing: { id: 'doing', title: 'Doing' },
+      done: { id: 'done', title: 'Done' }
+    }
+  };
   controller.hasStatusButtonTarget = true;
   controller.hasStatusMenuTarget = true;
   controller.hasStatusSelectTarget = true;
@@ -1001,7 +1019,7 @@ function createStatusControllerDouble(selectedStageId = 'doing') {
   controller.prioritySectionTarget = { hidden: false };
   controller.statusButtonTarget = createMenuTriggerTarget();
   controller.statusMenuTarget = createStatusMenuTarget(statusOptions);
-  controller.statusSelectTarget = createPickerSelectTarget(selectedStageId);
+  controller.statusSelectTarget = createPickerSelectTarget('');
   controller.modeInputTarget = { value: 'edit' };
   controller.cardIdInputTarget = { value: 'card_1' };
   controller.sourceStageIdInputTarget = { value: 'doing' };
@@ -1039,6 +1057,7 @@ function createMenuTriggerTarget() {
 function createPickerSelectTarget(value) {
   return {
     value,
+    selectedIndex: value ? 0 : -1,
     disabled: false,
     attributes: {
       'aria-disabled': 'false'
@@ -1087,7 +1106,7 @@ function createPriorityOptionTarget(priorityId, priorityLabel, selected) {
   };
 }
 
-function createStatusOptionTarget(targetStageId, stageTitle, selected) {
+function createStatusOptionTarget(targetStageId, stageTitle) {
   return {
     dataset: {
       targetStageId,
@@ -1095,14 +1114,16 @@ function createStatusOptionTarget(targetStageId, stageTitle, selected) {
     },
     disabled: false,
     focusCalls: 0,
-    tabIndex: selected ? 0 : -1,
+    tabIndex: -1,
     textContent: stageTitle,
     attributes: {
-      'aria-checked': selected ? 'true' : 'false',
       'aria-disabled': 'false'
     },
     setAttribute(name, value) {
       this.attributes[name] = value;
+    },
+    removeAttribute(name) {
+      delete this.attributes[name];
     },
     getAttribute(name) {
       return this.attributes[name];

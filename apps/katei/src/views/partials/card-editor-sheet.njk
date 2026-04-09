@@ -19,59 +19,21 @@
           </button>
         </div>
 
-        <div class="view-locale-picker" hidden data-card-editor-target="statusSection">
-          <button
-            type="button"
-            id="card-editor-status-trigger"
-            class="touch-button-secondary touch-button-secondary--icon"
-            aria-label="{{ t('cardEditor.statusLabel') }}"
-            aria-haspopup="menu"
-            aria-expanded="false"
-            aria-controls="card-editor-status-menu"
-            data-card-editor-target="statusButton"
-            data-action="click->card-editor#toggleStatusMenu keydown->card-editor#handleStatusTriggerKeydown"
-          >
-            <img src="/switch.svg" alt="" aria-hidden="true" class="touch-button-secondary__icon">
-            <span class="sr-only">{{ t('cardEditor.statusLabel') }}</span>
-          </button>
-
-          <div
-            id="card-editor-status-menu"
-            class="view-locale-menu"
-            role="menu"
-            aria-label="{{ t('cardEditor.statusLabel') }}"
-            hidden
-            data-card-editor-target="statusMenu"
-            data-action="keydown->card-editor#handleStatusMenuKeydown"
-          ></div>
-
-          <template data-card-editor-target="statusOptionTemplate">
-            <button
-              type="button"
-              class="view-locale-menu-option view-locale-menu-option--status"
-              value=""
-              data-card-editor-target="statusOption"
-              data-stage-title=""
-              data-target-stage-id=""
-              role="menuitemradio"
-              aria-checked="false"
-              tabindex="-1"
-              data-action="card-editor#selectStage"
-            ></button>
-          </template>
-
-          <label class="sr-only" for="card-editor-status-select">{{ t('cardEditor.statusLabel') }}</label>
-          <select
-            id="card-editor-status-select"
-            form="card-editor-form"
-            class="sr-only"
-            hidden
-            tabindex="-1"
-            aria-hidden="true"
-            data-card-editor-target="statusSelect"
-            data-action="change->card-editor#changeStatusFromSelect"
-          ></select>
-        </div>
+        {% set statusPickerController = 'card-editor' %}
+        {% set statusPickerPrefix = 'card-editor' %}
+        {% set statusPickerFormId = 'card-editor-form' %}
+        {% set statusPickerSectionTarget = 'statusSection' %}
+        {% set statusPickerButtonTarget = 'statusButton' %}
+        {% set statusPickerMenuTarget = 'statusMenu' %}
+        {% set statusPickerOptionTemplateTarget = 'statusOptionTemplate' %}
+        {% set statusPickerOptionTarget = 'statusOption' %}
+        {% set statusPickerSelectTarget = 'statusSelect' %}
+        {% set statusPickerToggleAction = 'toggleStatusMenu' %}
+        {% set statusPickerTriggerKeydownAction = 'handleStatusTriggerKeydown' %}
+        {% set statusPickerMenuKeydownAction = 'handleStatusMenuKeydown' %}
+        {% set statusPickerOptionAction = 'selectStage' %}
+        {% set statusPickerSelectAction = 'changeStatusFromSelect' %}
+        {% include "partials/card-status-picker.njk" %}
 
         <div class="view-locale-picker" hidden data-card-editor-target="prioritySection">
           <button

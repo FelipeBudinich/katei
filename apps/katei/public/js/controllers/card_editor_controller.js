@@ -1,11 +1,16 @@
 import { Controller } from '../../vendor/stimulus/stimulus.js';
 import { getBrowserTranslator } from '../i18n/browser.js';
 import {
+  getBoardStageTitle,
   getDefaultBoardStageId,
-  getStageMoveOptions,
   resolveBoardStageId,
   shouldShowPriorityForStage
 } from './stage_ui.js';
+import {
+  createStageSelectOption,
+  createStatusMenuOptionFromTemplate,
+  getActionableStageMoveOptions
+} from './status_picker.js';
 import {
   createLocalizedCardEditorUiState,
   resolveCardLocaleSelection
@@ -770,60 +775,54 @@ export default class extends Controller {
   syncStatusOptions({ sourceStageId, targetStageId, isDisabled = false } = {}) {
     const statusOptions = this.getStatusMenuOptions();
     const hasOptions = statusOptions.length > 0;
-    let resolvedTargetStageId = targetStageId ?? this.targetStageIdInputTarget.value;
-
-    if (
-      hasOptions &&
-      !statusOptions.some((option) => option.dataset.targetStageId === resolvedTargetStageId)
-    ) {
-      resolvedTargetStageId = statusOptions[0].dataset.targetStageId ?? resolvedTargetStageId;
-      this.targetStageIdInputTarget.value = resolvedTargetStageId;
-    }
-
+    const resolvedTargetStageId = targetStageId ?? this.targetStageIdInputTarget.value;
+    const hasSelectedTarget = hasOptions && statusOptions.some(
+      (option) => option.dataset.targetStageId === resolvedTargetStageId
+    );
     const shouldDisable = isDisabled || !hasOptions;
 
     if (this.hasStatusSelectTarget) {
-      this.statusSelectTarget.value = resolvedTargetStageId;
+      this.statusSelectTarget.value = hasSelectedTarget ? resolvedTargetStageId : '';
+
+      if (!hasSelectedTarget) {
+        this.statusSelectTarget.selectedIndex = -1;
+      }
+
       this.statusSelectTarget.disabled = shouldDisable;
       this.statusSelectTarget.setAttribute('aria-disabled', String(shouldDisable));
     }
 
-    const selectedIndex = statusOptions.findIndex(
-      (option) => option.dataset.targetStageId === resolvedTargetStageId
-    );
-    const focusableIndex = selectedIndex >= 0 ? selectedIndex : 0;
+    const selectedIndex = hasSelectedTarget
+      ? statusOptions.findIndex((option) => option.dataset.targetStageId === resolvedTargetStageId)
+      : -1;
+    const focusableIndex = hasOptions ? (selectedIndex >= 0 ? selectedIndex : 0) : -1;
 
     statusOptions.forEach((button, index) => {
       const buttonTargetStageId = button.dataset.targetStageId ?? '';
-      const isSelectedStage = buttonTargetStageId === resolvedTargetStageId;
-      const isCurrentStage = buttonTargetStageId === sourceStageId;
-      const stageTitle = button.dataset.stageTitle ?? '';
 
       button.disabled = shouldDisable;
       button.value = buttonTargetStageId;
-      button.textContent = getStageSelectionLabel({
-        stageTitle,
-        isSelectedStage,
-        isCurrentStage,
-        t: this.t
-      });
+      button.textContent = button.dataset.stageTitle ?? '';
       button.tabIndex = index === focusableIndex ? 0 : -1;
       button.setAttribute('aria-disabled', String(shouldDisable));
-      button.setAttribute('aria-checked', String(isSelectedStage));
+
+      if (typeof button.removeAttribute === 'function') {
+        button.removeAttribute('aria-checked');
+      } else if (button.attributes) {
+        delete button.attributes['aria-checked'];
+      }
     });
 
     if (this.hasStatusButtonTarget) {
-      const selectedOption = selectedIndex >= 0 ? statusOptions[selectedIndex] : null;
       const statusLabel = this.t('cardEditor.statusLabel');
-      const selectedLabel =
-        selectedOption?.textContent?.trim() ?? selectedOption?.dataset.stageTitle ?? statusLabel;
+      const currentStageLabel = getBoardStageTitle(this.board, sourceStageId) || statusLabel;
 
       this.statusButtonTarget.disabled = shouldDisable;
       this.statusButtonTarget.setAttribute('aria-disabled', String(shouldDisable));
-      this.statusButtonTarget.title = selectedLabel;
+      this.statusButtonTarget.title = currentStageLabel;
       this.statusButtonTarget.setAttribute(
         'aria-label',
-        selectedLabel ? `${statusLabel}: ${selectedLabel}` : statusLabel
+        currentStageLabel ? `${statusLabel}: ${currentStageLabel}` : statusLabel
       );
     }
 
@@ -833,15 +832,10 @@ export default class extends Controller {
   }
 
   renderStatusOptions({ board, sourceStageId }) {
-    const statusOptions = getStageMoveOptions(board, sourceStageId);
-    const statusButtons = statusOptions.map(({ id, title }) => {
-      const button = this.statusOptionTemplateTarget.content.firstElementChild.cloneNode(true);
-      button.dataset.targetStageId = id;
-      button.dataset.stageTitle = title;
-      button.value = id;
-      button.textContent = title;
-      return button;
-    });
+    const statusOptions = getActionableStageMoveOptions(board, sourceStageId);
+    const statusButtons = statusOptions.map(({ id, title }) =>
+      createStatusMenuOptionFromTemplate(this.statusOptionTemplateTarget, { stageId: id, title })
+    );
     const statusSelectOptions = statusOptions.map(({ id, title }) => createStageSelectOption(id, title));
 
     this.statusMenuTarget.replaceChildren(...statusButtons);
@@ -1034,7 +1028,8 @@ export default class extends Controller {
 
   focusSelectedStatusMenuOption() {
     const options = this.getStatusMenuOptions();
-    const selectedIndex = options.findIndex((option) => option.getAttribute('aria-checked') === 'true');
+    const selectedStageId = this.targetStageIdInputTarget?.value ?? '';
+    const selectedIndex = options.findIndex((option) => option.dataset.targetStageId === selectedStageId);
 
     this.focusStatusMenuOption(selectedIndex >= 0 ? selectedIndex : 0);
   }
@@ -1148,19 +1143,4 @@ function createLocaleOption(locale) {
   option.value = locale;
   option.textContent = locale;
   return option;
-}
-
-function createStageSelectOption(stageId, title) {
-  const option = document.createElement('option');
-  option.value = stageId;
-  option.textContent = title;
-  return option;
-}
-
-function getStageSelectionLabel({ stageTitle, isSelectedStage, isCurrentStage, t }) {
-  if (!isSelectedStage) {
-    return stageTitle;
-  }
-
-  return `${stageTitle} (${t(isCurrentStage ? 'cardEditor.moveStateCurrent' : 'cardEditor.moveStateSelected')})`;
 }

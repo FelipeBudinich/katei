@@ -37,6 +37,22 @@
           <span class="sr-only">{{ t('workspace.cardPromptRunButton') }}</span>
         </button>
 
+        {% set statusPickerController = 'workspace' %}
+        {% set statusPickerPrefix = 'card-view' %}
+        {% set statusPickerFormId = null %}
+        {% set statusPickerSectionTarget = 'viewStatusSection' %}
+        {% set statusPickerButtonTarget = 'viewStatusButton' %}
+        {% set statusPickerMenuTarget = 'viewStatusMenu' %}
+        {% set statusPickerOptionTemplateTarget = 'viewStatusOptionTemplate' %}
+        {% set statusPickerOptionTarget = 'viewStatusOption' %}
+        {% set statusPickerSelectTarget = 'viewStatusSelect' %}
+        {% set statusPickerToggleAction = 'toggleViewStatusMenu' %}
+        {% set statusPickerTriggerKeydownAction = 'handleViewStatusTriggerKeydown' %}
+        {% set statusPickerMenuKeydownAction = 'handleViewStatusMenuKeydown' %}
+        {% set statusPickerOptionAction = 'changeViewStatus' %}
+        {% set statusPickerSelectAction = 'changeViewStatus' %}
+        {% include "partials/card-status-picker.njk" %}
+
         <div hidden data-workspace-target="viewLocaleSection">
           <div class="view-locale-picker">
             <button

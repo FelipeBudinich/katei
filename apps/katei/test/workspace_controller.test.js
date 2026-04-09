@@ -1599,6 +1599,13 @@ test('openView uses the dedicated view dialog and limits locales to present loca
     assert.equal(controller.viewLocaleButtonTarget.disabled, false);
     assert.equal(controller.viewLocaleButtonTarget.attributes['aria-expanded'], 'false');
     assert.equal(controller.viewLocaleMenuTarget.hidden, true);
+    assert.equal(controller.viewStatusSectionTarget.hidden, true);
+    assert.equal(controller.viewStatusButtonTarget.hidden, true);
+    assert.equal(controller.viewStatusButtonTarget.disabled, true);
+    assert.equal(controller.viewStatusButtonTarget.attributes['aria-disabled'], 'true');
+    assert.equal(controller.viewStatusButtonTarget.attributes['aria-expanded'], 'false');
+    assert.deepEqual(controller.viewStatusMenuTarget.children, []);
+    assert.deepEqual(controller.viewStatusSelectTarget.options, []);
     assert.equal(controller.viewDialogState.selectedLocale, 'es-CL');
     assert.equal(controller.viewCardTitleTarget.textContent, 'Titulo por defecto');
     assert.equal(controller.viewCardBodyTarget.innerHTML, '<p>Detalles por defecto</p>');
@@ -1750,6 +1757,27 @@ test('openView shows the prompt-run button in the modal for editable prompt-enab
     });
 
     assert.equal(controller.viewDialogState.canEditBoard, true);
+    assert.equal(controller.viewStatusSectionTarget.hidden, false);
+    assert.equal(controller.viewStatusButtonTarget.hidden, false);
+    assert.equal(controller.viewStatusButtonTarget.disabled, false);
+    assert.equal(controller.viewStatusButtonTarget.attributes['aria-disabled'], 'false');
+    assert.equal(controller.viewStatusButtonTarget.title, 'Ready for Review');
+    assert.equal(controller.viewStatusButtonTarget.attributes['aria-label'], 'Task Status: Ready for Review');
+    assert.equal(controller.viewStatusMenuTarget.hidden, true);
+    assert.deepEqual(
+      controller.viewStatusMenuTarget.children.map((option) => option.dataset.targetStageId),
+      ['qa', 'published']
+    );
+    assert.deepEqual(
+      controller.viewStatusMenuTarget.children.map((option) => option.textContent),
+      ['QA Sweep', 'Published']
+    );
+    assert.deepEqual(
+      controller.viewStatusSelectTarget.options.map((option) => option.value),
+      ['qa', 'published']
+    );
+    assert.equal(controller.viewStatusSelectTarget.value, '');
+    assert.equal(controller.viewStatusSelectTarget.selectedIndex, -1);
     assert.equal(controller.viewActionRegionTarget.hidden, true);
     assert.equal(controller.viewDeleteButtonTarget.hidden, true);
     assert.equal(controller.viewDeleteButtonTarget.disabled, true);
@@ -1771,6 +1799,83 @@ test('openView shows the prompt-run button in the modal for editable prompt-enab
       cardId: card.id,
       stageId: 'review'
     });
+  } finally {
+    restoreDom();
+  }
+});
+
+test('changeViewStatus routes the selected actionable stage through the shared move flow', async () => {
+  const restoreDom = installViewDialogDomStubs();
+
+  try {
+    const { controller, board, card } = createViewDialogController({ viewerRole: 'editor' });
+    const moveCalls = [];
+    let prevented = false;
+
+    WorkspaceController.prototype.openView.call(controller, {
+      currentTarget: createViewTriggerDouble(card.id, 'review', { requestedLocale: 'es-CL' })
+    });
+    controller.viewStatusMenuTarget.hidden = false;
+    controller.runCardMove = async (detail) => {
+      moveCalls.push(detail);
+      return true;
+    };
+
+    await WorkspaceController.prototype.changeViewStatus.call(controller, {
+      preventDefault() {
+        prevented = true;
+      },
+      currentTarget: controller.viewStatusMenuTarget.children[0]
+    });
+
+    assert.equal(prevented, true);
+    assert.equal(controller.viewStatusMenuTarget.hidden, true);
+    assert.equal(controller.viewStatusButtonTarget.attributes['aria-expanded'], 'false');
+    assert.equal(controller.viewStatusButtonTarget.focused, true);
+    assert.deepEqual(moveCalls, [
+      {
+        boardId: board.id,
+        cardId: card.id,
+        sourceStageId: 'review',
+        targetStageId: 'qa'
+      }
+    ]);
+  } finally {
+    restoreDom();
+  }
+});
+
+test('syncViewDialog hides the status picker when the current stage has no actionable moves', () => {
+  const restoreDom = installViewDialogDomStubs();
+
+  try {
+    const board = createBoardWithCustomStages();
+    board.stageOrder = ['review', 'qa', 'published', 'blocked'];
+    board.stages.blocked = {
+      id: 'blocked',
+      title: 'Blocked',
+      cardIds: [],
+      allowedTransitionStageIds: [],
+      templateIds: [],
+      actions: [],
+      actionIds: []
+    };
+    const { controller, card } = createViewDialogController({
+      viewerRole: 'editor',
+      board,
+      cardStageId: 'blocked'
+    });
+
+    WorkspaceController.prototype.openView.call(controller, {
+      currentTarget: createViewTriggerDouble(card.id, 'blocked')
+    });
+
+    assert.equal(controller.viewStatusSectionTarget.hidden, true);
+    assert.equal(controller.viewStatusButtonTarget.hidden, true);
+    assert.equal(controller.viewStatusButtonTarget.disabled, true);
+    assert.equal(controller.viewStatusButtonTarget.attributes['aria-disabled'], 'true');
+    assert.deepEqual(controller.viewStatusMenuTarget.children, []);
+    assert.deepEqual(controller.viewStatusSelectTarget.options, []);
   } finally {
     restoreDom();
   }
@@ -2177,23 +2282,23 @@ test('handleViewDialogClick closes the locale menu when clicking outside', () =>
   }
 });
 
-test('dismissViewDialog closes the locale menu before clearing state', () => {
+test('dismissViewDialog closes the status and locale menus before clearing state', () => {
   const restoreDom = installViewDialogDomStubs();
 
   try {
-    const defaultBoard = createEmptyWorkspace().boards.main;
     const { controller, card } = createViewDialogController({
-      board: defaultBoard,
-      viewerRole: 'editor',
-      cardStageId: 'archived'
+      viewerRole: 'editor'
     });
 
     WorkspaceController.prototype.openView.call(controller, {
-      currentTarget: createViewTriggerDouble(card.id, 'archived')
+      currentTarget: createViewTriggerDouble(card.id, 'review')
     });
+    WorkspaceController.prototype.openViewStatusMenu.call(controller);
     WorkspaceController.prototype.openViewLocaleMenu.call(controller);
     WorkspaceController.prototype.dismissViewDialog.call(controller, { restoreFocus: false });
 
+    assert.equal(controller.viewStatusMenuTarget.hidden, true);
+    assert.equal(controller.viewStatusButtonTarget.attributes['aria-expanded'], 'false');
     assert.equal(controller.viewLocaleMenuTarget.hidden, true);
     assert.equal(controller.viewLocaleButtonTarget.attributes['aria-expanded'], 'false');
     assert.equal(controller.viewDialogState, null);
@@ -3591,12 +3696,26 @@ function createViewDialogController({
     }
   };
   controller.viewDialogTarget = createDialogDouble();
+  controller.hasViewStatusSectionTarget = true;
+  controller.viewStatusSectionTarget = { hidden: true };
+  controller.hasViewStatusButtonTarget = true;
+  controller.viewStatusButtonTarget = createButtonDouble();
+  controller.hasViewStatusMenuTarget = true;
+  controller.viewStatusMenuTarget = createMenuDouble({
+    selectors: ['[data-workspace-target="viewStatusOption"]']
+  });
+  controller.hasViewStatusSelectTarget = true;
+  controller.viewStatusSelectTarget = createSelectDouble();
+  controller.hasViewStatusOptionTemplateTarget = true;
+  controller.viewStatusOptionTemplateTarget = createStatusOptionTemplateDouble();
   controller.hasViewLocaleSectionTarget = true;
   controller.viewLocaleSectionTarget = { hidden: true };
   controller.hasViewLocaleButtonTarget = true;
   controller.viewLocaleButtonTarget = createButtonDouble();
   controller.hasViewLocaleMenuTarget = true;
-  controller.viewLocaleMenuTarget = createMenuDouble();
+  controller.viewLocaleMenuTarget = createMenuDouble({
+    selectors: ['.view-locale-menu-option']
+  });
   controller.hasViewLocaleSelectTarget = true;
   controller.viewLocaleSelectTarget = createSelectDouble();
   controller.hasViewReviewStateTarget = true;
@@ -3698,6 +3817,7 @@ function createSelectDouble() {
   return {
     options: [],
     value: '',
+    selectedIndex: -1,
     disabled: false,
     attributes: {},
     replaceChildren(...options) {
@@ -3731,7 +3851,7 @@ function createButtonDouble() {
   };
 }
 
-function createMenuDouble() {
+function createMenuDoubleWithSelectors(selectors = []) {
   return {
     hidden: true,
     children: [],
@@ -3742,11 +3862,29 @@ function createMenuDouble() {
       this.children = children;
     },
     querySelectorAll(selector) {
-      if (selector === '.view-locale-menu-option') {
+      if (selectors.includes(selector)) {
         return this.children;
       }
 
       return [];
+    }
+  };
+}
+
+function createMenuDouble({ selectors = ['.view-locale-menu-option'] } = {}) {
+  return createMenuDoubleWithSelectors(selectors);
+}
+
+function createStatusOptionTemplateDouble() {
+  return {
+    content: {
+      firstElementChild: {
+        cloneNode() {
+          const button = createMenuButtonDouble();
+          button.className = 'view-locale-menu-option view-locale-menu-option--status';
+          return button;
+        }
+      }
     }
   };
 }
@@ -3900,7 +4038,8 @@ function createViewDialogTranslator(locale) {
     'workspace.columns.archived': 'Archived',
     'workspace.priorities.urgent': 'Urgent',
     'workspace.priorities.important': 'Important',
-    'workspace.priorities.normal': 'Normal'
+    'workspace.priorities.normal': 'Normal',
+    'cardEditor.statusLabel': 'Task Status'
   };
 
   return Object.assign(

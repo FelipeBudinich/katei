@@ -33,6 +33,11 @@ import {
   shouldShowPriorityForStage,
   shouldShowPromptRunForStage
 } from './stage_ui.js';
+import {
+  createStageSelectOption,
+  createStatusMenuOptionFromTemplate,
+  getActionableStageMoveOptions
+} from './status_picker.js';
 
 export default class extends Controller {
   static values = {
@@ -48,6 +53,11 @@ export default class extends Controller {
     'desktopColumns',
     'announcer',
     'viewDialog',
+    'viewStatusSection',
+    'viewStatusButton',
+    'viewStatusMenu',
+    'viewStatusSelect',
+    'viewStatusOptionTemplate',
     'viewLocaleSection',
     'viewLocaleButton',
     'viewLocaleMenu',
@@ -677,6 +687,17 @@ export default class extends Controller {
 
     scheduleBrowserFrame(() => {
       if (
+        this.hasViewStatusSectionTarget &&
+        this.hasViewStatusButtonTarget &&
+        !this.viewStatusSectionTarget.hidden &&
+        this.viewStatusButtonTarget.hidden !== true &&
+        this.viewStatusButtonTarget.disabled !== true
+      ) {
+        this.viewStatusButtonTarget.focus();
+        return;
+      }
+
+      if (
         this.hasViewLocaleSectionTarget &&
         this.hasViewLocaleButtonTarget &&
         !this.viewLocaleSectionTarget.hidden &&
@@ -753,6 +774,152 @@ export default class extends Controller {
     }
   }
 
+  async changeViewStatus(event) {
+    event?.preventDefault?.();
+
+    const board = this.viewDialogState?.board ?? null;
+    const card = this.viewDialogState?.card ?? null;
+    const boardId = normalizeOptionalWorkspaceId(board?.id);
+    const cardId = normalizeOptionalWorkspaceId(card?.id);
+    const sourceStageId = board
+      ? resolveBoardStageId(board, {
+          stageId: this.viewDialogState?.stageId,
+          cardId
+        })
+      : null;
+    const targetStageId = normalizeOptionalWorkspaceId(
+      event?.currentTarget?.dataset?.targetStageId
+      ?? event?.currentTarget?.value
+    );
+    const canEditBoard = this.viewDialogState?.canEditBoard === true;
+    const canMoveToTarget = getActionableStageMoveOptions(board, sourceStageId)
+      .some((option) => option.id === targetStageId);
+
+    if (!boardId || !cardId || !sourceStageId || !targetStageId || !canEditBoard || !canMoveToTarget) {
+      return false;
+    }
+
+    this.closeViewStatusMenu({
+      restoreFocus: Boolean(event?.currentTarget?.dataset?.targetStageId)
+    });
+
+    return this.runCardMove({
+      boardId,
+      cardId,
+      sourceStageId,
+      targetStageId
+    });
+  }
+
+  toggleViewStatusMenu(event) {
+    event.preventDefault();
+
+    if (this.isViewStatusMenuOpen()) {
+      this.closeViewStatusMenu();
+      return;
+    }
+
+    this.openViewStatusMenu();
+  }
+
+  openViewStatusMenu() {
+    if (
+      !this.hasViewStatusButtonTarget ||
+      !this.hasViewStatusMenuTarget ||
+      this.viewStatusButtonTarget.disabled === true
+    ) {
+      return;
+    }
+
+    if (this.getViewStatusMenuOptions().length < 1) {
+      return;
+    }
+
+    this.closeViewLocaleMenu({ restoreFocus: false });
+    this.viewStatusMenuTarget.hidden = false;
+    this.viewStatusButtonTarget.setAttribute('aria-expanded', 'true');
+  }
+
+  closeViewStatusMenu({ restoreFocus = false } = {}) {
+    if (this.hasViewStatusMenuTarget) {
+      this.viewStatusMenuTarget.hidden = true;
+    }
+
+    if (this.hasViewStatusButtonTarget) {
+      this.viewStatusButtonTarget.setAttribute('aria-expanded', 'false');
+
+      if (restoreFocus) {
+        this.viewStatusButtonTarget.focus?.();
+      }
+    }
+  }
+
+  handleViewStatusTriggerKeydown(event) {
+    if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') {
+      event.preventDefault();
+      this.openViewStatusMenu();
+      this.focusSelectedViewStatusMenuOption();
+      return;
+    }
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      this.openViewStatusMenu();
+      this.focusSelectedViewStatusMenuOption();
+      return;
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      this.openViewStatusMenu();
+      this.focusSelectedViewStatusMenuOption();
+    }
+  }
+
+  handleViewStatusMenuKeydown(event) {
+    const options = this.getViewStatusMenuOptions();
+
+    if (options.length < 1) {
+      return;
+    }
+
+    const activeIndex = options.findIndex((option) => option === event.target);
+
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      this.closeViewStatusMenu({ restoreFocus: true });
+      return;
+    }
+
+    if (event.key === 'Tab') {
+      this.closeViewStatusMenu();
+      return;
+    }
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      this.focusViewStatusMenuOption(activeIndex >= 0 ? activeIndex + 1 : 0);
+      return;
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      this.focusViewStatusMenuOption(activeIndex >= 0 ? activeIndex - 1 : options.length - 1);
+      return;
+    }
+
+    if (event.key === 'Home') {
+      event.preventDefault();
+      this.focusViewStatusMenuOption(0);
+      return;
+    }
+
+    if (event.key === 'End') {
+      event.preventDefault();
+      this.focusViewStatusMenuOption(options.length - 1);
+    }
+  }
+
   toggleViewLocaleMenu(event) {
     event.preventDefault();
 
@@ -777,6 +944,7 @@ export default class extends Controller {
       return;
     }
 
+    this.closeViewStatusMenu({ restoreFocus: false });
     this.viewLocaleMenuTarget.hidden = false;
     this.viewLocaleButtonTarget.setAttribute('aria-expanded', 'true');
   }
@@ -862,19 +1030,66 @@ export default class extends Controller {
   }
 
   handleViewDialogClick(event) {
-    if (!this.isViewLocaleMenuOpen()) {
-      return;
-    }
-
     const target = event?.target ?? null;
-    const clickedMenu = this.hasViewLocaleMenuTarget && this.viewLocaleMenuTarget.contains?.(target);
-    const clickedTrigger = this.hasViewLocaleButtonTarget && this.viewLocaleButtonTarget.contains?.(target);
+    const clickedStatusMenu =
+      this.hasViewStatusMenuTarget && this.viewStatusMenuTarget.contains?.(target);
+    const clickedStatusTrigger =
+      this.hasViewStatusButtonTarget && this.viewStatusButtonTarget.contains?.(target);
+    const clickedLocaleMenu =
+      this.hasViewLocaleMenuTarget && this.viewLocaleMenuTarget.contains?.(target);
+    const clickedLocaleTrigger =
+      this.hasViewLocaleButtonTarget && this.viewLocaleButtonTarget.contains?.(target);
 
-    if (clickedMenu || clickedTrigger) {
+    if (this.isViewStatusMenuOpen() && !clickedStatusMenu && !clickedStatusTrigger) {
+      this.closeViewStatusMenu();
+    }
+
+    if (this.isViewLocaleMenuOpen() && !clickedLocaleMenu && !clickedLocaleTrigger) {
+      this.closeViewLocaleMenu();
+    }
+  }
+
+  isViewStatusMenuOpen() {
+    return this.hasViewStatusMenuTarget && this.viewStatusMenuTarget.hidden !== true;
+  }
+
+  getViewStatusMenuOptions() {
+    if (!this.hasViewStatusMenuTarget) {
+      return [];
+    }
+
+    if (typeof this.viewStatusMenuTarget.querySelectorAll === 'function') {
+      return Array.from(
+        this.viewStatusMenuTarget.querySelectorAll('[data-workspace-target="viewStatusOption"]')
+      );
+    }
+
+    if (Array.isArray(this.viewStatusMenuTarget.children)) {
+      return this.viewStatusMenuTarget.children;
+    }
+
+    return [];
+  }
+
+  focusViewStatusMenuOption(index) {
+    const options = this.getViewStatusMenuOptions();
+
+    if (options.length < 1) {
       return;
     }
 
-    this.closeViewLocaleMenu();
+    const boundedIndex = ((index % options.length) + options.length) % options.length;
+    options.forEach((option, optionIndex) => {
+      option.tabIndex = optionIndex === boundedIndex ? 0 : -1;
+    });
+    options[boundedIndex]?.focus?.();
+  }
+
+  focusSelectedViewStatusMenuOption() {
+    const selectedStageId = this.viewStatusSelectTarget?.value ?? '';
+    const options = this.getViewStatusMenuOptions();
+    const selectedIndex = options.findIndex((option) => option.dataset.targetStageId === selectedStageId);
+    this.focusViewStatusMenuOption(selectedIndex >= 0 ? selectedIndex : 0);
   }
 
   isViewLocaleMenuOpen() {
@@ -1173,25 +1388,37 @@ export default class extends Controller {
   }
 
   async moveCardTo(event) {
+    event?.preventDefault?.();
+
+    const {
+      cardId,
+      boardId,
+      sourceStageId,
+      targetStageId,
+      sourceColumnId,
+      targetColumnId
+    } = event.currentTarget.dataset;
+
+    return this.runCardMove({
+      boardId: boardId || this.activeBoard?.id,
+      cardId,
+      sourceStageId: sourceStageId || sourceColumnId,
+      targetStageId: targetStageId || targetColumnId
+    });
+  }
+
+  async runCardMove({ boardId, cardId, sourceStageId, targetStageId } = {}) {
     try {
-      const {
-        cardId,
-        boardId,
-        sourceStageId,
-        targetStageId,
-        sourceColumnId,
-        targetColumnId
-      } = event.currentTarget.dataset;
       const nextBoardId = boardId || this.activeBoard?.id;
       const board = nextBoardId ? this.workspace?.boards?.[nextBoardId] : null;
-      const nextSourceStageId = sourceStageId || sourceColumnId;
-      const nextTargetStageId = targetStageId || targetColumnId;
+      const nextSourceStageId = sourceStageId;
+      const nextTargetStageId = targetStageId;
 
       if (!board || !nextSourceStageId || !nextTargetStageId) {
-        return;
+        return false;
       }
 
-      await this.runAction(
+      return this.runAction(
         () => this.service.moveCard(nextBoardId, cardId, nextSourceStageId, nextTargetStageId),
         this.t('workspace.announcements.movedCard', {
           column: getBoardStageTitle(board, nextTargetStageId)
@@ -1367,6 +1594,7 @@ export default class extends Controller {
   }
 
   dismissViewDialog({ restoreFocus = true } = {}) {
+    this.closeViewStatusMenu({ restoreFocus: false });
     this.closeViewLocaleMenu({ restoreFocus: false });
 
     if (this.viewDialogTarget.open) {
@@ -1530,7 +1758,26 @@ export default class extends Controller {
       : null;
     const boardId = normalizeOptionalWorkspaceId(board?.id);
     const shouldShowPriority = shouldShowPriorityForStage(resolvedStageId);
+    const statusOptions = getActionableStageMoveOptions(board, resolvedStageId);
+    const shouldShowStatusSection = Boolean(
+      canEditBoard
+      && board
+      && card
+      && resolvedStageId
+      && statusOptions.length > 0
+    );
     const content = localizedView.variant;
+    const statusMenuOptions = shouldShowStatusSection && this.hasViewStatusOptionTemplateTarget
+      ? statusOptions.map(({ id, title }) =>
+          createStatusMenuOptionFromTemplate(this.viewStatusOptionTemplateTarget, {
+            stageId: id,
+            title
+          })
+        )
+      : [];
+    const statusSelectOptions = shouldShowStatusSection
+      ? statusOptions.map(({ id, title }) => createStageSelectOption(id, title))
+      : [];
     const localeOptions = localizedView.availableLocales.map((locale) => createLocaleOption(locale));
     const localeMenuOptions = localizedView.availableLocales.map((locale) =>
       createLocaleMenuOption(locale, localizedView.selectedLocale)
@@ -1565,6 +1812,38 @@ export default class extends Controller {
       && this.pendingStagePromptRunKeys instanceof Set
       && this.pendingStagePromptRunKeys.has(promptRunRequestKey)
     );
+
+    if (this.hasViewStatusSectionTarget) {
+      this.viewStatusSectionTarget.hidden = !shouldShowStatusSection;
+    }
+
+    if (this.hasViewStatusSelectTarget) {
+      this.viewStatusSelectTarget.replaceChildren(...statusSelectOptions);
+      this.viewStatusSelectTarget.value = '';
+      this.viewStatusSelectTarget.selectedIndex = -1;
+      this.viewStatusSelectTarget.disabled = !shouldShowStatusSection;
+      this.viewStatusSelectTarget.setAttribute('aria-disabled', String(!shouldShowStatusSection));
+    }
+
+    if (this.hasViewStatusButtonTarget) {
+      const statusLabel = this.t('cardEditor.statusLabel');
+      const currentStageLabel = getBoardStageTitle(board, resolvedStageId) || statusLabel;
+
+      this.viewStatusButtonTarget.hidden = !shouldShowStatusSection;
+      this.viewStatusButtonTarget.disabled = !shouldShowStatusSection;
+      this.viewStatusButtonTarget.setAttribute('aria-disabled', String(!shouldShowStatusSection));
+      this.viewStatusButtonTarget.setAttribute('aria-expanded', 'false');
+      this.viewStatusButtonTarget.title = currentStageLabel;
+      this.viewStatusButtonTarget.setAttribute(
+        'aria-label',
+        currentStageLabel ? `${statusLabel}: ${currentStageLabel}` : statusLabel
+      );
+    }
+
+    if (this.hasViewStatusMenuTarget) {
+      this.viewStatusMenuTarget.hidden = true;
+      this.viewStatusMenuTarget.replaceChildren(...statusMenuOptions);
+    }
 
     if (this.hasViewLocaleSectionTarget && this.hasViewLocaleSelectTarget) {
       const shouldShowLocaleSection = localeOptions.length > 0;

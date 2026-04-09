@@ -1,0 +1,52 @@
+<div class="view-locale-picker" hidden data-{{ statusPickerController }}-target="{{ statusPickerSectionTarget }}">
+  <button
+    type="button"
+    id="{{ statusPickerPrefix }}-status-trigger"
+    class="touch-button-secondary touch-button-secondary--icon"
+    aria-label="{{ t('cardEditor.statusLabel') }}"
+    aria-haspopup="menu"
+    aria-expanded="false"
+    aria-controls="{{ statusPickerPrefix }}-status-menu"
+    data-{{ statusPickerController }}-target="{{ statusPickerButtonTarget }}"
+    data-action="click->{{ statusPickerController }}#{{ statusPickerToggleAction }} keydown->{{ statusPickerController }}#{{ statusPickerTriggerKeydownAction }}"
+  >
+    <img src="/switch.svg" alt="" aria-hidden="true" class="touch-button-secondary__icon">
+    <span class="sr-only">{{ t('cardEditor.statusLabel') }}</span>
+  </button>
+
+  <div
+    id="{{ statusPickerPrefix }}-status-menu"
+    class="view-locale-menu"
+    role="menu"
+    aria-label="{{ t('cardEditor.statusLabel') }}"
+    hidden
+    data-{{ statusPickerController }}-target="{{ statusPickerMenuTarget }}"
+    data-action="keydown->{{ statusPickerController }}#{{ statusPickerMenuKeydownAction }}"
+  ></div>
+
+  <template data-{{ statusPickerController }}-target="{{ statusPickerOptionTemplateTarget }}">
+    <button
+      type="button"
+      class="view-locale-menu-option view-locale-menu-option--status"
+      value=""
+      data-{{ statusPickerController }}-target="{{ statusPickerOptionTarget }}"
+      data-stage-title=""
+      data-target-stage-id=""
+      role="menuitem"
+      tabindex="-1"
+      data-action="{{ statusPickerController }}#{{ statusPickerOptionAction }}"
+    ></button>
+  </template>
+
+  <label class="sr-only" for="{{ statusPickerPrefix }}-status-select">{{ t('cardEditor.statusLabel') }}</label>
+  <select
+    id="{{ statusPickerPrefix }}-status-select"
+    {% if statusPickerFormId %}form="{{ statusPickerFormId }}"{% endif %}
+    class="sr-only"
+    hidden
+    tabindex="-1"
+    aria-hidden="true"
+    data-{{ statusPickerController }}-target="{{ statusPickerSelectTarget }}"
+    data-action="change->{{ statusPickerController }}#{{ statusPickerSelectAction }}"
+  ></select>
+</div>
