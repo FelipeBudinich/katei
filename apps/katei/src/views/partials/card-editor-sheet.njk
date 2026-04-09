@@ -19,6 +19,69 @@
           </button>
         </div>
 
+        <div class="view-locale-picker" hidden data-card-editor-target="prioritySection">
+          <button
+            type="button"
+            id="card-editor-priority-trigger"
+            class="touch-button-secondary touch-button-secondary--icon"
+            aria-label="{{ t('cardEditor.priorityLabel') }}"
+            aria-haspopup="menu"
+            aria-expanded="false"
+            aria-controls="card-editor-priority-menu"
+            data-card-editor-target="priorityButton"
+            data-action="click->card-editor#togglePriorityMenu keydown->card-editor#handlePriorityTriggerKeydown"
+          >
+            <img src="/traffic.svg" alt="" aria-hidden="true" class="touch-button-secondary__icon">
+            <span class="sr-only">{{ t('cardEditor.priorityLabel') }}</span>
+          </button>
+
+          <div
+            id="card-editor-priority-menu"
+            class="view-locale-menu"
+            role="menu"
+            aria-label="{{ t('cardEditor.priorityGroupAriaLabel') }}"
+            hidden
+            data-card-editor-target="priorityMenu"
+            data-action="keydown->card-editor#handlePriorityMenuKeydown"
+          >
+            {% for priority in priorityDefinitions %}
+              <button
+                type="button"
+                class="view-locale-menu-option view-locale-menu-option--priority"
+                value="{{ priority.id }}"
+                data-card-editor-target="priorityOption"
+                data-priority-id="{{ priority.id }}"
+                data-priority-label="{{ priority.label }}"
+                role="menuitemradio"
+                aria-checked="false"
+                tabindex="-1"
+                data-action="card-editor#selectPriority"
+              >
+                {{ priority.label }}
+              </button>
+            {% endfor %}
+          </div>
+
+          <label class="sr-only" for="card-editor-priority-select">{{ t('cardEditor.priorityLabel') }}</label>
+          <select
+            id="card-editor-priority-select"
+            name="priority"
+            form="card-editor-form"
+            class="sr-only"
+            hidden
+            tabindex="-1"
+            aria-hidden="true"
+            data-card-editor-target="priorityInput prioritySelect"
+            data-action="change->card-editor#changePriorityFromSelect"
+          >
+            {% for priority in priorityDefinitions %}
+              <option value="{{ priority.id }}"{% if priority.id == 'important' %} selected{% endif %}>
+                {{ priority.label }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
         <button
           type="button"
           class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--close"
@@ -131,72 +194,6 @@
           data-card-editor-target="markdownInput"
         ></textarea>
       </label>
-
-      <section class="space-y-3 pt-2" data-card-editor-target="prioritySection">
-        <p class="field-label text-sm font-semibold">{{ t('cardEditor.priorityLabel') }}</p>
-
-        <div class="view-locale-picker">
-          <button
-            type="button"
-            id="card-editor-priority-trigger"
-            class="touch-button-secondary touch-button-secondary--icon"
-            aria-label="{{ t('cardEditor.priorityLabel') }}"
-            aria-haspopup="menu"
-            aria-expanded="false"
-            aria-controls="card-editor-priority-menu"
-            data-card-editor-target="priorityButton"
-            data-action="click->card-editor#togglePriorityMenu keydown->card-editor#handlePriorityTriggerKeydown"
-          >
-            <img src="/traffic.svg" alt="" aria-hidden="true" class="touch-button-secondary__icon">
-            <span class="sr-only">{{ t('cardEditor.priorityLabel') }}</span>
-          </button>
-
-          <div
-            id="card-editor-priority-menu"
-            class="view-locale-menu"
-            role="menu"
-            aria-label="{{ t('cardEditor.priorityGroupAriaLabel') }}"
-            hidden
-            data-card-editor-target="priorityMenu"
-            data-action="keydown->card-editor#handlePriorityMenuKeydown"
-          >
-            {% for priority in priorityDefinitions %}
-              <button
-                type="button"
-                class="view-locale-menu-option view-locale-menu-option--priority"
-                value="{{ priority.id }}"
-                data-card-editor-target="priorityOption"
-                data-priority-id="{{ priority.id }}"
-                data-priority-label="{{ priority.label }}"
-                role="menuitemradio"
-                aria-checked="false"
-                tabindex="-1"
-                data-action="card-editor#selectPriority"
-              >
-                {{ priority.label }}
-              </button>
-            {% endfor %}
-          </div>
-
-          <label class="sr-only" for="card-editor-priority-select">{{ t('cardEditor.priorityLabel') }}</label>
-          <select
-            id="card-editor-priority-select"
-            name="priority"
-            class="sr-only"
-            hidden
-            tabindex="-1"
-            aria-hidden="true"
-            data-card-editor-target="priorityInput prioritySelect"
-            data-action="change->card-editor#changePriorityFromSelect"
-          >
-            {% for priority in priorityDefinitions %}
-              <option value="{{ priority.id }}"{% if priority.id == 'important' %} selected{% endif %}>
-                {{ priority.label }}
-              </option>
-            {% endfor %}
-          </select>
-        </div>
-      </section>
 
       <section class="space-y-3 pt-2" hidden data-card-editor-target="editActions">
         <div class="space-y-2">

@@ -1886,7 +1886,7 @@ test('workspace template renders edit localization controls and a simplified loc
   );
   assert.match(
     cardEditorDialog,
-    /data-card-editor-target="prioritySection"[\s\S]*id="card-editor-priority-trigger"[\s\S]*data-card-editor-target="priorityButton"[\s\S]*<img src="\/traffic\.svg" alt="" aria-hidden="true" class="touch-button-secondary__icon">[\s\S]*id="card-editor-priority-menu"[\s\S]*data-card-editor-target="priorityMenu"[\s\S]*role="menuitemradio"[\s\S]*data-card-editor-target="priorityOption"[\s\S]*id="card-editor-priority-select"[\s\S]*name="priority"[\s\S]*data-card-editor-target="priorityInput prioritySelect"/
+    /class="dialog-header-row mt-4"[\s\S]*data-card-editor-target="heading"[\s\S]*data-card-editor-target="submitActions"[\s\S]*data-card-editor-target="prioritySection"[\s\S]*id="card-editor-priority-trigger"[\s\S]*data-card-editor-target="priorityButton"[\s\S]*<img src="\/traffic\.svg" alt="" aria-hidden="true" class="touch-button-secondary__icon">[\s\S]*id="card-editor-priority-menu"[\s\S]*data-card-editor-target="priorityMenu"[\s\S]*role="menuitemradio"[\s\S]*data-card-editor-target="priorityOption"[\s\S]*id="card-editor-priority-select"[\s\S]*name="priority"[\s\S]*form="card-editor-form"[\s\S]*data-card-editor-target="priorityInput prioritySelect"[\s\S]*touch-button-secondary--close/
   );
   assert.doesNotMatch(cardEditorDialog, /priority-dot-group/);
   assert.doesNotMatch(cardEditorDialog, /Localized content/);
