@@ -24,6 +24,12 @@ export default class extends Controller {
     'cardIdInput',
     'sourceStageIdInput',
     'targetStageIdInput',
+    'statusSection',
+    'statusButton',
+    'statusMenu',
+    'statusSelect',
+    'statusOption',
+    'statusOptionTemplate',
     'prioritySection',
     'priorityInput',
     'priorityButton',
@@ -45,9 +51,6 @@ export default class extends Controller {
     'requestLocaleButton',
     'clearLocaleRequestButton',
     'verifyLocaleButton',
-    'editActions',
-    'moveOptionRegion',
-    'moveOptionTemplate',
     'submitActions'
   ];
 
@@ -154,12 +157,13 @@ export default class extends Controller {
     this.sourceStageIdInputTarget.value = sourceStageId;
     this.targetStageIdInputTarget.value = targetStageId;
     this.priorityInputTarget.value = card?.priority ?? 'important';
+    this.closeStatusMenu();
     this.closePriorityMenu();
     this.ensureEditor().value('');
     this.syncLocalizedCardView();
     this.syncReadOnlyMode();
     this.headingTarget.textContent = this.t(getCardDialogHeadingKey(nextMode));
-    this.renderMoveOptions({ board, sourceStageId });
+    this.renderStatusOptions({ board, sourceStageId });
     this.syncPriorityOptions();
     this.syncEditActions({
       isEditMode,
@@ -210,6 +214,119 @@ export default class extends Controller {
     this.syncLocalizedCardView();
   }
 
+  toggleStatusMenu(event) {
+    event.preventDefault();
+
+    if (this.isReadOnlyLocaleView) {
+      return;
+    }
+
+    if (this.isStatusMenuOpen()) {
+      this.closeStatusMenu();
+      return;
+    }
+
+    this.openStatusMenu();
+  }
+
+  openStatusMenu() {
+    if (
+      !this.hasStatusButtonTarget ||
+      !this.hasStatusMenuTarget ||
+      this.statusButtonTarget.disabled === true
+    ) {
+      return;
+    }
+
+    if (this.getStatusMenuOptions().length < 1) {
+      return;
+    }
+
+    this.closePriorityMenu();
+    this.statusMenuTarget.hidden = false;
+    this.statusButtonTarget.setAttribute('aria-expanded', 'true');
+  }
+
+  closeStatusMenu({ restoreFocus = false } = {}) {
+    if (this.hasStatusMenuTarget) {
+      this.statusMenuTarget.hidden = true;
+    }
+
+    if (this.hasStatusButtonTarget) {
+      this.statusButtonTarget.setAttribute('aria-expanded', 'false');
+
+      if (restoreFocus) {
+        this.statusButtonTarget.focus?.();
+      }
+    }
+  }
+
+  handleStatusTriggerKeydown(event) {
+    if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') {
+      event.preventDefault();
+      this.openStatusMenu();
+      this.focusSelectedStatusMenuOption();
+      return;
+    }
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      this.openStatusMenu();
+      this.focusSelectedStatusMenuOption();
+      return;
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      this.openStatusMenu();
+      this.focusSelectedStatusMenuOption();
+    }
+  }
+
+  handleStatusMenuKeydown(event) {
+    const options = this.getStatusMenuOptions();
+
+    if (options.length < 1) {
+      return;
+    }
+
+    const activeIndex = options.findIndex((option) => option === event.target);
+
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      this.closeStatusMenu({ restoreFocus: true });
+      return;
+    }
+
+    if (event.key === 'Tab') {
+      this.closeStatusMenu();
+      return;
+    }
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      this.focusStatusMenuOption(activeIndex >= 0 ? activeIndex + 1 : 0);
+      return;
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      this.focusStatusMenuOption(activeIndex >= 0 ? activeIndex - 1 : options.length - 1);
+      return;
+    }
+
+    if (event.key === 'Home') {
+      event.preventDefault();
+      this.focusStatusMenuOption(0);
+      return;
+    }
+
+    if (event.key === 'End') {
+      event.preventDefault();
+      this.focusStatusMenuOption(options.length - 1);
+    }
+  }
+
   togglePriorityMenu(event) {
     event.preventDefault();
 
@@ -239,6 +356,7 @@ export default class extends Controller {
       return;
     }
 
+    this.closeStatusMenu();
     this.priorityMenuTarget.hidden = false;
     this.priorityButtonTarget.setAttribute('aria-expanded', 'true');
   }
@@ -324,20 +442,29 @@ export default class extends Controller {
   }
 
   handleDialogClick(event) {
-    if (!this.isPriorityMenuOpen()) {
-      return;
-    }
-
     const target = event?.target ?? null;
-    const clickedMenu = this.hasPriorityMenuTarget && this.priorityMenuTarget.contains?.(target);
-    const clickedTrigger =
-      this.hasPriorityButtonTarget && this.priorityButtonTarget.contains?.(target);
 
-    if (clickedMenu || clickedTrigger) {
-      return;
+    if (this.isPriorityMenuOpen()) {
+      const clickedPriorityMenu =
+        this.hasPriorityMenuTarget && this.priorityMenuTarget.contains?.(target);
+      const clickedPriorityTrigger =
+        this.hasPriorityButtonTarget && this.priorityButtonTarget.contains?.(target);
+
+      if (!clickedPriorityMenu && !clickedPriorityTrigger) {
+        this.closePriorityMenu();
+      }
     }
 
-    this.closePriorityMenu();
+    if (this.isStatusMenuOpen()) {
+      const clickedStatusMenu =
+        this.hasStatusMenuTarget && this.statusMenuTarget.contains?.(target);
+      const clickedStatusTrigger =
+        this.hasStatusButtonTarget && this.statusButtonTarget.contains?.(target);
+
+      if (!clickedStatusMenu && !clickedStatusTrigger) {
+        this.closeStatusMenu();
+      }
+    }
   }
 
   changePriorityFromSelect(event) {
@@ -361,6 +488,26 @@ export default class extends Controller {
     this.closePriorityMenu({ restoreFocus: true });
   }
 
+  changeStatusFromSelect(event) {
+    if (this.isReadOnlyLocaleView) {
+      return;
+    }
+
+    const nextTargetStageId = event.currentTarget.value ?? this.targetStageIdInputTarget.value;
+
+    if (!nextTargetStageId) {
+      return;
+    }
+
+    this.targetStageIdInputTarget.value = nextTargetStageId;
+    this.syncEditActions({
+      isEditMode: this.modeInputTarget.value === 'edit',
+      cardId: this.cardIdInputTarget.value,
+      sourceStageId: this.sourceStageIdInputTarget.value,
+      targetStageId: this.targetStageIdInputTarget.value
+    });
+  }
+
   selectStage(event) {
     event.preventDefault();
 
@@ -370,6 +517,7 @@ export default class extends Controller {
 
     this.targetStageIdInputTarget.value =
       event.currentTarget.dataset.targetStageId ??
+      event.currentTarget.value ??
       this.targetStageIdInputTarget.value;
     this.syncEditActions({
       isEditMode: this.modeInputTarget.value === 'edit',
@@ -377,6 +525,7 @@ export default class extends Controller {
       sourceStageId: this.sourceStageIdInputTarget.value,
       targetStageId: this.targetStageIdInputTarget.value
     });
+    this.closeStatusMenu({ restoreFocus: true });
   }
 
   submit(event) {
@@ -537,6 +686,7 @@ export default class extends Controller {
   }
 
   closeDialog() {
+    this.closeStatusMenu();
     this.closePriorityMenu();
 
     if (this.dialogTarget.open) {
@@ -617,40 +767,108 @@ export default class extends Controller {
     });
   }
 
-  renderMoveOptions({ board, sourceStageId }) {
-    const moveOptionButtons = getStageMoveOptions(board, sourceStageId).map(({ id, title }) => {
-      const button = this.moveOptionTemplateTarget.content.firstElementChild.cloneNode(true);
+  syncStatusOptions({ sourceStageId, targetStageId, isDisabled = false } = {}) {
+    const statusOptions = this.getStatusMenuOptions();
+    const hasOptions = statusOptions.length > 0;
+    let resolvedTargetStageId = targetStageId ?? this.targetStageIdInputTarget.value;
+
+    if (
+      hasOptions &&
+      !statusOptions.some((option) => option.dataset.targetStageId === resolvedTargetStageId)
+    ) {
+      resolvedTargetStageId = statusOptions[0].dataset.targetStageId ?? resolvedTargetStageId;
+      this.targetStageIdInputTarget.value = resolvedTargetStageId;
+    }
+
+    const shouldDisable = isDisabled || !hasOptions;
+
+    if (this.hasStatusSelectTarget) {
+      this.statusSelectTarget.value = resolvedTargetStageId;
+      this.statusSelectTarget.disabled = shouldDisable;
+      this.statusSelectTarget.setAttribute('aria-disabled', String(shouldDisable));
+    }
+
+    const selectedIndex = statusOptions.findIndex(
+      (option) => option.dataset.targetStageId === resolvedTargetStageId
+    );
+    const focusableIndex = selectedIndex >= 0 ? selectedIndex : 0;
+
+    statusOptions.forEach((button, index) => {
+      const buttonTargetStageId = button.dataset.targetStageId ?? '';
+      const isSelectedStage = buttonTargetStageId === resolvedTargetStageId;
+      const isCurrentStage = buttonTargetStageId === sourceStageId;
+      const stageTitle = button.dataset.stageTitle ?? '';
+
+      button.disabled = shouldDisable;
+      button.value = buttonTargetStageId;
+      button.textContent = getStageSelectionLabel({
+        stageTitle,
+        isSelectedStage,
+        isCurrentStage,
+        t: this.t
+      });
+      button.tabIndex = index === focusableIndex ? 0 : -1;
+      button.setAttribute('aria-disabled', String(shouldDisable));
+      button.setAttribute('aria-checked', String(isSelectedStage));
+    });
+
+    if (this.hasStatusButtonTarget) {
+      const selectedOption = selectedIndex >= 0 ? statusOptions[selectedIndex] : null;
+      const statusLabel = this.t('cardEditor.statusLabel');
+      const selectedLabel =
+        selectedOption?.textContent?.trim() ?? selectedOption?.dataset.stageTitle ?? statusLabel;
+
+      this.statusButtonTarget.disabled = shouldDisable;
+      this.statusButtonTarget.setAttribute('aria-disabled', String(shouldDisable));
+      this.statusButtonTarget.title = selectedLabel;
+      this.statusButtonTarget.setAttribute(
+        'aria-label',
+        selectedLabel ? `${statusLabel}: ${selectedLabel}` : statusLabel
+      );
+    }
+
+    if (shouldDisable) {
+      this.closeStatusMenu();
+    }
+  }
+
+  renderStatusOptions({ board, sourceStageId }) {
+    const statusOptions = getStageMoveOptions(board, sourceStageId);
+    const statusButtons = statusOptions.map(({ id, title }) => {
+      const button = this.statusOptionTemplateTarget.content.firstElementChild.cloneNode(true);
       button.dataset.targetStageId = id;
       button.dataset.stageTitle = title;
+      button.value = id;
       button.textContent = title;
       return button;
     });
+    const statusSelectOptions = statusOptions.map(({ id, title }) => createStageSelectOption(id, title));
 
-    this.moveOptionRegionTarget.replaceChildren(...moveOptionButtons);
+    this.statusMenuTarget.replaceChildren(...statusButtons);
+    this.statusSelectTarget.replaceChildren(...statusSelectOptions);
   }
 
   syncEditActions({ isEditMode, cardId, sourceStageId, targetStageId }) {
     const shouldShowPrioritySection = shouldShowPriorityForStage(targetStageId);
     const canMutateCard = isEditMode && !this.isReadOnlyLocaleView;
+    const hasStatusOptions = this.getStatusMenuOptions().length > 0;
 
     this.prioritySectionTarget.hidden = !shouldShowPrioritySection;
-    this.editActionsTarget.hidden = !canMutateCard;
+    this.statusSectionTarget.hidden = !canMutateCard || !hasStatusOptions;
 
     if (!shouldShowPrioritySection) {
       this.closePriorityMenu();
     }
 
-    for (const button of this.getMoveOptionButtons()) {
-      const buttonTargetStageId = button.dataset.targetStageId;
-      const isSelectedStage = buttonTargetStageId === targetStageId;
-      const isCurrentStage = buttonTargetStageId === sourceStageId;
-      const stageTitle = button.dataset.stageTitle ?? '';
-      button.disabled = isSelectedStage;
-      button.setAttribute('aria-disabled', String(isSelectedStage));
-      button.textContent = isSelectedStage
-        ? `${stageTitle} (${this.t(isCurrentStage ? 'cardEditor.moveStateCurrent' : 'cardEditor.moveStateSelected')})`
-        : stageTitle;
+    if (!canMutateCard || !hasStatusOptions) {
+      this.closeStatusMenu();
     }
+
+    this.syncStatusOptions({
+      sourceStageId,
+      targetStageId,
+      isDisabled: !canMutateCard
+    });
   }
 
   renderLocalizedReadSection(localizedView) {
@@ -787,8 +1005,38 @@ export default class extends Controller {
       : '';
   }
 
-  getMoveOptionButtons() {
-    return [...this.moveOptionRegionTarget.querySelectorAll('[data-card-editor-target="moveOption"]')];
+  isStatusMenuOpen() {
+    return this.hasStatusMenuTarget && this.statusMenuTarget.hidden !== true;
+  }
+
+  getStatusMenuOptions() {
+    if (!this.hasStatusMenuTarget) {
+      return [];
+    }
+
+    return [...this.statusMenuTarget.querySelectorAll('[data-card-editor-target="statusOption"]')];
+  }
+
+  focusStatusMenuOption(index) {
+    const options = this.getStatusMenuOptions();
+
+    if (options.length < 1) {
+      return;
+    }
+
+    const boundedIndex = ((index % options.length) + options.length) % options.length;
+
+    options.forEach((option, optionIndex) => {
+      option.tabIndex = optionIndex === boundedIndex ? 0 : -1;
+    });
+    options[boundedIndex]?.focus?.();
+  }
+
+  focusSelectedStatusMenuOption() {
+    const options = this.getStatusMenuOptions();
+    const selectedIndex = options.findIndex((option) => option.getAttribute('aria-checked') === 'true');
+
+    this.focusStatusMenuOption(selectedIndex >= 0 ? selectedIndex : 0);
   }
 
   isPriorityMenuOpen() {
@@ -900,4 +1148,19 @@ function createLocaleOption(locale) {
   option.value = locale;
   option.textContent = locale;
   return option;
+}
+
+function createStageSelectOption(stageId, title) {
+  const option = document.createElement('option');
+  option.value = stageId;
+  option.textContent = title;
+  return option;
+}
+
+function getStageSelectionLabel({ stageTitle, isSelectedStage, isCurrentStage, t }) {
+  if (!isSelectedStage) {
+    return stageTitle;
+  }
+
+  return `${stageTitle} (${t(isCurrentStage ? 'cardEditor.moveStateCurrent' : 'cardEditor.moveStateSelected')})`;
 }

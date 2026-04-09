@@ -1886,7 +1886,7 @@ test('workspace template renders edit localization controls and a simplified loc
   );
   assert.match(
     cardEditorDialog,
-    /class="dialog-header-row mt-4"[\s\S]*data-card-editor-target="heading"[\s\S]*data-card-editor-target="submitActions"[\s\S]*data-card-editor-target="prioritySection"[\s\S]*id="card-editor-priority-trigger"[\s\S]*data-card-editor-target="priorityButton"[\s\S]*<img src="\/traffic\.svg" alt="" aria-hidden="true" class="touch-button-secondary__icon">[\s\S]*id="card-editor-priority-menu"[\s\S]*data-card-editor-target="priorityMenu"[\s\S]*role="menuitemradio"[\s\S]*data-card-editor-target="priorityOption"[\s\S]*id="card-editor-priority-select"[\s\S]*name="priority"[\s\S]*form="card-editor-form"[\s\S]*data-card-editor-target="priorityInput prioritySelect"[\s\S]*touch-button-secondary--close/
+    /class="dialog-header-row mt-4"[\s\S]*data-card-editor-target="heading"[\s\S]*data-card-editor-target="submitActions"[\s\S]*data-card-editor-target="statusSection"[\s\S]*id="card-editor-status-trigger"[\s\S]*data-card-editor-target="statusButton"[\s\S]*<img src="\/switch\.svg" alt="" aria-hidden="true" class="touch-button-secondary__icon">[\s\S]*id="card-editor-status-menu"[\s\S]*data-card-editor-target="statusMenu"[\s\S]*data-card-editor-target="statusOptionTemplate"[\s\S]*data-card-editor-target="statusOption"[\s\S]*role="menuitemradio"[\s\S]*id="card-editor-status-select"[\s\S]*form="card-editor-form"[\s\S]*data-card-editor-target="statusSelect"[\s\S]*data-card-editor-target="prioritySection"[\s\S]*id="card-editor-priority-trigger"[\s\S]*data-card-editor-target="priorityButton"[\s\S]*<img src="\/traffic\.svg" alt="" aria-hidden="true" class="touch-button-secondary__icon">[\s\S]*id="card-editor-priority-menu"[\s\S]*data-card-editor-target="priorityMenu"[\s\S]*role="menuitemradio"[\s\S]*data-card-editor-target="priorityOption"[\s\S]*id="card-editor-priority-select"[\s\S]*name="priority"[\s\S]*form="card-editor-form"[\s\S]*data-card-editor-target="priorityInput prioritySelect"[\s\S]*touch-button-secondary--close/
   );
   assert.doesNotMatch(cardEditorDialog, /priority-dot-group/);
   assert.doesNotMatch(cardEditorDialog, /Localized content/);
@@ -1895,6 +1895,9 @@ test('workspace template renders edit localization controls and a simplified loc
   assert.doesNotMatch(cardEditorDialog, /Available localizations/);
   assert.doesNotMatch(cardEditorDialog, /data-card-editor-target="localeStatusRegion"/);
   assert.doesNotMatch(cardEditorDialog, /data-card-editor-target="localeStatusTemplate"/);
+  assert.doesNotMatch(cardEditorDialog, /data-card-editor-target="moveOptionRegion"/);
+  assert.doesNotMatch(cardEditorDialog, /data-card-editor-target="moveOptionTemplate"/);
+  assert.doesNotMatch(cardEditorDialog, /data-card-editor-target="editActions"/);
   assert.match(
     cardEditorDialog,
     /class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--close"[\s\S]*?aria-label="Close"[\s\S]*?data-action="card-editor#close"[\s\S]*?<span class="sr-only">Close<\/span>/
