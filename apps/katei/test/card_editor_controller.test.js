@@ -664,6 +664,93 @@ test('syncLocalizedCardView keeps fallback reference visible but blanks editable
   assert.equal(controller.lastLocalizedView.localeActionHelpKey, 'cardEditor.manualLocaleHelp');
 });
 
+test('priority trigger keyboard opens the menu and focuses the selected option', () => {
+  const controller = createPriorityControllerDouble();
+  let prevented = false;
+
+  CardEditorController.prototype.handlePriorityTriggerKeydown.call(controller, {
+    key: 'ArrowDown',
+    preventDefault() {
+      prevented = true;
+    }
+  });
+
+  assert.equal(prevented, true);
+  assert.equal(controller.priorityMenuTarget.hidden, false);
+  assert.equal(controller.priorityButtonTarget.attributes['aria-expanded'], 'true');
+  assert.equal(controller.priorityOptionTargets[1].focusCalls, 1);
+  assert.equal(controller.priorityOptionTargets[0].tabIndex, -1);
+  assert.equal(controller.priorityOptionTargets[1].tabIndex, 0);
+  assert.equal(controller.priorityOptionTargets[2].tabIndex, -1);
+});
+
+test('selectPriority syncs the hidden select, updates aria-checked, and restores focus', () => {
+  const controller = createPriorityControllerDouble();
+  controller.priorityMenuTarget.hidden = false;
+
+  CardEditorController.prototype.selectPriority.call(controller, {
+    preventDefault() {},
+    currentTarget: controller.priorityOptionTargets[0]
+  });
+
+  assert.equal(controller.priorityInputTarget.value, 'urgent');
+  assert.equal(controller.prioritySelectTarget.value, 'urgent');
+  assert.equal(controller.priorityOptionTargets[0].attributes['aria-checked'], 'true');
+  assert.equal(controller.priorityOptionTargets[1].attributes['aria-checked'], 'false');
+  assert.equal(controller.priorityOptionTargets[2].attributes['aria-checked'], 'false');
+  assert.equal(controller.priorityMenuTarget.hidden, true);
+  assert.equal(controller.priorityButtonTarget.attributes['aria-expanded'], 'false');
+  assert.equal(controller.priorityButtonTarget.focusCalls, 1);
+});
+
+test('handlePriorityMenuKeydown closes the menu on Escape and restores focus', () => {
+  const controller = createPriorityControllerDouble();
+  controller.priorityMenuTarget.hidden = false;
+  let prevented = false;
+
+  CardEditorController.prototype.handlePriorityMenuKeydown.call(controller, {
+    key: 'Escape',
+    target: controller.priorityOptionTargets[1],
+    preventDefault() {
+      prevented = true;
+    }
+  });
+
+  assert.equal(prevented, true);
+  assert.equal(controller.priorityMenuTarget.hidden, true);
+  assert.equal(controller.priorityButtonTarget.attributes['aria-expanded'], 'false');
+  assert.equal(controller.priorityButtonTarget.focusCalls, 1);
+});
+
+test('handleDialogClick closes an open priority menu when clicking outside the picker', () => {
+  const controller = createPriorityControllerDouble();
+  controller.priorityMenuTarget.hidden = false;
+
+  CardEditorController.prototype.handleDialogClick.call(controller, {
+    target: { id: 'outside' }
+  });
+
+  assert.equal(controller.priorityMenuTarget.hidden, true);
+  assert.equal(controller.priorityButtonTarget.attributes['aria-expanded'], 'false');
+});
+
+test('syncPriorityOptions disables the priority picker in read-only mode', () => {
+  const controller = createPriorityControllerDouble();
+  controller.isReadOnlyLocaleView = true;
+  controller.priorityMenuTarget.hidden = false;
+
+  CardEditorController.prototype.syncPriorityOptions.call(controller);
+
+  assert.equal(controller.priorityButtonTarget.disabled, true);
+  assert.equal(controller.priorityButtonTarget.attributes['aria-disabled'], 'true');
+  assert.equal(controller.prioritySelectTarget.disabled, true);
+  assert.equal(controller.prioritySelectTarget.attributes['aria-disabled'], 'true');
+  assert.equal(controller.priorityMenuTarget.hidden, true);
+  assert.equal(controller.priorityOptionTargets[0].disabled, true);
+  assert.equal(controller.priorityOptionTargets[1].disabled, true);
+  assert.equal(controller.priorityOptionTargets[2].disabled, true);
+});
+
 test('card editor EasyMDE config uses compact toolbar text with full accessible labels', () => {
   const originalWindow = globalThis.window;
   const easyMdeCalls = [];
@@ -798,6 +885,85 @@ test('card editor toolbar copy keeps compact text while localizing accessible la
   assert.equal(japanese('cardEditor.markdownToolbar.bullets.text'), '•');
   assert.equal(japanese('cardEditor.markdownToolbar.bullets.label'), '箇条書きリスト');
 });
+
+function createPriorityControllerDouble() {
+  const controller = Object.create(CardEditorController.prototype);
+
+  controller.isReadOnlyLocaleView = false;
+  controller.hasPriorityButtonTarget = true;
+  controller.hasPriorityMenuTarget = true;
+  controller.hasPriorityOptionTarget = true;
+  controller.hasPrioritySelectTarget = true;
+  controller.priorityButtonTarget = createPriorityTriggerTarget();
+  controller.priorityMenuTarget = { hidden: true, contains(target) { return target === this; } };
+  controller.priorityInputTarget = { value: 'important' };
+  controller.prioritySelectTarget = createPrioritySelectTarget('important');
+  controller.priorityOptionTargets = [
+    createPriorityOptionTarget('urgent', 'Urgent', false),
+    createPriorityOptionTarget('important', 'Important', true),
+    createPriorityOptionTarget('normal', 'Normal', false)
+  ];
+
+  return controller;
+}
+
+function createPriorityTriggerTarget() {
+  return {
+    disabled: false,
+    focusCalls: 0,
+    attributes: {
+      'aria-expanded': 'false',
+      'aria-disabled': 'false'
+    },
+    contains(target) {
+      return target === this;
+    },
+    setAttribute(name, value) {
+      this.attributes[name] = value;
+    },
+    focus() {
+      this.focusCalls += 1;
+    }
+  };
+}
+
+function createPrioritySelectTarget(value) {
+  return {
+    value,
+    disabled: false,
+    attributes: {
+      'aria-disabled': 'false'
+    },
+    setAttribute(name, nextValue) {
+      this.attributes[name] = nextValue;
+    }
+  };
+}
+
+function createPriorityOptionTarget(priorityId, priorityLabel, selected) {
+  return {
+    dataset: {
+      priorityId,
+      priorityLabel
+    },
+    disabled: false,
+    focusCalls: 0,
+    tabIndex: selected ? 0 : -1,
+    attributes: {
+      'aria-checked': selected ? 'true' : 'false',
+      'aria-disabled': 'false'
+    },
+    setAttribute(name, value) {
+      this.attributes[name] = value;
+    },
+    getAttribute(name) {
+      return this.attributes[name];
+    },
+    focus() {
+      this.focusCalls += 1;
+    }
+  };
+}
 
 function createBoard() {
   return {

@@ -26,6 +26,9 @@ export default class extends Controller {
     'targetStageIdInput',
     'prioritySection',
     'priorityInput',
+    'priorityButton',
+    'priorityMenu',
+    'prioritySelect',
     'priorityOption',
     'titleInput',
     'markdownInput',
@@ -151,6 +154,7 @@ export default class extends Controller {
     this.sourceStageIdInputTarget.value = sourceStageId;
     this.targetStageIdInputTarget.value = targetStageId;
     this.priorityInputTarget.value = card?.priority ?? 'important';
+    this.closePriorityMenu();
     this.ensureEditor().value('');
     this.syncLocalizedCardView();
     this.syncReadOnlyMode();
@@ -206,6 +210,144 @@ export default class extends Controller {
     this.syncLocalizedCardView();
   }
 
+  togglePriorityMenu(event) {
+    event.preventDefault();
+
+    if (this.isReadOnlyLocaleView) {
+      return;
+    }
+
+    if (this.isPriorityMenuOpen()) {
+      this.closePriorityMenu();
+      return;
+    }
+
+    this.openPriorityMenu();
+  }
+
+  openPriorityMenu() {
+    if (
+      !this.hasPriorityButtonTarget ||
+      !this.hasPriorityMenuTarget ||
+      !this.hasPriorityOptionTarget ||
+      this.priorityButtonTarget.disabled === true
+    ) {
+      return;
+    }
+
+    if (this.getPriorityMenuOptions().length < 1) {
+      return;
+    }
+
+    this.priorityMenuTarget.hidden = false;
+    this.priorityButtonTarget.setAttribute('aria-expanded', 'true');
+  }
+
+  closePriorityMenu({ restoreFocus = false } = {}) {
+    if (this.hasPriorityMenuTarget) {
+      this.priorityMenuTarget.hidden = true;
+    }
+
+    if (this.hasPriorityButtonTarget) {
+      this.priorityButtonTarget.setAttribute('aria-expanded', 'false');
+
+      if (restoreFocus) {
+        this.priorityButtonTarget.focus?.();
+      }
+    }
+  }
+
+  handlePriorityTriggerKeydown(event) {
+    if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') {
+      event.preventDefault();
+      this.openPriorityMenu();
+      this.focusSelectedPriorityMenuOption();
+      return;
+    }
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      this.openPriorityMenu();
+      this.focusSelectedPriorityMenuOption();
+      return;
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      this.openPriorityMenu();
+      this.focusSelectedPriorityMenuOption();
+    }
+  }
+
+  handlePriorityMenuKeydown(event) {
+    const options = this.getPriorityMenuOptions();
+
+    if (options.length < 1) {
+      return;
+    }
+
+    const activeIndex = options.findIndex((option) => option === event.target);
+
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      this.closePriorityMenu({ restoreFocus: true });
+      return;
+    }
+
+    if (event.key === 'Tab') {
+      this.closePriorityMenu();
+      return;
+    }
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      this.focusPriorityMenuOption(activeIndex >= 0 ? activeIndex + 1 : 0);
+      return;
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      this.focusPriorityMenuOption(activeIndex >= 0 ? activeIndex - 1 : options.length - 1);
+      return;
+    }
+
+    if (event.key === 'Home') {
+      event.preventDefault();
+      this.focusPriorityMenuOption(0);
+      return;
+    }
+
+    if (event.key === 'End') {
+      event.preventDefault();
+      this.focusPriorityMenuOption(options.length - 1);
+    }
+  }
+
+  handleDialogClick(event) {
+    if (!this.isPriorityMenuOpen()) {
+      return;
+    }
+
+    const target = event?.target ?? null;
+    const clickedMenu = this.hasPriorityMenuTarget && this.priorityMenuTarget.contains?.(target);
+    const clickedTrigger =
+      this.hasPriorityButtonTarget && this.priorityButtonTarget.contains?.(target);
+
+    if (clickedMenu || clickedTrigger) {
+      return;
+    }
+
+    this.closePriorityMenu();
+  }
+
+  changePriorityFromSelect(event) {
+    if (this.isReadOnlyLocaleView) {
+      return;
+    }
+
+    this.setSelectedPriority(event.currentTarget.value);
+  }
+
   selectPriority(event) {
     event.preventDefault();
 
@@ -213,8 +355,10 @@ export default class extends Controller {
       return;
     }
 
-    this.priorityInputTarget.value = event.currentTarget.dataset.priorityId;
-    this.syncPriorityOptions();
+    const nextPriority = event.currentTarget.dataset.priorityId ?? event.currentTarget.value ?? '';
+
+    this.setSelectedPriority(nextPriority);
+    this.closePriorityMenu({ restoreFocus: true });
   }
 
   selectStage(event) {
@@ -393,6 +537,8 @@ export default class extends Controller {
   }
 
   closeDialog() {
+    this.closePriorityMenu();
+
     if (this.dialogTarget.open) {
       this.dialogTarget.close();
     }
@@ -437,13 +583,38 @@ export default class extends Controller {
 
   syncPriorityOptions() {
     const selectedPriority = this.priorityInputTarget.value;
+    const isDisabled = this.isReadOnlyLocaleView;
+    const priorityOptions = this.getPriorityMenuOptions();
 
-    for (const button of this.priorityOptionTargets) {
-      const isCurrentPriority = button.dataset.priorityId === selectedPriority;
-      button.disabled = this.isReadOnlyLocaleView;
-      button.setAttribute('aria-disabled', String(this.isReadOnlyLocaleView));
-      button.setAttribute('aria-pressed', String(isCurrentPriority));
+    if (this.hasPrioritySelectTarget) {
+      this.prioritySelectTarget.value = selectedPriority;
+      this.prioritySelectTarget.disabled = isDisabled;
+      this.prioritySelectTarget.setAttribute('aria-disabled', String(isDisabled));
     }
+
+    if (this.hasPriorityButtonTarget) {
+      this.priorityButtonTarget.disabled = isDisabled;
+      this.priorityButtonTarget.setAttribute('aria-disabled', String(isDisabled));
+      const selectedOption = priorityOptions.find(
+        (option) => option.dataset.priorityId === selectedPriority
+      );
+
+      if (selectedOption?.dataset.priorityLabel) {
+        this.priorityButtonTarget.title = selectedOption.dataset.priorityLabel;
+      }
+    }
+
+    if (isDisabled) {
+      this.closePriorityMenu();
+    }
+
+    priorityOptions.forEach((button, index) => {
+      const isCurrentPriority = button.dataset.priorityId === selectedPriority;
+      button.disabled = isDisabled;
+      button.tabIndex = isCurrentPriority || index === 0 ? 0 : -1;
+      button.setAttribute('aria-disabled', String(isDisabled));
+      button.setAttribute('aria-checked', String(isCurrentPriority));
+    });
   }
 
   renderMoveOptions({ board, sourceStageId }) {
@@ -464,6 +635,10 @@ export default class extends Controller {
 
     this.prioritySectionTarget.hidden = !shouldShowPrioritySection;
     this.editActionsTarget.hidden = !canMutateCard;
+
+    if (!shouldShowPrioritySection) {
+      this.closePriorityMenu();
+    }
 
     for (const button of this.getMoveOptionButtons()) {
       const buttonTargetStageId = button.dataset.targetStageId;
@@ -614,6 +789,50 @@ export default class extends Controller {
 
   getMoveOptionButtons() {
     return [...this.moveOptionRegionTarget.querySelectorAll('[data-card-editor-target="moveOption"]')];
+  }
+
+  isPriorityMenuOpen() {
+    return this.hasPriorityMenuTarget && this.priorityMenuTarget.hidden !== true;
+  }
+
+  getPriorityMenuOptions() {
+    return this.hasPriorityOptionTarget ? this.priorityOptionTargets : [];
+  }
+
+  focusPriorityMenuOption(index) {
+    const options = this.getPriorityMenuOptions();
+
+    if (options.length < 1) {
+      return;
+    }
+
+    const boundedIndex = ((index % options.length) + options.length) % options.length;
+
+    options.forEach((option, optionIndex) => {
+      option.tabIndex = optionIndex === boundedIndex ? 0 : -1;
+    });
+    options[boundedIndex]?.focus?.();
+  }
+
+  focusSelectedPriorityMenuOption() {
+    const options = this.getPriorityMenuOptions();
+    const selectedIndex = options.findIndex((option) => option.getAttribute('aria-checked') === 'true');
+
+    this.focusPriorityMenuOption(selectedIndex >= 0 ? selectedIndex : 0);
+  }
+
+  setSelectedPriority(priority) {
+    if (!priority) {
+      return;
+    }
+
+    this.priorityInputTarget.value = priority;
+
+    if (this.hasPrioritySelectTarget) {
+      this.prioritySelectTarget.value = priority;
+    }
+
+    this.syncPriorityOptions();
   }
 
   resetDialogState() {

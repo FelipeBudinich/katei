@@ -304,52 +304,34 @@
     display: contents;
   }
 
-  .priority-dot-group {
-    display: grid;
-    grid-auto-flow: column;
-    gap: 0.4rem;
+  .view-locale-menu-option--priority {
+    --priority-menu-color: var(--color-bg-muted-strong);
+    display: inline-flex;
     align-items: center;
-    justify-content: start;
+    gap: 0.65rem;
+    white-space: nowrap;
   }
 
-  .priority-dot {
-    --priority-dot-color: var(--color-bg-muted-strong);
-    display: inline-grid;
-    inline-size: 2rem;
-    block-size: 2rem;
-    border-radius: 50%;
-    border: 0.1rem solid color-mix(in srgb, var(--priority-dot-color) 75%, black 25%);
-    background-color: var(--priority-dot-color);
-    color: var(--priority-dot-color);
-    cursor: pointer;
-    transition:
-      transform 160ms ease,
-      box-shadow 160ms ease,
-      border-color 160ms ease;
+  .view-locale-menu-option--priority::before {
+    content: "";
+    flex: none;
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 999px;
+    border: 0.1rem solid color-mix(in srgb, var(--priority-menu-color) 75%, black 25%);
+    background-color: var(--priority-menu-color);
   }
 
-  .priority-dot[data-priority-id="urgent"] {
-    --priority-dot-color: var(--ref-brand);
+  .view-locale-menu-option--priority[data-priority-id="urgent"] {
+    --priority-menu-color: var(--ref-brand);
   }
 
-  .priority-dot[data-priority-id="important"] {
-    --priority-dot-color: var(--ref-accent-yellow);
+  .view-locale-menu-option--priority[data-priority-id="important"] {
+    --priority-menu-color: var(--ref-accent-yellow);
   }
 
-  .priority-dot[data-priority-id="normal"] {
-    --priority-dot-color: var(--ref-accent-green);
-  }
-
-  .priority-dot[aria-pressed="true"] {
-    box-shadow:
-      0 0 0 0.12rem var(--color-bg-elevated-strong),
-      0 0 0 0.28rem currentColor;
-    transform: scale(1.05);
-  }
-
-  .priority-dot:focus-visible {
-    outline: 0.15rem solid var(--color-focus-ring);
-    outline-offset: 0.15rem;
+  .view-locale-menu-option--priority[data-priority-id="normal"] {
+    --priority-menu-color: var(--ref-accent-green);
   }
 
   .dialog-actions {

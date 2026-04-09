@@ -1884,6 +1884,11 @@ test('workspace template renders edit localization controls and a simplified loc
     cardEditorDialog,
     /data-card-editor-target="localeSection"[\s\S]*<select[\s\S]*name="locale"[\s\S]*data-card-editor-target="localeSelect"[\s\S]*data-card-editor-target="generateLocaleButton"[\s\S]*data-card-editor-target="discardLocaleButton"[\s\S]*data-card-editor-target="requestLocaleButton"[\s\S]*data-card-editor-target="clearLocaleRequestButton"[\s\S]*data-card-editor-target="generateLocaleHelp"/
   );
+  assert.match(
+    cardEditorDialog,
+    /data-card-editor-target="prioritySection"[\s\S]*id="card-editor-priority-trigger"[\s\S]*data-card-editor-target="priorityButton"[\s\S]*<img src="\/traffic\.svg" alt="" aria-hidden="true" class="touch-button-secondary__icon">[\s\S]*id="card-editor-priority-menu"[\s\S]*data-card-editor-target="priorityMenu"[\s\S]*role="menuitemradio"[\s\S]*data-card-editor-target="priorityOption"[\s\S]*id="card-editor-priority-select"[\s\S]*name="priority"[\s\S]*data-card-editor-target="priorityInput prioritySelect"/
+  );
+  assert.doesNotMatch(cardEditorDialog, /priority-dot-group/);
   assert.doesNotMatch(cardEditorDialog, /Localized content/);
   assert.doesNotMatch(cardEditorDialog, /data-controller="accordion"/);
   assert.doesNotMatch(cardEditorDialog, /data-accordion-/);
