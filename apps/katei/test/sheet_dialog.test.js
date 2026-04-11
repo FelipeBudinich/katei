@@ -100,6 +100,20 @@ test('closing the last open sheet dialog restores inline body styles and scroll 
   assert.deepEqual(environment.scrollToCalls, [[0, 320]]);
 });
 
+test('sheet dialog cancel events are prevented so Escape does not close the sheet', () => {
+  const environment = createSheetDialogEnvironment();
+  const dialog = environment.createDialog();
+
+  openSheetDialog(dialog, environment);
+  const cancelEvent = dialog.dispatchCancel();
+
+  assert.equal(cancelEvent.defaultPrevented, true);
+  assert.equal(dialog.open, true);
+  assert.equal(dialog.closeCalls, 0);
+  assert.equal(environment.documentRef.documentElement.classList.contains('sheet-dialog-open'), true);
+  assert.equal(environment.documentRef.body.classList.contains('sheet-dialog-open'), true);
+});
+
 test('sheet dialog helpers ignore dialogs outside the shared sheet selector', () => {
   const environment = createSheetDialogEnvironment();
   const dialog = environment.createDialog({ isSheetDialog: false });
@@ -196,6 +210,20 @@ function createSheetDialogEnvironment(
           for (const callback of listeners.get('close') ?? []) {
             callback();
           }
+        },
+        dispatchCancel() {
+          const cancelEvent = {
+            defaultPrevented: false,
+            preventDefault() {
+              this.defaultPrevented = true;
+            }
+          };
+
+          for (const callback of listeners.get('cancel') ?? []) {
+            callback(cancelEvent);
+          }
+
+          return cancelEvent;
         }
       };
 

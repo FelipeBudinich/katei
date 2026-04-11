@@ -3920,13 +3920,15 @@ function assertSharedProfileOptionsDialog(dialogHtml, { localeFormAction, locale
     /class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--language"/
   );
   assert.match(dialogHtml, /data-ui-locale-picker-target="dialog"/);
-  assert.match(dialogHtml, /click->ui-locale-picker#backdropCloseDialog cancel->ui-locale-picker#closeDialog/);
+  assert.doesNotMatch(dialogHtml, /backdropCloseDialog/);
+  assert.doesNotMatch(dialogHtml, /cancel->ui-locale-picker#closeDialog/);
   assert.match(dialogHtml, /class="ui-locale-modal-options mt-6"/);
   assert.match(dialogHtml, /data-controller="session"/);
   assert.match(dialogHtml, /data-session-target="logoutButton"/);
   assert.match(dialogHtml, /session#openLogoutConfirm/);
   assert.match(dialogHtml, /data-session-target="confirmDialog"/);
-  assert.match(dialogHtml, /click->session#backdropCloseConfirmDialog cancel->session#closeConfirmDialog/);
+  assert.doesNotMatch(dialogHtml, /backdropCloseConfirmDialog/);
+  assert.doesNotMatch(dialogHtml, /cancel->session#closeConfirmDialog/);
   assert.match(dialogHtml, /data-session-target="confirmTitle"/);
   assert.match(dialogHtml, /data-session-target="confirmMessage"/);
   assert.match(dialogHtml, /data-session-target="confirmButton"/);

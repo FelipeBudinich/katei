@@ -91,12 +91,6 @@ export default class extends Controller {
     this.hideError();
   }
 
-  backdropClose(event) {
-    if (this.hasDialogTarget && event?.target === this.dialogTarget) {
-      this.close(event);
-    }
-  }
-
   close(event) {
     if (event) {
       event.preventDefault();

@@ -108,12 +108,6 @@ export default class extends Controller {
     }
   }
 
-  backdropClose(event) {
-    if (event.target === this.dialogTarget) {
-      this.close();
-    }
-  }
-
   close(event) {
     if (event) {
       event.preventDefault();

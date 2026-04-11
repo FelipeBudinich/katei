@@ -2,6 +2,7 @@ const SHEET_DIALOG_SELECTOR = 'dialog.sheet-dialog';
 const OPEN_SHEET_DIALOG_SELECTOR = `${SHEET_DIALOG_SELECTOR}[open]`;
 const SHEET_DIALOG_LOCK_CLASS = 'sheet-dialog-open';
 const SHEET_DIALOG_CLOSE_LISTENER_KEY = Symbol('sheet-dialog-close-listener');
+const SHEET_DIALOG_CANCEL_LISTENER_KEY = Symbol('sheet-dialog-cancel-listener');
 const lockStateByDocument = new WeakMap();
 
 export function openSheetDialog(dialog, options = {}) {
@@ -10,6 +11,7 @@ export function openSheetDialog(dialog, options = {}) {
   }
 
   registerSheetDialogCloseListener(dialog);
+  registerSheetDialogCancelListener(dialog);
 
   if (!dialog.open && typeof dialog.showModal === 'function') {
     dialog.showModal();
@@ -68,6 +70,19 @@ function registerSheetDialogCloseListener(dialog) {
 
   dialog.addEventListener('close', listener);
   dialog[SHEET_DIALOG_CLOSE_LISTENER_KEY] = listener;
+}
+
+function registerSheetDialogCancelListener(dialog) {
+  if (dialog?.[SHEET_DIALOG_CANCEL_LISTENER_KEY] || typeof dialog?.addEventListener !== 'function') {
+    return;
+  }
+
+  const listener = (event) => {
+    event?.preventDefault?.();
+  };
+
+  dialog.addEventListener('cancel', listener);
+  dialog[SHEET_DIALOG_CANCEL_LISTENER_KEY] = listener;
 }
 
 function resolveEnvironment(

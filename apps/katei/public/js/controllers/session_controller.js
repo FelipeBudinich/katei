@@ -48,12 +48,6 @@ export default class extends Controller {
     requestAnimationFrame(() => this.confirmButtonTarget?.focus?.());
   }
 
-  backdropCloseConfirmDialog(event) {
-    if (event.target === this.confirmDialogTarget) {
-      this.closeConfirmDialog();
-    }
-  }
-
   closeConfirmDialog(event) {
     if (event) {
       event.preventDefault();

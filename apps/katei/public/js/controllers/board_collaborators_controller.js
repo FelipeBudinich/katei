@@ -54,12 +54,6 @@ export default class extends Controller {
     this.syncContext(event.detail?.workspace, event.detail?.viewerActor, event.detail?.boardId);
   }
 
-  backdropClose(event) {
-    if (event.target === this.dialogTarget) {
-      this.close();
-    }
-  }
-
   close(event) {
     if (event) {
       event.preventDefault();

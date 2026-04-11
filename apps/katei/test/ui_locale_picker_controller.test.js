@@ -17,18 +17,37 @@ test('dialog variant opens a modal and focuses the selected option', async () =>
   assert.equal(controller.optionTargets[1].focusCalls, 1);
 });
 
-test('dialog variant closes on backdrop and restores focus', () => {
+test('dialog variant closeDialog closes explicitly and restores focus', () => {
   const controller = createDialogControllerDouble();
   controller.dialogTarget.open = true;
 
-  UiLocalePickerController.prototype.backdropCloseDialog.call(controller, {
-    target: controller.dialogTarget
+  UiLocalePickerController.prototype.closeDialog.call(controller, {
+    preventDefault() {}
   });
 
   assert.equal(controller.dialogTarget.open, false);
   assert.equal(controller.dialogTarget.closeCalls, 1);
   assert.equal(controller.triggerTarget.attributes['aria-expanded'], 'false');
   assert.equal(controller.triggerTarget.focusCalls, 1);
+});
+
+test('dialog variant Escape does not close the dialog', () => {
+  const controller = createDialogControllerDouble();
+  controller.dialogTarget.open = true;
+  let prevented = false;
+
+  UiLocalePickerController.prototype.handleMenuKeydown.call(controller, {
+    key: 'Escape',
+    target: controller.optionTargets[1],
+    preventDefault() {
+      prevented = true;
+    }
+  });
+
+  assert.equal(prevented, true);
+  assert.equal(controller.dialogTarget.open, true);
+  assert.equal(controller.dialogTarget.closeCalls, 0);
+  assert.equal(controller.triggerTarget.attributes['aria-expanded'], 'false');
 });
 
 test('dialog variant selectLocale updates the hidden select, closes the dialog, and submits the form', () => {

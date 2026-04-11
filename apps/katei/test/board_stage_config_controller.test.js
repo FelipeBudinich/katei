@@ -151,22 +151,11 @@ test('board stage config apply dispatches board-stage-config:apply on window for
   assert.equal(controller.restoreFocusElement, null);
 });
 
-test('board stage config close, cancel, and backdrop paths restore focus predictably', () => {
+test('board stage config close restores focus predictably', () => {
   const controller = createBoardStageConfigControllerDouble();
   const triggerElement = createFocusableElement();
   let prevented = false;
 
-  controller.dialogTarget.open = true;
-  controller.restoreFocusElement = triggerElement;
-
-  BoardStageConfigController.prototype.backdropClose.call(controller, {
-    target: controller.dialogTarget
-  });
-
-  assert.equal(controller.dialogTarget.open, false);
-  assert.equal(triggerElement.focused, true);
-
-  triggerElement.focused = false;
   controller.dialogTarget.open = true;
   controller.restoreFocusElement = triggerElement;
 

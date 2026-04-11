@@ -91,12 +91,6 @@ export default class extends Controller {
     }
   }
 
-  backdropCloseDialog(event) {
-    if (event.target === this.dialogTarget) {
-      this.closeDialog();
-    }
-  }
-
   handleTriggerKeydown(event) {
     if (this.isDialogMode()) {
       if (
@@ -143,12 +137,13 @@ export default class extends Controller {
     const activeIndex = options.findIndex((option) => option === event.target);
 
     if (event.key === 'Escape') {
-      event.preventDefault();
       if (this.isDialogMode()) {
-        this.closeDialog(undefined, { restoreFocus: true });
-      } else {
-        this.closeMenu({ restoreFocus: true });
+        event.preventDefault();
+        return;
       }
+
+      event.preventDefault();
+      this.closeMenu({ restoreFocus: true });
       return;
     }
 

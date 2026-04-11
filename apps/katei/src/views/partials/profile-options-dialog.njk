@@ -4,8 +4,6 @@
   data-profile-options-target="dialog"
   data-action="
     workspace:open-profile-options@window->profile-options#openFromEvent
-    click->profile-options#backdropClose
-    cancel->profile-options#close
   "
 >
   {% set profileUiLocalePickerId = profileOptionsUiLocalePickerId or 'profile-options-ui-locale-picker' %}
@@ -59,7 +57,6 @@
         <dialog
           class="sheet-dialog confirm-dialog"
           data-session-target="confirmDialog"
-          data-action="click->session#backdropCloseConfirmDialog cancel->session#closeConfirmDialog"
         >
           <div class="confirm-panel">
             <div class="space-y-2">

@@ -1537,12 +1537,6 @@ export default class extends Controller {
     this.announcerTarget.textContent = message;
   }
 
-  backdropCloseViewDialog(event) {
-    if (event.target === this.viewDialogTarget) {
-      this.closeViewDialog();
-    }
-  }
-
   closeViewDialog(event) {
     if (event) {
       event.preventDefault();
@@ -1660,12 +1654,6 @@ export default class extends Controller {
     openSheetDialog(this.confirmDialogTarget);
 
     requestAnimationFrame(() => this.confirmButtonTarget.focus());
-  }
-
-  backdropCloseConfirmDialog(event) {
-    if (event.target === this.confirmDialogTarget) {
-      this.closeConfirmDialog();
-    }
   }
 
   closeConfirmDialog(event) {
