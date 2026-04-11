@@ -196,63 +196,6 @@ test('board options controller prefers workspace titles and falls back only when
   assert.equal(controller.boardListTarget.children[2].fields.workspaceTitle.textContent, 'workspace_fallback');
 });
 
-test('board options controller saves the active board self-role and refreshes the active board state', async () => {
-  const { workspace, viewerActor } = createAdminBoardOptionsFixture();
-  const controller = createBoardOptionsControllerDouble();
-  const dispatched = [];
-  const serviceCalls = [];
-  const updatedWorkspace = structuredClone(workspace);
-
-  setMembershipRole(updatedWorkspace.boards.main, viewerActor.id, 'viewer');
-  controller.dispatch = (name, options) => dispatched.push({ name, detail: options?.detail ?? null });
-  BoardOptionsController.prototype.syncWorkspace.call(controller, workspace, viewerActor, {
-    activeWorkspaceId: workspace.workspaceId,
-    isSuperAdmin: true,
-    workspaceService: createWorkspaceTitleServiceDouble({
-      workspaceId: workspace.workspaceId,
-      workspace,
-      selfRoleWorkspace: updatedWorkspace,
-      onSetBoardSelfRole(call) {
-        serviceCalls.push(call);
-      }
-    })
-  });
-  controller.selfRoleSelectTarget.value = 'viewer';
-  BoardOptionsController.prototype.handleSelfRoleInput.call(controller);
-
-  await BoardOptionsController.prototype.saveBoardSelfRole.call(controller, {
-    preventDefault() {}
-  });
-
-  assert.deepEqual(serviceCalls, [
-    {
-      boardId: 'main',
-      role: 'viewer',
-      options: {
-        workspaceId: workspace.workspaceId
-      }
-    }
-  ]);
-  assert.equal(controller.selfRoleSectionTarget.hidden, false);
-  assert.equal(controller.roleSummaryTarget.textContent, 'Your access: Viewer');
-  assert.equal(controller.selfRoleSummaryTarget.textContent, 'Current role: Viewer');
-  assert.equal(controller.selfRoleSelectTarget.value, 'viewer');
-  assert.equal(controller.selfRoleSaveButtonTarget.disabled, true);
-  assert.equal(controller.selfRoleSaveButtonTarget.textContent, 'Save role');
-  assert.equal(flattenRenderedBoardRows(controller.boardListTarget)[0].fields.editButton.hidden, true);
-  assert.deepEqual(dispatched, [
-    {
-      name: 'board-self-role-updated',
-      detail: {
-        workspace: updatedWorkspace,
-        workspaceId: workspace.workspaceId,
-        boardId: 'main',
-        role: 'viewer'
-      }
-    }
-  ]);
-});
-
 test('board list action state keeps switch and invite responses mutually exclusive', () => {
   const { optionsState } = createSharedBoardOptionsFixture();
   const activeBoardActions = createBoardListActionState(optionsState.boardStates[0]);
@@ -886,11 +829,6 @@ function createBoardOptionsControllerDouble() {
   controller.summaryTarget = createTextTarget();
   controller.roleSummaryTarget = createTextTarget();
   controller.pendingSummaryTarget = createTextTarget({ hidden: true });
-  controller.selfRoleSectionTarget = createToggleTarget(true);
-  controller.selfRoleSummaryTarget = createTextTarget();
-  controller.selfRoleSelectTarget = createSelectElement();
-  controller.selfRoleErrorTarget = createTextTarget({ hidden: true });
-  controller.selfRoleSaveButtonTarget = createButtonElement();
   controller.boardListTarget = createListTarget();
   controller.workspaceSectionTemplateTarget = createTemplateDouble([
     'workspaceTitle',
@@ -921,13 +859,6 @@ function createBoardOptionsControllerDouble() {
       this.open = false;
     }
   };
-  controller.hasSelfRoleSectionTarget = true;
-  controller.hasSelfRoleSummaryTarget = true;
-  controller.hasSelfRoleSelectTarget = true;
-  controller.hasSelfRoleErrorTarget = true;
-  controller.hasSelfRoleSaveButtonTarget = true;
-
-  BoardOptionsController.prototype.resetBoardSelfRoleEditorState.call(controller);
 
   return controller;
 }
@@ -998,48 +929,6 @@ function createButtonElement() {
     isConnected: true,
     focus() {
       this.focusCalls += 1;
-    }
-  };
-}
-
-function createSelectElement(value = 'viewer') {
-  return {
-    disabled: false,
-    value
-  };
-}
-
-function createWorkspaceTitleServiceDouble({
-  workspaceId,
-  workspace,
-  selfRoleWorkspace = workspace,
-  onSetWorkspaceTitle = () => {},
-  onSetBoardSelfRole = () => {}
-}) {
-  return {
-    getActiveWorkspaceId() {
-      return workspaceId;
-    },
-    getIsHomeWorkspace() {
-      return false;
-    },
-    getPendingWorkspaceInvites() {
-      return [];
-    },
-    getAccessibleWorkspaces() {
-      return [];
-    },
-    async setWorkspaceTitle(requestWorkspaceId, title) {
-      onSetWorkspaceTitle({ workspaceId: requestWorkspaceId, title });
-      return {
-        workspace: structuredClone(workspace),
-        workspaceId: requestWorkspaceId,
-        workspaceTitle: workspace.title
-      };
-    },
-    async setBoardSelfRole(boardId, role, options) {
-      onSetBoardSelfRole({ boardId, role, options });
-      return structuredClone(selfRoleWorkspace);
     }
   };
 }

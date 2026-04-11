@@ -1,7 +1,5 @@
 import { Controller } from '../../vendor/stimulus/stimulus.js';
-import { canonicalizeBoardRole } from '../domain/board_collaboration.js';
 import { getBrowserTranslator } from '../i18n/browser.js';
-import { localizeErrorMessage } from '../i18n/errors.js';
 import { logInviteDebug } from '../lib/invite_debug.js';
 import { createInviteDecisionDetail } from './board_collaborators_actions.js';
 import {
@@ -16,11 +14,6 @@ export default class extends Controller {
     'summary',
     'roleSummary',
     'pendingSummary',
-    'selfRoleSection',
-    'selfRoleSummary',
-    'selfRoleSelect',
-    'selfRoleError',
-    'selfRoleSaveButton',
     'boardList',
     'workspaceSectionTemplate',
     'boardItemTemplate',
@@ -41,8 +34,6 @@ export default class extends Controller {
     this.accessibleWorkspaces = [];
     this.workspaceService = null;
     this.restoreFocusElement = null;
-    this.isSubmittingBoardSelfRole = false;
-    this.resetBoardSelfRoleEditorState();
   }
 
   openFromEvent(event) {
@@ -85,10 +76,6 @@ export default class extends Controller {
   close(event) {
     if (event) {
       event.preventDefault();
-    }
-
-    if (this.isSubmittingBoardSelfRole) {
-      return;
     }
 
     this.closeDialog();
@@ -145,61 +132,6 @@ export default class extends Controller {
 
     this.dispatch('open-portfolio');
     this.closeDialog({ restoreFocus: false });
-  }
-
-  handleSelfRoleInput() {
-    this.hideBoardSelfRoleError();
-    this.syncBoardSelfRoleActionState();
-  }
-
-  async saveBoardSelfRole(event) {
-    if (event) {
-      event.preventDefault();
-    }
-
-    if (!this.canManageBoardSelfRoles() || this.isSubmittingBoardSelfRole || !this.activeBoard) {
-      return;
-    }
-
-    const currentRole = this.getActiveBoardSelfRole();
-    const requestedRole = canonicalizeBoardRole(this.selfRoleSelectTarget?.value);
-    const workspaceId = normalizeOptionalWorkspaceId(this.workspace?.workspaceId) ?? this.activeWorkspaceId;
-    const boardId = normalizeOptionalString(this.activeBoard?.id);
-
-    if (!workspaceId || !boardId || !requestedRole || !currentRole || requestedRole === currentRole) {
-      this.syncBoardSelfRoleActionState(currentRole);
-      return;
-    }
-
-    this.hideBoardSelfRoleError();
-    this.setBoardSelfRoleSubmittingState(true, currentRole);
-
-    try {
-      const result = await this.workspaceService.setBoardSelfRole(boardId, requestedRole, {
-        workspaceId
-      });
-      const nextWorkspace = isPlainObject(result) ? result : this.workspace;
-
-      this.syncWorkspace(nextWorkspace, this.viewerActor, this.getWorkspaceSyncOptions({
-        workspaceService: this.workspaceService
-      }));
-
-      const effectiveRole = this.getActiveBoardSelfRole() ?? requestedRole;
-
-      this.dispatch('board-self-role-updated', {
-        detail: {
-          workspace: nextWorkspace,
-          workspaceId,
-          boardId,
-          role: effectiveRole
-        }
-      });
-    } catch (error) {
-      console.error(error);
-      this.showBoardSelfRoleError(localizeErrorMessage(error, this.t));
-    } finally {
-      this.setBoardSelfRoleSubmittingState(false);
-    }
   }
 
   switchBoard(event) {
@@ -280,8 +212,6 @@ export default class extends Controller {
       return;
     }
 
-    this.renderBoardSelfRoleSection(activeBoardState);
-
     if (!this.activeBoard || !activeBoardState) {
       this.summaryTarget.textContent = this.t('boardOptionsDialog.noVisibleBoards');
       this.roleSummaryTarget.textContent = '';
@@ -303,34 +233,6 @@ export default class extends Controller {
 
     this.boardListTarget.replaceChildren(...this.createWorkspaceSectionItems());
     this.renderPendingWorkspaceInvites();
-  }
-
-  renderBoardSelfRoleSection(activeBoardState) {
-    if (!this.hasSelfRoleSectionTarget) {
-      return;
-    }
-
-    const currentRole = canonicalizeBoardRole(activeBoardState?.currentRole);
-    const shouldShow = this.canManageBoardSelfRoles() && Boolean(this.activeBoard) && Boolean(currentRole);
-
-    this.selfRoleSectionTarget.hidden = !shouldShow;
-
-    if (!shouldShow) {
-      this.resetBoardSelfRoleEditorState();
-      return;
-    }
-
-    if (this.hasSelfRoleSummaryTarget) {
-      this.selfRoleSummaryTarget.textContent = this.t('collaborators.currentRoleValue', {
-        role: this.t(getBoardRoleTranslationKey(currentRole))
-      });
-    }
-
-    if (this.hasSelfRoleSelectTarget && this.isSubmittingBoardSelfRole !== true) {
-      this.selfRoleSelectTarget.value = currentRole;
-    }
-
-    this.syncBoardSelfRoleActionState(currentRole);
   }
 
   createWorkspaceSectionItems() {
@@ -475,102 +377,6 @@ export default class extends Controller {
 
     this.restoreFocusElement = null;
   }
-
-  canManageBoardSelfRoles() {
-    return this.isSuperAdmin === true && this.workspaceService && typeof this.workspaceService.setBoardSelfRole === 'function';
-  }
-
-  getWorkspaceSyncOptions({ workspaceService = this.workspaceService } = {}) {
-    return {
-      pendingWorkspaceInvites:
-        typeof workspaceService?.getPendingWorkspaceInvites === 'function'
-          ? workspaceService.getPendingWorkspaceInvites()
-          : this.pendingWorkspaceInvites,
-      activeWorkspaceId:
-        typeof workspaceService?.getActiveWorkspaceId === 'function'
-          ? workspaceService.getActiveWorkspaceId()
-          : this.activeWorkspaceId,
-      activeWorkspaceIsHome:
-        typeof workspaceService?.getIsHomeWorkspace === 'function'
-          ? workspaceService.getIsHomeWorkspace()
-          : this.activeWorkspaceIsHome,
-      isSuperAdmin: this.isSuperAdmin,
-      accessibleWorkspaces:
-        typeof workspaceService?.getAccessibleWorkspaces === 'function'
-          ? workspaceService.getAccessibleWorkspaces()
-          : this.accessibleWorkspaces,
-      workspaceService
-    };
-  }
-
-  resetBoardSelfRoleEditorState() {
-    if (this.hasSelfRoleSummaryTarget) {
-      this.selfRoleSummaryTarget.textContent = '';
-    }
-
-    if (this.hasSelfRoleSelectTarget) {
-      this.selfRoleSelectTarget.value = 'viewer';
-      this.selfRoleSelectTarget.disabled = true;
-    }
-
-    if (this.hasSelfRoleSaveButtonTarget) {
-      this.selfRoleSaveButtonTarget.disabled = true;
-      this.selfRoleSaveButtonTarget.textContent = this.t('boardOptionsDialog.saveSelfRole');
-    }
-
-    this.hideBoardSelfRoleError();
-    this.isSubmittingBoardSelfRole = false;
-  }
-
-  getActiveBoardSelfRole() {
-    return canonicalizeBoardRole(this.optionsState?.activeBoardState?.currentRole);
-  }
-
-  syncBoardSelfRoleActionState(currentRole = this.getActiveBoardSelfRole()) {
-    if (this.hasSelfRoleSelectTarget) {
-      this.selfRoleSelectTarget.disabled = this.isSubmittingBoardSelfRole === true;
-    }
-
-    if (!this.hasSelfRoleSaveButtonTarget) {
-      return;
-    }
-
-    const selectedRole = canonicalizeBoardRole(this.selfRoleSelectTarget?.value);
-
-    this.selfRoleSaveButtonTarget.disabled =
-      this.isSubmittingBoardSelfRole === true
-      || !selectedRole
-      || !currentRole
-      || selectedRole === currentRole;
-    this.selfRoleSaveButtonTarget.textContent = this.t(
-      this.isSubmittingBoardSelfRole === true
-        ? 'boardOptionsDialog.savingSelfRole'
-        : 'boardOptionsDialog.saveSelfRole'
-    );
-  }
-
-  setBoardSelfRoleSubmittingState(isSubmitting, currentRole = this.getActiveBoardSelfRole()) {
-    this.isSubmittingBoardSelfRole = isSubmitting === true;
-    this.syncBoardSelfRoleActionState(currentRole);
-  }
-
-  showBoardSelfRoleError(message) {
-    if (!this.hasSelfRoleErrorTarget) {
-      return;
-    }
-
-    this.selfRoleErrorTarget.hidden = false;
-    this.selfRoleErrorTarget.textContent = message;
-  }
-
-  hideBoardSelfRoleError() {
-    if (!this.hasSelfRoleErrorTarget) {
-      return;
-    }
-
-    this.selfRoleErrorTarget.hidden = true;
-    this.selfRoleErrorTarget.textContent = '';
-  }
 }
 
 function getInviterLabel(invitedBy) {
@@ -587,10 +393,6 @@ function getWorkspaceLabel(section, t) {
   }
 
   return normalizeOptionalString(section?.workspaceId);
-}
-
-function isPlainObject(value) {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
 function normalizeOptionalWorkspaceId(workspaceId) {

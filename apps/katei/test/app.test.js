@@ -1520,15 +1520,15 @@ test('GET /boards renders the Portfolio action in board options for super admins
     new RegExp(`data-workspace-target="workspaceLabel">\\s*${escapeForRegex(createHomeWorkspaceId('sub_123'))}\\s*<`)
   );
   assert.match(response.text, /board-options:open-portfolio->workspace#openPortfolio/);
-  assert.match(response.text, /board-options:board-self-role-updated->workspace#handleBoardSelfRoleUpdated/);
+  assert.doesNotMatch(response.text, /board-options:board-self-role-updated->workspace#handleBoardSelfRoleUpdated/);
   assert.doesNotMatch(boardOptionsDialog, /data-board-options-field="workspaceTitleButton"/);
   assert.doesNotMatch(boardOptionsDialog, /board-options#openRenameDialog/);
   assert.doesNotMatch(boardOptionsDialog, /data-board-options-target="workspaceTitleEditor"/);
   assert.doesNotMatch(boardOptionsDialog, />\s*Edit workspace title\s*</);
-  assert.match(boardOptionsDialog, /data-board-options-target="selfRoleSection"/);
-  assert.match(boardOptionsDialog, /data-board-options-target="selfRoleSelect"/);
-  assert.match(boardOptionsDialog, />\s*My role on this board\s*</);
-  assert.match(boardOptionsDialog, />\s*Save role\s*</);
+  assert.doesNotMatch(boardOptionsDialog, /data-board-options-target="selfRoleSection"/);
+  assert.doesNotMatch(boardOptionsDialog, /data-board-options-target="selfRoleSelect"/);
+  assert.doesNotMatch(boardOptionsDialog, />\s*My role on this board\s*</);
+  assert.doesNotMatch(boardOptionsDialog, />\s*Save role\s*</);
   assert.match(boardOptionsDialog, /data-board-options-field="portfolioButton"/);
   assert.match(boardOptionsDialog, /board-options#openPortfolio/);
   assert.match(boardOptionsDialog, />\s*Open portfolio\s*</);

@@ -199,25 +199,6 @@ export default class extends Controller {
     );
   }
 
-  handleBoardSelfRoleUpdated(event) {
-    const nextWorkspace = event.detail?.workspace;
-    const nextWorkspaceId = normalizeOptionalWorkspaceId(nextWorkspace?.workspaceId ?? event.detail?.workspaceId);
-    const activeWorkspaceId = normalizeOptionalWorkspaceId(this.service?.getActiveWorkspaceId?.() ?? this.workspace?.workspaceId);
-
-    if (!nextWorkspaceId || (activeWorkspaceId && nextWorkspaceId !== activeWorkspaceId) || !nextWorkspace) {
-      return;
-    }
-
-    this.workspace = nextWorkspace;
-    this.render();
-
-    const roleKey = this.activeBoardCollaborationState?.currentRole ?? event.detail?.role;
-
-    this.announce(this.t('boardOptionsDialog.selfRoleSavedStatus', {
-      role: this.t(getBoardRoleTranslationKey(roleKey))
-    }));
-  }
-
   openProfileOptions(event) {
     this.dispatchWorkspaceEvent('open-profile-options', {
       triggerElement: event?.currentTarget ?? null
