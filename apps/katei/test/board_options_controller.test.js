@@ -196,89 +196,6 @@ test('board options controller prefers workspace titles and falls back only when
   assert.equal(controller.boardListTarget.children[2].fields.workspaceTitle.textContent, 'workspace_fallback');
 });
 
-test('board options controller opens the workspace title editor with the current title prefilled for super admins', () => {
-  const { workspace, viewerActor } = createAdminBoardOptionsFixture();
-  const controller = createBoardOptionsControllerDouble();
-  let prevented = false;
-
-  workspace.title = 'Studio HQ';
-  BoardOptionsController.prototype.syncWorkspace.call(controller, workspace, viewerActor, {
-    activeWorkspaceId: workspace.workspaceId,
-    isSuperAdmin: true,
-    workspaceService: createWorkspaceTitleServiceDouble({
-      workspaceId: workspace.workspaceId,
-      workspace
-    })
-  });
-
-  BoardOptionsController.prototype.openRenameDialog.call(controller, {
-    currentTarget: controller.workspaceTitleButtonTarget,
-    preventDefault() {
-      prevented = true;
-    }
-  });
-
-  assert.equal(prevented, true);
-  assert.equal(controller.workspaceTitleEditorTarget.hidden, false);
-  assert.equal(controller.workspaceTitleHeadingTarget.textContent, 'Edit workspace title');
-  assert.equal(controller.workspaceTitleInputTarget.value, 'Studio HQ');
-  assert.equal(controller.workspaceTitleInputTarget.focusCalls, 1);
-  assert.equal(controller.workspaceTitleRestoreFocusElement, controller.workspaceTitleButtonTarget);
-});
-
-test('board options controller saves the active workspace title and refreshes the visible board summaries', async () => {
-  const { workspace, viewerActor } = createAdminBoardOptionsFixture();
-  const controller = createBoardOptionsControllerDouble();
-  const dispatched = [];
-  const serviceCalls = [];
-  const updatedWorkspace = structuredClone(workspace);
-
-  updatedWorkspace.title = 'Studio HQ';
-  controller.dispatch = (name, options) => dispatched.push({ name, detail: options?.detail ?? null });
-  BoardOptionsController.prototype.syncWorkspace.call(controller, workspace, viewerActor, {
-    activeWorkspaceId: workspace.workspaceId,
-    isSuperAdmin: true,
-    workspaceService: createWorkspaceTitleServiceDouble({
-      workspaceId: workspace.workspaceId,
-      workspace: updatedWorkspace,
-      onSetWorkspaceTitle(call) {
-        serviceCalls.push(call);
-      }
-    })
-  });
-  BoardOptionsController.prototype.openRenameDialog.call(controller, {
-    currentTarget: controller.workspaceTitleButtonTarget,
-    preventDefault() {}
-  });
-  controller.workspaceTitleInputTarget.value = 'Studio HQ';
-
-  await BoardOptionsController.prototype.saveWorkspaceTitle.call(controller, {
-    preventDefault() {}
-  });
-
-  assert.deepEqual(serviceCalls, [
-    {
-      workspaceId: workspace.workspaceId,
-      title: 'Studio HQ'
-    }
-  ]);
-  assert.equal(controller.workspaceSummaryTarget.textContent, 'Studio HQ');
-  assert.equal(controller.workspaceMetaTarget.textContent, `Workspace ID: ${workspace.workspaceId}`);
-  assert.equal(controller.boardListTarget.children[0].fields.workspaceTitle.textContent, 'Studio HQ');
-  assert.equal(controller.workspaceTitleEditorTarget.hidden, true);
-  assert.equal(controller.workspaceTitleButtonTarget.focusCalls, 1);
-  assert.deepEqual(dispatched, [
-    {
-      name: 'workspace-title-updated',
-      detail: {
-        workspace: updatedWorkspace,
-        workspaceId: workspace.workspaceId,
-        workspaceTitle: 'Studio HQ'
-      }
-    }
-  ]);
-});
-
 test('board options controller saves the active board self-role and refreshes the active board state', async () => {
   const { workspace, viewerActor } = createAdminBoardOptionsFixture();
   const controller = createBoardOptionsControllerDouble();
@@ -961,9 +878,6 @@ function createBoardOptionsControllerDouble() {
   controller.accessibleWorkspaces = [];
   controller.workspaceService = null;
   controller.restoreFocusElement = null;
-  controller.workspaceTitleRestoreFocusElement = null;
-  controller.currentWorkspaceTitleEditorId = null;
-  controller.isSubmittingWorkspaceTitle = false;
   controller.closeDialogCalls = [];
   controller.dispatch = () => {};
   controller.closeDialog = (options = {}) => {
@@ -972,16 +886,6 @@ function createBoardOptionsControllerDouble() {
   controller.summaryTarget = createTextTarget();
   controller.roleSummaryTarget = createTextTarget();
   controller.pendingSummaryTarget = createTextTarget({ hidden: true });
-  controller.workspaceSummaryTarget = createTextTarget();
-  controller.workspaceMetaTarget = createTextTarget();
-  controller.workspaceTitleButtonTarget = createButtonElement();
-  controller.workspaceTitleEditorTarget = createToggleTarget(true);
-  controller.workspaceTitleHeadingTarget = createTextTarget();
-  controller.workspaceTitleInputTarget = createInputTarget();
-  controller.workspaceTitleErrorTarget = createTextTarget({ hidden: true });
-  controller.workspaceTitleSaveButtonTarget = createButtonElement();
-  controller.workspaceTitleCancelButtonTarget = createButtonElement();
-  controller.workspaceTitleCloseButtonTarget = createButtonElement();
   controller.selfRoleSectionTarget = createToggleTarget(true);
   controller.selfRoleSummaryTarget = createTextTarget();
   controller.selfRoleSelectTarget = createSelectElement();
@@ -1017,22 +921,12 @@ function createBoardOptionsControllerDouble() {
       this.open = false;
     }
   };
-  controller.hasWorkspaceSummaryTarget = true;
-  controller.hasWorkspaceMetaTarget = true;
-  controller.hasWorkspaceTitleEditorTarget = true;
-  controller.hasWorkspaceTitleHeadingTarget = true;
-  controller.hasWorkspaceTitleInputTarget = true;
-  controller.hasWorkspaceTitleErrorTarget = true;
-  controller.hasWorkspaceTitleSaveButtonTarget = true;
-  controller.hasWorkspaceTitleCancelButtonTarget = true;
-  controller.hasWorkspaceTitleCloseButtonTarget = true;
   controller.hasSelfRoleSectionTarget = true;
   controller.hasSelfRoleSummaryTarget = true;
   controller.hasSelfRoleSelectTarget = true;
   controller.hasSelfRoleErrorTarget = true;
   controller.hasSelfRoleSaveButtonTarget = true;
 
-  BoardOptionsController.prototype.resetWorkspaceTitleEditorState.call(controller);
   BoardOptionsController.prototype.resetBoardSelfRoleEditorState.call(controller);
 
   return controller;
@@ -1100,18 +994,6 @@ function createButtonElement() {
     disabled: false,
     textContent: '',
     dataset: {},
-    focusCalls: 0,
-    isConnected: true,
-    focus() {
-      this.focusCalls += 1;
-    }
-  };
-}
-
-function createInputTarget() {
-  return {
-    disabled: false,
-    value: '',
     focusCalls: 0,
     isConnected: true,
     focus() {

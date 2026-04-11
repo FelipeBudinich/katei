@@ -199,28 +199,6 @@ export default class extends Controller {
     );
   }
 
-  handleWorkspaceTitleUpdated(event) {
-    const nextWorkspace = event.detail?.workspace;
-    const nextWorkspaceId = normalizeOptionalWorkspaceId(nextWorkspace?.workspaceId ?? event.detail?.workspaceId);
-    const activeWorkspaceId = normalizeOptionalWorkspaceId(this.service?.getActiveWorkspaceId?.() ?? this.workspace?.workspaceId);
-
-    if (!nextWorkspaceId || (activeWorkspaceId && nextWorkspaceId !== activeWorkspaceId)) {
-      return;
-    }
-
-    if (nextWorkspace) {
-      this.workspace = nextWorkspace;
-    } else if (this.workspace && Object.prototype.hasOwnProperty.call(event.detail ?? {}, 'workspaceTitle')) {
-      this.workspace = {
-        ...this.workspace,
-        title: normalizeOptionalString(event.detail?.workspaceTitle) || null
-      };
-    }
-
-    this.render();
-    this.announce(this.t('portfolio.workspaceTitleEditor.savedStatus'));
-  }
-
   handleBoardSelfRoleUpdated(event) {
     const nextWorkspace = event.detail?.workspace;
     const nextWorkspaceId = normalizeOptionalWorkspaceId(nextWorkspace?.workspaceId ?? event.detail?.workspaceId);

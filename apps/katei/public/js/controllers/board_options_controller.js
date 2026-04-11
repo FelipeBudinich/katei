@@ -16,15 +16,6 @@ export default class extends Controller {
     'summary',
     'roleSummary',
     'pendingSummary',
-    'workspaceSummary',
-    'workspaceMeta',
-    'workspaceTitleEditor',
-    'workspaceTitleHeading',
-    'workspaceTitleInput',
-    'workspaceTitleError',
-    'workspaceTitleSaveButton',
-    'workspaceTitleCancelButton',
-    'workspaceTitleCloseButton',
     'selfRoleSection',
     'selfRoleSummary',
     'selfRoleSelect',
@@ -50,17 +41,12 @@ export default class extends Controller {
     this.accessibleWorkspaces = [];
     this.workspaceService = null;
     this.restoreFocusElement = null;
-    this.workspaceTitleRestoreFocusElement = null;
-    this.currentWorkspaceTitleEditorId = null;
-    this.isSubmittingWorkspaceTitle = false;
     this.isSubmittingBoardSelfRole = false;
-    this.resetWorkspaceTitleEditorState();
     this.resetBoardSelfRoleEditorState();
   }
 
   openFromEvent(event) {
     this.restoreFocusElement = event.detail?.triggerElement ?? null;
-    this.closeRenameDialog(null, { restoreFocus: false });
     this.syncWorkspace(event.detail?.workspace, event.detail?.viewerActor, {
       pendingWorkspaceInvites: event.detail?.pendingWorkspaceInvites,
       activeWorkspaceId: event.detail?.activeWorkspaceId,
@@ -101,7 +87,7 @@ export default class extends Controller {
       event.preventDefault();
     }
 
-    if (this.isSubmittingWorkspaceTitle || this.isSubmittingBoardSelfRole) {
+    if (this.isSubmittingBoardSelfRole) {
       return;
     }
 
@@ -161,106 +147,9 @@ export default class extends Controller {
     this.closeDialog({ restoreFocus: false });
   }
 
-  openRenameDialog(event) {
-    if (event) {
-      event.preventDefault();
-    }
-
-    if (!this.canManageWorkspaceTitles() || !this.hasWorkspaceTitleEditorTarget || !this.hasWorkspaceTitleInputTarget) {
-      return;
-    }
-
-    const workspaceId = normalizeOptionalWorkspaceId(this.workspace?.workspaceId) ?? this.activeWorkspaceId;
-
-    if (!workspaceId) {
-      return;
-    }
-
-    const workspaceTitle = normalizeOptionalString(this.workspace?.title);
-
-    this.workspaceTitleRestoreFocusElement = event?.currentTarget ?? null;
-    this.currentWorkspaceTitleEditorId = workspaceId;
-    this.resetWorkspaceTitleEditorState();
-    this.workspaceTitleHeadingTarget.textContent = this.t(
-      workspaceTitle
-        ? 'portfolio.workspaceTitleEditor.editHeading'
-        : 'portfolio.workspaceTitleEditor.assignHeading'
-    );
-    this.workspaceTitleInputTarget.value = workspaceTitle;
-    this.workspaceTitleEditorTarget.hidden = false;
-    this.focusWorkspaceTitleInput();
-  }
-
-  closeRenameDialog(event, { restoreFocus = true, force = false } = {}) {
-    if (event) {
-      event.preventDefault();
-    }
-
-    if (this.isSubmittingWorkspaceTitle && force !== true) {
-      return;
-    }
-
-    const restoreFocusElement = this.workspaceTitleRestoreFocusElement;
-
-    if (this.hasWorkspaceTitleEditorTarget) {
-      this.workspaceTitleEditorTarget.hidden = true;
-    }
-
-    this.workspaceTitleRestoreFocusElement = null;
-    this.currentWorkspaceTitleEditorId = null;
-    this.resetWorkspaceTitleEditorState();
-
-    if (restoreFocus && restoreFocusElement?.isConnected) {
-      restoreFocusElement.focus();
-    }
-  }
-
-  handleTitleInput() {
-    this.hideWorkspaceTitleError();
-  }
-
   handleSelfRoleInput() {
     this.hideBoardSelfRoleError();
     this.syncBoardSelfRoleActionState();
-  }
-
-  async saveWorkspaceTitle(event) {
-    if (event) {
-      event.preventDefault();
-    }
-
-    if (
-      !this.canManageWorkspaceTitles()
-      || !this.currentWorkspaceTitleEditorId
-      || this.isSubmittingWorkspaceTitle
-    ) {
-      return;
-    }
-
-    this.hideWorkspaceTitleError();
-    this.setWorkspaceTitleSubmittingState(true);
-
-    try {
-      const result = await this.workspaceService.setWorkspaceTitle(
-        this.currentWorkspaceTitleEditorId,
-        this.workspaceTitleInputTarget.value
-      );
-
-      const nextWorkspace = isPlainObject(result?.workspace) ? result.workspace : this.workspace;
-
-      this.syncWorkspace(nextWorkspace, this.viewerActor, this.getWorkspaceSyncOptions({
-        workspaceService: this.workspaceService
-      }));
-      this.closeRenameDialog(null, { restoreFocus: true, force: true });
-      this.dispatch('workspace-title-updated', {
-        detail: result
-      });
-    } catch (error) {
-      console.error(error);
-      this.showWorkspaceTitleError(localizeErrorMessage(error, this.t));
-    } finally {
-      this.setWorkspaceTitleSubmittingState(false);
-    }
   }
 
   async saveBoardSelfRole(event) {
@@ -391,7 +280,6 @@ export default class extends Controller {
       return;
     }
 
-    this.renderWorkspaceSummary();
     this.renderBoardSelfRoleSection(activeBoardState);
 
     if (!this.activeBoard || !activeBoardState) {
@@ -415,18 +303,6 @@ export default class extends Controller {
 
     this.boardListTarget.replaceChildren(...this.createWorkspaceSectionItems());
     this.renderPendingWorkspaceInvites();
-  }
-
-  renderWorkspaceSummary() {
-    if (this.hasWorkspaceSummaryTarget) {
-      this.workspaceSummaryTarget.textContent = getCurrentWorkspaceLabel(this.workspace, this.activeWorkspaceId);
-    }
-
-    if (this.hasWorkspaceMetaTarget) {
-      this.workspaceMetaTarget.textContent = this.t('boardOptionsDialog.workspaceIdSummary', {
-        workspaceId: normalizeOptionalWorkspaceId(this.workspace?.workspaceId) ?? this.activeWorkspaceId ?? ''
-      });
-    }
   }
 
   renderBoardSelfRoleSection(activeBoardState) {
@@ -589,8 +465,6 @@ export default class extends Controller {
   }
 
   closeDialog({ restoreFocus = true } = {}) {
-    this.closeRenameDialog(null, { restoreFocus: false });
-
     if (this.dialogTarget.open) {
       this.dialogTarget.close();
     }
@@ -600,10 +474,6 @@ export default class extends Controller {
     }
 
     this.restoreFocusElement = null;
-  }
-
-  canManageWorkspaceTitles() {
-    return this.isSuperAdmin === true && this.workspaceService && typeof this.workspaceService.setWorkspaceTitle === 'function';
   }
 
   canManageBoardSelfRoles() {
@@ -633,38 +503,6 @@ export default class extends Controller {
     };
   }
 
-  focusWorkspaceTitleInput() {
-    this.workspaceTitleInputTarget.focus();
-  }
-
-  resetWorkspaceTitleEditorState() {
-    this.hideWorkspaceTitleError();
-
-    if (this.hasWorkspaceTitleHeadingTarget) {
-      this.workspaceTitleHeadingTarget.textContent = this.t('portfolio.workspaceTitleEditor.assignHeading');
-    }
-
-    if (this.hasWorkspaceTitleInputTarget) {
-      this.workspaceTitleInputTarget.value = '';
-      this.workspaceTitleInputTarget.disabled = false;
-    }
-
-    if (this.hasWorkspaceTitleSaveButtonTarget) {
-      this.workspaceTitleSaveButtonTarget.disabled = false;
-      this.workspaceTitleSaveButtonTarget.textContent = this.t('common.save');
-    }
-
-    if (this.hasWorkspaceTitleCancelButtonTarget) {
-      this.workspaceTitleCancelButtonTarget.disabled = false;
-    }
-
-    if (this.hasWorkspaceTitleCloseButtonTarget) {
-      this.workspaceTitleCloseButtonTarget.disabled = false;
-    }
-
-    this.isSubmittingWorkspaceTitle = false;
-  }
-
   resetBoardSelfRoleEditorState() {
     if (this.hasSelfRoleSummaryTarget) {
       this.selfRoleSummaryTarget.textContent = '';
@@ -682,47 +520,6 @@ export default class extends Controller {
 
     this.hideBoardSelfRoleError();
     this.isSubmittingBoardSelfRole = false;
-  }
-
-  setWorkspaceTitleSubmittingState(isSubmitting) {
-    this.isSubmittingWorkspaceTitle = isSubmitting === true;
-
-    if (this.hasWorkspaceTitleInputTarget) {
-      this.workspaceTitleInputTarget.disabled = this.isSubmittingWorkspaceTitle;
-    }
-
-    if (this.hasWorkspaceTitleSaveButtonTarget) {
-      this.workspaceTitleSaveButtonTarget.disabled = this.isSubmittingWorkspaceTitle;
-      this.workspaceTitleSaveButtonTarget.textContent = this.t(
-        this.isSubmittingWorkspaceTitle ? 'portfolio.workspaceTitleEditor.savingAction' : 'common.save'
-      );
-    }
-
-    if (this.hasWorkspaceTitleCancelButtonTarget) {
-      this.workspaceTitleCancelButtonTarget.disabled = this.isSubmittingWorkspaceTitle;
-    }
-
-    if (this.hasWorkspaceTitleCloseButtonTarget) {
-      this.workspaceTitleCloseButtonTarget.disabled = this.isSubmittingWorkspaceTitle;
-    }
-  }
-
-  showWorkspaceTitleError(message) {
-    if (!this.hasWorkspaceTitleErrorTarget) {
-      return;
-    }
-
-    this.workspaceTitleErrorTarget.hidden = false;
-    this.workspaceTitleErrorTarget.textContent = message;
-  }
-
-  hideWorkspaceTitleError() {
-    if (!this.hasWorkspaceTitleErrorTarget) {
-      return;
-    }
-
-    this.workspaceTitleErrorTarget.hidden = true;
-    this.workspaceTitleErrorTarget.textContent = '';
   }
 
   getActiveBoardSelfRole() {
@@ -790,13 +587,6 @@ function getWorkspaceLabel(section, t) {
   }
 
   return normalizeOptionalString(section?.workspaceId);
-}
-
-function getCurrentWorkspaceLabel(workspace, activeWorkspaceId) {
-  return normalizeOptionalString(workspace?.title)
-    || normalizeOptionalWorkspaceId(workspace?.workspaceId)
-    || normalizeOptionalWorkspaceId(activeWorkspaceId)
-    || '';
 }
 
 function isPlainObject(value) {
