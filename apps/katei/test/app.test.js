@@ -99,6 +99,65 @@ test('GET / renders the landing page for anonymous users', async () => {
   assert.match(response.text, /<span class="ui-locale-badge-value">\s*English\s*<\/span>/);
   assert.match(response.text, /<option value="en" selected>\s*English\s*<\/option>/);
   assert.match(response.text, /UI language/);
+  assertSharedPwaHeadTags(response.text);
+});
+
+test('GET /manifest.webmanifest returns the install manifest', async () => {
+  const app = createTestApp();
+
+  const response = await request(app).get('/manifest.webmanifest');
+
+  assert.equal(response.status, 200);
+  assert.equal(response.type, 'application/manifest+json');
+
+  const manifest = JSON.parse(response.text);
+
+  assert.equal(manifest.display, 'standalone');
+  assert.equal(manifest.start_url, '/');
+  assert.equal(manifest.scope, '/');
+  assert.deepEqual(manifest.icons, [
+    {
+      src: '/icons/icon-192.png',
+      sizes: '192x192',
+      type: 'image/png'
+    },
+    {
+      src: '/icons/icon-512.png',
+      sizes: '512x512',
+      type: 'image/png'
+    },
+    {
+      src: '/icons/icon-maskable-512.png',
+      sizes: '512x512',
+      type: 'image/png',
+      purpose: 'maskable'
+    }
+  ]);
+});
+
+test('GET /offline.html returns the self-contained offline fallback page', async () => {
+  const app = createTestApp();
+
+  const response = await request(app).get('/offline.html');
+
+  assert.equal(response.status, 200);
+  assert.match(response.text, /You're offline/);
+  assert.match(response.text, /Katei can't reach the network right now\./);
+  assert.match(response.text, /Boards and workspace changes are not available offline in this first PWA cut\./);
+  assert.match(response.text, /window\.location\.reload\(\)/);
+  assert.match(response.text, /<a href="\/">Go to home<\/a>/);
+  assert.doesNotMatch(response.text, /\/assets\/app\.css/);
+  assert.doesNotMatch(response.text, /\/js\/app\.js/);
+});
+
+test('GET /sw.js returns the Katei service worker', async () => {
+  const app = createTestApp();
+
+  const response = await request(app).get('/sw.js');
+
+  assert.equal(response.status, 200);
+  assert.match(response.text, /const CACHE_VERSION = 'v1';/);
+  assert.match(response.text, /const OFFLINE_URL = '\/offline\.html';/);
 });
 
 test('GET / localizes landing page chrome for es-CL', async () => {
@@ -1225,6 +1284,7 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
   const bootstrapPayload = readWorkspaceBootstrapPayload(response.text);
 
   assert.equal(response.status, 200);
+  assertSharedPwaHeadTags(response.text);
   assert.match(response.text, /data-workspace-viewer-sub-value="sub_123"/);
   assert.match(response.text, /Logout/);
   assert.match(response.text, /Tester/);
@@ -3966,6 +4026,13 @@ function assertSharedProfileOptionsDialog(dialogHtml, { localeFormAction, locale
   assert.match(dialogHtml, /data-session-target="confirmMessage"/);
   assert.match(dialogHtml, /data-session-target="confirmButton"/);
   assert.match(dialogHtml, /session#confirmLogout/);
+}
+
+function assertSharedPwaHeadTags(html) {
+  assert.match(html, /<meta name="application-name" content="過程 \(katei\)">/);
+  assert.match(html, /<meta name="theme-color" content="#f5f1f0">/);
+  assert.match(html, /<link rel="manifest" href="\/manifest\.webmanifest">/);
+  assert.match(html, /<link rel="apple-touch-icon" href="\/icons\/icon-192\.png">/);
 }
 
 function renderPortfolioPage(viewModel, { uiLocale = 'en' } = {}) {

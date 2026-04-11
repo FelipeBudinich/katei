@@ -1,3 +1,4 @@
+import './pwa/register_service_worker.js';
 import { Application } from '../vendor/stimulus/stimulus.js';
 import WorkspaceController from '/js/controllers/workspace_controller.js';
 import BoardOptionsController from '/js/controllers/board_options_controller.js';
