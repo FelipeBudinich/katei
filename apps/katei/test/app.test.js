@@ -563,11 +563,6 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
   assert.ok(countMatches(response.text, /class="portfolio-workspace-group paper-panel"/g) >= 7);
   assert.match(response.text, /href="\/boards\?workspaceId=workspace_portfolio_alpha&amp;boardId=main"/);
   assert.match(response.text, /Tester/);
-  assert.match(response.text, /data-controller="profile-options"/);
-  assert.match(response.text, /data-controller="session"/);
-  assert.match(response.text, /data-session-target="logoutButton"/);
-  assert.match(response.text, /session#openLogoutConfirm/);
-  assert.match(response.text, /id="portfolio-ui-locale-picker"/);
   assert.match(
     findSetCookie(response, KATEI_LAST_SURFACE_COOKIE_NAME) ?? '',
     new RegExp(escapeForRegex(createLastSurfaceCookieValue({ surface: 'portfolio' })))
@@ -612,18 +607,10 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
   assert.doesNotMatch(boardDirectorySection, /portfolio-search-form/);
   assert.doesNotMatch(boardDirectorySection, /portfolio-search-input/);
   assert.doesNotMatch(boardDirectorySection, /portfolio-search-actions/);
-  assert.match(profileOptionsDialog, /class="ui-locale-badge(?: ui-locale-badge--with-picker)?"/);
-  assert.match(
-    profileOptionsDialog,
-    /<form[\s\S]*?method="get"[\s\S]*?action="\/portfolio"[\s\S]*?class="ui-locale-picker ui-locale-picker--icon-menu"[\s\S]*?data-controller="ui-locale-picker"[\s\S]*?<div class="ui-locale-badge ui-locale-badge--with-picker">[\s\S]*?<span class="ui-locale-badge-value">\s*English\s*<\/span>[\s\S]*?<div class="view-locale-picker">/
-  );
-  assert.match(profileOptionsDialog, /aria-haspopup="dialog"/);
-  assert.match(
-    profileOptionsDialog,
-    /class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--language"/
-  );
-  assert.match(profileOptionsDialog, /data-ui-locale-picker-target="dialog"/);
-  assert.match(profileOptionsDialog, /class="viewer-chip"/);
+  assertSharedProfileOptionsDialog(profileOptionsDialog, {
+    localeFormAction: '/portfolio',
+    localePickerId: 'portfolio-ui-locale-picker'
+  });
 });
 
 test('GET /portfolio renders one workspace title action per workspace group for super admins', async () => {
@@ -1295,16 +1282,6 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
     response.text,
     /class="touch-button-secondary touch-button-secondary--icon"[\s\S]*?data-action="workspace#openProfileOptions"[\s\S]*?aria-label="Profile"[\s\S]*?<img src="\/profile\.svg" alt="" aria-hidden="true" class="touch-button-secondary__icon">/
   );
-  assert.match(response.text, /id="profile-options-ui-locale-picker"/);
-  assert.match(
-    response.text,
-    /<form[\s\S]*?method="get"[\s\S]*?action="\/boards"[\s\S]*?class="ui-locale-picker ui-locale-picker--icon-menu"[\s\S]*?data-controller="ui-locale-picker"/
-  );
-  assert.match(response.text, /aria-haspopup="dialog"/);
-  assert.match(response.text, /data-action="click->ui-locale-picker#openDialog keydown->ui-locale-picker#handleTriggerKeydown"/);
-  assert.match(response.text, /class="sheet-dialog confirm-dialog"[\s\S]*?data-ui-locale-picker-target="dialog"/);
-  assert.match(response.text, /click->ui-locale-picker#backdropCloseDialog cancel->ui-locale-picker#closeDialog/);
-  assert.match(response.text, /class="ui-locale-modal-options mt-6"/);
   assert.match(response.text, /data-board-options-field="inviteAcceptButton"/);
   assert.match(response.text, /data-board-options-field="inviteDeclineButton"/);
   assert.match(response.text, /board-options:accept-invite->workspace#handleAcceptInvite/);
@@ -1312,6 +1289,7 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
 
   const boardOptionsDialog = extractDialogHtml(response.text, 'board-options');
   const boardCollaboratorsDialog = extractDialogHtml(response.text, 'board-collaborators');
+  const profileOptionsDialog = extractDialogHtml(response.text, 'profile-options');
 
   assert.doesNotMatch(boardOptionsDialog, /ui-locale-control-row/);
   assert.doesNotMatch(boardOptionsDialog, /session#logout/);
@@ -1370,19 +1348,10 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
     /class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--close"[\s\S]*?aria-label="Close"[\s\S]*?data-board-collaborators-initial-focus[\s\S]*?data-action="board-collaborators#close"[\s\S]*?<span class="sr-only">Close<\/span>/
   );
 
-  assert.match(response.text, /data-controller="profile-options"/);
-  assert.match(response.text, /profile-options-locale-slot/);
-  assert.match(response.text, /viewer-chip/);
-  assert.match(response.text, /data-controller="session"/);
-  assert.match(response.text, /data-session-target="logoutButton"/);
-  assert.match(response.text, /session#openLogoutConfirm/);
-  assert.match(response.text, /class="sheet-dialog confirm-dialog"/);
-  assert.match(response.text, /data-session-target="confirmDialog"/);
-  assert.match(response.text, /click->session#backdropCloseConfirmDialog cancel->session#closeConfirmDialog/);
-  assert.match(response.text, /data-session-target="confirmTitle"/);
-  assert.match(response.text, /data-session-target="confirmMessage"/);
-  assert.match(response.text, /data-session-target="confirmButton"/);
-  assert.match(response.text, /session#confirmLogout/);
+  assertSharedProfileOptionsDialog(profileOptionsDialog, {
+    localeFormAction: '/boards',
+    localePickerId: 'profile-options-ui-locale-picker'
+  });
 });
 
 test('GET /boards selects the requested board from the query string for first paint and last-surface memory', async () => {
@@ -1797,16 +1766,6 @@ test('workspace template renders the no-board header with both Options and Profi
     html,
     /class="touch-button-secondary touch-button-secondary--icon"[\s\S]*?data-action="workspace#openProfileOptions"[\s\S]*?aria-label="Profile"[\s\S]*?<img src="\/profile\.svg" alt="" aria-hidden="true" class="touch-button-secondary__icon">/
   );
-  assert.match(html, /id="profile-options-ui-locale-picker"/);
-  assert.match(html, /data-controller="profile-options"/);
-  assert.doesNotMatch(html, /ui-locale-badge/);
-  assert.match(
-    html,
-    /<form[\s\S]*?method="get"[\s\S]*?action="\/boards"[\s\S]*?class="ui-locale-picker ui-locale-picker--icon-menu"[\s\S]*?data-controller="ui-locale-picker"/
-  );
-  assert.match(html, /aria-haspopup="dialog"/);
-  assert.match(html, /data-ui-locale-picker-target="dialog"/);
-  assert.match(html, /class="ui-locale-modal-options mt-6"/);
   assert.match(html, /<option value="en" selected>\s*English\s*<\/option>/);
   assert.match(html, /role="menuitemradio"/);
   assert.match(html, /No Boards Viewer/);
@@ -1823,10 +1782,10 @@ test('workspace template renders the no-board header with both Options and Profi
     boardCollaboratorsDialog,
     /class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--close"[\s\S]*?aria-label="Close"[\s\S]*?data-board-collaborators-initial-focus[\s\S]*?data-action="board-collaborators#close"[\s\S]*?<span class="sr-only">Close<\/span>/
   );
-  assert.match(
-    profileOptionsDialog,
-    /class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--close"[\s\S]*?aria-label="Close"[\s\S]*?data-profile-options-initial-focus[\s\S]*?data-action="profile-options#close"[\s\S]*?<span class="sr-only">Close<\/span>/
-  );
+  assertSharedProfileOptionsDialog(profileOptionsDialog, {
+    localeFormAction: '/boards',
+    localePickerId: 'profile-options-ui-locale-picker'
+  });
 });
 
 test('workspace template nests the column chevron inside the count chip', () => {
@@ -3848,17 +3807,31 @@ function readWorkspaceBootstrapPayload(html) {
 }
 
 function extractDialogHtml(html, controllerName) {
-  const match = html.match(
-    new RegExp(
-      `<dialog[\\s\\S]*?data-controller="${escapeForRegex(controllerName)}"[\\s\\S]*?<\\/dialog>`
-    )
+  const startPattern = new RegExp(
+    `<dialog\\b[^>]*data-controller="${escapeForRegex(controllerName)}"[^>]*>`,
+    's'
   );
+  const match = startPattern.exec(html);
 
   if (!match) {
     throw new Error(`Dialog for controller "${controllerName}" was not rendered.`);
   }
 
-  return match[0];
+  const startIndex = match.index;
+  const dialogTokenPattern = /<dialog\b|<\/dialog>/g;
+  dialogTokenPattern.lastIndex = startIndex;
+  let depth = 0;
+  let tokenMatch = null;
+
+  while ((tokenMatch = dialogTokenPattern.exec(html))) {
+    depth += tokenMatch[0] === '<dialog' ? 1 : -1;
+
+    if (depth === 0) {
+      return html.slice(startIndex, dialogTokenPattern.lastIndex);
+    }
+  }
+
+  throw new Error(`Dialog for controller "${controllerName}" was not fully rendered.`);
 }
 
 function extractDialogByTarget(html, targetName) {
@@ -3874,6 +3847,46 @@ function extractDialogByTarget(html, targetName) {
   }
 
   return match[0];
+}
+
+function assertSharedProfileOptionsDialog(dialogHtml, { localeFormAction, localePickerId }) {
+  assert.match(dialogHtml, /class="sheet-panel"/);
+  assert.match(dialogHtml, /class="dialog-handle mx-auto h-1\.5 w-16 rounded-full lg:hidden"/);
+  assert.match(dialogHtml, /class="dialog-header-row mt-4"/);
+  assert.match(dialogHtml, /field-label text-sm font-semibold">\s*Profile\s*</);
+  assert.match(
+    dialogHtml,
+    /class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--close"[\s\S]*?aria-label="Close"[\s\S]*?data-profile-options-initial-focus[\s\S]*?data-action="profile-options#close"[\s\S]*?<span class="sr-only">Close<\/span>/
+  );
+  assert.match(dialogHtml, /class="profile-options-identity-row mt-4"/);
+  assert.match(dialogHtml, /class="viewer-chip"/);
+  assert.match(dialogHtml, /class="profile-options-locale-slot"/);
+  assert.match(dialogHtml, new RegExp(`id="${escapeForRegex(localePickerId)}"`));
+  assert.match(dialogHtml, /class="ui-locale-badge ui-locale-badge--with-picker"/);
+  assert.match(
+    dialogHtml,
+    new RegExp(
+      `<form[\\s\\S]*?method="get"[\\s\\S]*?action="${escapeForRegex(localeFormAction)}"[\\s\\S]*?class="ui-locale-picker ui-locale-picker--icon-menu"[\\s\\S]*?data-controller="ui-locale-picker"[\\s\\S]*?<div class="ui-locale-badge ui-locale-badge--with-picker">[\\s\\S]*?<span class="ui-locale-badge-value">\\s*English\\s*<\\/span>[\\s\\S]*?<div class="view-locale-picker">`
+    )
+  );
+  assert.match(dialogHtml, /aria-haspopup="dialog"/);
+  assert.match(dialogHtml, /data-action="click->ui-locale-picker#openDialog keydown->ui-locale-picker#handleTriggerKeydown"/);
+  assert.match(
+    dialogHtml,
+    /class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--language"/
+  );
+  assert.match(dialogHtml, /data-ui-locale-picker-target="dialog"/);
+  assert.match(dialogHtml, /click->ui-locale-picker#backdropCloseDialog cancel->ui-locale-picker#closeDialog/);
+  assert.match(dialogHtml, /class="ui-locale-modal-options mt-6"/);
+  assert.match(dialogHtml, /data-controller="session"/);
+  assert.match(dialogHtml, /data-session-target="logoutButton"/);
+  assert.match(dialogHtml, /session#openLogoutConfirm/);
+  assert.match(dialogHtml, /data-session-target="confirmDialog"/);
+  assert.match(dialogHtml, /click->session#backdropCloseConfirmDialog cancel->session#closeConfirmDialog/);
+  assert.match(dialogHtml, /data-session-target="confirmTitle"/);
+  assert.match(dialogHtml, /data-session-target="confirmMessage"/);
+  assert.match(dialogHtml, /data-session-target="confirmButton"/);
+  assert.match(dialogHtml, /session#confirmLogout/);
 }
 
 function renderPortfolioPage(viewModel, { uiLocale = 'en' } = {}) {

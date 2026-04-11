@@ -35,13 +35,11 @@
       </div>
 
       <div class="profile-options-locale-slot">
-        <div class="grid gap-2">
-          {% set uiLocalePickerId = profileUiLocalePickerId %}
-          {% set uiLocalePickerAction = profileUiLocalePickerAction %}
-          {% set uiLocalePickerVariant = 'icon-modal' %}
-          {% set uiLocalePickerBadgeValue = uiLocaleCurrent.label if profileOptionsShowLocaleBadge else '' %}
-          {% include "partials/ui-locale-picker.njk" %}
-        </div>
+        {% set uiLocalePickerId = profileUiLocalePickerId %}
+        {% set uiLocalePickerAction = profileUiLocalePickerAction %}
+        {% set uiLocalePickerVariant = 'icon-modal' %}
+        {% set uiLocalePickerBadgeValue = uiLocaleCurrent.label %}
+        {% include "partials/ui-locale-picker.njk" %}
       </div>
 
       <div
