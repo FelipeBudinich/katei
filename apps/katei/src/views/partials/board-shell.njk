@@ -27,6 +27,11 @@
     <button type="button" class="touch-button-secondary" data-action="workspace#openBoardOptions">
       {{ t('workspace.boardOptions') }}
     </button>
+    {% if viewer.isSuperAdmin %}
+      <button type="button" class="touch-button-secondary" data-action="workspace#openPortfolio">
+        {{ t('workspace.openPortfolio') }}
+      </button>
+    {% endif %}
     <button
       type="button"
       class="touch-button-secondary touch-button-secondary--icon"

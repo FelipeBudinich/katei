@@ -32,22 +32,6 @@
       </button>
     </div>
 
-    {% if viewer.isSuperAdmin %}
-      <section class="mt-6 space-y-3">
-        <p class="field-label text-sm font-semibold">{{ t('boardOptionsDialog.portfolioLabel') }}</p>
-        <div class="paper-panel px-4 py-4">
-          <button
-            type="button"
-            class="touch-button-secondary"
-            data-board-options-field="portfolioButton"
-            data-action="board-options#openPortfolio"
-          >
-            {{ t('boardOptionsDialog.openPortfolio') }}
-          </button>
-        </div>
-      </section>
-    {% endif %}
-
     <section class="mt-6 space-y-3">
       <p class="field-label text-sm font-semibold">{{ t('boardOptionsDialog.switchBoardLabel') }}</p>
       <div class="space-y-4" data-board-options-target="boardList"></div>

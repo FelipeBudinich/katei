@@ -1276,6 +1276,7 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
   assert.match(response.text, /<script defer src="\/vendor\/easymde\/easymde\.min\.js"><\/script>/);
   assert.match(response.text, /data-action="workspace#openBoardOptions"/);
   assert.match(response.text, /data-action="workspace#openProfileOptions"/);
+  assert.doesNotMatch(response.text, /data-action="workspace#openPortfolio"/);
   assert.match(response.text, /data-workspace-viewer-super-admin-value="false"/);
   assert.match(response.text, />\s*Options\s*</);
   assert.match(
@@ -1492,7 +1493,7 @@ test('GET /boards redirects super-admin drill-downs back to /portfolio when the 
   ]);
 });
 
-test('GET /boards renders the Portfolio action in board options for super admins', async () => {
+test('GET /boards renders the Portfolio action in the workspace top bar for super admins', async () => {
   const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble();
   const portfolioReadModel = createPortfolioReadModelDouble();
   const app = createTestApp({
@@ -1519,7 +1520,13 @@ test('GET /boards renders the Portfolio action in board options for super admins
     response.text,
     new RegExp(`data-workspace-target="workspaceLabel">\\s*${escapeForRegex(createHomeWorkspaceId('sub_123'))}\\s*<`)
   );
-  assert.match(response.text, /board-options:open-portfolio->workspace#openPortfolio/);
+  assert.match(
+    response.text,
+    /class="top-bar-actions"[\s\S]*?data-action="workspace#openBoardOptions"[\s\S]*?data-action="workspace#openPortfolio"[\s\S]*?data-action="workspace#openProfileOptions"/
+  );
+  assert.match(response.text, /data-action="workspace#openPortfolio"/);
+  assert.match(response.text, />\s*Open portfolio\s*</);
+  assert.doesNotMatch(response.text, /board-options:open-portfolio->workspace#openPortfolio/);
   assert.doesNotMatch(response.text, /board-options:board-self-role-updated->workspace#handleBoardSelfRoleUpdated/);
   assert.doesNotMatch(boardOptionsDialog, /data-board-options-field="workspaceTitleButton"/);
   assert.doesNotMatch(boardOptionsDialog, /board-options#openRenameDialog/);
@@ -1529,9 +1536,8 @@ test('GET /boards renders the Portfolio action in board options for super admins
   assert.doesNotMatch(boardOptionsDialog, /data-board-options-target="selfRoleSelect"/);
   assert.doesNotMatch(boardOptionsDialog, />\s*My role on this board\s*</);
   assert.doesNotMatch(boardOptionsDialog, />\s*Save role\s*</);
-  assert.match(boardOptionsDialog, /data-board-options-field="portfolioButton"/);
-  assert.match(boardOptionsDialog, /board-options#openPortfolio/);
-  assert.match(boardOptionsDialog, />\s*Open portfolio\s*</);
+  assert.doesNotMatch(boardOptionsDialog, /data-board-options-field="portfolioButton"/);
+  assert.doesNotMatch(boardOptionsDialog, /board-options#openPortfolio/);
   assert.deepEqual(portfolioReadModel.loadCalls, []);
 });
 
@@ -1761,6 +1767,7 @@ test('workspace template renders the no-board header with both Options and Profi
   assert.match(html, /This workspace no longer has any boards you can open\./);
   assert.match(html, /data-action="workspace#openBoardOptions"/);
   assert.match(html, /data-action="workspace#openProfileOptions"/);
+  assert.doesNotMatch(html, /data-action="workspace#openPortfolio"/);
   assert.match(html, />\s*Options\s*</);
   assert.match(
     html,
@@ -1786,6 +1793,43 @@ test('workspace template renders the no-board header with both Options and Profi
     localeFormAction: '/boards',
     localePickerId: 'profile-options-ui-locale-picker'
   });
+});
+
+test('workspace template renders the Open portfolio top-bar action for super admins with no visible boards', () => {
+  const workspace = createEmptyWorkspace();
+  workspace.ui.activeBoardId = 'missing_board';
+
+  const html = renderWorkspacePage(
+    buildWorkspacePageModel(
+      {
+        sub: 'sub_empty_super_admin',
+        name: 'No Boards Super Admin',
+        isSuperAdmin: true
+      },
+      createTranslator('en'),
+      workspace,
+      {
+        revision: 1,
+        updatedAt: '2026-04-02T11:00:00.000Z',
+        lastChangedBy: 'sub_empty_super_admin',
+        isPristine: false,
+        workspaceId: 'workspace_empty_super_admin_render',
+        isHomeWorkspace: true
+      }
+    )
+  );
+
+  assert.match(html, /No visible boards/);
+  assert.match(
+    html,
+    /class="top-bar-actions"[\s\S]*?data-action="workspace#openBoardOptions"[\s\S]*?data-action="workspace#openPortfolio"[\s\S]*?data-action="workspace#openProfileOptions"/
+  );
+  assert.match(html, />\s*Open portfolio\s*</);
+
+  const boardOptionsDialog = extractDialogHtml(html, 'board-options');
+
+  assert.doesNotMatch(boardOptionsDialog, /data-board-options-field="portfolioButton"/);
+  assert.doesNotMatch(boardOptionsDialog, /board-options#openPortfolio/);
 });
 
 test('workspace template nests the column chevron inside the count chip', () => {

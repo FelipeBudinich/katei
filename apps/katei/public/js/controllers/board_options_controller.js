@@ -125,15 +125,6 @@ export default class extends Controller {
     this.closeDialog({ restoreFocus: false });
   }
 
-  openPortfolio() {
-    if (!this.isSuperAdmin) {
-      return;
-    }
-
-    this.dispatch('open-portfolio');
-    this.closeDialog({ restoreFocus: false });
-  }
-
   switchBoard(event) {
     const boardId = event.currentTarget.dataset.boardId;
     const workspaceId = normalizeOptionalWorkspaceId(event.currentTarget.dataset.workspaceId)

@@ -464,37 +464,6 @@ test('board options controller openCollaborators dispatches the active board id 
   assert.deepEqual(controller.closeDialogCalls, [{ restoreFocus: false }]);
 });
 
-test('board options controller openPortfolio dispatches for super admins and closes the dialog', () => {
-  const controller = createBoardOptionsControllerDouble();
-  const dispatched = [];
-
-  controller.isSuperAdmin = true;
-  controller.dispatch = (name, options) => dispatched.push({ name, detail: options?.detail ?? null });
-
-  BoardOptionsController.prototype.openPortfolio.call(controller);
-
-  assert.deepEqual(dispatched, [
-    {
-      name: 'open-portfolio',
-      detail: null
-    }
-  ]);
-  assert.deepEqual(controller.closeDialogCalls, [{ restoreFocus: false }]);
-});
-
-test('board options controller openPortfolio ignores non-super-admin viewers', () => {
-  const controller = createBoardOptionsControllerDouble();
-  const dispatched = [];
-
-  controller.isSuperAdmin = false;
-  controller.dispatch = (name, options) => dispatched.push({ name, detail: options?.detail ?? null });
-
-  BoardOptionsController.prototype.openPortfolio.call(controller);
-
-  assert.deepEqual(dispatched, []);
-  assert.deepEqual(controller.closeDialogCalls, []);
-});
-
 test('board options controller acceptInvite dispatches workspaceId, boardId, and inviteId', () => {
   const controller = createBoardOptionsControllerDouble();
   const dispatched = [];

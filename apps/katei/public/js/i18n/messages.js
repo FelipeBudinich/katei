@@ -248,6 +248,7 @@ const EN_MESSAGES = freezeCatalog({
   workspace: {
     viewerSignedIn: 'Signed in',
     boardOptions: 'Options',
+    openPortfolio: 'Open portfolio',
     profileOptions: 'Profile',
     addCard: 'Add Card',
     detailsLabel: 'Details',
@@ -329,8 +330,6 @@ const EN_MESSAGES = freezeCatalog({
   boardOptionsDialog: {
     sectionLabel: 'Boards',
     heading: 'Board options',
-    portfolioLabel: 'Portfolio',
-    openPortfolio: 'Open portfolio',
     switchBoardLabel: 'Switch board',
     invitesHeading: 'Pending workspace invites',
     inviteContext: 'Workspace: {workspace}. From {inviter}',
@@ -852,6 +851,7 @@ const ES_CL_MESSAGES = freezeCatalog({
   workspace: {
     viewerSignedIn: 'Sesión iniciada',
     boardOptions: 'Opciones',
+    openPortfolio: 'Abrir portafolio',
     profileOptions: 'Perfil',
     addCard: 'Agregar tarjeta',
     detailsLabel: 'Detalles',
@@ -933,8 +933,6 @@ const ES_CL_MESSAGES = freezeCatalog({
   boardOptionsDialog: {
     sectionLabel: 'Tableros',
     heading: 'Opciones del tablero',
-    portfolioLabel: 'Portafolio',
-    openPortfolio: 'Abrir portafolio',
     switchBoardLabel: 'Cambiar tablero',
     invitesHeading: 'Invitaciones pendientes de espacios',
     inviteContext: 'Espacio: {workspace}. De {inviter}',
@@ -1457,6 +1455,7 @@ const JA_MESSAGES = freezeCatalog({
   workspace: {
     viewerSignedIn: 'サインイン済み',
     boardOptions: 'オプション',
+    openPortfolio: 'ポートフォリオを開く',
     profileOptions: 'プロフィール',
     addCard: 'カードを追加',
     detailsLabel: '詳細',
@@ -1538,8 +1537,6 @@ const JA_MESSAGES = freezeCatalog({
   boardOptionsDialog: {
     sectionLabel: 'ボード',
     heading: 'ボードオプション',
-    portfolioLabel: 'ポートフォリオ',
-    openPortfolio: 'ポートフォリオを開く',
     switchBoardLabel: 'ボードを切り替える',
     invitesHeading: '保留中のワークスペース招待',
     inviteContext: 'ワークスペース: {workspace}. {inviter} から',

@@ -19,9 +19,6 @@
     board-options:edit-board->workspace#openEditBoard
     board-options:reset-board->workspace#confirmResetBoard
     board-options:open-collaborators->workspace#openBoardCollaborators
-    {% if viewer.isSuperAdmin %}
-      board-options:open-portfolio->workspace#openPortfolio
-    {% endif %}
     board-options:accept-invite->workspace#handleAcceptInvite
     board-options:decline-invite->workspace#handleDeclineInvite
     board-collaborators:invite-member->workspace#handleInviteMember
@@ -49,6 +46,11 @@
         <button type="button" class="touch-button-secondary" data-action="workspace#openBoardOptions">
           {{ t('workspace.boardOptions') }}
         </button>
+        {% if viewer.isSuperAdmin %}
+          <button type="button" class="touch-button-secondary" data-action="workspace#openPortfolio">
+            {{ t('workspace.openPortfolio') }}
+          </button>
+        {% endif %}
         <button
           type="button"
           class="touch-button-secondary touch-button-secondary--icon"
