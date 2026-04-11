@@ -1278,7 +1278,7 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
   assert.match(response.text, /data-action="workspace#openProfileOptions"/);
   assert.doesNotMatch(response.text, /data-action="workspace#openPortfolio"/);
   assert.match(response.text, /data-workspace-viewer-super-admin-value="false"/);
-  assert.match(response.text, />\s*Options\s*</);
+  assert.match(response.text, />\s*Boards\s*</);
   assert.match(
     response.text,
     /class="touch-button-secondary touch-button-secondary--icon"[\s\S]*?data-action="workspace#openProfileOptions"[\s\S]*?aria-label="Profile"[\s\S]*?<img src="\/profile\.svg" alt="" aria-hidden="true" class="touch-button-secondary__icon">/
@@ -1740,7 +1740,7 @@ test('GET /boards?lang=ja repairs legacy jp card content and language policy for
   assert.equal(bootstrapPayload.workspace.boards.main.cards[cardId].localeRequests.ja.locale, 'ja');
 });
 
-test('workspace template renders the no-board header with both Options and Profile entry points', () => {
+test('workspace template renders the no-board header with both Boards and Profile entry points', () => {
   const workspace = createEmptyWorkspace();
   workspace.ui.activeBoardId = 'missing_board';
 
@@ -1768,7 +1768,7 @@ test('workspace template renders the no-board header with both Options and Profi
   assert.match(html, /data-action="workspace#openBoardOptions"/);
   assert.match(html, /data-action="workspace#openProfileOptions"/);
   assert.doesNotMatch(html, /data-action="workspace#openPortfolio"/);
-  assert.match(html, />\s*Options\s*</);
+  assert.match(html, />\s*Boards\s*</);
   assert.match(
     html,
     /class="touch-button-secondary touch-button-secondary--icon"[\s\S]*?data-action="workspace#openProfileOptions"[\s\S]*?aria-label="Profile"[\s\S]*?<img src="\/profile\.svg" alt="" aria-hidden="true" class="touch-button-secondary__icon">/
@@ -2306,7 +2306,7 @@ test('GET /boards localizes server-rendered chrome for ja without changing user-
   assert.equal(response.status, 200);
   assert.match(response.text, /<html lang="ja" data-ui-locale="ja">/);
   assert.match(response.text, /サインイン済み/);
-  assert.match(response.text, />\s*オプション\s*</);
+  assert.match(response.text, />\s*ボード\s*</);
   assert.match(response.text, /aria-label="カードを追加"/);
   assert.match(response.text, /data-workspace-target="boardTitle">過程</);
   assert.match(response.text, />Tester</);
