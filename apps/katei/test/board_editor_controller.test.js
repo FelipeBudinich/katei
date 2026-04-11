@@ -845,6 +845,9 @@ function createDialogTarget() {
     open: false,
     showModalCalls: 0,
     closeCalls: 0,
+    matches(selector) {
+      return selector === 'dialog.sheet-dialog';
+    },
     showModal() {
       this.open = true;
       this.showModalCalls += 1;

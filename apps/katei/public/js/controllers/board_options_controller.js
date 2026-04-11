@@ -7,6 +7,7 @@ import {
   createBoardOptionsState,
   getBoardRoleTranslationKey
 } from './board_collaboration_state.js';
+import { closeSheetDialog, openSheetDialog } from './sheet_dialog.js';
 
 export default class extends Controller {
   static targets = [
@@ -47,9 +48,7 @@ export default class extends Controller {
       workspaceService: event.detail?.workspaceService
     });
 
-    if (!this.dialogTarget.open) {
-      this.dialogTarget.showModal();
-    }
+    openSheetDialog(this.dialogTarget);
 
     requestAnimationFrame(() => {
       this.dialogTarget.querySelector('[data-board-options-initial-focus]')?.focus();
@@ -358,9 +357,7 @@ export default class extends Controller {
   }
 
   closeDialog({ restoreFocus = true } = {}) {
-    if (this.dialogTarget.open) {
-      this.dialogTarget.close();
-    }
+    closeSheetDialog(this.dialogTarget);
 
     if (restoreFocus && this.restoreFocusElement?.isConnected) {
       this.restoreFocusElement.focus();

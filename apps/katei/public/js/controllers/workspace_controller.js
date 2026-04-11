@@ -38,6 +38,7 @@ import {
   createStatusMenuOptionFromTemplate,
   getActionableStageMoveOptions
 } from './status_picker.js';
+import { closeSheetDialog, openSheetDialog } from './sheet_dialog.js';
 
 export default class extends Controller {
   static values = {
@@ -640,9 +641,7 @@ export default class extends Controller {
     };
     this.syncViewDialog();
 
-    if (!this.viewDialogTarget.open) {
-      this.viewDialogTarget.showModal();
-    }
+    openSheetDialog(this.viewDialogTarget);
 
     scheduleBrowserFrame(() => {
       if (
@@ -1556,9 +1555,7 @@ export default class extends Controller {
     this.closeViewStatusMenu({ restoreFocus: false });
     this.closeViewLocaleMenu({ restoreFocus: false });
 
-    if (this.viewDialogTarget.open) {
-      this.viewDialogTarget.close();
-    }
+    closeSheetDialog(this.viewDialogTarget);
 
     if (restoreFocus && this.viewTriggerElement?.isConnected) {
       this.viewTriggerElement.focus();
@@ -1660,9 +1657,7 @@ export default class extends Controller {
     this.confirmMessageTarget.textContent = confirmation.message;
     this.confirmButtonTarget.textContent = confirmation.confirmLabel;
 
-    if (!this.confirmDialogTarget.open) {
-      this.confirmDialogTarget.showModal();
-    }
+    openSheetDialog(this.confirmDialogTarget);
 
     requestAnimationFrame(() => this.confirmButtonTarget.focus());
   }
@@ -1680,9 +1675,7 @@ export default class extends Controller {
 
     this.pendingConfirmation = null;
 
-    if (this.confirmDialogTarget.open) {
-      this.confirmDialogTarget.close();
-    }
+    closeSheetDialog(this.confirmDialogTarget);
 
     const triggerDialog = this.confirmTriggerElement?.closest?.('dialog');
 

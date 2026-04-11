@@ -120,6 +120,9 @@ function createDialogDouble({ open = false } = {}) {
   return {
     open,
     showModalCalls: 0,
+    matches(selector) {
+      return selector === 'dialog.sheet-dialog';
+    },
     showModal() {
       this.open = true;
       this.showModalCalls += 1;

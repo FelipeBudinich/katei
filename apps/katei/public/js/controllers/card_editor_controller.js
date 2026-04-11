@@ -16,6 +16,7 @@ import {
   resolveCardLocaleSelection
 } from './card_editor_locale_view.js';
 import { canonicalizeContentLocaleWithLegacyAliases } from '../domain/board_language_policy.js';
+import { closeSheetDialog, openSheetDialog } from './sheet_dialog.js';
 
 const CARD_EDITOR_CODEMIRROR_INPUT_ID = 'card-editor-details-markdown-codemirror-input';
 
@@ -177,9 +178,7 @@ export default class extends Controller {
       targetStageId
     });
 
-    if (!this.dialogTarget.open) {
-      this.dialogTarget.showModal();
-    }
+    openSheetDialog(this.dialogTarget);
 
     requestAnimationFrame(() => {
       this.editor?.codemirror?.refresh();
@@ -694,9 +693,7 @@ export default class extends Controller {
     this.closeStatusMenu();
     this.closePriorityMenu();
 
-    if (this.dialogTarget.open) {
-      this.dialogTarget.close();
-    }
+    closeSheetDialog(this.dialogTarget);
 
     if (this.triggerElement?.isConnected) {
       this.triggerElement.focus();

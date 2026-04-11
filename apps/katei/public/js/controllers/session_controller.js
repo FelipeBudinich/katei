@@ -2,6 +2,7 @@ import { Controller } from '../../vendor/stimulus/stimulus.js';
 import { getBrowserTranslator } from '/js/i18n/browser.js';
 import { localizeErrorMessage } from '/js/i18n/errors.js';
 import { markDisableAutoSelectPending } from '/js/utils/google_identity.js';
+import { closeSheetDialog, openSheetDialog } from './sheet_dialog.js';
 
 export default class extends Controller {
   static targets = [
@@ -42,9 +43,7 @@ export default class extends Controller {
       this.confirmMessageTarget.textContent = this.t('session.logoutConfirmMessage');
     }
 
-    if (!this.confirmDialogTarget.open) {
-      this.confirmDialogTarget.showModal();
-    }
+    openSheetDialog(this.confirmDialogTarget);
 
     requestAnimationFrame(() => this.confirmButtonTarget?.focus?.());
   }
@@ -60,8 +59,8 @@ export default class extends Controller {
       event.preventDefault();
     }
 
-    if (this.hasConfirmDialogTarget && this.confirmDialogTarget.open) {
-      this.confirmDialogTarget.close();
+    if (this.hasConfirmDialogTarget) {
+      closeSheetDialog(this.confirmDialogTarget);
     }
 
     const triggerDialog = this.logoutButtonTarget?.closest?.('dialog');
@@ -91,8 +90,8 @@ export default class extends Controller {
       return;
     }
 
-    if (this.hasConfirmDialogTarget && this.confirmDialogTarget.open) {
-      this.confirmDialogTarget.close();
+    if (this.hasConfirmDialogTarget) {
+      closeSheetDialog(this.confirmDialogTarget);
     }
   }
 

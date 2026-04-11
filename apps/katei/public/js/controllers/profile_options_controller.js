@@ -1,4 +1,5 @@
 import { Controller } from '../../vendor/stimulus/stimulus.js';
+import { closeSheetDialog, openSheetDialog } from './sheet_dialog.js';
 
 export default class extends Controller {
   static targets = ['dialog'];
@@ -10,9 +11,7 @@ export default class extends Controller {
   openFromEvent(event) {
     this.restoreFocusElement = event.detail?.triggerElement ?? null;
 
-    if (!this.dialogTarget.open) {
-      this.dialogTarget.showModal();
-    }
+    openSheetDialog(this.dialogTarget);
 
     requestAnimationFrame(() => {
       this.dialogTarget.querySelector('[data-profile-options-initial-focus]')?.focus();
@@ -34,9 +33,7 @@ export default class extends Controller {
   }
 
   closeDialog({ restoreFocus = true } = {}) {
-    if (this.dialogTarget.open) {
-      this.dialogTarget.close();
-    }
+    closeSheetDialog(this.dialogTarget);
 
     if (restoreFocus && this.restoreFocusElement?.isConnected) {
       this.restoreFocusElement.focus();

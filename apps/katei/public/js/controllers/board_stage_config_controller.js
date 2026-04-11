@@ -10,6 +10,7 @@ import {
   validateAndNormalizeStageDefinitionsWithPromptActions,
   validateAndNormalizeStagePromptActions
 } from './board_stage_config_schema.js';
+import { closeSheetDialog } from './sheet_dialog.js';
 
 export default class extends Controller {
   static targets = ['dialog', 'definitionsInput', 'promptActionsInput', 'promptActionRegion', 'error'];
@@ -135,9 +136,7 @@ export default class extends Controller {
   }
 
   closeDialog({ restoreFocus = true } = {}) {
-    if (this.dialogTarget.open) {
-      this.dialogTarget.close();
-    }
+    closeSheetDialog(this.dialogTarget);
 
     this.hideError();
     this.currentBoard = null;

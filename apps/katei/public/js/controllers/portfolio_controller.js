@@ -7,6 +7,7 @@ import { HttpWorkspaceRepository } from '../repositories/http_workspace_reposito
 import { WorkspaceService } from '../services/workspace_service.js';
 import { createWorkspaceViewerActor, getBoardRoleTranslationKey } from './board_collaboration_state.js';
 import { openDialogWithInitialFocus } from './dialog_initial_focus.js';
+import { closeSheetDialog } from './sheet_dialog.js';
 
 export default class extends Controller {
   static values = {
@@ -210,8 +211,8 @@ export default class extends Controller {
   closeDialog({ restoreFocus = true } = {}) {
     const restoreFocusElement = this.restoreFocusElement;
 
-    if (this.hasDialogTarget && this.dialogTarget.open) {
-      this.dialogTarget.close();
+    if (this.hasDialogTarget) {
+      closeSheetDialog(this.dialogTarget);
     }
 
     this.restoreFocusElement = null;

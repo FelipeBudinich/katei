@@ -1,11 +1,11 @@
+import { openSheetDialog } from './sheet_dialog.js';
+
 const DEFAULT_FOCUS_OPTIONS = Object.freeze({
   preventScroll: true
 });
 
 export function openDialogWithInitialFocus(dialog, target, options = {}) {
-  if (!dialog?.open && typeof dialog?.showModal === 'function') {
-    dialog.showModal();
-  }
+  openSheetDialog(dialog, options);
 
   focusDialogTarget(dialog, target, options);
 }

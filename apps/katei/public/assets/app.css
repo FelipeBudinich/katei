@@ -279,6 +279,9 @@
   .table {
     display: table;
   }
+  .h-1 {
+    height: calc(var(--spacing) * 1);
+  }
   .h-1\.5 {
     height: calc(var(--spacing) * 1.5);
   }
@@ -651,6 +654,10 @@
     isolation: isolate;
     background-color: var(--color-bg-surface);
     color: var(--color-text-strong);
+  }
+  html.sheet-dialog-open, body.sheet-dialog-open {
+    overflow: hidden;
+    overscroll-behavior: none;
   }
   .app-shell::before {
     content: "";
@@ -1249,7 +1256,7 @@
     max-width: none;
     background-color: transparent;
     padding: 1.25rem;
-    overflow-y: auto;
+    overflow: hidden;
   }
   .sheet-dialog::backdrop {
     background: var(--color-overlay);
@@ -1274,6 +1281,8 @@
     max-width: 42rem;
     max-height: calc(100dvh - 2.5rem);
     overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
     border-top-left-radius: var(--radius-2xl);
     border-top-right-radius: var(--radius-2xl);
     border-bottom-left-radius: var(--radius-column-bottom);
@@ -1292,6 +1301,8 @@
     box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
     max-height: calc(100dvh - 2.5rem);
     overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
     border-top-left-radius: var(--radius-2xl);
     border-top-right-radius: var(--radius-2xl);
     border-bottom-left-radius: var(--radius-column-bottom);

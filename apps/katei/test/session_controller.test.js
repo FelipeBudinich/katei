@@ -145,6 +145,9 @@ function createDialogTarget() {
     open: false,
     showModalCalls: 0,
     closeCalls: 0,
+    matches(selector) {
+      return selector === 'dialog.sheet-dialog';
+    },
     showModal() {
       this.open = true;
       this.showModalCalls += 1;
@@ -205,12 +208,16 @@ async function loadSessionController() {
   const googleIdentityUrl = pathToFileURL(
     '/Users/felipebudinich/Documents/katei/apps/katei/public/js/utils/google_identity.js'
   ).href;
+  const sheetDialogUrl = pathToFileURL(
+    '/Users/felipebudinich/Documents/katei/apps/katei/public/js/controllers/sheet_dialog.js'
+  ).href;
   const source = await readFile(controllerPath, 'utf8');
   const patchedSource = source
     .replace("'../../vendor/stimulus/stimulus.js'", `'${stimulusUrl}'`)
     .replace("'/js/i18n/browser.js'", `'${browserUrl}'`)
     .replace("'/js/i18n/errors.js'", `'${errorsUrl}'`)
-    .replace("'/js/utils/google_identity.js'", `'${googleIdentityUrl}'`);
+    .replace("'/js/utils/google_identity.js'", `'${googleIdentityUrl}'`)
+    .replace("'./sheet_dialog.js'", `'${sheetDialogUrl}'`);
   const moduleUrl = `data:text/javascript,${encodeURIComponent(patchedSource)}`;
   const module = await import(moduleUrl);
 

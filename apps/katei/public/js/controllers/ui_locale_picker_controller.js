@@ -1,4 +1,5 @@
 import { Controller } from '../../vendor/stimulus/stimulus.js';
+import { closeSheetDialog, openSheetDialog } from './sheet_dialog.js';
 
 export default class extends Controller {
   static targets = ['trigger', 'menu', 'select', 'option', 'dialog'];
@@ -66,9 +67,7 @@ export default class extends Controller {
       return;
     }
 
-    if (!this.dialogTarget.open) {
-      this.dialogTarget.showModal();
-    }
+    openSheetDialog(this.dialogTarget);
 
     this.triggerTarget.setAttribute('aria-expanded', 'true');
     requestAnimationFrame(() => this.focusSelectedOption());
@@ -79,8 +78,8 @@ export default class extends Controller {
       event.preventDefault();
     }
 
-    if (this.hasDialogTarget && this.dialogTarget.open) {
-      this.dialogTarget.close();
+    if (this.hasDialogTarget) {
+      closeSheetDialog(this.dialogTarget);
     }
 
     if (this.hasTriggerTarget) {

@@ -4,6 +4,7 @@ import { createStageDefinitionsSummary } from './board_stage_config_schema.js';
 import { openDialogWithInitialFocus } from './dialog_initial_focus.js';
 import { getBrowserTranslator } from '../i18n/browser.js';
 import { localizeErrorMessage } from '../i18n/errors.js';
+import { closeSheetDialog } from './sheet_dialog.js';
 
 export default class extends Controller {
   static targets = [
@@ -172,9 +173,7 @@ export default class extends Controller {
   }
 
   closeDialog({ clearDeleteBoardId = true } = {}) {
-    if (this.dialogTarget.open) {
-      this.dialogTarget.close();
-    }
+    closeSheetDialog(this.dialogTarget);
 
     this.resetDialogState({ clearDeleteBoardId });
   }
