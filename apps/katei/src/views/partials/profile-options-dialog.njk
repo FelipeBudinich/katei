@@ -36,13 +36,10 @@
 
       <div class="profile-options-locale-slot">
         <div class="grid gap-2">
-          {% if profileOptionsShowLocaleBadge %}
-            {% include "partials/ui-locale-badge.njk" %}
-          {% endif %}
-
           {% set uiLocalePickerId = profileUiLocalePickerId %}
           {% set uiLocalePickerAction = profileUiLocalePickerAction %}
           {% set uiLocalePickerVariant = 'icon-modal' %}
+          {% set uiLocalePickerBadgeValue = uiLocaleCurrent.label if profileOptionsShowLocaleBadge else '' %}
           {% include "partials/ui-locale-picker.njk" %}
         </div>
       </div>

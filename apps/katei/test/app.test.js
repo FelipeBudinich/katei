@@ -612,13 +612,16 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
   assert.doesNotMatch(boardDirectorySection, /portfolio-search-form/);
   assert.doesNotMatch(boardDirectorySection, /portfolio-search-input/);
   assert.doesNotMatch(boardDirectorySection, /portfolio-search-actions/);
-  assert.match(profileOptionsDialog, /class="ui-locale-badge"/);
-  assert.match(profileOptionsDialog, /<span class="ui-locale-badge-value">\s*English\s*<\/span>/);
+  assert.match(profileOptionsDialog, /class="ui-locale-badge(?: ui-locale-badge--with-picker)?"/);
   assert.match(
     profileOptionsDialog,
-    /<form[\s\S]*?method="get"[\s\S]*?action="\/portfolio"[\s\S]*?class="ui-locale-picker ui-locale-picker--icon-menu"[\s\S]*?data-controller="ui-locale-picker"/
+    /<form[\s\S]*?method="get"[\s\S]*?action="\/portfolio"[\s\S]*?class="ui-locale-picker ui-locale-picker--icon-menu"[\s\S]*?data-controller="ui-locale-picker"[\s\S]*?<div class="ui-locale-badge ui-locale-badge--with-picker">[\s\S]*?<span class="ui-locale-badge-value">\s*English\s*<\/span>[\s\S]*?<div class="view-locale-picker">/
   );
   assert.match(profileOptionsDialog, /aria-haspopup="dialog"/);
+  assert.match(
+    profileOptionsDialog,
+    /class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--language"/
+  );
   assert.match(profileOptionsDialog, /data-ui-locale-picker-target="dialog"/);
   assert.match(profileOptionsDialog, /class="viewer-chip"/);
 });

@@ -159,6 +159,30 @@
     color: var(--color-text-strong);
   }
 
+  .ui-locale-badge--with-picker {
+    display: inline-grid;
+    grid-template-columns: auto auto;
+    grid-template-areas:
+      "label label"
+      "value picker";
+    align-items: center;
+    column-gap: 0.55rem;
+    row-gap: 0.25rem;
+  }
+
+  .ui-locale-badge--with-picker .ui-locale-badge-label {
+    grid-area: label;
+  }
+
+  .ui-locale-badge--with-picker .ui-locale-badge-value {
+    grid-area: value;
+  }
+
+  .ui-locale-badge--with-picker .view-locale-picker {
+    grid-area: picker;
+    justify-self: end;
+  }
+
   .ui-locale-picker {
     display: grid;
     gap: 0.4rem;

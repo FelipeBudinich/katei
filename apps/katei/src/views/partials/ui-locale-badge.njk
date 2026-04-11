@@ -1,4 +1,7 @@
-<div class="ui-locale-badge">
+<div class="ui-locale-badge{% if uiLocaleBadgeTrailingContent %} ui-locale-badge--with-picker{% endif %}">
   <span class="ui-locale-badge-label">{{ t('uiLocale.label') }}</span>
-  <span class="ui-locale-badge-value">{{ uiLocaleCurrent.label }}</span>
+  <span class="ui-locale-badge-value">{{ uiLocaleBadgeValue or uiLocaleCurrent.label }}</span>
+  {% if uiLocaleBadgeTrailingContent %}
+    {{ uiLocaleBadgeTrailingContent | safe }}
+  {% endif %}
 </div>

@@ -1,14 +1,5 @@
 {% if uiLocalePickerVariant == 'icon-modal' %}
-  <form
-    method="get"
-    action="{{ uiLocalePickerAction or '/' }}"
-    class="ui-locale-picker ui-locale-picker--icon-menu"
-    data-controller="ui-locale-picker"
-  >
-    <label class="sr-only" for="{{ uiLocalePickerId or 'ui-locale-picker' }}">
-      {{ t('uiLocale.label') }}
-    </label>
-
+  {% set uiLocalePickerView %}
     <div class="view-locale-picker">
       <button
         type="button"
@@ -88,6 +79,25 @@
         {% endfor %}
       </select>
     </div>
+  {% endset %}
+
+  <form
+    method="get"
+    action="{{ uiLocalePickerAction or '/' }}"
+    class="ui-locale-picker ui-locale-picker--icon-menu"
+    data-controller="ui-locale-picker"
+  >
+    <label class="sr-only" for="{{ uiLocalePickerId or 'ui-locale-picker' }}">
+      {{ t('uiLocale.label') }}
+    </label>
+
+    {% if uiLocalePickerBadgeValue %}
+      {% set uiLocaleBadgeValue = uiLocalePickerBadgeValue %}
+      {% set uiLocaleBadgeTrailingContent = uiLocalePickerView %}
+      {% include "partials/ui-locale-badge.njk" %}
+    {% else %}
+      {{ uiLocalePickerView | safe }}
+    {% endif %}
   </form>
 {% elif uiLocalePickerVariant == 'icon-menu' %}
   <form
