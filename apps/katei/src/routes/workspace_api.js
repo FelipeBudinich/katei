@@ -43,6 +43,7 @@ import {
 import {
   WorkspaceAccessDeniedError,
   WorkspaceBoardRoleAssignmentPermissionError,
+  WorkspaceCreationPermissionError,
   WorkspaceImportConflictError,
   WorkspaceRevisionConflictError,
   WorkspaceTitleManagementPermissionError
@@ -76,6 +77,7 @@ export function createWorkspaceApiRouter({
       const record = await workspaceRecordRepository.loadOrCreateWorkspaceRecord({
         viewerSub: request.viewer.sub,
         viewerEmail: request.viewer.email ?? null,
+        viewerName: request.viewer.name ?? null,
         workspaceId: resolveRequestedWorkspaceId(request),
         debugLog
       });
@@ -132,6 +134,7 @@ export function createWorkspaceApiRouter({
         await workspaceRecordRepository.loadOrCreateAuthoritativeWorkspaceRecord({
           viewerSub: request.viewer.sub,
           viewerEmail: request.viewer.email ?? null,
+          viewerName: request.viewer.name ?? null,
           workspaceId: resolveRequestedWorkspaceId(request),
           debugLog
         })
@@ -155,6 +158,7 @@ export function createWorkspaceApiRouter({
       const fullRecord = await workspaceRecordRepository.replaceWorkspaceSnapshot({
         viewerSub: request.viewer.sub,
         viewerEmail: request.viewer.email ?? null,
+        viewerName: request.viewer.name ?? null,
         workspaceId: resolveRequestedWorkspaceId(request),
         workspace,
         expectedRevision,
@@ -351,6 +355,7 @@ export function createWorkspaceApiRouter({
               await workspaceRecordRepository.loadOrCreateAuthoritativeWorkspaceRecord({
                 viewerSub: request.viewer.sub,
                 viewerEmail: request.viewer.email ?? null,
+                viewerName: request.viewer.name ?? null,
                 workspaceId: requestedWorkspaceId,
                 debugLog
               })
@@ -451,6 +456,7 @@ export function createWorkspaceApiRouter({
         await workspaceRecordRepository.loadOrCreateAuthoritativeWorkspaceRecord({
           viewerSub: request.viewer.sub,
           viewerEmail: request.viewer.email ?? null,
+          viewerName: request.viewer.name ?? null,
           workspaceId: requestedWorkspaceId,
           debugLog
         })
@@ -606,6 +612,7 @@ export function createWorkspaceApiRouter({
       currentRecord = await workspaceRecordRepository.loadOrCreateAuthoritativeWorkspaceRecord({
         viewerSub: request.viewer.sub,
         viewerEmail: request.viewer.email ?? null,
+        viewerName: request.viewer.name ?? null,
         workspaceId: requestedWorkspaceId,
         debugLog
       });
@@ -746,6 +753,7 @@ export function createWorkspaceApiRouter({
       const fullRecord = await workspaceRecordRepository.importWorkspaceSnapshot({
         viewerSub: request.viewer.sub,
         viewerEmail: request.viewer.email ?? null,
+        viewerName: request.viewer.name ?? null,
         workspaceId: resolveRequestedWorkspaceId(request),
         workspace,
         actor: {
@@ -778,6 +786,36 @@ export function createWorkspaceApiRouter({
 
       if (error instanceof WorkspaceImportConflictError || error?.code === 'WORKSPACE_IMPORT_CONFLICT') {
         response.status(409).json({
+          ok: false,
+          error: error.message
+        });
+        return;
+      }
+
+      next(error);
+    }
+  });
+
+  router.post('/api/workspace/create', requireSession, async (request, response, next) => {
+    try {
+      const record = await workspaceRecordRepository.createWorkspaceForSuperAdmin({
+        viewerIsSuperAdmin: request.viewer?.isSuperAdmin === true,
+        viewerSub: request.viewer.sub,
+        viewerEmail: request.viewer.email ?? null,
+        viewerName: request.viewer.name ?? null,
+        title: request.body?.title
+      });
+
+      response.status(201).json({
+        ok: true,
+        result: {
+          workspaceId: record.workspaceId,
+          workspaceTitle: normalizeOptionalString(record.workspace?.title) || null
+        }
+      });
+    } catch (error) {
+      if (error instanceof WorkspaceCreationPermissionError || error?.code === 'WORKSPACE_CREATION_FORBIDDEN') {
+        response.status(403).json({
           ok: false,
           error: error.message
         });
@@ -1305,6 +1343,7 @@ async function loadWorkspaceRecordForCommandRoute({
   return workspaceRecordRepository.loadOrCreateAuthoritativeWorkspaceRecord({
     viewerSub: request.viewer.sub,
     viewerEmail: request.viewer.email ?? null,
+    viewerName: request.viewer.name ?? null,
     workspaceId: requestedWorkspaceId,
     debugLog
   });
@@ -1330,6 +1369,7 @@ async function listPendingWorkspaceInvitesForRequest(workspaceRecordRepository, 
   return workspaceRecordRepository.listPendingWorkspaceInvitesForViewer({
     viewerSub: request.viewer.sub,
     viewerEmail: request.viewer.email ?? null,
+    viewerName: request.viewer.name ?? null,
     debugLog
   });
 }
@@ -1343,6 +1383,7 @@ async function listAccessibleWorkspacesForRequest(
   return workspaceRecordRepository.listAccessibleWorkspacesForViewer({
     viewerSub: request.viewer.sub,
     viewerEmail: request.viewer.email ?? null,
+    viewerName: request.viewer.name ?? null,
     excludeWorkspaceId,
     debugLog
   });

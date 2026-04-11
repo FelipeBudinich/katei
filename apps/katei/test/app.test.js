@@ -35,6 +35,7 @@ import {
   WorkspaceAccessDeniedError,
   WorkspaceImportConflictError,
   WorkspaceBoardRoleAssignmentPermissionError,
+  WorkspaceCreationPermissionError,
   WorkspaceRevisionConflictError,
   WorkspaceTitleManagementPermissionError
 } from '../src/workspaces/workspace_record_repository.js';
@@ -267,6 +268,7 @@ test('GET / redirects authenticated super admins to a remembered board workspace
     {
       viewerSub: 'sub_123',
       viewerEmail: 'tester@example.com',
+      viewerName: 'Tester',
       workspaceId: 'workspace_shared_portfolio_redirect'
     }
   ]);
@@ -310,6 +312,7 @@ test('GET / falls back to /portfolio for super admins when the remembered board 
     {
       viewerSub: 'sub_123',
       viewerEmail: 'tester@example.com',
+      viewerName: 'Tester',
       workspaceId: 'workspace_shared_portfolio_missing_board'
     }
   ]);
@@ -505,6 +508,8 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
   assert.match(response.text, /Back to boards/);
   assert.match(response.text, /Board directory/);
   assert.match(response.text, /Search portfolio/);
+  assert.match(response.text, /data-action="portfolio#openCreateDialog"/);
+  assert.match(response.text, />\s*Create workspace\s*</);
   assert.match(response.text, /Executive roadmap/);
   assert.match(response.text, /workspace_portfolio_alpha/);
   assert.match(response.text, /1 matching boards/);
@@ -1261,6 +1266,7 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
     {
       viewerSub: 'sub_123',
       viewerEmail: null,
+      viewerName: 'Tester',
       workspaceId: null
     }
   ]);
@@ -1353,6 +1359,25 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
     localeFormAction: '/boards',
     localePickerId: 'profile-options-ui-locale-picker'
   });
+});
+
+test('GET /boards stores a default workspace title on first home-workspace bootstrap', async () => {
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble();
+  const app = createTestApp({
+    googleTokenVerifier: async () => ({ sub: 'sub_123' }),
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .get('/boards')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_123', email: 'felipe@example.com', name: 'Felipe Budinich' }));
+  const bootstrapPayload = readWorkspaceBootstrapPayload(response.text);
+
+  assert.equal(response.status, 200);
+  assert.match(response.text, /data-workspace-target="workspaceLabel">\s*Felipe Budinich 1\s*</);
+  assert.equal(bootstrapPayload.workspace.title, 'Felipe Budinich 1');
+  assert.equal(bootstrapPayload.activeWorkspace.workspaceTitle, 'Felipe Budinich 1');
+  assert.equal(bootstrapPayload.meta.workspaceTitle, 'Felipe Budinich 1');
 });
 
 test('GET /boards selects the requested board from the query string for first paint and last-surface memory', async () => {
@@ -1488,6 +1513,7 @@ test('GET /boards redirects super-admin drill-downs back to /portfolio when the 
     {
       viewerSub: 'sub_123',
       viewerEmail: 'tester@example.com',
+      viewerName: 'Tester',
       workspaceId: 'workspace_missing_board_target'
     }
   ]);
@@ -1518,7 +1544,7 @@ test('GET /boards renders the Portfolio action in the workspace top bar for supe
   assert.match(response.text, /data-workspace-viewer-super-admin-value="true"/);
   assert.match(
     response.text,
-    new RegExp(`data-workspace-target="workspaceLabel">\\s*${escapeForRegex(createHomeWorkspaceId('sub_123'))}\\s*<`)
+    /data-workspace-target="workspaceLabel">\s*Tester 1\s*</
   );
   assert.match(
     response.text,
@@ -2269,7 +2295,7 @@ test('GET /boards loads an accessible shared workspace by workspaceId and reject
   assert.deepEqual(accessibleBootstrap.accessibleWorkspaces, [
     {
       workspaceId: createHomeWorkspaceId('sub_collab'),
-      workspaceTitle: null,
+      workspaceTitle: 'Workspace 1',
       isHomeWorkspace: true,
       boards: [
         {
@@ -2283,6 +2309,7 @@ test('GET /boards loads an accessible shared workspace by workspaceId and reject
   assert.deepEqual(workspaceRecordRepository.loadCalls[0], {
     viewerSub: 'sub_collab',
     viewerEmail: null,
+    viewerName: null,
     workspaceId: 'workspace_shared_1'
   });
 
@@ -2347,7 +2374,7 @@ test('GET /api/workspace returns the authenticated viewer workspace JSON', async
   assert.equal(validateWorkspaceShape(response.body.workspace), true);
   assert.deepEqual(response.body.activeWorkspace, {
     workspaceId: createHomeWorkspaceId('sub_123'),
-    workspaceTitle: null,
+    workspaceTitle: 'Tester 1',
     isHomeWorkspace: true
   });
   assert.deepEqual(response.body.meta, {
@@ -2360,6 +2387,7 @@ test('GET /api/workspace returns the authenticated viewer workspace JSON', async
     {
       viewerSub: 'sub_123',
       viewerEmail: null,
+      viewerName: 'Tester',
       workspaceId: null
     }
   ]);
@@ -2476,6 +2504,7 @@ test('PUT /api/workspace saves a valid full-workspace snapshot for the authentic
     {
       viewerSub: 'sub_123',
       viewerEmail: null,
+      viewerName: 'Tester',
       workspaceId: null,
       workspace: normalizedWorkspace,
       expectedRevision: 0,
@@ -3168,6 +3197,7 @@ test('POST /api/workspace/import saves a valid full-workspace snapshot for a pri
     {
       viewerSub: 'sub_123',
       viewerEmail: null,
+      viewerName: 'Tester',
       workspaceId: null,
       workspace: normalizedWorkspace,
       actor: {
@@ -3584,6 +3614,7 @@ test('POST /auth/google resumes the remembered board workspace for super admins 
     {
       viewerSub: 'sub_123',
       viewerEmail: 'tester@example.com',
+      viewerName: 'Tester',
       workspaceId: 'workspace_shared_login_resume'
     }
   ]);
@@ -3628,6 +3659,7 @@ test('POST /auth/google falls back to /portfolio for super admins when the remem
     {
       viewerSub: 'sub_123',
       viewerEmail: 'tester@example.com',
+      viewerName: 'Tester',
       workspaceId: 'workspace_shared_login_missing_board'
     }
   ]);
@@ -3665,6 +3697,7 @@ test('POST /auth/google falls back to /portfolio for super admins when the remem
     {
       viewerSub: 'sub_123',
       viewerEmail: 'tester@example.com',
+      viewerName: 'Tester',
       workspaceId: 'workspace_missing_resume_target'
     }
   ]);
@@ -4151,7 +4184,7 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = []) {
     };
   }
 
-  async function loadFullRecord({ viewerSub, viewerEmail = null, workspaceId = null } = {}) {
+  async function loadFullRecord({ viewerSub, viewerEmail = null, viewerName = null, workspaceId = null } = {}) {
     if (workspaceId) {
       const requestedRecord = records.get(workspaceId);
 
@@ -4184,6 +4217,7 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = []) {
       records.set(
         homeWorkspaceId,
         createInitialWorkspaceRecord(viewerSub, {
+          title: typeof viewerName === 'string' && viewerName.trim() ? `${viewerName.trim()} 1` : 'Workspace 1',
           now: '2026-04-02T10:00:00.000Z'
         })
       );
@@ -4219,31 +4253,71 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = []) {
     loadAuthoritativeCalls: [],
     loadSuperAdminTitleManagementCalls: [],
     loadSuperAdminBoardRoleAssignmentCalls: [],
+    createWorkspaceForSuperAdminCalls: [],
     replaceCalls: [],
     replaceRecordCalls: [],
     importCalls: [],
 
-    async loadOrCreateWorkspaceRecord({ viewerSub, viewerEmail = null, workspaceId = null } = {}) {
+    async loadOrCreateWorkspaceRecord({ viewerSub, viewerEmail = null, viewerName = null, workspaceId = null } = {}) {
       this.loadCalls.push({
         viewerSub,
         viewerEmail,
+        viewerName,
         workspaceId
       });
 
       return projectRecord(
-        await loadFullRecord({ viewerSub, viewerEmail, workspaceId }),
+        await loadFullRecord({ viewerSub, viewerEmail, viewerName, workspaceId }),
         { viewerSub, viewerEmail }
       );
     },
 
-    async loadOrCreateAuthoritativeWorkspaceRecord({ viewerSub, viewerEmail = null, workspaceId = null } = {}) {
+    async loadOrCreateAuthoritativeWorkspaceRecord({ viewerSub, viewerEmail = null, viewerName = null, workspaceId = null } = {}) {
       this.loadAuthoritativeCalls.push({
         viewerSub,
         viewerEmail,
+        viewerName,
         workspaceId
       });
 
-      return loadFullRecord({ viewerSub, viewerEmail, workspaceId });
+      return loadFullRecord({ viewerSub, viewerEmail, viewerName, workspaceId });
+    },
+
+    async createWorkspaceForSuperAdmin({
+      viewerIsSuperAdmin = false,
+      viewerSub,
+      viewerEmail = null,
+      viewerName = null,
+      title = undefined
+    } = {}) {
+      this.createWorkspaceForSuperAdminCalls.push({
+        viewerIsSuperAdmin,
+        viewerSub,
+        viewerEmail,
+        viewerName,
+        title
+      });
+
+      if (viewerIsSuperAdmin !== true) {
+        throw new WorkspaceCreationPermissionError('Workspace creation is only available to super admins.');
+      }
+
+      const workspaceId = `workspace_created_${this.createWorkspaceForSuperAdminCalls.length}`;
+      const record = createInitialWorkspaceRecord(viewerSub, {
+        workspaceId,
+        title: typeof title === 'string' && title.trim()
+          ? title.trim()
+          : `${typeof viewerName === 'string' && viewerName.trim() ? viewerName.trim() : 'Workspace'} 1`,
+        now: '2026-04-02T10:00:00.000Z',
+        creator: {
+          email: viewerEmail,
+          displayName: viewerName
+        }
+      });
+
+      record.isHomeWorkspace = false;
+      records.set(workspaceId, structuredClone(record));
+      return createWorkspaceRecord(record);
     },
 
     async loadWorkspaceRecordForSuperAdminTitleManagement({ viewerIsSuperAdmin = false, workspaceId } = {}) {
@@ -4276,15 +4350,16 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = []) {
       return listPendingWorkspaceInvites(records.values(), { viewerSub, viewerEmail });
     },
 
-    async listAccessibleWorkspacesForViewer({ viewerSub, viewerEmail = null, excludeWorkspaceId = null } = {}) {
-      await loadFullRecord({ viewerSub, viewerEmail });
+    async listAccessibleWorkspacesForViewer({ viewerSub, viewerEmail = null, viewerName = null, excludeWorkspaceId = null } = {}) {
+      await loadFullRecord({ viewerSub, viewerEmail, viewerName });
       return listAccessibleWorkspaces(records.values(), { viewerSub, viewerEmail, excludeWorkspaceId });
     },
 
-    async replaceWorkspaceSnapshot({ viewerSub, viewerEmail = null, workspaceId = null, workspace, actor, expectedRevision }) {
+    async replaceWorkspaceSnapshot({ viewerSub, viewerEmail = null, viewerName = null, workspaceId = null, workspace, actor, expectedRevision }) {
       this.replaceCalls.push({
         viewerSub,
         viewerEmail,
+        viewerName,
         workspaceId,
         workspace,
         expectedRevision,
@@ -4295,6 +4370,7 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = []) {
         await this.loadOrCreateAuthoritativeWorkspaceRecord({
           viewerSub,
           viewerEmail,
+          viewerName,
           workspaceId
         });
 
@@ -4313,10 +4389,11 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = []) {
       return structuredClone(nextRecord);
     },
 
-    async importWorkspaceSnapshot({ viewerSub, viewerEmail = null, workspaceId = null, workspace, actor }) {
+    async importWorkspaceSnapshot({ viewerSub, viewerEmail = null, viewerName = null, workspaceId = null, workspace, actor }) {
       this.importCalls.push({
         viewerSub,
         viewerEmail,
+        viewerName,
         workspaceId,
         workspace,
         actor
@@ -4326,6 +4403,7 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = []) {
         await this.loadOrCreateAuthoritativeWorkspaceRecord({
           viewerSub,
           viewerEmail,
+          viewerName,
           workspaceId
         });
 

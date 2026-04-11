@@ -50,6 +50,7 @@ async function resolveRememberedBoardDestination({
     const record = await workspaceRecordRepository.loadOrCreateWorkspaceRecord({
       viewerSub: viewer.sub,
       viewerEmail: viewer.email ?? null,
+      viewerName: viewer.name ?? null,
       workspaceId: normalizedWorkspaceId
     });
     const resolvedWorkspaceId = normalizeOptionalString(record?.workspaceId ?? record?.workspace?.workspaceId);

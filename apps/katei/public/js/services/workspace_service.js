@@ -111,6 +111,16 @@ export class WorkspaceService {
     return createWorkspaceTitleMutationResult(response);
   }
 
+  async createWorkspace(input = {}) {
+    if (typeof this.repository.createWorkspace !== 'function') {
+      throw new Error('Workspace creation is not available for this repository.');
+    }
+
+    return this.repository.createWorkspace({
+      title: input?.title
+    });
+  }
+
   async createBoard(input) {
     return this.#applyCommand('board.create', {
       title: input?.title,

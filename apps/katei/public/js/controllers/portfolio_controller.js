@@ -19,6 +19,7 @@ export default class extends Controller {
     'dialog',
     'heading',
     'titleInput',
+    'help',
     'error',
     'saveButton',
     'cancelButton',
@@ -31,11 +32,31 @@ export default class extends Controller {
     this.browserWindow = typeof window !== 'undefined' ? window : globalThis;
     this.service = this.buildWorkspaceService();
     this.restoreFocusElement = null;
+    this.dialogMode = 'rename';
     this.currentWorkspaceId = null;
     this.currentWorkspaceFallbackLabel = null;
     this.isSubmitting = false;
+    this.setDialogMode('rename');
     this.resetDialogState();
     this.syncBoardSelfRoleForms();
+  }
+
+  openCreateDialog(event) {
+    if (event) {
+      event.preventDefault();
+    }
+
+    if (!this.canManageWorkspaceTitles() || !this.hasDialogTarget || !this.hasTitleInputTarget) {
+      return;
+    }
+
+    this.restoreFocusElement = event?.currentTarget ?? null;
+    this.currentWorkspaceId = null;
+    this.currentWorkspaceFallbackLabel = null;
+    this.setDialogMode('create');
+    this.resetDialogState();
+
+    openDialogWithInitialFocus(this.dialogTarget, this.titleInputTarget);
   }
 
   openRenameDialog(event) {
@@ -60,6 +81,7 @@ export default class extends Controller {
     this.currentWorkspaceId = workspaceId;
     this.currentWorkspaceFallbackLabel =
       normalizeOptionalString(triggerElement?.dataset?.workspaceFallbackLabel) || workspaceId;
+    this.setDialogMode('rename');
     this.resetDialogState();
     if (this.hasHeadingTarget) {
       this.headingTarget.textContent = this.t(
@@ -108,7 +130,11 @@ export default class extends Controller {
       event.preventDefault();
     }
 
-    if (!this.canManageWorkspaceTitles() || !this.currentWorkspaceId || this.isSubmitting || !this.service) {
+    if (!this.canManageWorkspaceTitles() || this.isSubmitting || !this.service) {
+      return;
+    }
+
+    if (this.dialogMode !== 'create' && !this.currentWorkspaceId) {
       return;
     }
 
@@ -116,11 +142,16 @@ export default class extends Controller {
     this.setSubmittingState(true);
 
     try {
-      const result = await this.service.setWorkspaceTitle(
-        this.currentWorkspaceId,
-        this.hasTitleInputTarget ? this.titleInputTarget.value : ''
-      );
+      const title = this.hasTitleInputTarget ? this.titleInputTarget.value : '';
 
+      if (this.dialogMode === 'create') {
+        await this.service.createWorkspace({ title });
+        this.closeDialog({ restoreFocus: false });
+        this.reloadPortfolioPage();
+        return;
+      }
+
+      const result = await this.service.setWorkspaceTitle(this.currentWorkspaceId, title);
       this.applyWorkspaceTitleResult(result);
       this.closeDialog();
       this.announce(this.t('portfolio.workspaceTitleEditor.savedStatus'));
@@ -212,6 +243,7 @@ export default class extends Controller {
     this.restoreFocusElement = null;
     this.currentWorkspaceId = null;
     this.currentWorkspaceFallbackLabel = null;
+    this.setDialogMode('rename');
     this.resetDialogState();
 
     if (restoreFocus && restoreFocusElement?.isConnected) {
@@ -251,17 +283,22 @@ export default class extends Controller {
     this.hideError();
 
     if (this.hasHeadingTarget) {
-      this.headingTarget.textContent = this.t('portfolio.workspaceTitleEditor.assignHeading');
+      this.headingTarget.textContent = this.t(this.getDialogHeadingKey());
     }
 
     if (this.hasTitleInputTarget) {
       this.titleInputTarget.value = '';
       this.titleInputTarget.disabled = false;
+      this.titleInputTarget.placeholder = this.t(this.dialogPlaceholderKey);
+    }
+
+    if (this.hasHelpTarget) {
+      this.helpTarget.textContent = this.t(this.dialogHelpKey);
     }
 
     if (this.hasSaveButtonTarget) {
       this.saveButtonTarget.disabled = false;
-      this.saveButtonTarget.textContent = this.t('common.save');
+      this.saveButtonTarget.textContent = this.t(this.dialogSubmitLabelKey);
     }
 
     if (this.hasCancelButtonTarget) {
@@ -283,7 +320,7 @@ export default class extends Controller {
     if (this.hasSaveButtonTarget) {
       this.saveButtonTarget.disabled = this.isSubmitting;
       this.saveButtonTarget.textContent = this.t(
-        this.isSubmitting ? 'portfolio.workspaceTitleEditor.savingAction' : 'common.save'
+        this.isSubmitting ? this.dialogSubmittingLabelKey : this.dialogSubmitLabelKey
       );
     }
 
@@ -346,6 +383,40 @@ export default class extends Controller {
           ? 'portfolio.workspaceTitleEditor.editAction'
           : 'portfolio.workspaceTitleEditor.assignAction'
       );
+    }
+  }
+
+  setDialogMode(mode) {
+    this.dialogMode = mode === 'create' ? 'create' : 'rename';
+    this.dialogPlaceholderKey =
+      this.dialogMode === 'create'
+        ? 'portfolio.workspaceTitleEditor.createPlaceholder'
+        : 'portfolio.workspaceTitleEditor.placeholder';
+    this.dialogHelpKey =
+      this.dialogMode === 'create'
+        ? 'portfolio.workspaceTitleEditor.createHelp'
+        : 'portfolio.workspaceTitleEditor.help';
+    this.dialogSubmitLabelKey =
+      this.dialogMode === 'create'
+        ? 'portfolio.workspaceTitleEditor.createAction'
+        : 'common.save';
+    this.dialogSubmittingLabelKey =
+      this.dialogMode === 'create'
+        ? 'portfolio.workspaceTitleEditor.creatingAction'
+        : 'portfolio.workspaceTitleEditor.savingAction';
+  }
+
+  getDialogHeadingKey() {
+    return this.dialogMode === 'create'
+      ? 'portfolio.workspaceTitleEditor.createHeading'
+      : 'portfolio.workspaceTitleEditor.assignHeading';
+  }
+
+  reloadPortfolioPage() {
+    const browserWindow = this.browserWindow ?? globalThis.window;
+
+    if (typeof browserWindow?.location?.reload === 'function') {
+      browserWindow.location.reload();
     }
   }
 

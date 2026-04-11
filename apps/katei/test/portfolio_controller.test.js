@@ -52,6 +52,31 @@ test('portfolio controller opens the workspace title dialog with the current tit
   });
 });
 
+test('portfolio controller opens the create workspace dialog with create-specific copy', () => {
+  withMockDocument(() => {
+    const controller = createPortfolioControllerDouble({
+      workspaceId: 'workspace_alpha',
+      workspaceTitle: 'Studio HQ'
+    });
+    const triggerElement = createButtonElement();
+
+    PortfolioController.prototype.openCreateDialog.call(controller, {
+      currentTarget: triggerElement,
+      preventDefault() {}
+    });
+
+    assert.equal(controller.dialogTarget.open, true);
+    assert.equal(controller.headingTarget.textContent, 'Create workspace');
+    assert.equal(controller.titleInputTarget.placeholder, 'Leave blank to use the default workspace name');
+    assert.equal(
+      controller.helpTarget.textContent,
+      'Blank titles use your display name plus the next sequence number.'
+    );
+    assert.equal(controller.saveButtonTarget.textContent, 'Create workspace');
+    assert.equal(controller.restoreFocusElement, triggerElement);
+  });
+});
+
 test('portfolio controller saves an assigned workspace title and updates every visible workspace label', async () => {
   await withMockDocument(async () => {
     const controller = createPortfolioControllerDouble({
@@ -169,6 +194,50 @@ test('portfolio controller clears a workspace title back to the workspaceId fall
     );
     assert.equal(controller.renameButtons[0].dataset.workspaceTitle, '');
     assert.equal(controller.renameButtons[0].textContent, 'Assign title');
+  });
+});
+
+test('portfolio controller creates a workspace and reloads the portfolio page', async () => {
+  await withMockDocument(async () => {
+    const controller = createPortfolioControllerDouble({
+      workspaceId: 'workspace_alpha',
+      workspaceTitle: 'Studio HQ'
+    });
+    const createButton = createButtonElement();
+    let reloadCalls = 0;
+
+    controller.browserWindow.location = {
+      reload() {
+        reloadCalls += 1;
+      }
+    };
+    controller.service = {
+      async createWorkspace(input) {
+        assert.deepEqual(input, {
+          title: '   '
+        });
+        return {
+          ok: true,
+          result: {
+            workspaceId: 'workspace_created_1',
+            workspaceTitle: 'Felipe Budinich 1'
+          }
+        };
+      }
+    };
+
+    PortfolioController.prototype.openCreateDialog.call(controller, {
+      currentTarget: createButton,
+      preventDefault() {}
+    });
+    controller.titleInputTarget.value = '   ';
+
+    await PortfolioController.prototype.saveWorkspaceTitle.call(controller, {
+      preventDefault() {}
+    });
+
+    assert.equal(reloadCalls, 1);
+    assert.equal(controller.dialogTarget.open, false);
   });
 });
 
@@ -358,6 +427,7 @@ function createPortfolioControllerDouble({
   controller.dialogTarget = createDialogTarget();
   controller.headingTarget = createTextTarget();
   controller.titleInputTarget = createInputTarget();
+  controller.helpTarget = createTextTarget();
   controller.errorTarget = createErrorTarget();
   controller.saveButtonTarget = createButtonElement();
   controller.cancelButtonTarget = createButtonElement();
@@ -366,6 +436,7 @@ function createPortfolioControllerDouble({
   controller.hasDialogTarget = true;
   controller.hasHeadingTarget = true;
   controller.hasTitleInputTarget = true;
+  controller.hasHelpTarget = true;
   controller.hasErrorTarget = true;
   controller.hasSaveButtonTarget = true;
   controller.hasCancelButtonTarget = true;

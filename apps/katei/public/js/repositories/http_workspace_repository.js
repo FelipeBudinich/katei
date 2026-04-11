@@ -197,6 +197,35 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
     );
   }
 
+  async createWorkspace({ title } = {}) {
+    const response = await this.fetchImpl('/api/workspace/create', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        ...(title !== undefined ? { title } : {})
+      })
+    });
+    const data = await parseJsonResponse(response);
+
+    if (!response.ok) {
+      throw createWorkspaceApiError(response, data, 'Unable to create workspace.');
+    }
+
+    const workspaceId = normalizeOptionalWorkspaceId(data?.result?.workspaceId);
+
+    return {
+      ...(isPlainObject(data) ? data : { ok: true }),
+      result: {
+        workspaceId,
+        workspaceTitle: normalizeOptionalString(data?.result?.workspaceTitle) || null
+      }
+    };
+  }
+
   async generateCardLocalization(
     {
       clientMutationId,

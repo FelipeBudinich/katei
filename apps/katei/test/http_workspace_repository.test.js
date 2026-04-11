@@ -777,6 +777,59 @@ test('HttpWorkspaceRepository setWorkspaceTitle sends workspace.title.set and up
   });
 });
 
+test('HttpWorkspaceRepository createWorkspace calls the dedicated create endpoint without mutating active workspace state', async () => {
+  const repository = new HttpWorkspaceRepository({
+    fetchImpl: createFetchDouble([
+      createJsonResponse({
+        ok: true,
+        result: {
+          workspaceId: 'workspace_created_1',
+          workspaceTitle: 'Felipe Budinich 1'
+        }
+      })
+    ]).fetch,
+    viewerSub: 'sub_123',
+    workspaceId: 'workspace_home',
+    storage: null,
+    document: null
+  });
+
+  repository.activeWorkspaceId = 'workspace_home';
+  repository.revision = 7;
+  repository.lastRevisionWorkspaceId = 'workspace_home';
+  repository.lastStateSource = 'bootstrap';
+  const fetchDouble = createFetchDouble([
+    createJsonResponse({
+      ok: true,
+      result: {
+        workspaceId: 'workspace_created_1',
+        workspaceTitle: 'Felipe Budinich 1'
+      }
+    })
+  ]);
+  repository.fetchImpl = fetchDouble.fetch;
+
+  const payload = await repository.createWorkspace({
+    title: '   '
+  });
+
+  assert.deepEqual(payload, {
+    ok: true,
+    result: {
+      workspaceId: 'workspace_created_1',
+      workspaceTitle: 'Felipe Budinich 1'
+    }
+  });
+  assert.equal(repository.activeWorkspaceId, 'workspace_home');
+  assert.equal(repository.revision, 7);
+  assert.equal(repository.lastRevisionWorkspaceId, 'workspace_home');
+  assert.equal(fetchDouble.calls[0].url, '/api/workspace/create');
+  assert.equal(fetchDouble.calls[0].options.method, 'POST');
+  assert.deepEqual(JSON.parse(fetchDouble.calls[0].options.body), {
+    title: '   '
+  });
+});
+
 test('HttpWorkspaceRepository generateCardLocalization sends expectedRevision and updates local meta state', async () => {
   const localizedWorkspace = createCard(createEmptyWorkspace(), 'main', {
     title: 'Command result',

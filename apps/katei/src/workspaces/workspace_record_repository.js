@@ -38,20 +38,32 @@ export class WorkspaceBoardRoleAssignmentPermissionError extends Error {
   }
 }
 
+export class WorkspaceCreationPermissionError extends Error {
+  constructor(message = 'Workspace creation is only available to super admins.') {
+    super(message);
+    this.name = 'WorkspaceCreationPermissionError';
+    this.code = 'WORKSPACE_CREATION_FORBIDDEN';
+  }
+}
+
 export class WorkspaceRecordRepository {
-  async loadOrCreateWorkspaceRecord({ viewerSub, workspaceId, viewerEmail } = {}) {
+  async loadOrCreateWorkspaceRecord({ viewerSub, workspaceId, viewerEmail, viewerName } = {}) {
     throw new Error('Not implemented');
   }
 
-  async listPendingWorkspaceInvitesForViewer({ viewerSub, viewerEmail = null } = {}) {
+  async listPendingWorkspaceInvitesForViewer({ viewerSub, viewerEmail = null, viewerName = null } = {}) {
     throw new Error('Not implemented');
   }
 
-  async listAccessibleWorkspacesForViewer({ viewerSub, viewerEmail = null, excludeWorkspaceId = null } = {}) {
+  async listAccessibleWorkspacesForViewer({ viewerSub, viewerEmail = null, viewerName = null, excludeWorkspaceId = null } = {}) {
     throw new Error('Not implemented');
   }
 
-  async loadOrCreateAuthoritativeWorkspaceRecord({ viewerSub, workspaceId, viewerEmail } = {}) {
+  async loadOrCreateAuthoritativeWorkspaceRecord({ viewerSub, workspaceId, viewerEmail, viewerName } = {}) {
+    throw new Error('Not implemented');
+  }
+
+  async createWorkspaceForSuperAdmin({ viewerIsSuperAdmin, viewerSub, viewerEmail, viewerName, title } = {}) {
     throw new Error('Not implemented');
   }
 
@@ -67,11 +79,11 @@ export class WorkspaceRecordRepository {
     throw new Error('Not implemented');
   }
 
-  async replaceWorkspaceSnapshot({ viewerSub, workspaceId, viewerEmail, workspace, actor, expectedRevision }) {
+  async replaceWorkspaceSnapshot({ viewerSub, workspaceId, viewerEmail, viewerName, workspace, actor, expectedRevision }) {
     throw new Error('Not implemented');
   }
 
-  async importWorkspaceSnapshot({ viewerSub, workspaceId, viewerEmail, workspace, actor }) {
+  async importWorkspaceSnapshot({ viewerSub, workspaceId, viewerEmail, viewerName, workspace, actor }) {
     throw new Error('Not implemented');
   }
 

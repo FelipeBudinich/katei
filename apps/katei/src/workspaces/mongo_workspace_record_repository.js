@@ -8,6 +8,7 @@ import {
 import {
   WorkspaceAccessDeniedError,
   WorkspaceBoardRoleAssignmentPermissionError,
+  WorkspaceCreationPermissionError,
   WorkspaceImportConflictError,
   WorkspaceRecordRepository,
   WorkspaceRevisionConflictError,
@@ -16,6 +17,7 @@ import {
 import {
   WORKSPACE_RECORD_COLLECTION_NAME,
   createHomeWorkspaceId,
+  createWorkspaceId,
   createWorkspaceActivityEventId,
   createWorkspaceRecord,
   createInitialWorkspaceRecord,
@@ -28,6 +30,7 @@ import {
   validateWorkspaceSnapshot
 } from './workspace_record.js';
 import { canViewerAccessWorkspace, canViewerReadBoard, filterWorkspaceForViewer } from './workspace_access.js';
+import { resolveWorkspaceCreationTitle } from './default_workspace_title.js';
 
 export function createMongoWorkspaceRecordRepository(options = {}) {
   return new MongoWorkspaceRecordRepository(options);
@@ -69,7 +72,8 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
     config,
     getDb = getMongoDb,
     now = createNowIsoString,
-    createActivityEventId = createWorkspaceActivityEventId
+    createActivityEventId = createWorkspaceActivityEventId,
+    createWorkspaceId: createOpaqueWorkspaceId = createWorkspaceId
   } = {}) {
     super();
     this.collection = collection ?? null;
@@ -78,26 +82,63 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
     this.getDb = getDb;
     this.now = now;
     this.createActivityEventId = createActivityEventId;
+    this.createWorkspaceId = createOpaqueWorkspaceId;
   }
 
-  async loadOrCreateWorkspaceRecord({ viewerSub, workspaceId = null, viewerEmail = null, debugLog = null } = {}) {
+  async loadOrCreateWorkspaceRecord({ viewerSub, workspaceId = null, viewerEmail = null, viewerName = null, debugLog = null } = {}) {
     return this.#loadOrCreateWorkspaceRecord({
       viewerSub,
       workspaceId,
       viewerEmail,
+      viewerName,
       debugLog,
       projectForViewer: true
     });
   }
 
-  async loadOrCreateAuthoritativeWorkspaceRecord({ viewerSub, workspaceId = null, viewerEmail = null, debugLog = null } = {}) {
+  async loadOrCreateAuthoritativeWorkspaceRecord({
+    viewerSub,
+    workspaceId = null,
+    viewerEmail = null,
+    viewerName = null,
+    debugLog = null
+  } = {}) {
     return this.#loadOrCreateWorkspaceRecord({
       viewerSub,
       workspaceId,
       viewerEmail,
+      viewerName,
       debugLog,
       projectForViewer: false
     });
+  }
+
+  async createWorkspaceForSuperAdmin({
+    viewerIsSuperAdmin = false,
+    viewerSub,
+    viewerEmail = null,
+    viewerName = null,
+    title = undefined
+  } = {}) {
+    assertSuperAdminWorkspaceCreationAccess(viewerIsSuperAdmin);
+
+    const collection = this.#getCollection();
+    const normalizedViewerSub = normalizeViewerSub(viewerSub);
+    const initialRecord = await this.#buildInitialWorkspaceRecord({
+      viewerSub: normalizedViewerSub,
+      viewerEmail,
+      viewerName,
+      workspaceId: this.createWorkspaceId(),
+      title
+    });
+
+    await collection.updateOne(
+      { _id: initialRecord.workspaceId },
+      { $setOnInsert: toWorkspaceRecordDocument(initialRecord) },
+      { upsert: true }
+    );
+
+    return this.#loadRequiredWorkspaceRecord(initialRecord.workspaceId);
   }
 
   async loadWorkspaceRecordForSuperAdminTitleManagement({ viewerIsSuperAdmin = false, workspaceId } = {}) {
@@ -195,6 +236,7 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
   async listAccessibleWorkspacesForViewer({
     viewerSub,
     viewerEmail = null,
+    viewerName = null,
     excludeWorkspaceId = null,
     debugLog = null
   } = {}) {
@@ -206,6 +248,7 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
     await this.#loadOrCreateWorkspaceRecord({
       viewerSub: normalizedViewerSub,
       viewerEmail: normalizedViewerEmail,
+      viewerName,
       debugLog,
       projectForViewer: true
     });
@@ -242,13 +285,22 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
     return summaries.sort(compareAccessibleWorkspaceSummaries);
   }
 
-  async replaceWorkspaceSnapshot({ viewerSub, workspaceId = null, viewerEmail = null, workspace, actor, expectedRevision } = {}) {
+  async replaceWorkspaceSnapshot({
+    viewerSub,
+    workspaceId = null,
+    viewerEmail = null,
+    viewerName = null,
+    workspace,
+    actor,
+    expectedRevision
+  } = {}) {
     validateWorkspaceSnapshot(workspace);
 
     const currentRecord = await this.loadOrCreateAuthoritativeWorkspaceRecord({
       viewerSub,
       workspaceId,
-      viewerEmail
+      viewerEmail,
+      viewerName
     });
 
     if (currentRecord.revision !== expectedRevision) {
@@ -271,13 +323,21 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
     });
   }
 
-  async importWorkspaceSnapshot({ viewerSub, workspaceId = null, viewerEmail = null, workspace, actor } = {}) {
+  async importWorkspaceSnapshot({
+    viewerSub,
+    workspaceId = null,
+    viewerEmail = null,
+    viewerName = null,
+    workspace,
+    actor
+  } = {}) {
     validateWorkspaceSnapshot(workspace);
 
     const currentRecord = await this.loadOrCreateAuthoritativeWorkspaceRecord({
       viewerSub,
       workspaceId,
-      viewerEmail
+      viewerEmail,
+      viewerName
     });
 
     if (currentRecord.revision !== 0) {
@@ -285,7 +345,7 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
     }
 
     const nextRecord = createUpdatedWorkspaceRecord(currentRecord, {
-      workspace,
+      workspace: preserveCreationTimeTitle(currentRecord.workspace, workspace),
       actor,
       now: this.now(),
       activityType: 'workspace.imported',
@@ -315,6 +375,7 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
     viewerSub,
     workspaceId = null,
     viewerEmail = null,
+    viewerName = null,
     debugLog = null,
     projectForViewer = true
   } = {}) {
@@ -346,7 +407,13 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
       return existingRecord;
     }
 
-    const initialRecord = createInitialWorkspaceRecord(normalizedViewerSub, { now: this.now() });
+    const initialRecord = await this.#buildInitialWorkspaceRecord({
+      viewerSub: normalizedViewerSub,
+      viewerEmail,
+      viewerName,
+      workspaceId: null,
+      title: undefined
+    });
 
     await collection.updateOne(
       { _id: initialRecord.workspaceId },
@@ -500,6 +567,44 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
 
     return this.collection;
   }
+
+  async #buildInitialWorkspaceRecord({
+    viewerSub,
+    viewerEmail = null,
+    viewerName = null,
+    workspaceId = null,
+    title = undefined
+  } = {}) {
+    const normalizedViewerSub = normalizeViewerSub(viewerSub);
+    const ownedWorkspaceTitles = await this.#listOwnedWorkspaceTitles(normalizedViewerSub);
+    const nextTitle = resolveWorkspaceCreationTitle({
+      requestedTitle: title,
+      displayName: normalizeOptionalString(viewerName) || null,
+      email: normalizeOptionalEmail(viewerEmail),
+      existingWorkspaceTitles: ownedWorkspaceTitles
+    });
+
+    return createInitialWorkspaceRecord(normalizedViewerSub, {
+      workspaceId: workspaceId ?? createHomeWorkspaceId(normalizedViewerSub),
+      title: nextTitle,
+      creator: {
+        email: normalizeOptionalEmail(viewerEmail),
+        displayName: normalizeOptionalString(viewerName) || null
+      },
+      now: this.now()
+    });
+  }
+
+  async #listOwnedWorkspaceTitles(viewerSub) {
+    const collection = this.#getCollection();
+    const documents = await collection.find({ viewerSub }).toArray();
+
+    return documents
+      .map((document) => fromWorkspaceRecordDocument(document))
+      .filter(Boolean)
+      .map((record) => resolveWorkspaceTitle(record.workspace))
+      .filter(Boolean);
+  }
 }
 
 function createNowIsoString() {
@@ -515,6 +620,12 @@ function assertSuperAdminTitleManagementAccess(viewerIsSuperAdmin) {
 function assertSuperAdminBoardRoleAssignmentAccess(viewerIsSuperAdmin) {
   if (viewerIsSuperAdmin !== true) {
     throw new WorkspaceBoardRoleAssignmentPermissionError();
+  }
+}
+
+function assertSuperAdminWorkspaceCreationAccess(viewerIsSuperAdmin) {
+  if (viewerIsSuperAdmin !== true) {
+    throw new WorkspaceCreationPermissionError();
   }
 }
 
@@ -736,6 +847,25 @@ function normalizeOptionalString(value) {
 
 function resolveWorkspaceTitle(workspace) {
   return normalizeOptionalString(workspace?.title) || null;
+}
+
+function preserveCreationTimeTitle(currentWorkspace, importedWorkspace) {
+  const importedWorkspaceTitle = resolveWorkspaceTitle(importedWorkspace);
+
+  if (importedWorkspaceTitle) {
+    return importedWorkspace;
+  }
+
+  const currentWorkspaceTitle = resolveWorkspaceTitle(currentWorkspace);
+
+  if (!currentWorkspaceTitle) {
+    return importedWorkspace;
+  }
+
+  return {
+    ...structuredClone(importedWorkspace),
+    title: currentWorkspaceTitle
+  };
 }
 
 function normalizeOptionalEmail(value) {

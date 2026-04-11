@@ -21,6 +21,7 @@ import {
 import {
   WorkspaceAccessDeniedError,
   WorkspaceBoardRoleAssignmentPermissionError,
+  WorkspaceCreationPermissionError,
   WorkspaceImportConflictError,
   WorkspaceRevisionConflictError,
   WorkspaceTitleManagementPermissionError
@@ -33,7 +34,10 @@ test('loadOrCreateWorkspaceRecord creates an empty record on first access', asyn
     now: () => '2026-04-01T10:00:00.000Z'
   });
 
-  const record = await repository.loadOrCreateWorkspaceRecord({ viewerSub: ' sub_123 ' });
+  const record = await repository.loadOrCreateWorkspaceRecord({
+    viewerSub: ' sub_123 ',
+    viewerName: 'Felipe Budinich'
+  });
 
   assert.equal(record.viewerSub, 'sub_123');
   assert.equal(record.workspaceId, createHomeWorkspaceId('sub_123'));
@@ -45,6 +49,7 @@ test('loadOrCreateWorkspaceRecord creates an empty record on first access', asyn
   assert.deepEqual(record.activityEvents, []);
   assert.equal(validateWorkspaceShape(record.workspace), true);
   assert.equal(record.workspace.workspaceId, createHomeWorkspaceId('sub_123'));
+  assert.equal(record.workspace.title, 'Felipe Budinich 1');
   assert.equal(collection.size(), 1);
 
   const storedDocument = collection.getDocument(createHomeWorkspaceId('sub_123'));
@@ -52,6 +57,149 @@ test('loadOrCreateWorkspaceRecord creates an empty record on first access', asyn
   assert.equal(storedDocument.viewerSub, 'sub_123');
   assert.equal(storedDocument.workspaceId, createHomeWorkspaceId('sub_123'));
   assert.equal(storedDocument.isHomeWorkspace, true);
+  assert.equal(storedDocument.workspace.title, 'Felipe Budinich 1');
+});
+
+test('loadOrCreateWorkspaceRecord uses only the owner matching titles when assigning the next default home workspace title', async () => {
+  const ownedRecord = createUpdatedWorkspaceRecord(
+    createInitialWorkspaceRecord('sub_123', {
+      workspaceId: 'workspace_owned_existing',
+      title: 'Felipe Budinich 2',
+      now: '2026-04-01T09:00:00.000Z'
+    }),
+    {
+      workspace: {
+        ...createEmptyWorkspace({
+          workspaceId: 'workspace_owned_existing',
+          title: 'Felipe Budinich 2',
+          creator: {
+            type: 'human',
+            id: 'sub_123',
+            displayName: 'Felipe Budinich'
+          }
+        })
+      },
+      actor: { type: 'human', id: 'sub_123' },
+      now: '2026-04-01T09:15:00.000Z'
+    }
+  );
+  ownedRecord.isHomeWorkspace = false;
+  const otherOwnerRecord = createUpdatedWorkspaceRecord(
+    createInitialWorkspaceRecord('sub_other', {
+      workspaceId: 'workspace_other_existing',
+      title: 'Felipe Budinich 99',
+      now: '2026-04-01T08:00:00.000Z'
+    }),
+    {
+      workspace: {
+        ...createEmptyWorkspace({
+          workspaceId: 'workspace_other_existing',
+          title: 'Felipe Budinich 99',
+          creator: {
+            type: 'human',
+            id: 'sub_other',
+            displayName: 'Felipe Budinich'
+          }
+        })
+      },
+      actor: { type: 'human', id: 'sub_other' },
+      now: '2026-04-01T08:15:00.000Z'
+    }
+  );
+  otherOwnerRecord.isHomeWorkspace = false;
+  const collection = createWorkspaceRecordCollectionDouble([
+    toWorkspaceRecordDocument(ownedRecord),
+    toWorkspaceRecordDocument(otherOwnerRecord)
+  ]);
+  const repository = new MongoWorkspaceRecordRepository({
+    collection,
+    now: () => '2026-04-01T10:00:00.000Z'
+  });
+
+  const record = await repository.loadOrCreateWorkspaceRecord({
+    viewerSub: 'sub_123',
+    viewerName: 'Felipe Budinich'
+  });
+
+  assert.equal(record.workspaceId, createHomeWorkspaceId('sub_123'));
+  assert.equal(record.workspace.title, 'Felipe Budinich 3');
+});
+
+test('createWorkspaceForSuperAdmin preserves explicit titles and keeps generated workspace ids opaque', async () => {
+  const collection = createWorkspaceRecordCollectionDouble();
+  const repository = new MongoWorkspaceRecordRepository({
+    collection,
+    now: () => '2026-04-01T10:00:00.000Z',
+    createWorkspaceId: () => 'workspace_generated_1'
+  });
+
+  const record = await repository.createWorkspaceForSuperAdmin({
+    viewerIsSuperAdmin: true,
+    viewerSub: 'sub_admin',
+    viewerEmail: 'admin@example.com',
+    viewerName: 'Felipe Budinich',
+    title: '  Studio HQ  '
+  });
+
+  assert.equal(record.workspaceId, 'workspace_generated_1');
+  assert.equal(record.workspace.workspaceId, 'workspace_generated_1');
+  assert.equal(record.workspace.title, 'Studio HQ');
+  assert.equal(record.viewerSub, 'sub_admin');
+});
+
+test('createWorkspaceForSuperAdmin assigns the next default title when the submitted title is blank', async () => {
+  const existingOwnedRecord = createUpdatedWorkspaceRecord(
+    createInitialWorkspaceRecord('sub_admin', {
+      workspaceId: 'workspace_existing_default_title',
+      title: 'Felipe Budinich 7',
+      now: '2026-04-01T09:00:00.000Z'
+    }),
+    {
+      workspace: createEmptyWorkspace({
+        workspaceId: 'workspace_existing_default_title',
+        title: 'Felipe Budinich 7',
+        creator: {
+          type: 'human',
+          id: 'sub_admin',
+          displayName: 'Felipe Budinich'
+        }
+      }),
+      actor: { type: 'human', id: 'sub_admin' },
+      now: '2026-04-01T09:10:00.000Z'
+    }
+  );
+  existingOwnedRecord.isHomeWorkspace = false;
+  const collection = createWorkspaceRecordCollectionDouble([toWorkspaceRecordDocument(existingOwnedRecord)]);
+  const repository = new MongoWorkspaceRecordRepository({
+    collection,
+    now: () => '2026-04-01T10:00:00.000Z',
+    createWorkspaceId: () => 'workspace_generated_2'
+  });
+
+  const record = await repository.createWorkspaceForSuperAdmin({
+    viewerIsSuperAdmin: true,
+    viewerSub: 'sub_admin',
+    viewerEmail: 'admin@example.com',
+    viewerName: 'Felipe Budinich',
+    title: '   '
+  });
+
+  assert.equal(record.workspaceId, 'workspace_generated_2');
+  assert.equal(record.workspace.title, 'Felipe Budinich 8');
+});
+
+test('createWorkspaceForSuperAdmin rejects non-super-admin callers', async () => {
+  const repository = new MongoWorkspaceRecordRepository({
+    collection: createWorkspaceRecordCollectionDouble()
+  });
+
+  await assert.rejects(
+    repository.createWorkspaceForSuperAdmin({
+      viewerIsSuperAdmin: false,
+      viewerSub: 'sub_admin'
+    }),
+    WorkspaceCreationPermissionError
+  );
 });
 
 test('loadOrCreateWorkspaceRecord normalizes existing legacy-shaped workspace documents', async () => {
@@ -891,6 +1039,7 @@ test('importWorkspaceSnapshot stores a validated full-workspace snapshot only wh
 
   const record = await repository.importWorkspaceSnapshot({
     viewerSub: 'sub_123',
+    viewerName: 'Felipe Budinich',
     workspace,
     actor: { type: 'human', id: 'sub_123' }
   });
@@ -915,6 +1064,7 @@ test('importWorkspaceSnapshot stores a validated full-workspace snapshot only wh
     }
   ]);
   assert.equal(validateWorkspaceShape(record.workspace), true);
+  assert.equal(record.workspace.title, 'Felipe Budinich 1');
 });
 
 test('importWorkspaceSnapshot rejects imports once the server record is no longer pristine', async () => {
@@ -1016,10 +1166,12 @@ function createWorkspaceRecordCollectionDouble(initialDocuments = []) {
   );
 
   return {
-    find() {
+    find(filter = {}) {
       return {
         async toArray() {
-          return [...documents.values()].map((document) => structuredClone(document));
+          return [...documents.values()]
+            .filter((document) => matchesDocumentFilter(document, filter))
+            .map((document) => structuredClone(document));
         }
       };
     },

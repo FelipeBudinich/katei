@@ -21,6 +21,7 @@ import {
 import {
   WorkspaceAccessDeniedError,
   WorkspaceBoardRoleAssignmentPermissionError,
+  WorkspaceCreationPermissionError,
   WorkspaceImportConflictError,
   WorkspaceRevisionConflictError,
   WorkspaceTitleManagementPermissionError
@@ -166,6 +167,80 @@ test('GET /api/workspace treats another viewer home workspace as an external acc
       ]
     }
   ]);
+});
+
+test('POST /api/workspace/create lets super admins create a workspace with a default stored title', async () => {
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble();
+  const app = createTestApp({
+    env: {
+      SUPER_ADMINS: 'admin@example.com'
+    },
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .post('/api/workspace/create')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_admin', email: 'admin@example.com', name: 'Felipe Budinich' }))
+    .send({
+      title: '   '
+    });
+
+  assert.equal(response.status, 201);
+  assert.deepEqual(response.body, {
+    ok: true,
+    result: {
+      workspaceId: 'workspace_created_1',
+      workspaceTitle: 'Felipe Budinich 1'
+    }
+  });
+  assert.deepEqual(workspaceRecordRepository.createWorkspaceForSuperAdminCalls, [
+    {
+      viewerIsSuperAdmin: true,
+      viewerSub: 'sub_admin',
+      viewerEmail: 'admin@example.com',
+      viewerName: 'Felipe Budinich',
+      title: '   '
+    }
+  ]);
+});
+
+test('POST /api/workspace/create preserves explicit titles for super admins', async () => {
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble();
+  const app = createTestApp({
+    env: {
+      SUPER_ADMINS: 'admin@example.com'
+    },
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .post('/api/workspace/create')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_admin', email: 'admin@example.com', name: 'Felipe Budinich' }))
+    .send({
+      title: '  Studio HQ  '
+    });
+
+  assert.equal(response.status, 201);
+  assert.deepEqual(response.body.result, {
+    workspaceId: 'workspace_created_1',
+    workspaceTitle: 'Studio HQ'
+  });
+});
+
+test('POST /api/workspace/create rejects non-super-admin callers', async () => {
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble();
+  const app = createTestApp({ workspaceRecordRepository });
+
+  const response = await request(app)
+    .post('/api/workspace/create')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_member', email: 'member@example.com', name: 'Member' }))
+    .send({
+      title: ''
+    });
+
+  assert.equal(response.status, 403);
+  assert.equal(response.body.ok, false);
+  assert.equal(response.body.error, 'Workspace creation is only available to super admins.');
 });
 
 test('POST /api/workspace/commands returns the filtered resulting workspace', async () => {
@@ -346,6 +421,7 @@ test('POST /api/workspace/commands keeps unrelated commands on the normal author
     {
       viewerSub: 'sub_member',
       viewerEmail: 'member@example.com',
+      viewerName: 'Member',
       workspaceId: sharedRecord.workspaceId
     }
   ]);
@@ -485,6 +561,7 @@ test('POST /api/workspace/commands does not add a super-admin self-removal seam'
     {
       viewerSub: 'sub_admin',
       viewerEmail: 'admin@example.com',
+      viewerName: 'Admin',
       workspaceId: sharedRecord.workspaceId
     }
   ]);
@@ -1473,7 +1550,7 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = [], { allowInval
     };
   }
 
-  async function loadFullRecord({ viewerSub, viewerEmail = null, workspaceId = null } = {}) {
+  async function loadFullRecord({ viewerSub, viewerEmail = null, viewerName = null, workspaceId = null } = {}) {
     if (workspaceId) {
       const requestedRecord = records.get(workspaceId);
       if (requestedRecord && invalidWorkspaceIdSet.has(workspaceId)) {
@@ -1510,6 +1587,7 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = [], { allowInval
       records.set(
         homeWorkspaceId,
         createInitialWorkspaceRecord(viewerSub, {
+          title: typeof viewerName === 'string' && viewerName.trim() ? `${viewerName.trim()} 1` : 'Workspace 1',
           now: '2026-04-04T10:00:00.000Z'
         })
       );
@@ -1535,21 +1613,61 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = [], { allowInval
     loadAuthoritativeCalls: [],
     loadSuperAdminTitleManagementCalls: [],
     loadSuperAdminBoardRoleAssignmentCalls: [],
+    createWorkspaceForSuperAdminCalls: [],
 
-    async loadOrCreateWorkspaceRecord({ viewerSub, viewerEmail = null, workspaceId = null } = {}) {
+    async loadOrCreateWorkspaceRecord({ viewerSub, viewerEmail = null, viewerName = null, workspaceId = null } = {}) {
       return projectRecord(
-        await loadFullRecord({ viewerSub, viewerEmail, workspaceId }),
+        await loadFullRecord({ viewerSub, viewerEmail, viewerName, workspaceId }),
         { viewerSub, viewerEmail }
       );
     },
 
-    async loadOrCreateAuthoritativeWorkspaceRecord({ viewerSub, viewerEmail = null, workspaceId = null } = {}) {
+    async loadOrCreateAuthoritativeWorkspaceRecord({ viewerSub, viewerEmail = null, viewerName = null, workspaceId = null } = {}) {
       this.loadAuthoritativeCalls.push({
         viewerSub,
         viewerEmail,
+        viewerName,
         workspaceId
       });
-      return loadFullRecord({ viewerSub, viewerEmail, workspaceId });
+      return loadFullRecord({ viewerSub, viewerEmail, viewerName, workspaceId });
+    },
+
+    async createWorkspaceForSuperAdmin({
+      viewerIsSuperAdmin = false,
+      viewerSub,
+      viewerEmail = null,
+      viewerName = null,
+      title = undefined
+    } = {}) {
+      this.createWorkspaceForSuperAdminCalls.push({
+        viewerIsSuperAdmin,
+        viewerSub,
+        viewerEmail,
+        viewerName,
+        title
+      });
+
+      if (viewerIsSuperAdmin !== true) {
+        throw new WorkspaceCreationPermissionError();
+      }
+
+      const workspaceId = `workspace_created_${this.createWorkspaceForSuperAdminCalls.length}`;
+      const normalizedTitle = typeof title === 'string' && title.trim()
+        ? title.trim()
+        : `${typeof viewerName === 'string' && viewerName.trim() ? viewerName.trim() : 'Workspace'} 1`;
+      const record = createInitialWorkspaceRecord(viewerSub, {
+        workspaceId,
+        title: normalizedTitle,
+        now: '2026-04-04T10:00:00.000Z',
+        creator: {
+          email: viewerEmail,
+          displayName: viewerName
+        }
+      });
+
+      record.isHomeWorkspace = false;
+      records.set(workspaceId, record);
+      return createWorkspaceRecord(record);
     },
 
     async loadWorkspaceRecordForSuperAdminTitleManagement({ viewerIsSuperAdmin = false, workspaceId } = {}) {
@@ -1582,22 +1700,31 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = [], { allowInval
       return listPendingWorkspaceInvites(records.values(), { viewerSub, viewerEmail });
     },
 
-    async listAccessibleWorkspacesForViewer({ viewerSub, viewerEmail = null, excludeWorkspaceId = null } = {}) {
-      await loadFullRecord({ viewerSub, viewerEmail });
+    async listAccessibleWorkspacesForViewer({ viewerSub, viewerEmail = null, viewerName = null, excludeWorkspaceId = null } = {}) {
+      await loadFullRecord({ viewerSub, viewerEmail, viewerName });
       return listAccessibleWorkspaces(records.values(), { viewerSub, viewerEmail, excludeWorkspaceId });
     },
 
-    async replaceWorkspaceSnapshot({ viewerSub, viewerEmail = null, workspaceId = null, workspace, actor, expectedRevision }) {
+    async replaceWorkspaceSnapshot({
+      viewerSub,
+      viewerEmail = null,
+      viewerName = null,
+      workspaceId = null,
+      workspace,
+      actor,
+      expectedRevision
+    }) {
       this.replaceCalls.push({
         viewerSub,
         viewerEmail,
+        viewerName,
         workspaceId,
         workspace,
         actor,
         expectedRevision
       });
 
-      const currentRecord = await loadFullRecord({ viewerSub, viewerEmail, workspaceId });
+      const currentRecord = await loadFullRecord({ viewerSub, viewerEmail, viewerName, workspaceId });
 
       if (currentRecord.revision !== expectedRevision) {
         throw new WorkspaceRevisionConflictError();
@@ -1613,8 +1740,8 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = [], { allowInval
       return createWorkspaceRecord(nextRecord);
     },
 
-    async importWorkspaceSnapshot({ viewerSub, viewerEmail = null, workspaceId = null, workspace, actor }) {
-      const currentRecord = await loadFullRecord({ viewerSub, viewerEmail, workspaceId });
+    async importWorkspaceSnapshot({ viewerSub, viewerEmail = null, viewerName = null, workspaceId = null, workspace, actor }) {
+      const currentRecord = await loadFullRecord({ viewerSub, viewerEmail, viewerName, workspaceId });
 
       if (currentRecord.revision !== 0) {
         throw new WorkspaceImportConflictError();

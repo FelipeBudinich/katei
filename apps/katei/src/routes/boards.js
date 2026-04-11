@@ -33,6 +33,7 @@ export function createBoardsRouter({ requireSession, workspaceRecordRepository, 
         workspaceRecordRepository.loadOrCreateWorkspaceRecord({
           viewerSub: request.viewer.sub,
           viewerEmail: request.viewer.email ?? null,
+          viewerName: request.viewer.name ?? null,
           workspaceId: requestedWorkspaceId,
           debugLog
         }),
@@ -55,6 +56,7 @@ export function createBoardsRouter({ requireSession, workspaceRecordRepository, 
       const accessibleWorkspaces = await workspaceRecordRepository.listAccessibleWorkspacesForViewer({
         viewerSub: request.viewer.sub,
         viewerEmail: request.viewer.email ?? null,
+        viewerName: request.viewer.name ?? null,
         excludeWorkspaceId: record.workspaceId,
         debugLog
       });

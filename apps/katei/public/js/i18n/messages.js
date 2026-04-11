@@ -105,13 +105,18 @@ const EN_MESSAGES = freezeCatalog({
       }
     },
     workspaceTitleEditor: {
+      createAction: 'Create workspace',
+      createHeading: 'Create workspace',
       assignAction: 'Assign title',
       editAction: 'Edit title',
       assignHeading: 'Assign workspace title',
       editHeading: 'Edit workspace title',
       fieldLabel: 'Workspace title',
+      createPlaceholder: 'Leave blank to use the default workspace name',
+      createHelp: 'Blank titles use your display name plus the next sequence number.',
       placeholder: 'Leave blank to show the workspace ID',
       help: 'Clear the title to fall back to the workspace ID.',
+      creatingAction: 'Creating...',
       savingAction: 'Saving...',
       savedStatus: 'Workspace title saved.'
     },
@@ -708,13 +713,18 @@ const ES_CL_MESSAGES = freezeCatalog({
       }
     },
     workspaceTitleEditor: {
+      createAction: 'Crear espacio',
+      createHeading: 'Crear espacio',
       assignAction: 'Asignar título',
       editAction: 'Editar título',
       assignHeading: 'Asignar título del espacio',
       editHeading: 'Editar título del espacio',
       fieldLabel: 'Título del espacio',
+      createPlaceholder: 'Déjalo vacío para usar el nombre predeterminado del espacio',
+      createHelp: 'Los títulos vacíos usan tu nombre visible más el siguiente número de secuencia.',
       placeholder: 'Déjalo vacío para mostrar el ID del espacio',
       help: 'Borra el título para volver a usar el ID del espacio.',
+      creatingAction: 'Creando...',
       savingAction: 'Guardando...',
       savedStatus: 'Título del espacio guardado.'
     },
@@ -1312,13 +1322,18 @@ const JA_MESSAGES = freezeCatalog({
       }
     },
     workspaceTitleEditor: {
+      createAction: 'ワークスペースを作成',
+      createHeading: 'ワークスペースを作成',
       assignAction: 'タイトルを付ける',
       editAction: 'タイトルを編集',
       assignHeading: 'ワークスペース名を設定',
       editHeading: 'ワークスペース名を編集',
       fieldLabel: 'ワークスペース名',
+      createPlaceholder: '空欄にすると既定のワークスペース名を使います',
+      createHelp: '空欄のタイトルには表示名と次の連番を使います。',
       placeholder: '空欄にするとワークスペース ID を表示します',
       help: 'タイトルを消すとワークスペース ID 表示に戻ります。',
+      creatingAction: '作成しています...',
       savingAction: '保存しています...',
       savedStatus: 'ワークスペース名を保存しました。'
     },

@@ -12,6 +12,15 @@
       </div>
 
       <div class="top-bar-actions">
+        {% if canManageWorkspaceTitles %}
+          <button
+            type="button"
+            class="touch-button-secondary"
+            data-action="portfolio#openCreateDialog"
+          >
+            {{ t('portfolio.workspaceTitleEditor.createAction') }}
+          </button>
+        {% endif %}
         <a href="/boards" class="touch-button-secondary">{{ t('portfolio.openBoards') }}</a>
         <button
           type="button"
@@ -651,7 +660,7 @@
             >
           </label>
 
-          <p class="text-xs leading-5 text-muted">{{ t('portfolio.workspaceTitleEditor.help') }}</p>
+          <p class="text-xs leading-5 text-muted" data-portfolio-target="help">{{ t('portfolio.workspaceTitleEditor.help') }}</p>
           <p class="portfolio-dialog-status text-sm" hidden data-portfolio-target="error"></p>
 
           <div class="dialog-actions board-options-actions mt-6">

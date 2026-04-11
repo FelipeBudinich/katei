@@ -17,6 +17,8 @@ export function createInitialWorkspaceRecord(
   viewerSub,
   {
     workspaceId = createHomeWorkspaceId(viewerSub),
+    title = undefined,
+    creator = null,
     now = new Date().toISOString()
   } = {}
 ) {
@@ -36,10 +38,11 @@ export function createInitialWorkspaceRecord(
     viewerSub: normalizedViewerSub,
     workspace: createEmptyWorkspace({
       workspaceId: normalizedWorkspaceId,
-      creator: {
-        type: 'human',
-        id: normalizedViewerSub
-      }
+      title,
+      creator: normalizeInitialWorkspaceCreator({
+        viewerSub: normalizedViewerSub,
+        creator
+      })
     }),
     isHomeWorkspace: normalizedIsHomeWorkspace,
     revision: 0,
@@ -274,6 +277,10 @@ export function createWorkspaceActivityEventId() {
   return `activity_${randomUUID().replaceAll('-', '').slice(0, 12)}`;
 }
 
+export function createWorkspaceId() {
+  return `workspace_${randomUUID().replaceAll('-', '').slice(0, 12)}`;
+}
+
 export function appendActivityEvent(record, event, maxEvents = DEFAULT_MAX_ACTIVITY_EVENTS) {
   const currentRecord = createWorkspaceRecord(record);
   const normalizedEvent = createActivityEvent(event);
@@ -448,6 +455,24 @@ function createHumanActor(actorId) {
         id: normalizedActorId
       }
     : null;
+}
+
+function normalizeInitialWorkspaceCreator({ viewerSub, creator = null } = {}) {
+  const normalizedViewerSub = normalizeOptionalString(viewerSub);
+
+  if (!normalizedViewerSub) {
+    return createHumanActor(null);
+  }
+
+  const normalizedEmail = normalizeOptionalString(creator?.email);
+  const normalizedDisplayName = normalizeOptionalString(creator?.displayName ?? creator?.name);
+
+  return {
+    type: 'human',
+    id: normalizedViewerSub,
+    ...(normalizedEmail ? { email: normalizedEmail } : {}),
+    ...(normalizedDisplayName ? { displayName: normalizedDisplayName } : {})
+  };
 }
 
 function normalizeRevision(revision) {

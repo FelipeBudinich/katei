@@ -176,6 +176,29 @@ test('WorkspaceService setWorkspaceTitle honors explicit expectedRevision and pr
   ]);
 });
 
+test('WorkspaceService createWorkspace delegates to repository.createWorkspace without touching active state', async () => {
+  const workspace = createEmptyWorkspace({ workspaceId: 'workspace_home' });
+  const repository = createRepositoryDouble({ workspace });
+  const service = new WorkspaceService(repository);
+
+  const result = await service.createWorkspace({
+    title: '  Studio HQ  '
+  });
+
+  assert.deepEqual(repository.createWorkspaceCalls, [
+    {
+      title: '  Studio HQ  '
+    }
+  ]);
+  assert.deepEqual(result, {
+    ok: true,
+    result: {
+      workspaceId: 'workspace_created_1',
+      workspaceTitle: 'Studio HQ'
+    }
+  });
+});
+
 test('WorkspaceService createBoard calls repository.applyCommand and returns workspace', async () => {
   await assertServiceCommand({
     action: (service) => service.createBoard({ title: 'Roadmap' }),
@@ -757,6 +780,7 @@ function createRepositoryDouble({
     applyCommandContexts: [],
     setWorkspaceTitleCalls: [],
     setWorkspaceTitleContexts: [],
+    createWorkspaceCalls: [],
     generateCardLocalizationCalls: [],
     generateCardLocalizationContexts: [],
     runStagePromptCalls: [],
@@ -854,6 +878,16 @@ function createRepositoryDouble({
           noOp: false,
           workspaceId: nextWorkspace.workspaceId,
           workspaceTitle: normalizedTitle || null
+        }
+      };
+    },
+    async createWorkspace(request = {}) {
+      this.createWorkspaceCalls.push(structuredClone(request));
+      return {
+        ok: true,
+        result: {
+          workspaceId: 'workspace_created_1',
+          workspaceTitle: typeof request?.title === 'string' && request.title.trim() ? request.title.trim() : 'Workspace 1'
         }
       };
     },
