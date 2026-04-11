@@ -3,6 +3,7 @@
     @apply min-h-screen;
     position: relative;
     isolation: isolate;
+    overflow-x: clip;
     background-color: var(--color-bg-surface);
     color: var(--color-text-strong);
   }
@@ -34,10 +35,26 @@
 
   .top-bar {
     @apply grid gap-4 border px-5 py-4 shadow-[var(--shadow-paper)] lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start;
+    min-width: 0;
     border-radius: var(--radius-2xl);
     border-color: var(--color-border-subtle);
     background-color: var(--color-bg-canvas);
     height: fit-content;
+  }
+
+  .top-bar-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+    justify-content: flex-start;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .top-bar-actions > * {
+    min-width: 0;
+    max-width: 100%;
   }
 
   .column-panel {
@@ -551,6 +568,11 @@
   }
 
   @media (min-width: 64rem) {
+    .top-bar-actions {
+      flex-wrap: nowrap;
+      justify-content: flex-end;
+    }
+
     .board-columns {
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }

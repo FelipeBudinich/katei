@@ -611,8 +611,7 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
   assert.match(response.text, /Open board/);
   assert.match(response.text, /Needs locales/);
   assert.match(response.text, /3 cards/);
-  assert.match(response.text, /<section class="portfolio-hero paper-panel grid gap-4 px-5 py-4">/);
-  assert.match(response.text, /<header class="top-bar border-0 bg-transparent px-0 py-0 shadow-none">/);
+  assert.match(response.text, /<header class="top-bar">/);
   assert.match(response.text, /<div class="top-bar-heading-group">/);
   assert.match(response.text, /<h1 class="top-bar-title font-serif text-3xl leading-tight text-strong">Portfolio<\/h1>/);
   assert.match(response.text, /<div class="top-bar-actions">/);
@@ -621,6 +620,7 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
     response.text,
     /class="touch-button-secondary touch-button-secondary--icon"[\s\S]*?data-action="portfolio#openProfileOptions"[\s\S]*?aria-label="Profile"[\s\S]*?<img src="\/profile\.svg" alt="" aria-hidden="true" class="touch-button-secondary__icon">/
   );
+  assert.doesNotMatch(response.text, /class="portfolio-hero"/);
   assert.doesNotMatch(response.text, /class="portfolio-header"/);
   assert.doesNotMatch(response.text, /class="portfolio-actions"/);
   assert.match(response.text, /class="portfolio-workspace-group portfolio-directory-card paper-panel"/);
@@ -636,7 +636,7 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
   assert.deepEqual(workspaceRecordRepository.loadCalls, []);
   assert.deepEqual(portfolioReadModel.loadCalls, [{ viewerSub: 'sub_123' }]);
 
-  const portfolioHero = response.text.match(/<section class="portfolio-hero[\s\S]*?<\/section>/)?.[0] ?? '';
+  const portfolioHeader = response.text.match(/<header class="top-bar">[\s\S]*?<\/header>/)?.[0] ?? '';
   const portfolioSummaryGrid = response.text.match(
     /<section class="env-inventory-status-grid">[\s\S]*?<\/section>/
   )?.[0] ?? '';
@@ -645,14 +645,14 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
   )?.[0] ?? '';
   const profileOptionsDialog = extractDialogHtml(response.text, 'profile-options');
 
-  assert.doesNotMatch(portfolioHero, /field-label text-sm font-semibold/);
-  assert.doesNotMatch(portfolioHero, /max-w-3xl text-base leading-7 text-muted sm:text-lg/);
-  assert.doesNotMatch(portfolioHero, /portfolio-meta-row/);
-  assert.doesNotMatch(portfolioHero, /portfolio-badge-row/);
-  assert.doesNotMatch(portfolioHero, /class="viewer-chip"/);
+  assert.doesNotMatch(portfolioHeader, /field-label text-sm font-semibold/);
+  assert.doesNotMatch(portfolioHeader, /max-w-3xl text-base leading-7 text-muted sm:text-lg/);
+  assert.doesNotMatch(portfolioHeader, /portfolio-meta-row/);
+  assert.doesNotMatch(portfolioHeader, /portfolio-badge-row/);
+  assert.doesNotMatch(portfolioHeader, /class="viewer-chip"/);
   assert.match(
     response.text,
-    /<section class="portfolio-hero[\s\S]*?<\/section>\s*<section class="env-inventory-status-grid">[\s\S]*?<\/section>\s*<section class="paper-panel portfolio-section inventory-panel">[\s\S]*?<h2 class="font-serif text-3xl text-strong">Board directory<\/h2>/
+    /<header class="top-bar">[\s\S]*?<\/header>\s*<section class="env-inventory-status-grid">[\s\S]*?<\/section>\s*<section class="paper-panel portfolio-section inventory-panel">[\s\S]*?<h2 class="font-serif text-3xl text-strong">Board directory<\/h2>/
   );
   assert.ok(countMatches(response.text, /class="paper-panel portfolio-section inventory-panel"/g) >= 6);
   assert.ok(countMatches(portfolioSummaryGrid, /class="paper-panel env-inventory-status-card env-inventory-status-card--good"/g) >= 7);

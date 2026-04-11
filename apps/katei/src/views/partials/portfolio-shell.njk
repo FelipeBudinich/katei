@@ -5,34 +5,32 @@
   data-portfolio-viewer-super-admin-value="{{ 'true' if canManageBoardSelfRoles else 'false' }}"
 >
   <p class="sr-only" role="status" aria-live="polite" data-portfolio-target="announcer"></p>
-  <section class="portfolio-hero paper-panel grid gap-4 px-5 py-4">
-    <header class="top-bar border-0 bg-transparent px-0 py-0 shadow-none">
-      <div class="top-bar-heading-group">
-        <h1 class="top-bar-title font-serif text-3xl leading-tight text-strong">{{ t('portfolio.title') }}</h1>
-      </div>
+  <header class="top-bar">
+    <div class="top-bar-heading-group">
+      <h1 class="top-bar-title font-serif text-3xl leading-tight text-strong">{{ t('portfolio.title') }}</h1>
+    </div>
 
-      <div class="top-bar-actions">
-        {% if canManageWorkspaceTitles %}
-          <button
-            type="button"
-            class="touch-button-secondary"
-            data-action="portfolio#openCreateDialog"
-          >
-            {{ t('portfolio.workspaceTitleEditor.createAction') }}
-          </button>
-        {% endif %}
-        <a href="/boards" class="touch-button-secondary">{{ t('portfolio.openBoards') }}</a>
+    <div class="top-bar-actions">
+      {% if canManageWorkspaceTitles %}
         <button
           type="button"
-          class="touch-button-secondary touch-button-secondary--icon"
-          data-action="portfolio#openProfileOptions"
-          aria-label="{{ t('workspace.profileOptions') }}"
+          class="touch-button-secondary"
+          data-action="portfolio#openCreateDialog"
         >
-          <img src="/profile.svg" alt="" aria-hidden="true" class="touch-button-secondary__icon">
+          {{ t('portfolio.workspaceTitleEditor.createAction') }}
         </button>
-      </div>
-    </header>
-  </section>
+      {% endif %}
+      <a href="/boards" class="touch-button-secondary">{{ t('portfolio.openBoards') }}</a>
+      <button
+        type="button"
+        class="touch-button-secondary touch-button-secondary--icon"
+        data-action="portfolio#openProfileOptions"
+        aria-label="{{ t('workspace.profileOptions') }}"
+      >
+        <img src="/profile.svg" alt="" aria-hidden="true" class="touch-button-secondary__icon">
+      </button>
+    </div>
+  </header>
 
   <section class="env-inventory-status-grid">
     {% for item in summaryItems %}

@@ -378,16 +378,6 @@
     border-style: var(--tw-border-style);
     border-width: 1px;
   }
-  .border-0 {
-    border-style: var(--tw-border-style);
-    border-width: 0px;
-  }
-  .bg-transparent {
-    background-color: transparent;
-  }
-  .px-0 {
-    padding-inline: calc(var(--spacing) * 0);
-  }
   .px-2 {
     padding-inline: calc(var(--spacing) * 2);
   }
@@ -396,12 +386,6 @@
   }
   .px-4 {
     padding-inline: calc(var(--spacing) * 4);
-  }
-  .px-5 {
-    padding-inline: calc(var(--spacing) * 5);
-  }
-  .py-0 {
-    padding-block: calc(var(--spacing) * 0);
   }
   .py-0\.5 {
     padding-block: calc(var(--spacing) * 0.5);
@@ -506,10 +490,6 @@
   }
   .shadow {
     --tw-shadow: 0 1px 3px 0 var(--tw-shadow-color, rgb(0 0 0 / 0.1)), 0 1px 2px -1px var(--tw-shadow-color, rgb(0 0 0 / 0.1));
-    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
-  }
-  .shadow-none {
-    --tw-shadow: 0 0 #0000;
     box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
   }
   .outline {
@@ -652,6 +632,7 @@
     min-height: 100vh;
     position: relative;
     isolation: isolate;
+    overflow-x: clip;
     background-color: var(--color-bg-surface);
     color: var(--color-text-strong);
   }
@@ -694,10 +675,24 @@
     @media (width >= 64rem) {
       align-items: flex-start;
     }
+    min-width: 0;
     border-radius: var(--radius-2xl);
     border-color: var(--color-border-subtle);
     background-color: var(--color-bg-canvas);
     height: fit-content;
+  }
+  .top-bar-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+    justify-content: flex-start;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .top-bar-actions > * {
+    min-width: 0;
+    max-width: 100%;
   }
   .column-panel {
     overflow: hidden;
@@ -1229,6 +1224,10 @@
     padding: 0.625rem 1.25rem;
   }
   @media (min-width: 64rem) {
+    .top-bar-actions {
+      flex-wrap: nowrap;
+      justify-content: flex-end;
+    }
     .board-columns {
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
@@ -1655,15 +1654,6 @@
     min-height: 2.75rem;
     text-align: left;
   }
-  .top-bar-actions {
-    display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: max-content;
-    gap: 0.75rem;
-    align-items: center;
-    justify-items: start;
-    justify-content: start;
-  }
   .top-bar-heading-group {
     display: flex;
     flex-wrap: nowrap;
@@ -2082,6 +2072,22 @@
     overflow-wrap: anywhere;
     word-break: break-word;
   }
+  .portfolio-section, .portfolio-section-header, .portfolio-directory-groups, .portfolio-workspace-groups, .portfolio-workspace-group, .portfolio-subsection-list, .portfolio-subsection, .portfolio-workspace-header, .portfolio-table-wrap {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .portfolio-section-header, .portfolio-empty-state, .portfolio-subsection-list, .portfolio-subsection {
+    display: grid;
+    gap: 1rem;
+  }
+  .portfolio-section-header {
+    gap: 0.35rem;
+  }
+  .portfolio-results-label {
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+    color: var(--color-text-muted);
+  }
   .portfolio-directory-groups, .portfolio-workspace-groups {
     display: grid;
     gap: 1rem;
@@ -2114,12 +2120,18 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 0.75rem;
+    min-width: 0;
   }
   .portfolio-workspace-title-row > h3 {
     margin: 0;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
   .portfolio-table-wrap {
     overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
     border: 1px solid var(--color-border-subtle);
     border-radius: var(--radius-2xl);
     background: linear-gradient( 180deg, var(--color-bg-elevated), var(--color-bg-muted) );
@@ -2167,16 +2179,23 @@
   .portfolio-table-primary {
     font-weight: 600;
     color: var(--color-text-strong);
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
   .portfolio-table-secondary {
     margin: 0.25rem 0 0;
     font-size: 0.8rem;
     line-height: 1.45;
     color: var(--color-text-muted);
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
   .portfolio-locale-coverage {
     display: grid;
     gap: 0.35rem;
+    min-width: 0;
   }
   .portfolio-status-badge {
     display: inline-flex;
@@ -2219,9 +2238,11 @@
     margin: 0;
     padding: 0;
     list-style: none;
+    min-width: 0;
   }
   .portfolio-count-item {
     display: flex;
+    flex-wrap: wrap;
     align-items: baseline;
     justify-content: space-between;
     gap: 0.75rem;
@@ -2232,10 +2253,44 @@
     @supports (color: color-mix(in lab, red, red)) {
       background-color: color-mix(in srgb, var(--color-bg-muted) 66%, white 34%);
     }
+    min-width: 0;
+  }
+  .portfolio-count-item > * {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+  .portfolio-board-role-form, .portfolio-board-role-controls {
+    display: grid;
+    gap: 0.75rem;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .portfolio-board-role-form > *, .portfolio-board-role-controls > * {
+    min-width: 0;
+  }
+  .portfolio-board-role-select {
+    width: 100%;
+    min-width: 0;
+  }
+  .portfolio-board-role-form > .touch-button-secondary, .portfolio-board-role-controls > .touch-button-secondary {
+    width: 100%;
   }
   .portfolio-link-disabled {
     pointer-events: none;
     opacity: 0.58;
+  }
+  @media (min-width: 48rem) {
+    .portfolio-board-role-controls {
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: end;
+    }
+    .portfolio-board-role-form > .touch-button-secondary, .portfolio-board-role-controls > .touch-button-secondary {
+      width: auto;
+    }
+    .portfolio-board-role-form > .touch-button-secondary {
+      justify-self: start;
+    }
   }
   @media (max-width: 56.25rem) {
     .portfolio-table {
@@ -2501,10 +2556,6 @@
     }
   }
   @media (min-width: 1024px) {
-    .top-bar-actions {
-      justify-items: end;
-      justify-content: end;
-    }
     .viewer-chip {
       max-width: 20rem;
     }
