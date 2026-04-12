@@ -738,6 +738,252 @@ test('card.create starts workflowReview as pending in review-enabled stages', ()
   });
 });
 
+test('card.review.approve updates only workflowReview and keeps the card in the current stage', () => {
+  const workspace = createWorkspaceWithCard({
+    memberships: [
+      createMembership({ id: 'viewer_123', role: 'editor' })
+    ]
+  });
+  const originalBoardUpdatedAt = workspace.boards.main.updatedAt;
+  const originalCard = structuredClone(workspace.boards.main.cards.card_1);
+
+  workspace.boards.main.stages.backlog.actions = ['card.create', 'card.review'];
+  workspace.boards.main.stages.backlog.actionIds = ['card.create', 'card.review'];
+  workspace.boards.main.cards.card_1.workflowReview = {
+    required: true,
+    currentStageId: 'backlog',
+    status: 'pending',
+    decidedAt: null,
+    decidedBy: null,
+    decidedByRole: null
+  };
+
+  const { workspace: nextWorkspace, result, activityEvent } = applyWorkspaceCommand({
+    record: createRecord(workspace, 1),
+    command: {
+      clientMutationId: 'm2_review_approve',
+      type: 'card.review.approve',
+      payload: {
+        boardId: 'main',
+        cardId: 'card_1'
+      }
+    },
+    expectedRevision: 1,
+    context: createContext({
+      now: '2026-03-31T11:00:00.000Z'
+    })
+  });
+
+  assert.deepEqual(result, {
+    clientMutationId: 'm2_review_approve',
+    type: 'card.review.approve',
+    noOp: false,
+    boardId: 'main',
+    cardId: 'card_1',
+    stageId: 'backlog',
+    status: 'approved'
+  });
+  assert.deepEqual(nextWorkspace.boards.main.stages.backlog.cardIds, ['card_1']);
+  assert.equal(nextWorkspace.boards.main.updatedAt, originalBoardUpdatedAt);
+  assert.equal(nextWorkspace.boards.main.cards.card_1.updatedAt, originalCard.updatedAt);
+  assert.equal(nextWorkspace.boards.main.cards.card_1.contentByLocale.en.title, originalCard.contentByLocale.en.title);
+  assert.deepEqual(nextWorkspace.boards.main.cards.card_1.workflowReview, {
+    required: true,
+    currentStageId: 'backlog',
+    status: 'approved',
+    decidedAt: '2026-03-31T11:00:00.000Z',
+    decidedBy: {
+      type: 'human',
+      id: 'viewer_123'
+    },
+    decidedByRole: 'editor'
+  });
+  assert.equal(activityEvent.type, 'workspace.card.review.approved');
+  assert.deepEqual(activityEvent.entity, {
+    kind: 'card',
+    boardId: 'main',
+    cardId: 'card_1'
+  });
+  assert.deepEqual(activityEvent.details, {
+    stageId: 'backlog',
+    previousStatus: 'pending',
+    nextStatus: 'approved',
+    decidedByRole: 'editor',
+    contentUpdatedAt: originalCard.updatedAt
+  });
+});
+
+test('card.review.reject records audit details without moving the card', () => {
+  const workspace = createWorkspaceWithCard({
+    memberships: [
+      createMembership({ id: 'viewer_123', role: 'admin' })
+    ]
+  });
+
+  workspace.boards.main.stages.backlog.actions = ['card.create', 'card.review'];
+  workspace.boards.main.stages.backlog.actionIds = ['card.create', 'card.review'];
+  workspace.boards.main.cards.card_1.workflowReview = {
+    required: true,
+    currentStageId: 'backlog',
+    status: 'approved',
+    decidedAt: '2026-03-31T10:15:00.000Z',
+    decidedBy: {
+      type: 'human',
+      id: 'viewer_previous'
+    },
+    decidedByRole: 'editor'
+  };
+
+  const { workspace: nextWorkspace, result, activityEvent } = applyWorkspaceCommand({
+    record: createRecord(workspace, 1),
+    command: {
+      clientMutationId: 'm2_review_reject',
+      type: 'card.review.reject',
+      payload: {
+        boardId: 'main',
+        cardId: 'card_1'
+      }
+    },
+    expectedRevision: 1,
+    context: createContext({
+      now: '2026-03-31T11:30:00.000Z'
+    })
+  });
+
+  assert.equal(result.type, 'card.review.reject');
+  assert.equal(result.stageId, 'backlog');
+  assert.equal(result.status, 'rejected');
+  assert.deepEqual(nextWorkspace.boards.main.stages.backlog.cardIds, ['card_1']);
+  assert.deepEqual(nextWorkspace.boards.main.cards.card_1.workflowReview, {
+    required: true,
+    currentStageId: 'backlog',
+    status: 'rejected',
+    decidedAt: '2026-03-31T11:30:00.000Z',
+    decidedBy: {
+      type: 'human',
+      id: 'viewer_123'
+    },
+    decidedByRole: 'admin'
+  });
+  assert.equal(activityEvent.type, 'workspace.card.review.rejected');
+  assert.deepEqual(activityEvent.details, {
+    stageId: 'backlog',
+    previousStatus: 'approved',
+    nextStatus: 'rejected',
+    decidedByRole: 'admin',
+    contentUpdatedAt: '2026-03-31T09:30:00.000Z'
+  });
+});
+
+test('card.review decision requires workflowReview.required to be true', () => {
+  const workspace = createWorkspaceWithCard({
+    memberships: [
+      createMembership({ id: 'viewer_123', role: 'editor' })
+    ]
+  });
+
+  workspace.boards.main.stages.backlog.actions = ['card.create', 'card.review'];
+  workspace.boards.main.stages.backlog.actionIds = ['card.create', 'card.review'];
+  workspace.boards.main.cards.card_1.workflowReview = {
+    required: false,
+    currentStageId: null,
+    status: null,
+    decidedAt: null,
+    decidedBy: null,
+    decidedByRole: null
+  };
+
+  assert.throws(
+    () =>
+      applyWorkspaceCommand({
+        record: createRecord(workspace, 1),
+        command: {
+          clientMutationId: 'm2_review_not_required',
+          type: 'card.review.approve',
+          payload: {
+            boardId: 'main',
+            cardId: 'card_1'
+          }
+        },
+        expectedRevision: 1,
+        context: createContext()
+      }),
+    /review is not required/
+  );
+});
+
+test('card.review decision requires the current stage to support card.review', () => {
+  const workspace = createWorkspaceWithCard({
+    memberships: [
+      createMembership({ id: 'viewer_123', role: 'editor' })
+    ]
+  });
+
+  workspace.boards.main.cards.card_1.workflowReview = {
+    required: true,
+    currentStageId: 'backlog',
+    status: 'pending',
+    decidedAt: null,
+    decidedBy: null,
+    decidedByRole: null
+  };
+
+  assertPermissionError(
+    () =>
+      applyWorkspaceCommand({
+        record: createRecord(workspace, 1),
+        command: {
+          clientMutationId: 'm2_review_stage_forbidden',
+          type: 'card.review.approve',
+          payload: {
+            boardId: 'main',
+            cardId: 'card_1'
+          }
+        },
+        expectedRevision: 1,
+        context: createContext()
+      }),
+    /review-enabled stages/
+  );
+});
+
+test('card.review decision rejects viewers', () => {
+  const workspace = createWorkspaceWithCard({
+    memberships: [
+      createMembership({ id: 'viewer_123', role: 'viewer' })
+    ]
+  });
+
+  workspace.boards.main.stages.backlog.actions = ['card.create', 'card.review'];
+  workspace.boards.main.stages.backlog.actionIds = ['card.create', 'card.review'];
+  workspace.boards.main.cards.card_1.workflowReview = {
+    required: true,
+    currentStageId: 'backlog',
+    status: 'pending',
+    decidedAt: null,
+    decidedBy: null,
+    decidedByRole: null
+  };
+
+  assertPermissionError(
+    () =>
+      applyWorkspaceCommand({
+        record: createRecord(workspace, 1),
+        command: {
+          clientMutationId: 'm2_review_viewer_forbidden',
+          type: 'card.review.reject',
+          payload: {
+            boardId: 'main',
+            cardId: 'card_1'
+          }
+        },
+        expectedRevision: 1,
+        context: createContext()
+      }),
+    /permission to review this card/
+  );
+});
+
 test('card.create rejects stages that are not create-enabled', () => {
   assert.throws(
     () =>

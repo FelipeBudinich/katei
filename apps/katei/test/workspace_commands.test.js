@@ -23,6 +23,8 @@ test('isWorkspaceCommandType accepts known command types and rejects unknown one
   assert.equal(isWorkspaceCommandType('card.locale.request.clear'), true);
   assert.equal(isWorkspaceCommandType('card.locale.review.request'), true);
   assert.equal(isWorkspaceCommandType('card.locale.review.verify'), true);
+  assert.equal(isWorkspaceCommandType('card.review.approve'), true);
+  assert.equal(isWorkspaceCommandType('card.review.reject'), true);
   assert.equal(isWorkspaceCommandType('card.move'), true);
   assert.equal(isWorkspaceCommandType('board.archive'), false);
   assert.equal(isWorkspaceCommandType('ui.columnCollapsed.set'), false);
@@ -244,6 +246,16 @@ test('validateWorkspaceCommand accepts valid command envelopes', () => {
     {
       clientMutationId: 'm20',
       type: 'card.delete',
+      payload: { boardId: 'main', cardId: 'card_1' }
+    },
+    {
+      clientMutationId: 'm20b',
+      type: 'card.review.approve',
+      payload: { boardId: 'main', cardId: 'card_1' }
+    },
+    {
+      clientMutationId: 'm20c',
+      type: 'card.review.reject',
       payload: { boardId: 'main', cardId: 'card_1' }
     },
     {

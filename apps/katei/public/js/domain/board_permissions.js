@@ -45,6 +45,24 @@ export function canActorAdminBoard(board, actor) {
   return isBoardAdminMembership(getBoardMembershipForActor(board, actor));
 }
 
+export function canActorApproveCardReview(board, actor, stageId) {
+  const membership = getBoardMembershipForActor(board, actor);
+  const reviewerThreshold = resolveCardReviewReviewerThreshold(board, stageId);
+
+  if (!membership || !reviewerThreshold) {
+    return false;
+  }
+
+  switch (reviewerThreshold) {
+    case 'admin':
+      return isBoardAdminMembership(membership);
+    case 'editor':
+      return isBoardEditorLikeRole(membership);
+    default:
+      return false;
+  }
+}
+
 export function isBoardAdminMembership(membership) {
   return canonicalizeBoardRole(membership?.role) === 'admin';
 }
@@ -77,4 +95,14 @@ function readBoardMemberships(board) {
   }
 
   return [];
+}
+
+function resolveCardReviewReviewerThreshold(board, stageId) {
+  const normalizedStageId = typeof stageId === 'string' ? stageId.trim() : '';
+
+  if (!normalizedStageId || !board?.stages?.[normalizedStageId]) {
+    return null;
+  }
+
+  return 'editor';
 }

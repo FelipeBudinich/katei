@@ -645,6 +645,136 @@ test('POST /api/workspace/commands rejects deleting a card outside a delete-enab
   });
 });
 
+test('POST /api/workspace/commands approves card review without moving the card and persists an activity event', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_api_card_review_approve', {
+    memberRole: 'editor',
+    includeInvite: false
+  });
+  const memberBoard = sharedRecord.workspace.boards.member;
+  const cardId = Object.keys(memberBoard.cards)[0];
+  const contentUpdatedAt = memberBoard.cards[cardId].updatedAt;
+
+  memberBoard.stages.backlog.actions = ['card.create', 'card.review'];
+  memberBoard.stages.backlog.actionIds = ['card.create', 'card.review'];
+  memberBoard.cards[cardId].workflowReview = {
+    required: true,
+    currentStageId: 'backlog',
+    status: 'pending',
+    decidedAt: null,
+    decidedBy: null,
+    decidedByRole: null
+  };
+
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord]);
+  const app = createTestApp({ workspaceRecordRepository });
+
+  const response = await request(app)
+    .post('/api/workspace/commands')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_member', email: 'member@example.com', name: 'Member' }))
+    .send({
+      workspaceId: 'workspace_shared_api_card_review_approve',
+      command: {
+        clientMutationId: 'approve_member_card_review',
+        type: 'card.review.approve',
+        payload: {
+          boardId: 'member',
+          cardId
+        }
+      },
+      expectedRevision: 1
+    });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(response.body.result, {
+    clientMutationId: 'approve_member_card_review',
+    type: 'card.review.approve',
+    noOp: false,
+    boardId: 'member',
+    cardId,
+    stageId: 'backlog',
+    status: 'approved'
+  });
+  assert.deepEqual(response.body.workspace.boards.member.stages.backlog.cardIds, [cardId]);
+
+  const persistedRecord = await workspaceRecordRepository.loadOrCreateAuthoritativeWorkspaceRecord({
+    viewerSub: 'sub_member',
+    viewerEmail: 'member@example.com',
+    viewerName: 'Member',
+    workspaceId: sharedRecord.workspaceId
+  });
+  const latestActivityEvent = persistedRecord.activityEvents.at(-1);
+  const decidedAt = response.body.workspace.boards.member.cards[cardId].workflowReview.decidedAt;
+
+  assert.deepEqual(response.body.workspace.boards.member.cards[cardId].workflowReview, {
+    required: true,
+    currentStageId: 'backlog',
+    status: 'approved',
+    decidedAt,
+    decidedBy: {
+      type: 'human',
+      id: 'sub_member',
+      email: 'member@example.com',
+      displayName: 'Member'
+    },
+    decidedByRole: 'editor'
+  });
+  assert.equal(decidedAt, latestActivityEvent.createdAt);
+
+  assert.equal(latestActivityEvent.type, 'workspace.card.review.approved');
+  assert.deepEqual(latestActivityEvent.details, {
+    stageId: 'backlog',
+    previousStatus: 'pending',
+    nextStatus: 'approved',
+    decidedByRole: 'editor',
+    contentUpdatedAt
+  });
+});
+
+test('POST /api/workspace/commands rejects viewer review decisions', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_api_card_review_forbidden', {
+    memberRole: 'viewer',
+    includeInvite: false
+  });
+  const memberBoard = sharedRecord.workspace.boards.member;
+  const cardId = Object.keys(memberBoard.cards)[0];
+
+  memberBoard.stages.backlog.actions = ['card.create', 'card.review'];
+  memberBoard.stages.backlog.actionIds = ['card.create', 'card.review'];
+  memberBoard.cards[cardId].workflowReview = {
+    required: true,
+    currentStageId: 'backlog',
+    status: 'pending',
+    decidedAt: null,
+    decidedBy: null,
+    decidedByRole: null
+  };
+
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord]);
+  const app = createTestApp({ workspaceRecordRepository });
+
+  const response = await request(app)
+    .post('/api/workspace/commands')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_member', email: 'member@example.com', name: 'Member' }))
+    .send({
+      workspaceId: 'workspace_shared_api_card_review_forbidden',
+      command: {
+        clientMutationId: 'reject_member_card_review',
+        type: 'card.review.reject',
+        payload: {
+          boardId: 'member',
+          cardId
+        }
+      },
+      expectedRevision: 1
+    });
+
+  assert.equal(response.status, 403);
+  assert.deepEqual(response.body, {
+    ok: false,
+    error: 'You do not have permission to review this card.'
+  });
+});
+
 test('POST /api/workspace/localizations/generate writes localized content, clears requests, and redacts board OpenAI secrets', async () => {
   const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_api_localize_success', {
     memberRole: 'editor',

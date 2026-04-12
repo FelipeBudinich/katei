@@ -328,6 +328,20 @@ export class WorkspaceService {
     });
   }
 
+  async approveCardReview(boardId, cardId) {
+    return this.#applyCommand('card.review.approve', {
+      boardId,
+      cardId
+    });
+  }
+
+  async rejectCardReview(boardId, cardId) {
+    return this.#applyCommand('card.review.reject', {
+      boardId,
+      cardId
+    });
+  }
+
   async moveCard(boardId, cardId, sourceColumnId, targetColumnId) {
     return this.#applyCommand('card.move', {
       boardId,

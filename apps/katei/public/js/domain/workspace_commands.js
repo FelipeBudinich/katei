@@ -29,6 +29,8 @@ export const WORKSPACE_COMMAND_TYPES = Object.freeze([
   'card.locale.review.request',
   'card.locale.review.verify',
   'card.delete',
+  'card.review.approve',
+  'card.review.reject',
   'card.move',
   'ui.activeBoard.set'
 ]);
@@ -132,6 +134,8 @@ function validatePayload(type, payload) {
     case 'card.locale.review.verify':
       return validateCardLocaleRequestPayload(type, payload);
     case 'card.delete':
+    case 'card.review.approve':
+    case 'card.review.reject':
       return validateCardIdentityPayload(type, payload);
     case 'card.move':
       return validateCardMovePayload(payload);

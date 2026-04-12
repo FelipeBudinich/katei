@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   canActorAdminBoard,
+  canActorApproveCardReview,
   canActorEditBoard,
   canActorReadBoard,
   getBoardMembershipForActor
@@ -48,4 +49,34 @@ test('board permission helpers derive admin, editor, and viewer capabilities fro
   assert.equal(canActorReadBoard(board, { type: 'human', id: 'viewer_missing' }), false);
   assert.equal(canActorEditBoard(board, { type: 'human', id: 'viewer_missing' }), false);
   assert.equal(canActorAdminBoard(board, { type: 'human', id: 'viewer_missing' }), false);
+});
+
+test('card review approval defaults to an editor reviewer threshold', () => {
+  const board = {
+    stages: {
+      review: {
+        id: 'review'
+      }
+    },
+    memberships: [
+      {
+        actor: { type: 'human', id: 'viewer_admin' },
+        role: 'admin'
+      },
+      {
+        actor: { type: 'human', id: 'viewer_editor' },
+        role: 'editor'
+      },
+      {
+        actor: { type: 'human', id: 'viewer_viewer' },
+        role: 'viewer'
+      }
+    ]
+  };
+
+  assert.equal(canActorApproveCardReview(board, { type: 'human', id: 'viewer_admin' }, 'review'), true);
+  assert.equal(canActorApproveCardReview(board, { type: 'human', id: 'viewer_editor' }, 'review'), true);
+  assert.equal(canActorApproveCardReview(board, { type: 'human', id: 'viewer_viewer' }, 'review'), false);
+  assert.equal(canActorApproveCardReview(board, { type: 'human', id: 'viewer_missing' }, 'review'), false);
+  assert.equal(canActorApproveCardReview(board, { type: 'human', id: 'viewer_admin' }, 'missing'), false);
 });

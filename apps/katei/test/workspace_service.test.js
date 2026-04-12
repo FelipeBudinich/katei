@@ -721,6 +721,28 @@ test('WorkspaceService deleteCard calls repository.applyCommand and returns work
   });
 });
 
+test('WorkspaceService approveCardReview calls repository.applyCommand and returns workspace', async () => {
+  await assertServiceCommand({
+    action: (service) => service.approveCardReview('main', 'card_1'),
+    expectedType: 'card.review.approve',
+    expectedPayload: {
+      boardId: 'main',
+      cardId: 'card_1'
+    }
+  });
+});
+
+test('WorkspaceService rejectCardReview calls repository.applyCommand and returns workspace', async () => {
+  await assertServiceCommand({
+    action: (service) => service.rejectCardReview('main', 'card_1'),
+    expectedType: 'card.review.reject',
+    expectedPayload: {
+      boardId: 'main',
+      cardId: 'card_1'
+    }
+  });
+});
+
 test('WorkspaceService moveCard calls repository.applyCommand and returns workspace', async () => {
   await assertServiceCommand({
     action: (service) => service.moveCard('main', 'card_1', 'backlog', 'doing'),

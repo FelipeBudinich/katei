@@ -22,6 +22,7 @@ import { canonicalizeContentLocale } from '../../public/js/domain/board_language
 import { normalizeBoardLocalizationGlossary } from '../../public/js/domain/board_localization_glossary.js';
 import {
   canActorAdminBoard,
+  canActorApproveCardReview,
   canActorEditBoard,
   canActorReadBoard,
   getBoardMembershipForActor,
@@ -203,6 +204,10 @@ function applyCommandToWorkspace({ workspace, command, context }) {
       return applyCardLocaleReviewVerify(workspace, command, context);
     case 'card.delete':
       return applyCardDelete(workspace, command, context);
+    case 'card.review.approve':
+      return applyCardReviewApprove(workspace, command, context);
+    case 'card.review.reject':
+      return applyCardReviewReject(workspace, command, context);
     case 'card.move':
       return applyCardMove(workspace, command, context);
     case 'ui.activeBoard.set':
@@ -1310,6 +1315,95 @@ function applyCardDelete(workspace, command, context) {
   };
 }
 
+function applyCardReviewApprove(workspace, command, context) {
+  return applyCardReviewDecision(workspace, command, context, {
+    nextStatus: 'approved'
+  });
+}
+
+function applyCardReviewReject(workspace, command, context) {
+  return applyCardReviewDecision(workspace, command, context, {
+    nextStatus: 'rejected'
+  });
+}
+
+function applyCardReviewDecision(workspace, command, context, { nextStatus } = {}) {
+  const currentBoard = getBoard(workspace, command.payload.boardId);
+  const actor = assertAuthenticatedHumanActor(
+    context.actor,
+    'You must be signed in to review cards.'
+  );
+  const currentCard = getCard(currentBoard, command.payload.cardId);
+  const stageId = findColumnIdByCardId(currentBoard, currentCard.id);
+  const currentReview = currentCard.workflowReview;
+  const membership = getBoardMembershipForActor(currentBoard, actor);
+  const previousStatus = currentReview?.status ?? null;
+
+  if (!stageId) {
+    throw new Error('Card is not in a workflow stage.');
+  }
+
+  if (currentReview?.required !== true) {
+    throw new Error('Card review is not required.');
+  }
+
+  if (!stageSupportsAction(currentBoard, stageId, 'card.review')) {
+    throw new WorkspaceCommandPermissionError('Cards can only be reviewed in review-enabled stages.');
+  }
+
+  if (!canActorApproveCardReview(currentBoard, actor, stageId) || !membership?.role) {
+    throw new WorkspaceCommandPermissionError('You do not have permission to review this card.');
+  }
+
+  if (previousStatus === nextStatus && currentReview?.currentStageId === stageId) {
+    return {
+      workspace,
+      result: createCommandResult(command, {
+        noOp: true,
+        boardId: currentBoard.id,
+        cardId: currentCard.id,
+        stageId,
+        status: nextStatus
+      })
+    };
+  }
+
+  const nextWorkspace = cloneWorkspace(workspace);
+  const board = getBoard(nextWorkspace, command.payload.boardId);
+  const card = getCard(board, command.payload.cardId);
+
+  board.cards[card.id] = {
+    ...card,
+    workflowReview: createCardWorkflowReview({
+      required: true,
+      currentStageId: stageId,
+      status: nextStatus,
+      decidedAt: context.now,
+      decidedBy: actor,
+      decidedByRole: membership.role
+    })
+  };
+
+  return {
+    workspace: nextWorkspace,
+    result: createCommandResult(command, {
+      boardId: board.id,
+      cardId: card.id,
+      stageId,
+      status: nextStatus
+    }),
+    activityEventInput: createCardReviewDecisionActivityEventInput({
+      boardId: board.id,
+      cardId: card.id,
+      stageId,
+      previousStatus,
+      nextStatus,
+      decidedByRole: membership.role,
+      contentUpdatedAt: currentCard.updatedAt
+    })
+  };
+}
+
 function applyCardMove(workspace, command, context) {
   const { boardId, cardId, sourceColumnId, targetColumnId } = command.payload;
   const currentBoard = getBoard(workspace, boardId);
@@ -1634,6 +1728,35 @@ function createCardLocaleReviewActivityEventInput({
       locale,
       reviewAction,
       reviewStatus: reviewState?.status ?? null
+    }
+  };
+}
+
+function createCardReviewDecisionActivityEventInput({
+  boardId,
+  cardId,
+  stageId,
+  previousStatus,
+  nextStatus,
+  decidedByRole,
+  contentUpdatedAt
+} = {}) {
+  return {
+    type:
+      nextStatus === 'approved'
+        ? 'workspace.card.review.approved'
+        : 'workspace.card.review.rejected',
+    entity: {
+      kind: 'card',
+      boardId,
+      cardId
+    },
+    details: {
+      stageId,
+      previousStatus,
+      nextStatus,
+      decidedByRole,
+      contentUpdatedAt
     }
   };
 }
