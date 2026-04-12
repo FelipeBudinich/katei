@@ -1299,6 +1299,8 @@ test('GET /portfolio renders the pending card reviews section and summary count'
   assert.match(pendingSection, /Approve launch brief/);
   assert.match(pendingSection, /Final review/);
   assert.match(pendingSection, /Pending review/);
+  assert.match(pendingSection, /workflow review/);
+  assert.doesNotMatch(pendingSection, /Verification requested/);
   assert.match(pendingSection, /2026-04-03T10:20:00.000Z/);
   assert.match(pendingSection, /Open board/);
   assert.match(
@@ -1307,6 +1309,11 @@ test('GET /portfolio renders the pending card reviews section and summary count'
       `<article class="paper-panel env-inventory-status-card env-inventory-status-card--good">[\\s\\S]*?<div class="env-inventory-status-label">${escapeForRegex(translator('portfolio.summary.pendingCardReviewCountLabel'))}<\\/div>[\\s\\S]*?<div class="env-inventory-status-value">1<\\/div>[\\s\\S]*?<\\/article>`
     )
   );
+  assertSectionOrder(response.text, [
+    translator('portfolio.directory.heading'),
+    translator('portfolio.pendingCardReviews.heading'),
+    translator('portfolio.awaitingApproval.heading')
+  ]);
 });
 
 test('GET /portfolio keeps pending card review rows visible when the search matches the stage title', async () => {
@@ -4145,6 +4152,24 @@ function extractPortfolioSectionHtml(html, heading) {
   }
 
   return match[0];
+}
+
+function assertSectionOrder(html, headings) {
+  let previousIndex = -1;
+
+  for (const heading of headings) {
+    const currentIndex = html.indexOf(`<h2 class="font-serif text-3xl text-strong">${heading}</h2>`);
+
+    if (currentIndex === -1) {
+      throw new Error(`Section heading "${heading}" was not rendered.`);
+    }
+
+    assert.ok(
+      currentIndex > previousIndex,
+      `Expected section "${heading}" to render after the previous section heading.`
+    );
+    previousIndex = currentIndex;
+  }
 }
 
 function assertSharedProfileOptionsDialog(dialogHtml, {
