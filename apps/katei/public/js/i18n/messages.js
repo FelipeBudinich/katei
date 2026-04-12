@@ -253,7 +253,7 @@ const EN_MESSAGES = freezeCatalog({
   workspace: {
     viewerSignedIn: 'Signed in',
     boardOptions: 'Boards',
-    openPortfolio: 'Open portfolio',
+    openPortfolio: 'Portfolio',
     profileOptions: 'Profile',
     addCard: 'Add Card',
     detailsLabel: 'Details',
@@ -861,7 +861,7 @@ const ES_CL_MESSAGES = freezeCatalog({
   workspace: {
     viewerSignedIn: 'Sesión iniciada',
     boardOptions: 'Tableros',
-    openPortfolio: 'Abrir portafolio',
+    openPortfolio: 'Portafolio',
     profileOptions: 'Perfil',
     addCard: 'Agregar tarjeta',
     detailsLabel: 'Detalles',
@@ -1470,7 +1470,7 @@ const JA_MESSAGES = freezeCatalog({
   workspace: {
     viewerSignedIn: 'サインイン済み',
     boardOptions: 'ボード',
-    openPortfolio: 'ポートフォリオを開く',
+    openPortfolio: 'ポートフォリオ',
     profileOptions: 'プロフィール',
     addCard: 'カードを追加',
     detailsLabel: '詳細',

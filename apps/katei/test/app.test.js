@@ -1611,7 +1611,7 @@ test('GET /boards renders the Portfolio action in the workspace top bar for supe
     /class="top-bar-actions"[\s\S]*?data-action="workspace#openBoardOptions"[\s\S]*?data-action="workspace#openPortfolio"[\s\S]*?data-action="workspace#openProfileOptions"/
   );
   assert.match(response.text, /data-action="workspace#openPortfolio"/);
-  assert.match(response.text, />\s*Open portfolio\s*</);
+  assert.match(response.text, />\s*Portfolio\s*</);
   assert.doesNotMatch(response.text, /board-options:open-portfolio->workspace#openPortfolio/);
   assert.doesNotMatch(response.text, /board-options:board-self-role-updated->workspace#handleBoardSelfRoleUpdated/);
   assert.doesNotMatch(boardOptionsDialog, /data-board-options-field="workspaceTitleButton"/);
@@ -1881,7 +1881,7 @@ test('workspace template renders the no-board header with both Boards and Profil
   });
 });
 
-test('workspace template renders the Open portfolio top-bar action for super admins with no visible boards', () => {
+test('workspace template renders the Portfolio top-bar action for super admins with no visible boards', () => {
   const workspace = createEmptyWorkspace();
   workspace.ui.activeBoardId = 'missing_board';
 
@@ -1910,7 +1910,7 @@ test('workspace template renders the Open portfolio top-bar action for super adm
     html,
     /class="top-bar-actions"[\s\S]*?data-action="workspace#openBoardOptions"[\s\S]*?data-action="workspace#openPortfolio"[\s\S]*?data-action="workspace#openProfileOptions"/
   );
-  assert.match(html, />\s*Open portfolio\s*</);
+  assert.match(html, />\s*Portfolio\s*</);
 
   const boardOptionsDialog = extractDialogHtml(html, 'board-options');
 
