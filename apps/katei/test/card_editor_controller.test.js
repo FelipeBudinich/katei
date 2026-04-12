@@ -1207,6 +1207,41 @@ function createStatusControllerDouble(selectedStageId = 'doing') {
   return controller;
 }
 
+function createWorkflowReviewControllerDouble({
+  board = createBoardWithWorkflowReviewStage(),
+  card = createCardWithPendingWorkflowReview(),
+  currentActorRole = 'editor'
+} = {}) {
+  const controller = Object.create(CardEditorController.prototype);
+
+  controller.t = createTranslator('en');
+  controller.mode = 'edit';
+  controller.board = board;
+  controller.card = card;
+  controller.selectedLocale = 'es-CL';
+  controller.currentActorRole = currentActorRole;
+  controller.isReadOnlyLocaleView = false;
+  controller.hasWorkflowReviewSectionTarget = true;
+  controller.hasWorkflowReviewCreateRowTarget = true;
+  controller.hasWorkflowReviewStatusRowTarget = true;
+  controller.hasWorkflowReviewStatusTarget = true;
+  controller.hasRequiresReviewInputTarget = true;
+  controller.hasApproveReviewButtonTarget = true;
+  controller.hasRejectReviewButtonTarget = true;
+  controller.workflowReviewSectionTarget = { hidden: true };
+  controller.workflowReviewCreateRowTarget = { hidden: false };
+  controller.workflowReviewStatusRowTarget = { hidden: true };
+  controller.workflowReviewStatusTarget = { textContent: '' };
+  controller.requiresReviewInputTarget = { checked: false, disabled: true };
+  controller.approveReviewButtonTarget = createActionButtonTarget();
+  controller.rejectReviewButtonTarget = createActionButtonTarget();
+  controller.boardIdInputTarget = { value: 'board_localized' };
+  controller.cardIdInputTarget = { value: 'card_1' };
+  controller.sourceStageIdInputTarget = { value: 'review' };
+
+  return controller;
+}
+
 function createMenuTriggerTarget() {
   return {
     disabled: false,
@@ -1224,6 +1259,19 @@ function createMenuTriggerTarget() {
     },
     focus() {
       this.focusCalls += 1;
+    }
+  };
+}
+
+function createActionButtonTarget() {
+  return {
+    hidden: true,
+    disabled: true,
+    attributes: {
+      'aria-disabled': 'true'
+    },
+    setAttribute(name, value) {
+      this.attributes[name] = value;
     }
   };
 }
@@ -1311,11 +1359,38 @@ function createStatusOptionTarget(targetStageId, stageTitle) {
 function createBoard() {
   return {
     id: 'board_localized',
+    stageOrder: ['backlog'],
+    stages: {
+      backlog: {
+        id: 'backlog',
+        title: 'Backlog',
+        actionIds: ['card.create']
+      }
+    },
     languagePolicy: {
       sourceLocale: 'en',
       defaultLocale: 'es-CL',
       supportedLocales: ['en', 'es-CL', 'ja'],
       requiredLocales: ['en', 'ja']
+    }
+  };
+}
+
+function createBoardWithWorkflowReviewStage() {
+  return {
+    ...createBoard(),
+    stageOrder: ['backlog', 'review'],
+    stages: {
+      backlog: {
+        id: 'backlog',
+        title: 'Backlog',
+        actionIds: ['card.create']
+      },
+      review: {
+        id: 'review',
+        title: 'Review',
+        actionIds: ['card.review']
+      }
     }
   };
 }
@@ -1398,6 +1473,29 @@ function createCard() {
         },
         requestedAt: '2026-03-31T12:30:00.000Z'
       }
+    },
+    workflowReview: {
+      required: false,
+      currentStageId: null,
+      status: null,
+      decidedAt: null,
+      decidedBy: null,
+      decidedByRole: null
+    }
+  };
+}
+
+function createCardWithPendingWorkflowReview(overrides = {}) {
+  return {
+    ...createCard(),
+    workflowReview: {
+      required: true,
+      currentStageId: 'review',
+      status: 'pending',
+      decidedAt: null,
+      decidedBy: null,
+      decidedByRole: null,
+      ...overrides
     }
   };
 }

@@ -2825,6 +2825,99 @@ test('handleGenerateCardLocalization ignores repeated clicks while the same loca
   assert.deepEqual(serviceCalls, [['main', 'card_1', 'ja']]);
 });
 
+test('handleApproveCardReview calls the service, rerenders the workspace, and refreshes the open editor', async () => {
+  const initialWorkspace = createEmptyWorkspace();
+  const updatedWorkspace = createEmptyWorkspace();
+  const controller = Object.create(WorkspaceController.prototype);
+  const refreshCalls = [];
+  const announcements = [];
+  const serviceCalls = [];
+  let renderCalls = 0;
+
+  controller.workspace = initialWorkspace;
+  controller.service = {
+    async approveCardReview(...args) {
+      serviceCalls.push(args);
+      return updatedWorkspace;
+    }
+  };
+  controller.t = createTranslator('en');
+  controller.render = () => {
+    renderCalls += 1;
+  };
+  controller.announce = (message) => {
+    announcements.push(message);
+  };
+  controller.refreshCardEditor = (detail) => {
+    refreshCalls.push(detail);
+  };
+  controller.isCardEditorOpenFor = () => true;
+
+  await WorkspaceController.prototype.handleApproveCardReview.call(controller, {
+    detail: {
+      boardId: 'main',
+      cardId: 'card_1',
+      locale: 'ja'
+    }
+  });
+
+  assert.deepEqual(serviceCalls, [['main', 'card_1']]);
+  assert.equal(controller.workspace, updatedWorkspace);
+  assert.equal(renderCalls, 1);
+  assert.deepEqual(announcements, ['Card review approved.']);
+  assert.deepEqual(refreshCalls, [
+    {
+      boardId: 'main',
+      cardId: 'card_1',
+      locale: 'ja',
+      mode: 'edit'
+    }
+  ]);
+});
+
+test('handleRejectCardReview calls the service and keeps the editor closed when it is no longer open', async () => {
+  const initialWorkspace = createEmptyWorkspace();
+  const updatedWorkspace = createEmptyWorkspace();
+  const controller = Object.create(WorkspaceController.prototype);
+  const refreshCalls = [];
+  const announcements = [];
+  const serviceCalls = [];
+  let renderCalls = 0;
+
+  controller.workspace = initialWorkspace;
+  controller.service = {
+    async rejectCardReview(...args) {
+      serviceCalls.push(args);
+      return updatedWorkspace;
+    }
+  };
+  controller.t = createTranslator('en');
+  controller.render = () => {
+    renderCalls += 1;
+  };
+  controller.announce = (message) => {
+    announcements.push(message);
+  };
+  controller.refreshCardEditor = (detail) => {
+    refreshCalls.push(detail);
+  };
+  controller.isCardEditorOpenFor = () => false;
+
+  await WorkspaceController.prototype.handleRejectCardReview.call(controller, {
+    detail: {
+      boardId: 'main',
+      cardId: 'card_1',
+      locale: 'ja'
+    }
+  });
+
+  assert.deepEqual(serviceCalls, [['main', 'card_1']]);
+  assert.equal(controller.workspace, updatedWorkspace);
+  assert.equal(renderCalls, 1);
+  assert.deepEqual(announcements, ['Card review rejected.']);
+  assert.deepEqual(refreshCalls, []);
+});
+
 test('handleGenerateCardLocalization reports localized failures and skips refresh when generation fails', async () => {
   const controller = Object.create(WorkspaceController.prototype);
   const refreshCalls = [];

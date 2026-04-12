@@ -1990,8 +1990,17 @@ test('workspace template renders edit localization controls and a simplified loc
     /data-card-editor-target="localeSection"[\s\S]*<select[\s\S]*name="locale"[\s\S]*data-card-editor-target="localeSelect"[\s\S]*data-card-editor-target="generateLocaleButton"[\s\S]*data-card-editor-target="discardLocaleButton"[\s\S]*data-card-editor-target="requestLocaleButton"[\s\S]*data-card-editor-target="clearLocaleRequestButton"[\s\S]*data-card-editor-target="generateLocaleHelp"/
   );
   assert.match(cardEditorDialog, /data-card-editor-target="workflowReviewSection"/);
+  assert.match(cardEditorDialog, /data-card-editor-target="workflowReviewCreateRow"/);
+  assert.match(cardEditorDialog, /data-card-editor-target="workflowReviewStatusRow"/);
+  assert.match(cardEditorDialog, /data-card-editor-target="workflowReviewStatus"/);
   assert.match(cardEditorDialog, /name="requiresReview"/);
   assert.match(cardEditorDialog, /data-card-editor-target="requiresReviewInput"/);
+  assert.match(cardEditorDialog, /data-card-editor-target="approveReviewButton"/);
+  assert.match(cardEditorDialog, /data-card-editor-target="rejectReviewButton"/);
+  assert.match(cardEditorDialog, /data-action="card-editor#approveReview"/);
+  assert.match(cardEditorDialog, /data-action="card-editor#rejectReview"/);
+  assert.match(html, /card-editor:approve-review->workspace#handleApproveCardReview/);
+  assert.match(html, /card-editor:reject-review->workspace#handleRejectCardReview/);
   assert.match(
     cardEditorDialog,
     /class="dialog-header-row mt-4"[\s\S]*data-card-editor-target="heading"[\s\S]*data-card-editor-target="submitActions"[\s\S]*data-card-editor-target="statusSection"[\s\S]*id="card-editor-status-trigger"[\s\S]*data-card-editor-target="statusButton"[\s\S]*<img src="\/switch\.svg" alt="" aria-hidden="true" class="touch-button-secondary__icon">[\s\S]*id="card-editor-status-menu"[\s\S]*data-card-editor-target="statusMenu"[\s\S]*data-card-editor-target="statusOptionTemplate"[\s\S]*data-card-editor-target="statusOption"[\s\S]*role="menuitem"[\s\S]*id="card-editor-status-select"[\s\S]*form="card-editor-form"[\s\S]*data-card-editor-target="statusSelect"[\s\S]*data-card-editor-target="prioritySection"[\s\S]*id="card-editor-priority-trigger"[\s\S]*data-card-editor-target="priorityButton"[\s\S]*<img src="\/traffic\.svg" alt="" aria-hidden="true" class="touch-button-secondary__icon">[\s\S]*id="card-editor-priority-menu"[\s\S]*data-card-editor-target="priorityMenu"[\s\S]*role="menuitemradio"[\s\S]*data-card-editor-target="priorityOption"[\s\S]*id="card-editor-priority-select"[\s\S]*name="priority"[\s\S]*form="card-editor-form"[\s\S]*data-card-editor-target="priorityInput prioritySelect"[\s\S]*touch-button-secondary--close/
