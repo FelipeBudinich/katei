@@ -252,6 +252,77 @@
 
   <section class="paper-panel portfolio-section inventory-panel">
     <div class="portfolio-section-header">
+      <h2 class="font-serif text-3xl text-strong">{{ t('cardEditor.workflowReview.pending') }}</h2>
+      <p class="text-sm leading-6 text-muted">{{ t('cardEditor.requiresReviewHelp') }}</p>
+    </div>
+
+    {% if pendingCardReviewEntries.length %}
+      <p class="portfolio-results-label">
+        {{ t('portfolio.filters.resultsLabel', { count: pendingCardReviewCount }) }}
+      </p>
+
+      <div class="portfolio-workspace-groups">
+        {% for group in pendingCardReviewWorkspaceGroups %}
+          <article class="portfolio-workspace-group paper-panel">
+            <div class="portfolio-workspace-header">
+              <div class="portfolio-workspace-header-copy">
+                <h3
+                  class="font-serif text-2xl text-strong"
+                  data-portfolio-field="workspace-label"
+                  data-portfolio-workspace-id="{{ group.workspaceId }}"
+                  data-portfolio-workspace-fallback-label="{{ group.workspaceId }}"
+                >
+                  {{ group.workspaceLabel }}
+                </h3>
+              </div>
+            </div>
+
+            <div class="portfolio-table-wrap">
+              <table class="portfolio-table">
+                <thead>
+                  <tr>
+                    <th scope="col">{{ t('portfolio.awaitingApproval.boardColumnLabel') }}</th>
+                    <th scope="col">{{ t('portfolio.awaitingApproval.cardColumnLabel') }}</th>
+                    <th scope="col">{{ t('cardViewDialog.copyFields.stage') }}</th>
+                    <th scope="col">{{ t('portfolio.awaitingApproval.stateColumnLabel') }}</th>
+                    <th scope="col">{{ t('portfolio.missingRequiredLocalizations.updatedAtColumnLabel') }}</th>
+                    <th scope="col">{{ t('portfolio.awaitingApproval.actionsColumnLabel') }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for entry in group.entries %}
+                    <tr>
+                      <td><div class="portfolio-table-primary">{{ entry.boardTitle }}</div></td>
+                      <td><div class="portfolio-table-primary">{{ entry.cardTitle }}</div></td>
+                      <td><div class="portfolio-table-primary">{{ entry.stageTitle }}</div></td>
+                      <td><div class="portfolio-table-primary">{{ entry.stateLabel }}</div></td>
+                      <td><div class="portfolio-table-primary">{{ entry.updatedAt }}</div></td>
+                      <td>
+                        <a href="{{ entry.openBoardHref }}" class="touch-button-secondary">{{ t('portfolio.awaitingApproval.openBoardAction') }}</a>
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="portfolio-empty-state">
+        {% if portfolioFilters.hasSearchQuery %}
+          <h3 class="font-serif text-2xl text-strong">{{ t('portfolio.awaitingApproval.emptyFiltered.heading') }}</h3>
+          <p class="text-sm leading-6 text-muted">{{ t('portfolio.awaitingApproval.emptyFiltered.description') }}</p>
+        {% else %}
+          <h3 class="font-serif text-2xl text-strong">{{ t('portfolio.awaitingApproval.empty.heading') }}</h3>
+          <p class="text-sm leading-6 text-muted">{{ t('portfolio.awaitingApproval.empty.description') }}</p>
+        {% endif %}
+      </div>
+    {% endif %}
+  </section>
+
+  <section class="paper-panel portfolio-section inventory-panel">
+    <div class="portfolio-section-header">
       <h2 class="font-serif text-3xl text-strong">{{ t('portfolio.awaitingApproval.heading') }}</h2>
       <p class="text-sm leading-6 text-muted">{{ t('portfolio.awaitingApproval.description') }}</p>
     </div>
