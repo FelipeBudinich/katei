@@ -4,7 +4,8 @@ import { createWorkspaceBoard } from '../public/js/domain/workspace_read_model.j
 import {
   shouldShowPromptRunForStage,
   shouldShowCreateForStage,
-  shouldShowDeleteForStage
+  shouldShowDeleteForStage,
+  shouldShowReviewForStage
 } from '../public/js/controllers/stage_ui.js';
 
 test('stage action helpers follow schema-defined stage actions instead of literal stage ids', () => {
@@ -49,6 +50,50 @@ test('stage action helpers follow schema-defined stage actions instead of litera
   assert.equal(shouldShowDeleteForStage(board, 'backlog'), false);
   assert.equal(shouldShowDeleteForStage(board, 'archive-bin'), true);
   assert.equal(shouldShowDeleteForStage(board, 'archived'), false);
+  assert.equal(shouldShowReviewForStage(board, 'backlog'), false);
+  assert.equal(shouldShowReviewForStage(board, 'archive-bin'), false);
+  assert.equal(shouldShowReviewForStage(board, 'archived'), false);
+});
+
+test('shouldShowReviewForStage requires the stage to advertise the card.review action', () => {
+  const board = createWorkspaceBoard({
+    id: 'board_review_actions',
+    title: 'Board review actions',
+    createdAt: '2026-03-31T10:00:00.000Z',
+    updatedAt: '2026-03-31T10:00:00.000Z'
+  });
+
+  board.stageOrder = ['backlog', 'review', 'done'];
+  board.stages = {
+    backlog: {
+      id: 'backlog',
+      title: 'Backlog',
+      cardIds: [],
+      allowedTransitionStageIds: ['review'],
+      templateIds: [],
+      actionIds: ['card.create']
+    },
+    review: {
+      id: 'review',
+      title: 'Review',
+      cardIds: [],
+      allowedTransitionStageIds: ['done'],
+      templateIds: [],
+      actionIds: ['card.review']
+    },
+    done: {
+      id: 'done',
+      title: 'Done',
+      cardIds: [],
+      allowedTransitionStageIds: [],
+      templateIds: [],
+      actionIds: []
+    }
+  };
+
+  assert.equal(shouldShowReviewForStage(board, 'backlog'), false);
+  assert.equal(shouldShowReviewForStage(board, 'review'), true);
+  assert.equal(shouldShowReviewForStage(board, 'done'), false);
 });
 
 test('shouldShowPromptRunForStage requires both the action id and a valid prompt action', () => {

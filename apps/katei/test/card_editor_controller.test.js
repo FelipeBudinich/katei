@@ -573,6 +573,100 @@ test('card editor dispatches verify-locale with board, card, and locale payload'
   ]);
 });
 
+test('card editor shows pending workflow review controls only for editable review-enabled cards', () => {
+  const controller = createWorkflowReviewControllerDouble();
+
+  CardEditorController.prototype.syncWorkflowReviewSection.call(controller, {
+    isCreateMode: false,
+    sourceStageId: 'review'
+  });
+
+  assert.equal(controller.workflowReviewSectionTarget.hidden, false);
+  assert.equal(controller.workflowReviewCreateRowTarget.hidden, true);
+  assert.equal(controller.workflowReviewStatusRowTarget.hidden, false);
+  assert.equal(controller.workflowReviewStatusTarget.textContent, 'Pending review');
+  assert.equal(controller.approveReviewButtonTarget.hidden, false);
+  assert.equal(controller.approveReviewButtonTarget.disabled, false);
+  assert.equal(controller.rejectReviewButtonTarget.hidden, false);
+  assert.equal(controller.rejectReviewButtonTarget.disabled, false);
+});
+
+test('card editor hides workflow review action buttons once the review is decided', () => {
+  const controller = createWorkflowReviewControllerDouble({
+    card: createCardWithPendingWorkflowReview({
+      status: 'approved',
+      decidedAt: '2026-04-01T11:30:00.000Z',
+      decidedBy: { type: 'human', id: 'viewer_456' },
+      decidedByRole: 'editor'
+    })
+  });
+
+  CardEditorController.prototype.syncWorkflowReviewSection.call(controller, {
+    isCreateMode: false,
+    sourceStageId: 'review'
+  });
+
+  assert.equal(controller.workflowReviewSectionTarget.hidden, false);
+  assert.equal(controller.workflowReviewStatusRowTarget.hidden, false);
+  assert.equal(controller.workflowReviewStatusTarget.textContent, 'Approved');
+  assert.equal(controller.approveReviewButtonTarget.hidden, true);
+  assert.equal(controller.rejectReviewButtonTarget.hidden, true);
+});
+
+test('card editor dispatches approve-review with board, card, and locale payload', () => {
+  const controller = createWorkflowReviewControllerDouble();
+  const dispatchedEvents = [];
+
+  controller.dispatch = (name, payload) => {
+    dispatchedEvents.push({ name, payload });
+  };
+
+  CardEditorController.prototype.approveReview.call(controller, {
+    preventDefault() {}
+  });
+
+  assert.deepEqual(dispatchedEvents, [
+    {
+      name: 'approve-review',
+      payload: {
+        detail: {
+          mode: 'edit',
+          boardId: 'board_localized',
+          cardId: 'card_1',
+          locale: 'es-CL'
+        }
+      }
+    }
+  ]);
+});
+
+test('card editor dispatches reject-review with board, card, and locale payload', () => {
+  const controller = createWorkflowReviewControllerDouble();
+  const dispatchedEvents = [];
+
+  controller.dispatch = (name, payload) => {
+    dispatchedEvents.push({ name, payload });
+  };
+
+  CardEditorController.prototype.rejectReview.call(controller, {
+    preventDefault() {}
+  });
+
+  assert.deepEqual(dispatchedEvents, [
+    {
+      name: 'reject-review',
+      payload: {
+        detail: {
+          mode: 'edit',
+          boardId: 'board_localized',
+          cardId: 'card_1',
+          locale: 'es-CL'
+        }
+      }
+    }
+  ]);
+});
+
 test('card editor submit serializes requiresReview into the save payload', () => {
   const controller = Object.create(CardEditorController.prototype);
   const dispatchedEvents = [];

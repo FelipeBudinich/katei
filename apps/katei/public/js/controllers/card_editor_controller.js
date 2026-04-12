@@ -1,10 +1,12 @@
 import { Controller } from '../../vendor/stimulus/stimulus.js';
+import { isBoardEditorLikeRole } from '../domain/board_permissions.js';
 import { getBrowserTranslator } from '../i18n/browser.js';
 import {
   getBoardStageTitle,
   getDefaultBoardStageId,
   resolveBoardStageId,
-  shouldShowPriorityForStage
+  shouldShowPriorityForStage,
+  shouldShowReviewForStage
 } from './stage_ui.js';
 import {
   createStageSelectOption,
@@ -45,7 +47,12 @@ export default class extends Controller {
     'titleInput',
     'markdownInput',
     'workflowReviewSection',
+    'workflowReviewCreateRow',
+    'workflowReviewStatusRow',
+    'workflowReviewStatus',
     'requiresReviewInput',
+    'approveReviewButton',
+    'rejectReviewButton',
     'localeSection',
     'localeSelect',
     'localeSummary',
@@ -182,7 +189,10 @@ export default class extends Controller {
       sourceStageId,
       targetStageId
     });
-    this.syncWorkflowReviewSection({ isCreateMode: nextMode === 'create' });
+    this.syncWorkflowReviewSection({
+      isCreateMode: nextMode === 'create',
+      sourceStageId
+    });
 
     openSheetDialog(this.dialogTarget);
 
@@ -617,6 +627,16 @@ export default class extends Controller {
     });
   }
 
+  approveReview(event) {
+    event.preventDefault();
+    this.dispatchWorkflowReviewAction('approve-review');
+  }
+
+  rejectReview(event) {
+    event.preventDefault();
+    this.dispatchWorkflowReviewAction('reject-review');
+  }
+
   discardSelectedLocale(event) {
     event.preventDefault();
 
@@ -688,6 +708,26 @@ export default class extends Controller {
     if (this.localizedEditorUiState) {
       this.renderLocaleEditingState(this.localizedEditorUiState);
     }
+  }
+
+  dispatchWorkflowReviewAction(actionName) {
+    if (
+      this.isReadOnlyLocaleView ||
+      this.mode !== 'edit' ||
+      !this.card ||
+      !this.canApproveWorkflowReview()
+    ) {
+      return;
+    }
+
+    this.dispatch(actionName, {
+      detail: {
+        mode: this.mode,
+        boardId: this.boardIdInputTarget.value,
+        cardId: this.cardIdInputTarget.value,
+        locale: this.selectedLocale
+      }
+    });
   }
 
   closeDialog() {
@@ -863,19 +903,47 @@ export default class extends Controller {
     });
   }
 
-  syncWorkflowReviewSection({ isCreateMode }) {
+  syncWorkflowReviewSection({ isCreateMode, sourceStageId = null } = {}) {
     if (!this.hasWorkflowReviewSectionTarget || !this.hasRequiresReviewInputTarget) {
       return;
     }
 
-    const shouldShow = isCreateMode && !this.isReadOnlyLocaleView;
+    const workflowReview = this.card?.workflowReview ?? null;
+    const workflowReviewStatus = normalizeWorkflowReviewStatus(workflowReview?.status);
+    const shouldShowCreateRow = isCreateMode && !this.isReadOnlyLocaleView;
+    const shouldShowStatusRow = Boolean(
+      this.mode === 'edit' &&
+        workflowReview?.required === true &&
+        workflowReviewStatus &&
+        shouldShowReviewForStage(this.board, sourceStageId)
+    );
+    const shouldShowDecisionButtons = shouldShowStatusRow && this.canApproveWorkflowReview();
+    const shouldShowSection = shouldShowCreateRow || shouldShowStatusRow;
 
-    this.workflowReviewSectionTarget.hidden = !shouldShow;
-    this.requiresReviewInputTarget.disabled = !shouldShow;
+    this.workflowReviewSectionTarget.hidden = !shouldShowSection;
 
-    if (!shouldShow) {
+    if (this.hasWorkflowReviewCreateRowTarget) {
+      this.workflowReviewCreateRowTarget.hidden = !shouldShowCreateRow;
+    }
+
+    this.requiresReviewInputTarget.disabled = !shouldShowCreateRow;
+
+    if (!shouldShowCreateRow) {
       this.requiresReviewInputTarget.checked = false;
     }
+
+    if (this.hasWorkflowReviewStatusRowTarget) {
+      this.workflowReviewStatusRowTarget.hidden = !shouldShowStatusRow;
+    }
+
+    if (this.hasWorkflowReviewStatusTarget) {
+      this.workflowReviewStatusTarget.textContent = shouldShowStatusRow
+        ? this.t(`cardEditor.workflowReview.${workflowReviewStatus}`)
+        : '';
+    }
+
+    this.setWorkflowReviewButtonState('approveReviewButton', shouldShowDecisionButtons);
+    this.setWorkflowReviewButtonState('rejectReviewButton', shouldShowDecisionButtons);
   }
 
   renderLocalizedReadSection(localizedView) {
@@ -1091,6 +1159,31 @@ export default class extends Controller {
     this.syncPriorityOptions();
   }
 
+  canApproveWorkflowReview() {
+    const workflowReviewStatus = normalizeWorkflowReviewStatus(this.card?.workflowReview?.status);
+    const sourceStageId = this.sourceStageIdInputTarget?.value ?? '';
+
+    return Boolean(
+      workflowReviewStatus === 'pending' &&
+        shouldShowReviewForStage(this.board, sourceStageId) &&
+        isBoardEditorLikeRole(this.currentActorRole)
+    );
+  }
+
+  setWorkflowReviewButtonState(targetName, shouldShow) {
+    const hasTargetName = `has${targetName[0].toUpperCase()}${targetName.slice(1)}Target`;
+    const buttonTargetName = `${targetName}Target`;
+    const button = this[hasTargetName] ? this[buttonTargetName] : null;
+
+    if (!button) {
+      return;
+    }
+
+    button.hidden = !shouldShow;
+    button.disabled = !shouldShow;
+    button.setAttribute('aria-disabled', String(!shouldShow));
+  }
+
   resetDialogState() {
     this.board = null;
     this.card = null;
@@ -1108,10 +1201,25 @@ export default class extends Controller {
       this.workflowReviewSectionTarget.hidden = true;
     }
 
+    if (this.hasWorkflowReviewCreateRowTarget) {
+      this.workflowReviewCreateRowTarget.hidden = false;
+    }
+
+    if (this.hasWorkflowReviewStatusRowTarget) {
+      this.workflowReviewStatusRowTarget.hidden = true;
+    }
+
+    if (this.hasWorkflowReviewStatusTarget) {
+      this.workflowReviewStatusTarget.textContent = '';
+    }
+
     if (this.hasRequiresReviewInputTarget) {
       this.requiresReviewInputTarget.checked = false;
       this.requiresReviewInputTarget.disabled = true;
     }
+
+    this.setWorkflowReviewButtonState('approveReviewButton', false);
+    this.setWorkflowReviewButtonState('rejectReviewButton', false);
   }
 }
 
@@ -1165,4 +1273,12 @@ function createLocaleOption(locale) {
   option.value = locale;
   option.textContent = locale;
   return option;
+}
+
+function normalizeWorkflowReviewStatus(value) {
+  const normalizedValue = typeof value === 'string' ? value.trim().toLowerCase() : '';
+
+  return normalizedValue === 'pending' || normalizedValue === 'approved' || normalizedValue === 'rejected'
+    ? normalizedValue
+    : null;
 }

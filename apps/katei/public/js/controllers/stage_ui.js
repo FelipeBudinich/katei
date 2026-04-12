@@ -76,6 +76,10 @@ export function shouldShowDeleteForStage(board, stageId) {
   return stageSupportsAction(board, stageId, 'card.delete');
 }
 
+export function shouldShowReviewForStage(board, stageId) {
+  return stageSupportsAction(board, stageId, 'card.review');
+}
+
 export function shouldShowPromptRunForStage(board, stageId) {
   return stageSupportsPromptRun(board, stageId);
 }

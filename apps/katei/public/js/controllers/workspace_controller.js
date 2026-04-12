@@ -1155,6 +1155,20 @@ export default class extends Controller {
     );
   }
 
+  async handleApproveCardReview(event) {
+    await this.handleCardReviewDecision(event, {
+      serviceMethod: 'approveCardReview',
+      successMessageKey: 'workspace.announcements.cardReviewApproved'
+    });
+  }
+
+  async handleRejectCardReview(event) {
+    await this.handleCardReviewDecision(event, {
+      serviceMethod: 'rejectCardReview',
+      successMessageKey: 'workspace.announcements.cardReviewRejected'
+    });
+  }
+
   async handleCardLocaleRequest(event) {
     const action = createCardLocaleRequestAction(event.detail);
     const success = await this.runAction(
@@ -1266,6 +1280,38 @@ export default class extends Controller {
         cardId,
         locale,
         success
+      });
+    }
+  }
+
+  async handleCardReviewDecision(
+    event,
+    { serviceMethod = '', successMessageKey = '' } = {}
+  ) {
+    const boardId = normalizeOptionalWorkspaceId(event?.detail?.boardId);
+    const cardId = normalizeOptionalWorkspaceId(event?.detail?.cardId);
+    const locale = normalizeOptionalLocale(event?.detail?.locale ?? null);
+
+    if (
+      !boardId ||
+      !cardId ||
+      !serviceMethod ||
+      typeof this.service?.[serviceMethod] !== 'function'
+    ) {
+      return;
+    }
+
+    const success = await this.runAction(
+      () => this.service[serviceMethod](boardId, cardId),
+      successMessageKey ? this.t(successMessageKey) : ''
+    );
+
+    if (success && this.isCardEditorOpenFor({ boardId, cardId })) {
+      this.refreshCardEditor({
+        boardId,
+        cardId,
+        locale,
+        mode: 'edit'
       });
     }
   }

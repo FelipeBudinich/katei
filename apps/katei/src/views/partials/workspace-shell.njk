@@ -9,6 +9,8 @@
   data-workspace-viewer-super-admin-value="{{ 'true' if viewer.isSuperAdmin else 'false' }}"
   data-action="
     card-editor:save->workspace#handleCardEditorSave
+    card-editor:approve-review->workspace#handleApproveCardReview
+    card-editor:reject-review->workspace#handleRejectCardReview
     card-editor:generate-locale->workspace#handleGenerateCardLocalization
     card-editor:discard-locale->workspace#handleDiscardCardLocale
     card-editor:request-locale->workspace#handleCardLocaleRequest
