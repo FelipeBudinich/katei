@@ -143,7 +143,7 @@ export function buildPortfolioPageModel({ viewer, t, portfolio = createEmptyPort
         value: normalizedPortfolio.totals.agentProposalCount
       },
       {
-        label: t('cardEditor.workflowReview.pending'),
+        label: t('portfolio.summary.pendingCardReviewCountLabel'),
         value: normalizedPortfolio.totals.pendingCardReviewCount
       }
     ],

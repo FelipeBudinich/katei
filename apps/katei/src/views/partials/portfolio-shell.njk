@@ -252,8 +252,8 @@
 
   <section class="paper-panel portfolio-section inventory-panel">
     <div class="portfolio-section-header">
-      <h2 class="font-serif text-3xl text-strong">{{ t('cardEditor.workflowReview.pending') }}</h2>
-      <p class="text-sm leading-6 text-muted">{{ t('cardEditor.requiresReviewHelp') }}</p>
+      <h2 class="font-serif text-3xl text-strong">{{ t('portfolio.pendingCardReviews.heading') }}</h2>
+      <p class="text-sm leading-6 text-muted">{{ t('portfolio.pendingCardReviews.description') }}</p>
     </div>
 
     {% if pendingCardReviewEntries.length %}
@@ -281,12 +281,12 @@
               <table class="portfolio-table">
                 <thead>
                   <tr>
-                    <th scope="col">{{ t('portfolio.awaitingApproval.boardColumnLabel') }}</th>
-                    <th scope="col">{{ t('portfolio.awaitingApproval.cardColumnLabel') }}</th>
-                    <th scope="col">{{ t('cardViewDialog.copyFields.stage') }}</th>
-                    <th scope="col">{{ t('portfolio.awaitingApproval.stateColumnLabel') }}</th>
-                    <th scope="col">{{ t('portfolio.missingRequiredLocalizations.updatedAtColumnLabel') }}</th>
-                    <th scope="col">{{ t('portfolio.awaitingApproval.actionsColumnLabel') }}</th>
+                    <th scope="col">{{ t('portfolio.pendingCardReviews.boardColumnLabel') }}</th>
+                    <th scope="col">{{ t('portfolio.pendingCardReviews.cardColumnLabel') }}</th>
+                    <th scope="col">{{ t('portfolio.pendingCardReviews.stageColumnLabel') }}</th>
+                    <th scope="col">{{ t('portfolio.pendingCardReviews.stateColumnLabel') }}</th>
+                    <th scope="col">{{ t('portfolio.pendingCardReviews.updatedAtColumnLabel') }}</th>
+                    <th scope="col">{{ t('portfolio.pendingCardReviews.actionsColumnLabel') }}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -298,7 +298,7 @@
                       <td><div class="portfolio-table-primary">{{ entry.stateLabel }}</div></td>
                       <td><div class="portfolio-table-primary">{{ entry.updatedAt }}</div></td>
                       <td>
-                        <a href="{{ entry.openBoardHref }}" class="touch-button-secondary">{{ t('portfolio.awaitingApproval.openBoardAction') }}</a>
+                        <a href="{{ entry.openBoardHref }}" class="touch-button-secondary">{{ t('portfolio.pendingCardReviews.openBoardAction') }}</a>
                       </td>
                     </tr>
                   {% endfor %}
@@ -311,11 +311,11 @@
     {% else %}
       <div class="portfolio-empty-state">
         {% if portfolioFilters.hasSearchQuery %}
-          <h3 class="font-serif text-2xl text-strong">{{ t('portfolio.awaitingApproval.emptyFiltered.heading') }}</h3>
-          <p class="text-sm leading-6 text-muted">{{ t('portfolio.awaitingApproval.emptyFiltered.description') }}</p>
+          <h3 class="font-serif text-2xl text-strong">{{ t('portfolio.pendingCardReviews.emptyFiltered.heading') }}</h3>
+          <p class="text-sm leading-6 text-muted">{{ t('portfolio.pendingCardReviews.emptyFiltered.description') }}</p>
         {% else %}
-          <h3 class="font-serif text-2xl text-strong">{{ t('portfolio.awaitingApproval.empty.heading') }}</h3>
-          <p class="text-sm leading-6 text-muted">{{ t('portfolio.awaitingApproval.empty.description') }}</p>
+          <h3 class="font-serif text-2xl text-strong">{{ t('portfolio.pendingCardReviews.empty.heading') }}</h3>
+          <p class="text-sm leading-6 text-muted">{{ t('portfolio.pendingCardReviews.empty.description') }}</p>
         {% endif %}
       </div>
     {% endif %}

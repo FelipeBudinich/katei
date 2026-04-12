@@ -1264,6 +1264,125 @@ test('GET /portfolio filters the board directory by the search query', async () 
   assert.doesNotMatch(response.text, /Research board/);
 });
 
+test('GET /portfolio renders the pending card reviews section and summary count', async () => {
+  const portfolioReadModel = createPortfolioReadModelDouble({
+    summary: createPendingCardReviewPortfolioSummary()
+  });
+  const app = createTestApp({
+    env: {
+      SUPER_ADMINS: 'tester@example.com'
+    },
+    googleTokenVerifier: async () => ({ sub: 'sub_123' }),
+    portfolioReadModel
+  });
+  const translator = createTranslator('en');
+
+  const response = await request(app)
+    .get('/portfolio')
+    .set('Cookie', createSessionCookieHeader({
+      sub: 'sub_123',
+      name: 'Tester',
+      email: 'tester@example.com'
+    }));
+
+  assert.equal(response.status, 200);
+
+  const pendingSection = extractPortfolioSectionHtml(
+    response.text,
+    translator('portfolio.pendingCardReviews.heading')
+  );
+  const portfolioSummaryGrid = response.text.match(
+    /<section class="env-inventory-status-grid">[\s\S]*?<\/section>/
+  )?.[0] ?? '';
+
+  assert.match(pendingSection, /Editorial roadmap/);
+  assert.match(pendingSection, /Approve launch brief/);
+  assert.match(pendingSection, /Final review/);
+  assert.match(pendingSection, /Pending review/);
+  assert.match(pendingSection, /2026-04-03T10:20:00.000Z/);
+  assert.match(pendingSection, /Open board/);
+  assert.match(
+    portfolioSummaryGrid,
+    new RegExp(
+      `<article class="paper-panel env-inventory-status-card env-inventory-status-card--good">[\\s\\S]*?<div class="env-inventory-status-label">${escapeForRegex(translator('portfolio.summary.pendingCardReviewCountLabel'))}<\\/div>[\\s\\S]*?<div class="env-inventory-status-value">1<\\/div>[\\s\\S]*?<\\/article>`
+    )
+  );
+});
+
+test('GET /portfolio keeps pending card review rows visible when the search matches the stage title', async () => {
+  const portfolioReadModel = createPortfolioReadModelDouble({
+    summary: createPendingCardReviewPortfolioSummary()
+  });
+  const app = createTestApp({
+    env: {
+      SUPER_ADMINS: 'tester@example.com'
+    },
+    googleTokenVerifier: async () => ({ sub: 'sub_123' }),
+    portfolioReadModel
+  });
+  const translator = createTranslator('en');
+
+  const response = await request(app)
+    .get('/portfolio?q=final review')
+    .set('Cookie', createSessionCookieHeader({
+      sub: 'sub_123',
+      name: 'Tester',
+      email: 'tester@example.com'
+    }));
+
+  assert.equal(response.status, 200);
+  assert.match(response.text, /value="final review"/);
+
+  const pendingSection = extractPortfolioSectionHtml(
+    response.text,
+    translator('portfolio.pendingCardReviews.heading')
+  );
+  const boardDirectorySection = extractPortfolioSectionHtml(
+    response.text,
+    translator('portfolio.directory.heading')
+  );
+
+  assert.match(pendingSection, /1 matching boards/);
+  assert.match(pendingSection, /Editorial roadmap/);
+  assert.match(pendingSection, /Approve launch brief/);
+  assert.match(pendingSection, /Final review/);
+  assert.match(boardDirectorySection, /No boards match this search/);
+});
+
+test('GET /portfolio shows the filtered empty state for pending card reviews when the search excludes them', async () => {
+  const portfolioReadModel = createPortfolioReadModelDouble({
+    summary: createPendingCardReviewPortfolioSummary()
+  });
+  const app = createTestApp({
+    env: {
+      SUPER_ADMINS: 'tester@example.com'
+    },
+    googleTokenVerifier: async () => ({ sub: 'sub_123' }),
+    portfolioReadModel
+  });
+  const translator = createTranslator('en');
+
+  const response = await request(app)
+    .get('/portfolio?q=backlog')
+    .set('Cookie', createSessionCookieHeader({
+      sub: 'sub_123',
+      name: 'Tester',
+      email: 'tester@example.com'
+    }));
+
+  assert.equal(response.status, 200);
+
+  const pendingSection = extractPortfolioSectionHtml(
+    response.text,
+    translator('portfolio.pendingCardReviews.heading')
+  );
+
+  assert.match(pendingSection, new RegExp(escapeForRegex(translator('portfolio.pendingCardReviews.emptyFiltered.heading'))));
+  assert.match(pendingSection, new RegExp(escapeForRegex(translator('portfolio.pendingCardReviews.emptyFiltered.description'))));
+  assert.doesNotMatch(pendingSection, /Approve launch brief/);
+  assert.doesNotMatch(pendingSection, /Final review/);
+});
+
 test('GET /boards renders the server workspace and bootstrap payload for authenticated users', async () => {
   const workspace = createCard(createEmptyWorkspace(), 'main', {
     title: 'Ship launch checklist',
@@ -4013,6 +4132,21 @@ function extractDialogByTarget(html, targetName) {
   return match[0];
 }
 
+function extractPortfolioSectionHtml(html, heading) {
+  const match = html.match(
+    new RegExp(
+      `<section class="paper-panel portfolio-section inventory-panel">[\\s\\S]*?<h2 class="font-serif text-3xl text-strong">${escapeForRegex(heading)}<\\/h2>[\\s\\S]*?<\\/section>`,
+      's'
+    )
+  );
+
+  if (!match) {
+    throw new Error(`Portfolio section "${heading}" was not rendered.`);
+  }
+
+  return match[0];
+}
+
 function assertSharedProfileOptionsDialog(dialogHtml, {
   localeFormAction,
   localePickerId,
@@ -4569,10 +4703,12 @@ function createPortfolioReadModelDouble({
       cardsMissingRequiredLocales: 0,
       openLocaleRequestCount: 0,
       awaitingHumanVerificationCount: 0,
-      agentProposalCount: 0
+      agentProposalCount: 0,
+      pendingCardReviewCount: 0
     },
     workspaces: [],
-    boardDirectory: []
+    boardDirectory: [],
+    pendingCardReviewItems: []
   }
 } = {}) {
   return {
@@ -4582,6 +4718,86 @@ function createPortfolioReadModelDouble({
       this.loadCalls.push(structuredClone(options));
       return structuredClone(summary);
     }
+  };
+}
+
+function createPendingCardReviewPortfolioSummary() {
+  return {
+    totals: {
+      workspaces: 1,
+      boards: 1,
+      cards: 2,
+      cardsMissingRequiredLocales: 0,
+      openLocaleRequestCount: 0,
+      awaitingHumanVerificationCount: 0,
+      agentProposalCount: 0,
+      pendingCardReviewCount: 1
+    },
+    workspaces: [
+      {
+        workspaceId: 'workspace_portfolio_reviews',
+        workspaceTitle: 'Studio HQ',
+        boardCount: 1,
+        timestamps: {
+          createdAt: '2026-04-01T09:00:00.000Z',
+          updatedAt: '2026-04-03T12:00:00.000Z'
+        }
+      }
+    ],
+    boardDirectory: [
+      {
+        workspaceId: 'workspace_portfolio_reviews',
+        workspaceTitle: 'Studio HQ',
+        boardId: 'main',
+        boardTitle: 'Editorial roadmap',
+        viewerRole: 'editor',
+        localePolicy: {
+          sourceLocale: 'en',
+          defaultLocale: 'en',
+          supportedLocales: ['en'],
+          requiredLocales: ['en']
+        },
+        cardCounts: {
+          total: 2,
+          byStage: null
+        },
+        localizationSummary: {
+          cardsMissingRequiredLocales: 0,
+          openLocaleRequestCount: 0,
+          awaitingHumanVerificationCount: 0,
+          agentProposalCount: 0,
+          pendingCardReviewCount: 1
+        },
+        aging: {
+          oldestMissingRequiredLocaleUpdatedAt: null,
+          oldestOpenLocaleRequestAt: null,
+          oldestAwaitingHumanVerificationAt: null,
+          oldestAgentProposalAt: null
+        },
+        timestamps: {
+          workspaceCreatedAt: '2026-04-01T09:00:00.000Z',
+          workspaceUpdatedAt: '2026-04-03T12:00:00.000Z',
+          boardCreatedAt: '2026-04-01T09:05:00.000Z',
+          boardUpdatedAt: '2026-04-03T11:45:00.000Z'
+        }
+      }
+    ],
+    awaitingHumanVerificationItems: [],
+    agentProposalItems: [],
+    pendingCardReviewItems: [
+      {
+        workspaceId: 'workspace_portfolio_reviews',
+        workspaceTitle: 'Studio HQ',
+        boardId: 'main',
+        boardTitle: 'Editorial roadmap',
+        cardId: 'card_pending_review',
+        cardTitle: 'Approve launch brief',
+        cardUpdatedAt: '2026-04-03T10:20:00.000Z',
+        stageId: 'review',
+        stageTitle: 'Final review'
+      }
+    ],
+    missingRequiredLocalizationItems: []
   };
 }
 
