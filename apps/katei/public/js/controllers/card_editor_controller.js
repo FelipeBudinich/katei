@@ -1,5 +1,5 @@
 import { Controller } from '../../vendor/stimulus/stimulus.js';
-import { isBoardEditorLikeRole } from '../domain/board_permissions.js';
+import { canBoardRoleApproveCardReview } from '../domain/board_permissions.js';
 import { getBrowserTranslator } from '../i18n/browser.js';
 import {
   getBoardStageTitle,
@@ -1166,7 +1166,7 @@ export default class extends Controller {
     return Boolean(
       workflowReviewStatus === 'pending' &&
         shouldShowReviewForStage(this.board, sourceStageId) &&
-        isBoardEditorLikeRole(this.currentActorRole)
+        canBoardRoleApproveCardReview(this.board, this.currentActorRole, sourceStageId)
     );
   }
 

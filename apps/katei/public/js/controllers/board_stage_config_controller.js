@@ -3,23 +3,35 @@ import { getBrowserTranslator } from '../i18n/browser.js';
 import { localizeErrorMessage } from '../i18n/errors.js';
 import { openDialogWithInitialFocus } from './dialog_initial_focus.js';
 import { BOARD_STAGE_PROMPT_RUN_ACTION_ID } from '../domain/board_stage_actions.js';
+import { DEFAULT_BOARD_STAGE_REVIEW_APPROVER_ROLE } from '../domain/board_stage_review_policy.js';
 import {
   parseStageDefinitions,
+  serializeStageReviewPolicies,
   serializeStageDefinitions,
   serializeStagePromptActions,
-  validateAndNormalizeStageDefinitionsWithPromptActions,
-  validateAndNormalizeStagePromptActions
+  validateAndNormalizeStageDefinitionsWithStagePolicies,
+  validateAndNormalizeStagePromptActions,
+  validateAndNormalizeStageReviewPolicies
 } from './board_stage_config_schema.js';
 import { closeSheetDialog } from './sheet_dialog.js';
 
 export default class extends Controller {
-  static targets = ['dialog', 'definitionsInput', 'promptActionsInput', 'promptActionRegion', 'error'];
+  static targets = [
+    'dialog',
+    'definitionsInput',
+    'promptActionsInput',
+    'promptActionRegion',
+    'reviewPoliciesInput',
+    'reviewPolicyRegion',
+    'error'
+  ];
 
   connect() {
     this.t = getBrowserTranslator();
     this.currentBoard = null;
     this.restoreFocusElement = null;
     this.promptActionDrafts = {};
+    this.reviewPolicyDrafts = {};
     this.hideError();
   }
 
@@ -29,8 +41,12 @@ export default class extends Controller {
     this.definitionsInputTarget.value = typeof event.detail?.stageDefinitions === 'string' ? event.detail.stageDefinitions : '';
     this.promptActionsInputTarget.value =
       typeof event.detail?.stagePromptActions === 'string' ? event.detail.stagePromptActions : '';
+    this.reviewPoliciesInputTarget.value =
+      typeof event.detail?.stageReviewPolicies === 'string' ? event.detail.stageReviewPolicies : '';
     this.promptActionDrafts = this.parseInitialPromptActionDrafts(this.promptActionsInputTarget.value);
+    this.reviewPolicyDrafts = this.parseInitialReviewPolicyDrafts(this.reviewPoliciesInputTarget.value);
     this.syncPromptActionRows();
+    this.syncReviewPolicyRows();
     this.hideError();
 
     openDialogWithInitialFocus(this.dialogTarget, this.definitionsInputTarget);
@@ -38,6 +54,7 @@ export default class extends Controller {
 
   handleDefinitionsInput() {
     this.syncPromptActionRows();
+    this.syncReviewPolicyRows();
     this.hideError();
   }
 
@@ -84,6 +101,21 @@ export default class extends Controller {
     this.hideError();
   }
 
+  handleReviewPolicyApproverRoleChange(event) {
+    const stageId = normalizeStageId(event.currentTarget?.dataset?.stageId);
+
+    if (!stageId) {
+      return;
+    }
+
+    this.reviewPolicyDrafts[stageId] = {
+      ...this.getReviewPolicyDraft(stageId),
+      approverRole: normalizeApproverRole(event.currentTarget.value),
+      explicit: true
+    };
+    this.hideError();
+  }
+
   apply(event) {
     event.preventDefault();
 
@@ -92,9 +124,14 @@ export default class extends Controller {
       const nextStageDefinitions = this.applyPromptActionTogglesToStageDefinitions(parsedStageDefinitions);
       const stageDefinitions = serializeStageDefinitions(nextStageDefinitions);
       const stagePromptActions = this.buildSerializedPromptActions(nextStageDefinitions);
+      const stageReviewPolicies = this.buildSerializedReviewPolicies(nextStageDefinitions);
       const normalizedPromptActions = validateAndNormalizeStagePromptActions(stagePromptActions, nextStageDefinitions);
+      const normalizedReviewPolicies = validateAndNormalizeStageReviewPolicies(
+        stageReviewPolicies,
+        nextStageDefinitions
+      );
 
-      validateAndNormalizeStageDefinitionsWithPromptActions(stageDefinitions, stagePromptActions, {
+      validateAndNormalizeStageDefinitionsWithStagePolicies(stageDefinitions, stagePromptActions, stageReviewPolicies, {
         currentBoard: this.currentBoard
       });
 
@@ -102,8 +139,13 @@ export default class extends Controller {
         ...this.promptActionDrafts,
         ...normalizedPromptActions
       };
+      this.reviewPolicyDrafts = mergeNormalizedReviewPolicyDrafts(
+        this.reviewPolicyDrafts,
+        normalizedReviewPolicies
+      );
       this.definitionsInputTarget.value = stageDefinitions;
       this.promptActionsInputTarget.value = serializeStagePromptActions(normalizedPromptActions);
+      this.reviewPoliciesInputTarget.value = serializeStageReviewPolicies(normalizedReviewPolicies);
     } catch (error) {
       this.showError(localizeErrorMessage(error, this.t));
       return;
@@ -115,7 +157,8 @@ export default class extends Controller {
       new CustomEvent('board-stage-config:apply', {
         detail: {
           stageDefinitions: this.definitionsInputTarget.value,
-          stagePromptActions: this.promptActionsInputTarget.value
+          stagePromptActions: this.promptActionsInputTarget.value,
+          stageReviewPolicies: this.reviewPoliciesInputTarget.value
         }
       })
     );
@@ -135,6 +178,7 @@ export default class extends Controller {
     this.hideError();
     this.currentBoard = null;
     this.promptActionDrafts = {};
+    this.reviewPolicyDrafts = {};
 
     if (restoreFocus && this.restoreFocusElement?.isConnected) {
       this.restoreFocusElement.focus();
@@ -175,6 +219,36 @@ export default class extends Controller {
     }
   }
 
+  parseInitialReviewPolicyDrafts(rawValue) {
+    const normalizedValue = String(rawValue ?? '').trim();
+
+    if (!normalizedValue) {
+      return {};
+    }
+
+    try {
+      const parsedValue = JSON.parse(normalizedValue);
+
+      if (!isPlainObject(parsedValue)) {
+        return {};
+      }
+
+      return Object.fromEntries(
+        Object.entries(parsedValue)
+          .filter(([stageId, reviewPolicy]) => normalizeStageId(stageId) && isPlainObject(reviewPolicy))
+          .map(([stageId, reviewPolicy]) => [
+            stageId,
+            {
+              approverRole: normalizeApproverRole(reviewPolicy.approverRole),
+              explicit: true
+            }
+          ])
+      );
+    } catch (error) {
+      return {};
+    }
+  }
+
   getPromptActionDraft(stageId) {
     const currentDraft = this.promptActionDrafts?.[stageId];
 
@@ -185,6 +259,15 @@ export default class extends Controller {
           prompt: '',
           targetStageId: ''
         };
+  }
+
+  getReviewPolicyDraft(stageId) {
+    const currentDraft = this.reviewPolicyDrafts?.[stageId];
+
+    return {
+      approverRole: normalizeApproverRole(currentDraft?.approverRole),
+      explicit: currentDraft?.explicit === true
+    };
   }
 
   syncPromptActionRows() {
@@ -219,6 +302,34 @@ export default class extends Controller {
 
     this.promptActionRegionTarget.innerHTML = stageDefinitions
       .map((stageDefinition) => this.renderPromptActionRow(stageDefinition, stageDefinitions))
+      .join('');
+  }
+
+  syncReviewPolicyRows() {
+    if (!this.hasReviewPolicyRegionTarget) {
+      return;
+    }
+
+    let stageDefinitions = [];
+
+    try {
+      stageDefinitions = parseStageDefinitions(this.definitionsInputTarget.value);
+    } catch (error) {
+      this.reviewPolicyRegionTarget.innerHTML = '';
+      return;
+    }
+
+    for (const stageDefinition of stageDefinitions) {
+      const currentDraft = this.getReviewPolicyDraft(stageDefinition.id);
+
+      this.reviewPolicyDrafts[stageDefinition.id] = {
+        approverRole: normalizeApproverRole(currentDraft.approverRole),
+        explicit: currentDraft.explicit === true
+      };
+    }
+
+    this.reviewPolicyRegionTarget.innerHTML = stageDefinitions
+      .map((stageDefinition) => this.renderReviewPolicyRow(stageDefinition))
       .join('');
   }
 
@@ -289,6 +400,47 @@ export default class extends Controller {
     `;
   }
 
+  renderReviewPolicyRow(stageDefinition) {
+    const stageId = stageDefinition.id;
+    const stageTitle = stageDefinition.title;
+    const actionIds = Array.isArray(stageDefinition.actionIds) ? stageDefinition.actionIds : [];
+    const hasReviewAction = actionIds.includes('card.review');
+    const draft = this.getReviewPolicyDraft(stageId);
+    const helpKey = hasReviewAction
+      ? 'boardStageConfigDialog.reviewPolicyHelp'
+      : 'boardStageConfigDialog.reviewPolicyRequiresActionHelp';
+
+    return `
+      <section class="paper-panel px-4 py-4 space-y-3" data-stage-id="${escapeHtml(stageId)}">
+        <div class="min-w-0 space-y-1">
+          <p class="field-label text-sm font-semibold">${escapeHtml(stageId)}</p>
+          <p class="text-xs leading-5 text-muted">${escapeHtml(stageTitle)}</p>
+        </div>
+
+        <p class="text-xs leading-5 text-muted">${escapeHtml(this.t(helpKey))}</p>
+
+        <label class="block space-y-2">
+          <span class="field-label text-sm font-semibold">${escapeHtml(this.t('boardStageConfigDialog.reviewPolicyApproverRoleLabel'))}</span>
+          <select
+            class="field-control"
+            data-stage-id="${escapeHtml(stageId)}"
+            data-action="change->board-stage-config#handleReviewPolicyApproverRoleChange"
+            ${hasReviewAction ? '' : 'disabled'}
+          >
+            <option
+              value="editor"
+              ${draft.approverRole === 'editor' ? 'selected' : ''}
+            >${escapeHtml(this.t('boardStageConfigDialog.reviewPolicyRoleEditorLabel'))}</option>
+            <option
+              value="admin"
+              ${draft.approverRole === 'admin' ? 'selected' : ''}
+            >${escapeHtml(this.t('boardStageConfigDialog.reviewPolicyRoleAdminLabel'))}</option>
+          </select>
+        </label>
+      </section>
+    `;
+  }
+
   applyPromptActionTogglesToStageDefinitions(stageDefinitions) {
     return stageDefinitions.map((stageDefinition) => {
       const actionIds = Array.isArray(stageDefinition.actionIds) ? [...stageDefinition.actionIds] : null;
@@ -341,6 +493,31 @@ export default class extends Controller {
 
     return serializeStagePromptActions(promptActions);
   }
+
+  buildSerializedReviewPolicies(stageDefinitions) {
+    const reviewPolicies = {};
+
+    for (const stageDefinition of stageDefinitions) {
+      const actionIds = Array.isArray(stageDefinition.actionIds) ? stageDefinition.actionIds : [];
+
+      if (!actionIds.includes('card.review')) {
+        continue;
+      }
+
+      const reviewPolicyDraft = this.getReviewPolicyDraft(stageDefinition.id);
+      const approverRole = normalizeApproverRole(reviewPolicyDraft.approverRole);
+
+      if (!reviewPolicyDraft.explicit && approverRole === DEFAULT_BOARD_STAGE_REVIEW_APPROVER_ROLE) {
+        continue;
+      }
+
+      reviewPolicies[stageDefinition.id] = {
+        approverRole
+      };
+    }
+
+    return serializeStageReviewPolicies(reviewPolicies);
+  }
 }
 
 function resolveTargetStageId(targetStageId, validStageIds) {
@@ -356,6 +533,25 @@ function resolveDefaultTargetStageId(validStageIds) {
 
 function normalizeStageId(value) {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function normalizeApproverRole(value) {
+  return value === 'admin' ? 'admin' : DEFAULT_BOARD_STAGE_REVIEW_APPROVER_ROLE;
+}
+
+function mergeNormalizedReviewPolicyDrafts(existingDrafts, normalizedReviewPolicies) {
+  const nextDrafts = {
+    ...(isPlainObject(existingDrafts) ? existingDrafts : {})
+  };
+
+  for (const [stageId, reviewPolicy] of Object.entries(normalizedReviewPolicies ?? {})) {
+    nextDrafts[stageId] = {
+      approverRole: normalizeApproverRole(reviewPolicy?.approverRole),
+      explicit: true
+    };
+  }
+
+  return nextDrafts;
 }
 
 function escapeHtml(value) {

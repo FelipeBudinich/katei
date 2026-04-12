@@ -984,6 +984,47 @@ test('card.review decision rejects viewers', () => {
   );
 });
 
+test('card.review decision enforces an admin-only stage review policy', () => {
+  const workspace = createWorkspaceWithCard({
+    memberships: [
+      createMembership({ id: 'viewer_123', role: 'editor' }),
+      createMembership({ id: 'viewer_admin', role: 'admin' })
+    ]
+  });
+
+  workspace.boards.main.stages.backlog.actions = ['card.create', 'card.review'];
+  workspace.boards.main.stages.backlog.actionIds = ['card.create', 'card.review'];
+  workspace.boards.main.stages.backlog.reviewPolicy = {
+    approverRole: 'admin'
+  };
+  workspace.boards.main.cards.card_1.workflowReview = {
+    required: true,
+    currentStageId: 'backlog',
+    status: 'pending',
+    decidedAt: null,
+    decidedBy: null,
+    decidedByRole: null
+  };
+
+  assertPermissionError(
+    () =>
+      applyWorkspaceCommand({
+        record: createRecord(workspace, 1),
+        command: {
+          clientMutationId: 'm2_review_admin_only',
+          type: 'card.review.approve',
+          payload: {
+            boardId: 'main',
+            cardId: 'card_1'
+          }
+        },
+        expectedRevision: 1,
+        context: createContext()
+      }),
+    /permission to review this card/
+  );
+});
+
 test('card.create rejects stages that are not create-enabled', () => {
   assert.throws(
     () =>

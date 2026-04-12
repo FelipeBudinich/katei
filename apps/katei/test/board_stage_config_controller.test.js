@@ -8,13 +8,22 @@ test('board stage config opens from the workspace event and populates both stage
   const controller = createBoardStageConfigControllerDouble();
   const board = createEmptyWorkspace().boards.main;
   const triggerElement = createFocusableElement();
-  const stageDefinitions = ['backlog | Backlog | review | card.create', 'review | Review | backlog'].join('\n');
+  const stageDefinitions = ['backlog | Backlog | review | card.create', 'review | Review | backlog | card.review'].join('\n');
   const stagePromptActions = JSON.stringify(
     {
       backlog: {
         enabled: true,
         prompt: 'Turn this card into a review task.',
         targetStageId: 'review'
+      }
+    },
+    null,
+    2
+  );
+  const stageReviewPolicies = JSON.stringify(
+    {
+      review: {
+        approverRole: 'admin'
       }
     },
     null,
@@ -27,6 +36,7 @@ test('board stage config opens from the workspace event and populates both stage
         detail: {
           stageDefinitions,
           stagePromptActions,
+          stageReviewPolicies,
           currentBoard: board,
           triggerElement
         }
@@ -39,11 +49,14 @@ test('board stage config opens from the workspace event and populates both stage
   assert.equal(controller.dialogTarget.open, true);
   assert.equal(controller.definitionsInputTarget.value, stageDefinitions);
   assert.equal(controller.promptActionsInputTarget.value, stagePromptActions);
+  assert.equal(controller.reviewPoliciesInputTarget.value, stageReviewPolicies);
   assert.equal(controller.currentBoard, board);
   assert.equal(controller.restoreFocusElement, triggerElement);
   assert.equal(controller.definitionsInputTarget.focused, true);
   assert.match(controller.promptActionRegionTarget.innerHTML, /data-stage-id="backlog"/);
   assert.match(controller.promptActionRegionTarget.innerHTML, /data-stage-id="review"/);
+  assert.match(controller.reviewPolicyRegionTarget.innerHTML, /data-stage-id="backlog"/);
+  assert.match(controller.reviewPolicyRegionTarget.innerHTML, /data-stage-id="review"/);
   assert.equal(controller.errorTarget.hidden, true);
 });
 
@@ -146,7 +159,8 @@ test('board stage config apply dispatches board-stage-config:apply on window for
   assert.equal(dispatchedEvents[0].type, 'board-stage-config:apply');
   assert.deepEqual(dispatchedEvents[0].detail, {
     stageDefinitions,
-    stagePromptActions
+    stagePromptActions,
+    stageReviewPolicies: ''
   });
   assert.equal(controller.restoreFocusElement, null);
 });
@@ -179,7 +193,50 @@ test('board stage config apply preserves card.review stage actions', async () =>
   assert.equal(dispatchedEvents.length, 1);
   assert.deepEqual(dispatchedEvents[0].detail, {
     stageDefinitions,
-    stagePromptActions: ''
+    stagePromptActions: '',
+    stageReviewPolicies: ''
+  });
+});
+
+test('board stage config apply dispatches review policy drafts for review-enabled stages', async () => {
+  const controller = createBoardStageConfigControllerDouble();
+  const dispatchedEvents = [];
+  const stageDefinitions = [
+    'review | Review | publish | card.review',
+    'publish | Publish | review | card.review'
+  ].join('\n');
+
+  controller.dialogTarget.open = true;
+  controller.currentBoard = createEmptyWorkspace().boards.main;
+  controller.restoreFocusElement = createFocusableElement();
+  controller.definitionsInputTarget.value = stageDefinitions;
+  controller.reviewPolicyDrafts = {
+    publish: {
+      approverRole: 'admin',
+      explicit: true
+    }
+  };
+  controller.syncReviewPolicyRows();
+
+  await withWindowDispatchCapture(dispatchedEvents, () => {
+    BoardStageConfigController.prototype.apply.call(controller, {
+      preventDefault() {}
+    });
+  });
+
+  assert.equal(dispatchedEvents.length, 1);
+  assert.deepEqual(dispatchedEvents[0].detail, {
+    stageDefinitions,
+    stagePromptActions: '',
+    stageReviewPolicies: JSON.stringify(
+      {
+        publish: {
+          approverRole: 'admin'
+        }
+      },
+      null,
+      2
+    )
   });
 });
 
@@ -215,7 +272,13 @@ function createBoardStageConfigControllerDouble() {
     innerHTML: ''
   };
   controller.hasPromptActionRegionTarget = true;
+  controller.reviewPoliciesInputTarget = createFocusableValueTarget('');
+  controller.reviewPolicyRegionTarget = {
+    innerHTML: ''
+  };
+  controller.hasReviewPolicyRegionTarget = true;
   controller.promptActionDrafts = {};
+  controller.reviewPolicyDrafts = {};
   controller.errorTarget = createTextTarget({ hidden: true });
   controller.hasErrorTarget = true;
 

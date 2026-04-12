@@ -545,6 +545,13 @@ const EN_MESSAGES = freezeCatalog({
       'Add "card.prompt.run" to the stage action list above before configuring this prompt action.',
     promptActionUncheckedHelp:
       'This prompt action will be removed from the stage when you apply these changes.',
+    reviewPolicySectionLabel: 'Review policies',
+    reviewPolicyHelp: 'Choose who can approve cards in each review-enabled stage.',
+    reviewPolicyRequiresActionHelp:
+      'Add "card.review" to the stage action list above before configuring this review policy.',
+    reviewPolicyApproverRoleLabel: 'Approver role',
+    reviewPolicyRoleEditorLabel: 'Editors and admins',
+    reviewPolicyRoleAdminLabel: 'Admins only',
     applyButton: 'Apply stages'
   },
   confirmDialog: {
@@ -581,6 +588,11 @@ const EN_MESSAGES = freezeCatalog({
     boardStagePromptActionTargetMissing: 'Prompt actions must target an existing stage.',
     boardStagePromptActionJsonInvalid: 'Prompt action draft data is invalid.',
     boardStagePromptActionStageMissing: 'Prompt action draft data must reference current stages.',
+    boardStageReviewPolicyRequiresActionId: 'Review policies require the card.review action id.',
+    boardStageReviewPolicyInvalid: 'Stage review policy settings are invalid.',
+    boardStageReviewApproverRoleInvalid: 'Review stages must choose editor or admin approval.',
+    boardStageReviewPolicyJsonInvalid: 'Review policy draft data is invalid.',
+    boardStageReviewPolicyStageMissing: 'Review policy draft data must reference current stages.',
     boardTemplateIdRequired: 'Each template needs an id.',
     boardTemplateIdsUnique: 'Template ids must be unique.',
     boardTemplateTitleRequired: 'Each template needs a title.',
@@ -1167,6 +1179,13 @@ const ES_CL_MESSAGES = freezeCatalog({
       'Agrega "card.prompt.run" a la lista de acciones de la etapa para configurar esta acción.',
     promptActionUncheckedHelp:
       'Esta acción con prompt se quitará de la etapa cuando apliques estos cambios.',
+    reviewPolicySectionLabel: 'Políticas de revisión',
+    reviewPolicyHelp: 'Elige quién puede aprobar tarjetas en cada etapa con revisión.',
+    reviewPolicyRequiresActionHelp:
+      'Agrega "card.review" a la lista de acciones de la etapa para configurar esta política.',
+    reviewPolicyApproverRoleLabel: 'Rol aprobador',
+    reviewPolicyRoleEditorLabel: 'Editores y administradores',
+    reviewPolicyRoleAdminLabel: 'Solo administradores',
     applyButton: 'Aplicar etapas'
   },
   confirmDialog: {
@@ -1203,6 +1222,11 @@ const ES_CL_MESSAGES = freezeCatalog({
     boardStagePromptActionTargetMissing: 'Las acciones con prompt deben apuntar a una etapa existente.',
     boardStagePromptActionJsonInvalid: 'El borrador JSON de acciones con prompt no es válido.',
     boardStagePromptActionStageMissing: 'El borrador de acciones con prompt debe apuntar a etapas actuales.',
+    boardStageReviewPolicyRequiresActionId: 'Las políticas de revisión requieren el id card.review.',
+    boardStageReviewPolicyInvalid: 'La configuración de la política de revisión no es válida.',
+    boardStageReviewApproverRoleInvalid: 'Las etapas de revisión deben elegir aprobación de editor o admin.',
+    boardStageReviewPolicyJsonInvalid: 'El borrador JSON de políticas de revisión no es válido.',
+    boardStageReviewPolicyStageMissing: 'El borrador de políticas de revisión debe apuntar a etapas actuales.',
     boardTemplateIdRequired: 'Cada plantilla necesita un id.',
     boardTemplateIdsUnique: 'Los ids de plantilla deben ser únicos.',
     boardTemplateTitleRequired: 'Cada plantilla necesita un título.',
@@ -1789,6 +1813,13 @@ const JA_MESSAGES = freezeCatalog({
       'この操作を設定するには、上のステージ action 一覧へ "card.prompt.run" を追加してください。',
     promptActionUncheckedHelp:
       'このプロンプト操作は、適用時にステージから削除されます。',
+    reviewPolicySectionLabel: 'レビュー方針',
+    reviewPolicyHelp: '各レビュー対応ステージで、誰が承認できるかを選びます。',
+    reviewPolicyRequiresActionHelp:
+      'この設定を使うには、上のステージ action 一覧へ "card.review" を追加してください。',
+    reviewPolicyApproverRoleLabel: '承認できるロール',
+    reviewPolicyRoleEditorLabel: 'editor と admin',
+    reviewPolicyRoleAdminLabel: 'admin のみ',
     applyButton: 'ステージを適用'
   },
   confirmDialog: {
@@ -1825,6 +1856,11 @@ const JA_MESSAGES = freezeCatalog({
     boardStagePromptActionTargetMissing: 'プロンプト操作は存在するステージを参照してください。',
     boardStagePromptActionJsonInvalid: 'プロンプト操作の下書き JSON が無効です。',
     boardStagePromptActionStageMissing: 'プロンプト操作の下書きは現在のステージを参照してください。',
+    boardStageReviewPolicyRequiresActionId: 'レビュー方針には card.review の action id が必要です。',
+    boardStageReviewPolicyInvalid: 'ステージのレビュー方針が無効です。',
+    boardStageReviewApproverRoleInvalid: 'レビュー用ステージでは editor または admin を選んでください。',
+    boardStageReviewPolicyJsonInvalid: 'レビュー方針の下書き JSON が無効です。',
+    boardStageReviewPolicyStageMissing: 'レビュー方針の下書きは現在のステージを参照してください。',
     boardTemplateIdRequired: '各テンプレートに id が必要です。',
     boardTemplateIdsUnique: 'テンプレート id は重複できません。',
     boardTemplateTitleRequired: '各テンプレートにタイトルが必要です。',

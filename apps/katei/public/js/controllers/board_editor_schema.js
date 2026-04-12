@@ -7,15 +7,20 @@ import { createDefaultBoardLanguagePolicy } from '../domain/board_language_polic
 import { normalizeBoardLocalizationGlossary } from '../domain/board_localization_glossary.js';
 import { getStageActions } from '../domain/board_stage_actions.js';
 import { serializeBoardStagePromptAction } from '../domain/board_stage_prompt_action.js';
+import { serializeBoardStageReviewPolicy } from '../domain/board_stage_review_policy.js';
 import { normalizeBoardSchemaInput, assertBoardSchemaCompatibleWithBoard } from '../domain/board_schema.js';
 import { createDefaultBoardStages } from '../domain/board_workflow.js';
 import {
   extractStagePromptActionsFromDefinitions,
+  extractStageReviewPoliciesFromDefinitions,
   mergeStageDefinitionsWithPromptActions,
+  mergeStageDefinitionsWithReviewPolicies,
   parseStageDefinitions,
   serializeStageDefinitions,
   serializeStagePromptActions,
-  validateAndNormalizeStagePromptActions
+  serializeStageReviewPolicies,
+  validateAndNormalizeStagePromptActions,
+  validateAndNormalizeStageReviewPolicies
 } from './board_stage_config_schema.js';
 
 export function createBoardEditorFormState(board = null) {
@@ -32,6 +37,11 @@ export function createBoardEditorFormState(board = null) {
                 board.stages[stageId].promptAction,
                 board.stageOrder
               )
+            }
+          : {}),
+        ...(board.stages?.[stageId]?.reviewPolicy
+          ? {
+              reviewPolicy: serializeBoardStageReviewPolicy(board.stages[stageId].reviewPolicy)
             }
           : {})
       }))
@@ -57,7 +67,8 @@ export function createBoardEditorFormState(board = null) {
       })
     ),
     stageDefinitions: serializeStageDefinitions(stageDefinitions),
-    stagePromptActions: serializeStagePromptActions(extractStagePromptActionsFromDefinitions(stageDefinitions))
+    stagePromptActions: serializeStagePromptActions(extractStagePromptActionsFromDefinitions(stageDefinitions)),
+    stageReviewPolicies: serializeStageReviewPolicies(extractStageReviewPoliciesFromDefinitions(stageDefinitions))
   };
 }
 
@@ -73,9 +84,17 @@ export function parseBoardEditorFormInput(input, { currentBoard = null } = {}) {
     input?.stagePromptActions,
     parsedStageDefinitions
   );
+  const stageReviewPolicies = validateAndNormalizeStageReviewPolicies(
+    input?.stageReviewPolicies,
+    parsedStageDefinitions
+  );
   const mergedStageDefinitions = mergeStageDefinitionsWithPromptActions(
     parsedStageDefinitions,
     stagePromptActions
+  );
+  const mergedStageDefinitionsWithPolicies = mergeStageDefinitionsWithReviewPolicies(
+    mergedStageDefinitions,
+    stageReviewPolicies
   );
   const normalizedSchema = normalizeBoardSchemaInput({
     languagePolicy: {
@@ -84,7 +103,7 @@ export function parseBoardEditorFormInput(input, { currentBoard = null } = {}) {
       supportedLocales: splitInlineList(input?.supportedLocales),
       requiredLocales: splitInlineList(input?.requiredLocales)
     },
-    stageDefinitions: mergedStageDefinitions,
+    stageDefinitions: mergedStageDefinitionsWithPolicies,
     templates: []
   });
 

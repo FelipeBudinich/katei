@@ -10,6 +10,10 @@ import {
   normalizeBoardStagePromptAction,
   serializeBoardStagePromptAction
 } from './board_stage_prompt_action.js';
+import {
+  normalizeBoardStageReviewPolicy,
+  serializeBoardStageReviewPolicy
+} from './board_stage_review_policy.js';
 import { isValidBoardStageId } from './board_workflow.js';
 
 export function normalizeBoardSchemaInput(input) {
@@ -34,7 +38,8 @@ export function normalizeBoardSchemaInput(input) {
         templateIds: [],
         actions: createBoardStageActions(stage.actionIds),
         actionIds: [...stage.actionIds],
-        ...(stage.promptAction ? { promptAction: serializeBoardStagePromptAction(stage.promptAction, stageIds) } : {})
+        ...(stage.promptAction ? { promptAction: serializeBoardStagePromptAction(stage.promptAction, stageIds) } : {}),
+        ...(stage.reviewPolicy ? { reviewPolicy: serializeBoardStageReviewPolicy(stage.reviewPolicy) } : {})
       }
     ])
   );
@@ -74,6 +79,11 @@ export function serializeBoardSchemaInput(board) {
                   board.stages[stageId].promptAction,
                   board.stageOrder
                 )
+              }
+            : {}),
+          ...(getStageActions(board, stageId).includes('card.review') && board.stages?.[stageId]?.reviewPolicy
+            ? {
+                reviewPolicy: serializeBoardStageReviewPolicy(board.stages[stageId].reviewPolicy)
               }
             : {})
         }))
@@ -136,6 +146,7 @@ function normalizeStageDefinitions(value) {
     seenStageIds.add(stageId);
     const hasActionIds = isPlainObject(rawStage) && Object.prototype.hasOwnProperty.call(rawStage, 'actionIds');
     const hasPromptAction = isPlainObject(rawStage) && Object.prototype.hasOwnProperty.call(rawStage, 'promptAction');
+    const hasReviewPolicy = isPlainObject(rawStage) && Object.prototype.hasOwnProperty.call(rawStage, 'reviewPolicy');
     stageDefinitions.push({
       id: stageId,
       title: normalizeRequiredText(rawStage?.title, 'Stage titles are required.'),
@@ -146,7 +157,8 @@ function normalizeStageDefinitions(value) {
       actionIds: hasActionIds
         ? normalizeBoardStageActionIds(rawStage.actionIds)
         : getDefaultBoardStageActionIds(stageId),
-      ...(hasPromptAction ? { promptAction: rawStage.promptAction } : {})
+      ...(hasPromptAction ? { promptAction: rawStage.promptAction } : {}),
+      ...(hasReviewPolicy ? { reviewPolicy: rawStage.reviewPolicy } : {})
     });
   }
 
@@ -159,6 +171,8 @@ function normalizeStageDefinitions(value) {
 
     const hasPromptRunAction = stage.actionIds.includes(BOARD_STAGE_PROMPT_RUN_ACTION_ID);
     const hasPromptAction = Object.prototype.hasOwnProperty.call(stage, 'promptAction');
+    const hasReviewAction = stage.actionIds.includes('card.review');
+    const hasReviewPolicy = Object.prototype.hasOwnProperty.call(stage, 'reviewPolicy');
 
     if (hasPromptRunAction && !hasPromptAction) {
       throw new Error('Stages with "card.prompt.run" must define a prompt action.');
@@ -170,6 +184,14 @@ function normalizeStageDefinitions(value) {
 
     if (hasPromptAction) {
       stage.promptAction = normalizeBoardStagePromptAction(stage.promptAction, validStageIds);
+    }
+
+    if (!hasReviewAction && hasReviewPolicy) {
+      throw new Error('Stage review policies require the "card.review" action id.');
+    }
+
+    if (hasReviewPolicy) {
+      stage.reviewPolicy = normalizeBoardStageReviewPolicy(stage.reviewPolicy);
     }
   }
 

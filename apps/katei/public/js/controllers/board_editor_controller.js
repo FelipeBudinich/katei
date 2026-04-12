@@ -26,6 +26,7 @@ export default class extends Controller {
     'localizationGlossaryInput',
     'stageDefinitionsInput',
     'stagePromptActionsInput',
+    'stageReviewPoliciesInput',
     'stageSummary',
     'configureStagesButton',
     'deleteActions',
@@ -62,6 +63,7 @@ export default class extends Controller {
     this.syncApiKeyStatus(formState);
     this.stageDefinitionsInputTarget.value = formState.stageDefinitions;
     this.stagePromptActionsInputTarget.value = formState.stagePromptActions;
+    this.stageReviewPoliciesInputTarget.value = formState.stageReviewPolicies;
     this.syncStageSummary();
     this.headingTarget.textContent = isEditMode ? this.t('boardEditor.editHeading') : this.t('boardEditor.newHeading');
     this.submitButtonTarget.textContent = isEditMode ? this.t('boardEditor.saveButton') : this.t('boardEditor.createButton');
@@ -85,6 +87,7 @@ export default class extends Controller {
         detail: {
           stageDefinitions: this.stageDefinitionsInputTarget.value,
           stagePromptActions: this.stagePromptActionsInputTarget.value,
+          stageReviewPolicies: this.stageReviewPoliciesInputTarget.value,
           currentBoard: this.currentBoard,
           triggerElement: event?.currentTarget ?? this.configureStagesButtonTarget
         }
@@ -100,6 +103,8 @@ export default class extends Controller {
     this.stageDefinitionsInputTarget.value = event.detail.stageDefinitions;
     this.stagePromptActionsInputTarget.value =
       typeof event.detail?.stagePromptActions === 'string' ? event.detail.stagePromptActions : '';
+    this.stageReviewPoliciesInputTarget.value =
+      typeof event.detail?.stageReviewPolicies === 'string' ? event.detail.stageReviewPolicies : '';
     this.syncStageSummary();
     this.hideError();
 
@@ -144,7 +149,8 @@ export default class extends Controller {
           clearOpenAiApiKey: formData.get('clearOpenAiApiKey') === 'true',
           localizationGlossary: formData.get('localizationGlossary'),
           stageDefinitions: formData.get('stageDefinitions'),
-          stagePromptActions: formData.get('stagePromptActions')
+          stagePromptActions: formData.get('stagePromptActions'),
+          stageReviewPolicies: formData.get('stageReviewPolicies')
         },
         {
           currentBoard: this.currentBoard

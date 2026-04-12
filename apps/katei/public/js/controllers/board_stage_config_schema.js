@@ -4,7 +4,13 @@ import {
   normalizeBoardStagePromptAction,
   serializeBoardStagePromptAction
 } from '../domain/board_stage_prompt_action.js';
+import {
+  normalizeBoardStageReviewPolicy,
+  serializeBoardStageReviewPolicy
+} from '../domain/board_stage_review_policy.js';
 import { assertBoardSchemaCompatibleWithBoard, normalizeBoardSchemaInput } from '../domain/board_schema.js';
+
+const BOARD_STAGE_REVIEW_ACTION_ID = 'card.review';
 
 export function parseStageDefinitions(rawValue) {
   const lines = splitMultilineInput(rawValue);
@@ -111,6 +117,43 @@ export function parseStagePromptActions(rawValue) {
   return promptActions;
 }
 
+export function parseStageReviewPolicies(rawValue) {
+  const normalizedValue = String(rawValue ?? '').trim();
+
+  if (!normalizedValue) {
+    return {};
+  }
+
+  let parsedValue = null;
+
+  try {
+    parsedValue = JSON.parse(normalizedValue);
+  } catch (error) {
+    throw new Error('Stage review policies must use a JSON object.');
+  }
+
+  if (!isPlainObject(parsedValue)) {
+    throw new Error('Stage review policies must use a JSON object.');
+  }
+
+  const reviewPolicies = {};
+
+  for (const [rawStageId, rawReviewPolicy] of Object.entries(parsedValue)) {
+    const stageId = String(rawStageId ?? '').trim();
+
+    if (!stageId || !isPlainObject(rawReviewPolicy)) {
+      throw new Error('Stage review policies must use a JSON object.');
+    }
+
+    reviewPolicies[stageId] = {
+      approverRole:
+        typeof rawReviewPolicy.approverRole === 'string' ? rawReviewPolicy.approverRole : ''
+    };
+  }
+
+  return reviewPolicies;
+}
+
 export function serializeStagePromptActions(promptActions) {
   if (!isPlainObject(promptActions) || Object.keys(promptActions).length < 1) {
     return '';
@@ -130,6 +173,28 @@ export function serializeStagePromptActions(promptActions) {
 
   return Object.keys(serializedPromptActions).length > 0
     ? JSON.stringify(serializedPromptActions, null, 2)
+    : '';
+}
+
+export function serializeStageReviewPolicies(reviewPolicies) {
+  if (!isPlainObject(reviewPolicies) || Object.keys(reviewPolicies).length < 1) {
+    return '';
+  }
+
+  const serializedReviewPolicies = {};
+
+  for (const stageId of Object.keys(reviewPolicies).sort()) {
+    const reviewPolicy = reviewPolicies[stageId];
+
+    if (!isPlainObject(reviewPolicy)) {
+      continue;
+    }
+
+    serializedReviewPolicies[stageId] = serializeBoardStageReviewPolicy(reviewPolicy);
+  }
+
+  return Object.keys(serializedReviewPolicies).length > 0
+    ? JSON.stringify(serializedReviewPolicies, null, 2)
     : '';
 }
 
@@ -161,6 +226,34 @@ export function mergeStageDefinitionsWithPromptActions(stageDefinitions, promptA
     : [];
 }
 
+export function mergeStageDefinitionsWithReviewPolicies(stageDefinitions, reviewPolicies) {
+  const normalizedReviewPolicies = isPlainObject(reviewPolicies) ? reviewPolicies : {};
+
+  return Array.isArray(stageDefinitions)
+    ? stageDefinitions.map((stageDefinition) => {
+        const actionIds = Array.isArray(stageDefinition?.actionIds) ? [...stageDefinition.actionIds] : null;
+        const nextStageDefinition = {
+          ...stageDefinition,
+          allowedTransitionStageIds: [...(stageDefinition?.allowedTransitionStageIds ?? [])]
+        };
+        const reviewPolicy = normalizedReviewPolicies[nextStageDefinition.id];
+
+        if (actionIds) {
+          nextStageDefinition.actionIds = actionIds;
+        }
+
+        if (
+          actionIds?.includes(BOARD_STAGE_REVIEW_ACTION_ID)
+          && reviewPolicy
+        ) {
+          nextStageDefinition.reviewPolicy = serializeBoardStageReviewPolicy(reviewPolicy);
+        }
+
+        return nextStageDefinition;
+      })
+    : [];
+}
+
 export function extractStagePromptActionsFromDefinitions(stageDefinitions) {
   if (!Array.isArray(stageDefinitions)) {
     return {};
@@ -177,6 +270,24 @@ export function extractStagePromptActionsFromDefinitions(stageDefinitions) {
   }
 
   return promptActions;
+}
+
+export function extractStageReviewPoliciesFromDefinitions(stageDefinitions) {
+  if (!Array.isArray(stageDefinitions)) {
+    return {};
+  }
+
+  const reviewPolicies = {};
+
+  for (const stageDefinition of stageDefinitions) {
+    if (!stageDefinition?.reviewPolicy) {
+      continue;
+    }
+
+    reviewPolicies[stageDefinition.id] = serializeBoardStageReviewPolicy(stageDefinition.reviewPolicy);
+  }
+
+  return reviewPolicies;
 }
 
 export function validateAndNormalizeStagePromptActions(rawValue, stageDefinitions) {
@@ -207,6 +318,33 @@ export function validateAndNormalizeStagePromptActions(rawValue, stageDefinition
   return normalizedPromptActions;
 }
 
+export function validateAndNormalizeStageReviewPolicies(rawValue, stageDefinitions) {
+  const parsedReviewPolicies = parseStageReviewPolicies(rawValue);
+
+  if (!Array.isArray(stageDefinitions)) {
+    throw new Error('Board must define at least one stage.');
+  }
+
+  const stageDefinitionsById = new Map(stageDefinitions.map((stageDefinition) => [stageDefinition.id, stageDefinition]));
+  const normalizedReviewPolicies = {};
+
+  for (const [stageId, rawReviewPolicy] of Object.entries(parsedReviewPolicies)) {
+    const stageDefinition = stageDefinitionsById.get(stageId);
+
+    if (!stageDefinition) {
+      throw new Error('Stage review policies must reference stages in the current draft.');
+    }
+
+    if (!Array.isArray(stageDefinition.actionIds) || !stageDefinition.actionIds.includes(BOARD_STAGE_REVIEW_ACTION_ID)) {
+      throw new Error('Stage review policies require the "card.review" action id.');
+    }
+
+    normalizedReviewPolicies[stageId] = normalizeBoardStageReviewPolicy(rawReviewPolicy);
+  }
+
+  return normalizedReviewPolicies;
+}
+
 export function validateAndNormalizeStageDefinitions(
   rawValue,
   {
@@ -225,9 +363,10 @@ export function validateAndNormalizeStageDefinitions(
   return normalizedSchema.stageDefinitions;
 }
 
-export function validateAndNormalizeStageDefinitionsWithPromptActions(
+export function validateAndNormalizeStageDefinitionsWithStagePolicies(
   rawDefinitionsValue,
   rawPromptActionsValue,
+  rawReviewPoliciesValue,
   {
     currentBoard = null,
     languagePolicy = currentBoard?.languagePolicy ?? createDefaultBoardLanguagePolicy()
@@ -235,7 +374,11 @@ export function validateAndNormalizeStageDefinitionsWithPromptActions(
 ) {
   const parsedStageDefinitions = parseStageDefinitions(rawDefinitionsValue);
   const promptActions = validateAndNormalizeStagePromptActions(rawPromptActionsValue, parsedStageDefinitions);
-  const mergedStageDefinitions = mergeStageDefinitionsWithPromptActions(parsedStageDefinitions, promptActions);
+  const reviewPolicies = validateAndNormalizeStageReviewPolicies(rawReviewPoliciesValue, parsedStageDefinitions);
+  const mergedStageDefinitions = mergeStageDefinitionsWithReviewPolicies(
+    mergeStageDefinitionsWithPromptActions(parsedStageDefinitions, promptActions),
+    reviewPolicies
+  );
   const normalizedSchema = normalizeBoardSchemaInput({
     languagePolicy,
     stageDefinitions: mergedStageDefinitions,
@@ -245,6 +388,19 @@ export function validateAndNormalizeStageDefinitionsWithPromptActions(
   assertBoardSchemaCompatibleWithBoard(currentBoard, normalizedSchema);
 
   return normalizedSchema.stageDefinitions;
+}
+
+export function validateAndNormalizeStageDefinitionsWithPromptActions(
+  rawDefinitionsValue,
+  rawPromptActionsValue,
+  options = {}
+) {
+  return validateAndNormalizeStageDefinitionsWithStagePolicies(
+    rawDefinitionsValue,
+    rawPromptActionsValue,
+    '',
+    options
+  );
 }
 
 function splitMultilineInput(value) {

@@ -79,6 +79,24 @@ test('validateBoardStages accepts card.review as a valid stage action id', () =>
   assert.equal(validateBoardStages(board), true);
 });
 
+test('validateBoardStages accepts review policies only on card.review stages', () => {
+  const board = createCustomWorkflowBoard();
+
+  board.stages.review.actionIds = ['card.review'];
+  board.stages.review.reviewPolicy = {
+    approverRole: 'admin'
+  };
+
+  assert.equal(validateBoardStages(board), true);
+
+  delete board.stages.review.reviewPolicy;
+  board.stages.qa.reviewPolicy = {
+    approverRole: 'admin'
+  };
+
+  assert.equal(validateBoardStages(board), false);
+});
+
 test('validateBoardStages rejects duplicate stage ids or invalid stage definitions', () => {
   const board = createWorkspaceBoard({
     id: 'main',

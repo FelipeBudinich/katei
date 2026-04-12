@@ -5,6 +5,7 @@ import {
   isValidBoardStageActionId
 } from './board_stage_actions.js';
 import { normalizeBoardStagePromptAction } from './board_stage_prompt_action.js';
+import { normalizeBoardStageReviewPolicy } from './board_stage_review_policy.js';
 
 const DEFAULT_BOARD_STAGES = Object.freeze([
   Object.freeze({
@@ -113,6 +114,8 @@ export function validateBoardStages(board) {
 
     const hasPromptRunAction = stage.actionIds.includes(BOARD_STAGE_PROMPT_RUN_ACTION_ID);
     const hasPromptAction = Object.prototype.hasOwnProperty.call(stage, 'promptAction');
+    const hasReviewAction = stage.actionIds.includes('card.review');
+    const hasReviewPolicy = Object.prototype.hasOwnProperty.call(stage, 'reviewPolicy');
 
     if (hasPromptRunAction !== hasPromptAction) {
       return false;
@@ -121,6 +124,18 @@ export function validateBoardStages(board) {
     if (hasPromptAction) {
       try {
         normalizeBoardStagePromptAction(stage.promptAction, validStageIds);
+      } catch (error) {
+        return false;
+      }
+    }
+
+    if (!hasReviewAction && hasReviewPolicy) {
+      return false;
+    }
+
+    if (hasReviewPolicy) {
+      try {
+        normalizeBoardStageReviewPolicy(stage.reviewPolicy);
       } catch (error) {
         return false;
       }

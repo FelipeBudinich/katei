@@ -53,9 +53,11 @@ test('board permission helpers derive admin, editor, and viewer capabilities fro
 
 test('card review approval defaults to an editor reviewer threshold', () => {
   const board = {
+    stageOrder: ['review'],
     stages: {
       review: {
-        id: 'review'
+        id: 'review',
+        actionIds: ['card.review']
       }
     },
     memberships: [
@@ -79,4 +81,38 @@ test('card review approval defaults to an editor reviewer threshold', () => {
   assert.equal(canActorApproveCardReview(board, { type: 'human', id: 'viewer_viewer' }, 'review'), false);
   assert.equal(canActorApproveCardReview(board, { type: 'human', id: 'viewer_missing' }, 'review'), false);
   assert.equal(canActorApproveCardReview(board, { type: 'human', id: 'viewer_admin' }, 'missing'), false);
+});
+
+test('card review approval reads per-stage reviewer thresholds', () => {
+  const board = {
+    stageOrder: ['review', 'publish'],
+    stages: {
+      review: {
+        id: 'review',
+        actionIds: ['card.review']
+      },
+      publish: {
+        id: 'publish',
+        actionIds: ['card.review'],
+        reviewPolicy: {
+          approverRole: 'admin'
+        }
+      }
+    },
+    memberships: [
+      {
+        actor: { type: 'human', id: 'viewer_admin' },
+        role: 'admin'
+      },
+      {
+        actor: { type: 'human', id: 'viewer_editor' },
+        role: 'editor'
+      }
+    ]
+  };
+
+  assert.equal(canActorApproveCardReview(board, { type: 'human', id: 'viewer_editor' }, 'review'), true);
+  assert.equal(canActorApproveCardReview(board, { type: 'human', id: 'viewer_admin' }, 'review'), true);
+  assert.equal(canActorApproveCardReview(board, { type: 'human', id: 'viewer_editor' }, 'publish'), false);
+  assert.equal(canActorApproveCardReview(board, { type: 'human', id: 'viewer_admin' }, 'publish'), true);
 });

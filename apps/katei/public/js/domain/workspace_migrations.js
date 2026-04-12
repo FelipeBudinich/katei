@@ -14,6 +14,7 @@ import {
   isValidBoardStageActionId
 } from './board_stage_actions.js';
 import { normalizeBoardStagePromptAction } from './board_stage_prompt_action.js';
+import { normalizeBoardStageReviewPolicy } from './board_stage_review_policy.js';
 import { createDefaultBoardStages, createDefaultBoardTemplates } from './board_workflow.js';
 import {
   createCardContentProvenance,
@@ -363,6 +364,21 @@ function migrateStageDefinition({ stageId, stageOrder, legacyStage, defaultStage
         normalizedLegacyStage.promptAction,
         stageOrder
       );
+    } catch (error) {
+      // Keep migration tolerant of older/corrupted snapshots; validation later decides whether
+      // the migrated workspace is acceptable for persistence.
+    }
+  }
+
+  if (actionIds.includes('card.review')) {
+    try {
+      const normalizedReviewPolicy = normalizeBoardStageReviewPolicy(
+        normalizedLegacyStage.reviewPolicy
+      );
+
+      if (normalizedReviewPolicy) {
+        nextStageDefinition.reviewPolicy = normalizedReviewPolicy;
+      }
     } catch (error) {
       // Keep migration tolerant of older/corrupted snapshots; validation later decides whether
       // the migrated workspace is acceptable for persistence.

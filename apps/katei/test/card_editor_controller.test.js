@@ -613,6 +613,27 @@ test('card editor hides workflow review action buttons once the review is decide
   assert.equal(controller.rejectReviewButtonTarget.hidden, true);
 });
 
+test('card editor hides workflow review controls when the stage requires admin approval and the viewer is only an editor', () => {
+  const controller = createWorkflowReviewControllerDouble({
+    board: createBoardWithWorkflowReviewStage({
+      reviewPolicy: {
+        approverRole: 'admin'
+      }
+    }),
+    currentActorRole: 'editor'
+  });
+
+  CardEditorController.prototype.syncWorkflowReviewSection.call(controller, {
+    isCreateMode: false,
+    sourceStageId: 'review'
+  });
+
+  assert.equal(controller.workflowReviewSectionTarget.hidden, false);
+  assert.equal(controller.workflowReviewStatusRowTarget.hidden, false);
+  assert.equal(controller.approveReviewButtonTarget.hidden, true);
+  assert.equal(controller.rejectReviewButtonTarget.hidden, true);
+});
+
 test('card editor dispatches approve-review with board, card, and locale payload', () => {
   const controller = createWorkflowReviewControllerDouble();
   const dispatchedEvents = [];
@@ -1376,7 +1397,7 @@ function createBoard() {
   };
 }
 
-function createBoardWithWorkflowReviewStage() {
+function createBoardWithWorkflowReviewStage({ reviewPolicy = undefined } = {}) {
   return {
     ...createBoard(),
     stageOrder: ['backlog', 'review'],
@@ -1389,7 +1410,8 @@ function createBoardWithWorkflowReviewStage() {
       review: {
         id: 'review',
         title: 'Review',
-        actionIds: ['card.review']
+        actionIds: ['card.review'],
+        ...(reviewPolicy ? { reviewPolicy } : {})
       }
     }
   };

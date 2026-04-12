@@ -327,6 +327,56 @@ test('normalizeBoardSchemaInput preserves card.review stage actions', () => {
   assert.deepEqual(normalizedSchema.stages.review.actionIds, ['card.review']);
 });
 
+test('normalizeBoardSchemaInput preserves review policies only on card.review stages', () => {
+  const normalizedSchema = normalizeBoardSchemaInput({
+    languagePolicy: {
+      sourceLocale: 'en',
+      defaultLocale: 'en',
+      supportedLocales: ['en'],
+      requiredLocales: ['en']
+    },
+    stageDefinitions: [
+      {
+        id: 'review',
+        title: 'Review',
+        allowedTransitionStageIds: ['publish'],
+        actionIds: ['card.review'],
+        reviewPolicy: {
+          approverRole: 'admin'
+        }
+      },
+      {
+        id: 'publish',
+        title: 'Publish',
+        allowedTransitionStageIds: ['review'],
+        actionIds: []
+      }
+    ],
+    templates: []
+  });
+
+  assert.deepEqual(normalizedSchema.stageDefinitions, [
+    {
+      id: 'review',
+      title: 'Review',
+      allowedTransitionStageIds: ['publish'],
+      actionIds: ['card.review'],
+      reviewPolicy: {
+        approverRole: 'admin'
+      }
+    },
+    {
+      id: 'publish',
+      title: 'Publish',
+      allowedTransitionStageIds: ['review'],
+      actionIds: []
+    }
+  ]);
+  assert.deepEqual(normalizedSchema.stages.review.reviewPolicy, {
+    approverRole: 'admin'
+  });
+});
+
 test('normalizeBoardSchemaInput rejects invalid prompt-run stage prompt action combinations', () => {
   assert.throws(
     () =>
@@ -402,6 +452,31 @@ test('normalizeBoardSchemaInput rejects invalid prompt-run stage prompt action c
         templates: []
       }),
     /must target an existing stage/
+  );
+
+  assert.throws(
+    () =>
+      normalizeBoardSchemaInput({
+        languagePolicy: {
+          sourceLocale: 'en',
+          defaultLocale: 'en',
+          supportedLocales: ['en'],
+          requiredLocales: ['en']
+        },
+        stageDefinitions: [
+          {
+            id: 'backlog',
+            title: 'Backlog',
+            allowedTransitionStageIds: [],
+            actionIds: [],
+            reviewPolicy: {
+              approverRole: 'admin'
+            }
+          }
+        ],
+        templates: []
+      }),
+    /require the "card\.review" action id/
   );
 });
 
@@ -519,6 +594,51 @@ test('serializeBoardSchemaInput includes card.review stage actions', () => {
       id: 'review',
       title: 'Review',
       allowedTransitionStageIds: ['draft'],
+      actionIds: ['card.review']
+    }
+  ]);
+});
+
+test('serializeBoardSchemaInput includes review policy data for review stages', () => {
+  const board = createEmptyWorkspace().boards.main;
+
+  board.stageOrder = ['review', 'publish'];
+  board.stages = {
+    review: {
+      id: 'review',
+      title: 'Review',
+      cardIds: [],
+      allowedTransitionStageIds: ['publish'],
+      templateIds: [],
+      actionIds: ['card.review'],
+      reviewPolicy: {
+        approverRole: 'admin'
+      }
+    },
+    publish: {
+      id: 'publish',
+      title: 'Publish',
+      cardIds: [],
+      allowedTransitionStageIds: ['review'],
+      templateIds: [],
+      actionIds: ['card.review']
+    }
+  };
+
+  assert.deepEqual(serializeBoardSchemaInput(board).stageDefinitions, [
+    {
+      id: 'review',
+      title: 'Review',
+      allowedTransitionStageIds: ['publish'],
+      actionIds: ['card.review'],
+      reviewPolicy: {
+        approverRole: 'admin'
+      }
+    },
+    {
+      id: 'publish',
+      title: 'Publish',
+      allowedTransitionStageIds: ['review'],
       actionIds: ['card.review']
     }
   ]);

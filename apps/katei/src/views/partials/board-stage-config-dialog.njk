@@ -49,6 +49,16 @@
         <div class="space-y-3" data-board-stage-config-target="promptActionRegion"></div>
       </section>
 
+      <section class="space-y-3">
+        <div class="space-y-1">
+          <p class="field-label text-sm font-semibold">{{ t('boardStageConfigDialog.reviewPolicySectionLabel') }}</p>
+          <p class="text-xs leading-5 text-muted">{{ t('boardStageConfigDialog.reviewPolicyHelp') }}</p>
+        </div>
+
+        <textarea hidden data-board-stage-config-target="reviewPoliciesInput"></textarea>
+        <div class="space-y-3" data-board-stage-config-target="reviewPolicyRegion"></div>
+      </section>
+
       <p class="text-sm leading-6" style="color: var(--color-danger);" hidden data-board-stage-config-target="error"></p>
 
       <div class="dialog-actions pt-2">

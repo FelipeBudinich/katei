@@ -3,6 +3,8 @@ import {
   createBoardActorKey,
   normalizeBoardMembership
 } from './board_collaboration.js';
+import { stageSupportsAction } from './board_stage_actions.js';
+import { getBoardStageReviewPolicy } from './board_stage_review_policy.js';
 
 export function getBoardMembershipForActor(board, actor) {
   const actorKey = createBoardActorKey(actor);
@@ -47,24 +49,35 @@ export function canActorAdminBoard(board, actor) {
 
 export function canActorApproveCardReview(board, actor, stageId) {
   const membership = getBoardMembershipForActor(board, actor);
+
+  if (!membership) {
+    return false;
+  }
+
+  return canBoardRoleApproveCardReview(board, membership, stageId);
+}
+
+export function canBoardRoleApproveCardReview(board, roleOrMembership, stageId) {
   const reviewerThreshold = resolveCardReviewReviewerThreshold(board, stageId);
 
-  if (!membership || !reviewerThreshold) {
+  if (!reviewerThreshold) {
     return false;
   }
 
   switch (reviewerThreshold) {
     case 'admin':
-      return isBoardAdminMembership(membership);
+      return isBoardAdminMembership(roleOrMembership);
     case 'editor':
-      return isBoardEditorLikeRole(membership);
+      return isBoardEditorLikeRole(roleOrMembership);
     default:
       return false;
   }
 }
 
-export function isBoardAdminMembership(membership) {
-  return canonicalizeBoardRole(membership?.role) === 'admin';
+export function isBoardAdminMembership(roleOrMembership) {
+  return canonicalizeBoardRole(
+    typeof roleOrMembership === 'string' ? roleOrMembership : roleOrMembership?.role
+  ) === 'admin';
 }
 
 export function isBoardEditorLikeRole(roleOrMembership) {
@@ -99,10 +112,25 @@ function readBoardMemberships(board) {
 
 function resolveCardReviewReviewerThreshold(board, stageId) {
   const normalizedStageId = typeof stageId === 'string' ? stageId.trim() : '';
+  const hasExplicitReviewPolicy = Boolean(
+    normalizedStageId &&
+      board?.stages?.[normalizedStageId] &&
+      board.stages[normalizedStageId].reviewPolicy != null
+  );
 
   if (!normalizedStageId || !board?.stages?.[normalizedStageId]) {
     return null;
   }
 
-  return 'editor';
+  if (!stageSupportsAction(board, normalizedStageId, 'card.review')) {
+    return null;
+  }
+
+  const reviewPolicy = getBoardStageReviewPolicy(board, normalizedStageId);
+
+  if (hasExplicitReviewPolicy && !reviewPolicy) {
+    return null;
+  }
+
+  return reviewPolicy?.approverRole ?? 'editor';
 }
