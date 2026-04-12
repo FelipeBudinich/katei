@@ -69,7 +69,8 @@ const EN_MESSAGES = freezeCatalog({
       cardsMissingRequiredLocalesLabel: 'Cards missing required locales',
       openLocaleRequestCountLabel: 'Open locale requests',
       awaitingHumanVerificationCountLabel: 'Awaiting human verification',
-      agentProposalCountLabel: 'Agent proposals'
+      agentProposalCountLabel: 'Agent proposals',
+      pendingCardReviewCountLabel: 'Pending card reviews'
     },
     directory: {
       heading: 'Board directory',
@@ -128,6 +129,25 @@ const EN_MESSAGES = freezeCatalog({
       savedStatus: '{board}: role saved as {role}.',
       openBoardHelp: 'Assign yourself a role to open this board.',
       requiredError: 'Choose a role before saving.'
+    },
+    pendingCardReviews: {
+      heading: 'Pending card reviews',
+      description: 'Cards that are currently waiting in an active workflow review stage are listed across boards here.',
+      boardColumnLabel: 'Board',
+      cardColumnLabel: 'Card',
+      stageColumnLabel: 'Stage',
+      stateColumnLabel: 'State',
+      updatedAtColumnLabel: 'Card updated',
+      actionsColumnLabel: 'Actions',
+      openBoardAction: 'Open board',
+      empty: {
+        heading: 'No pending card reviews',
+        description: 'No cards are currently waiting for workflow review.'
+      },
+      emptyFiltered: {
+        heading: 'No pending card reviews match this search',
+        description: 'Try another workspace, board, card, or stage term.'
+      }
     },
     awaitingApproval: {
       heading: 'Awaiting approval',
@@ -703,7 +723,8 @@ const ES_CL_MESSAGES = freezeCatalog({
       cardsMissingRequiredLocalesLabel: 'Tarjetas con locales requeridos faltantes',
       openLocaleRequestCountLabel: 'Solicitudes de locale abiertas',
       awaitingHumanVerificationCountLabel: 'Esperando verificación humana',
-      agentProposalCountLabel: 'Propuestas de agente'
+      agentProposalCountLabel: 'Propuestas de agente',
+      pendingCardReviewCountLabel: 'Revisiones de tarjetas pendientes'
     },
     directory: {
       heading: 'Directorio de tableros',
@@ -762,6 +783,25 @@ const ES_CL_MESSAGES = freezeCatalog({
       savedStatus: '{board}: rol guardado como {role}.',
       openBoardHelp: 'Asígnate un rol para abrir este tablero.',
       requiredError: 'Elige un rol antes de guardar.'
+    },
+    pendingCardReviews: {
+      heading: 'Revisiones de tarjetas pendientes',
+      description: 'Aquí se listan entre tableros las tarjetas que actualmente esperan en una etapa activa de revisión del flujo de trabajo.',
+      boardColumnLabel: 'Tablero',
+      cardColumnLabel: 'Tarjeta',
+      stageColumnLabel: 'Etapa',
+      stateColumnLabel: 'Estado',
+      updatedAtColumnLabel: 'Tarjeta actualizada',
+      actionsColumnLabel: 'Acciones',
+      openBoardAction: 'Abrir tablero',
+      empty: {
+        heading: 'No hay revisiones de tarjetas pendientes',
+        description: 'Actualmente no hay tarjetas esperando revisión del flujo de trabajo.'
+      },
+      emptyFiltered: {
+        heading: 'Ninguna revisión de tarjeta pendiente coincide con esta búsqueda',
+        description: 'Prueba con otro espacio, tablero, tarjeta o término de etapa.'
+      }
     },
     awaitingApproval: {
       heading: 'Esperando aprobación',
@@ -1338,7 +1378,8 @@ const JA_MESSAGES = freezeCatalog({
       cardsMissingRequiredLocalesLabel: '必須 locale が不足しているカード',
       openLocaleRequestCountLabel: '未対応の locale リクエスト',
       awaitingHumanVerificationCountLabel: '人の確認待ち',
-      agentProposalCountLabel: 'エージェント提案'
+      agentProposalCountLabel: 'エージェント提案',
+      pendingCardReviewCountLabel: '保留中のカードレビュー'
     },
     directory: {
       heading: 'ボード一覧',
@@ -1397,6 +1438,25 @@ const JA_MESSAGES = freezeCatalog({
       savedStatus: '{board}: 権限を{role}に保存しました。',
       openBoardHelp: 'このボードを開くには自分に権限を割り当ててください。',
       requiredError: '保存する前に権限を選択してください。'
+    },
+    pendingCardReviews: {
+      heading: '保留中のカードレビュー',
+      description: '現在アクティブなワークフローレビューステージで待機しているカードを、ボード横断で一覧表示します。',
+      boardColumnLabel: 'ボード',
+      cardColumnLabel: 'カード',
+      stageColumnLabel: 'ステージ',
+      stateColumnLabel: '状態',
+      updatedAtColumnLabel: 'カード更新日時',
+      actionsColumnLabel: '操作',
+      openBoardAction: 'ボードを開く',
+      empty: {
+        heading: '保留中のカードレビューはありません',
+        description: '現在、ワークフローレビュー待ちのカードはありません。'
+      },
+      emptyFiltered: {
+        heading: '検索条件に一致する保留中のカードレビューはありません',
+        description: '別のワークスペース名、ボード名、カード名、またはステージ名で試してください。'
+      }
     },
     awaitingApproval: {
       heading: '承認待ち',
