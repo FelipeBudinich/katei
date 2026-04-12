@@ -40,8 +40,11 @@ export function buildCardEditorMutationPlan({
           args: [
             boardId,
             {
-              ...input,
-              stageId: targetStageId
+              stageId: targetStageId,
+              title: input?.title,
+              detailsMarkdown: input?.detailsMarkdown,
+              priority: input?.priority,
+              requiresReview: input?.requiresReview === true
             }
           ]
         }

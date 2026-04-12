@@ -656,6 +656,14 @@ test('card.create mints a server-side card id and stores the card in the request
   assert.deepEqual(workspace.boards.main.stages.doing.cardIds, ['card_srv001']);
   assert.equal(workspace.boards.main.cards.card_srv001.createdAt, '2026-03-31T10:00:00.000Z');
   assert.equal(workspace.boards.main.cards.card_srv001.updatedAt, '2026-03-31T10:00:00.000Z');
+  assert.deepEqual(workspace.boards.main.cards.card_srv001.workflowReview, {
+    required: false,
+    currentStageId: null,
+    status: null,
+    decidedAt: null,
+    decidedBy: null,
+    decidedByRole: null
+  });
   assert.deepEqual(workspace.boards.main.cards.card_srv001.localeRequests, {});
   assert.deepEqual(workspace.boards.main.cards.card_srv001.contentByLocale.en, {
     title: 'Ship service',
@@ -669,6 +677,64 @@ test('card.create mints a server-side card id and stores the card in the request
       includesHumanInput: true
     },
     review: createReview('human')
+  });
+});
+
+test('card.create stores a required workflowReview without pending status outside review-enabled stages', () => {
+  const { workspace } = applyWorkspaceCommand({
+    record: createRecord(),
+    command: {
+      clientMutationId: 'm2_review_required',
+      type: 'card.create',
+      payload: {
+        boardId: 'main',
+        stageId: 'doing',
+        title: 'Needs workflow review',
+        requiresReview: true
+      }
+    },
+    expectedRevision: 0,
+    context: createContext()
+  });
+
+  assert.deepEqual(workspace.boards.main.cards.card_srv001.workflowReview, {
+    required: true,
+    currentStageId: null,
+    status: null,
+    decidedAt: null,
+    decidedBy: null,
+    decidedByRole: null
+  });
+});
+
+test('card.create starts workflowReview as pending in review-enabled stages', () => {
+  const workspace = createWorkspaceForActor();
+  workspace.boards.main.stages.backlog.actions = ['card.create', 'card.review'];
+  workspace.boards.main.stages.backlog.actionIds = ['card.create', 'card.review'];
+
+  const { workspace: nextWorkspace } = applyWorkspaceCommand({
+    record: createRecord(workspace, 0),
+    command: {
+      clientMutationId: 'm2_review_pending',
+      type: 'card.create',
+      payload: {
+        boardId: 'main',
+        stageId: 'backlog',
+        title: 'Ready for review',
+        requiresReview: true
+      }
+    },
+    expectedRevision: 0,
+    context: createContext()
+  });
+
+  assert.deepEqual(nextWorkspace.boards.main.cards.card_srv001.workflowReview, {
+    required: true,
+    currentStageId: 'backlog',
+    status: 'pending',
+    decidedAt: null,
+    decidedBy: null,
+    decidedByRole: null
   });
 });
 

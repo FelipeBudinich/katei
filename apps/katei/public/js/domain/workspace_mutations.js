@@ -5,6 +5,7 @@ import {
   getStoredCardContentVariant,
   upsertCardContentVariant
 } from './card_localization.js';
+import { createCardWorkflowReview } from './card_workflow_review.js';
 import { stageSupportsAction } from './board_stage_actions.js';
 import {
   DEFAULT_PRIORITY,
@@ -117,6 +118,11 @@ export function createCard(workspace, boardId, input) {
   const initialStageId =
     (typeof input?.stageId === 'string' && input.stageId.trim()) ? input.stageId : board.stageOrder[0];
   const sourceLocale = board.languagePolicy.sourceLocale;
+  const requiresReview = input?.requiresReview === true;
+  const workflowReviewStageId =
+    requiresReview && stageSupportsAction(board, initialStageId, 'card.review')
+      ? initialStageId
+      : null;
 
   assertValidColumnId(initialStageId, board);
 
@@ -129,6 +135,10 @@ export function createCard(workspace, boardId, input) {
     priority: normalizePriority(input?.priority ?? DEFAULT_PRIORITY),
     createdAt: timestamp,
     updatedAt: timestamp,
+    workflowReview: createCardWorkflowReview({
+      required: requiresReview,
+      currentStageId: workflowReviewStageId
+    }),
     localeRequests: {},
     contentByLocale: {
       [sourceLocale]: {

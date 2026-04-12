@@ -15,5 +15,6 @@ export * from './board_ai_localization.js';
 export * from './board_permissions.js';
 export * from './card_localization.js';
 export * from './card_localization_requests.js';
+export * from './card_workflow_review.js';
 export * from './localized_content_guard.js';
 export * from './workspace_migrations.js';

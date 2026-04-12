@@ -47,6 +47,7 @@ import {
   getOpenLocalizationRequest,
   requestCardLocale
 } from '../../public/js/domain/card_localization_requests.js';
+import { createCardWorkflowReview } from '../../public/js/domain/card_workflow_review.js';
 import {
   cloneWorkspace,
   createWorkspaceBoard,
@@ -800,12 +801,21 @@ function applyCardCreate(workspace, command, context) {
   const cardId = context.createCardId();
   const initialStageId = command.payload.stageId;
   const sourceLocale = board.languagePolicy.sourceLocale;
+  const requiresReview = command.payload.requiresReview === true;
+  const workflowReviewStageId =
+    requiresReview && stageSupportsAction(board, initialStageId, 'card.review')
+      ? initialStageId
+      : null;
 
   board.cards[cardId] = {
     id: cardId,
     priority: normalizePriority(command.payload.priority ?? DEFAULT_PRIORITY),
     createdAt: context.now,
     updatedAt: context.now,
+    workflowReview: createCardWorkflowReview({
+      required: requiresReview,
+      currentStageId: workflowReviewStageId
+    }),
     localeRequests: {},
     contentByLocale: {
       [sourceLocale]: {

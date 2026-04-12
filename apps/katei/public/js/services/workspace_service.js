@@ -227,7 +227,8 @@ export class WorkspaceService {
       stageId: input?.stageId,
       title: input?.title,
       detailsMarkdown: input?.detailsMarkdown,
-      priority: input?.priority
+      priority: input?.priority,
+      requiresReview: input?.requiresReview === true
     });
   }
 

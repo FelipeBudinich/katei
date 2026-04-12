@@ -7,6 +7,7 @@ import { validateCardContentByLocale } from './card_localization.js';
 import {
   validateCardLocaleRequests
 } from './card_localization_requests.js';
+import { validateCardWorkflowReview } from './card_workflow_review.js';
 import {
   COLUMN_ORDER,
   PRIORITY_ORDER,
@@ -191,6 +192,7 @@ function isValidCard(card, cardId, board) {
       typeof card.updatedAt === 'string' &&
       validateCardContentByLocale(card, board) &&
       validateCardLocaleRequests(card) &&
+      validateCardWorkflowReview(card, { validStageIds: new Set(board?.stageOrder ?? []) }) &&
       isValidPriority(card.priority)
   );
 }

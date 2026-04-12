@@ -543,7 +543,8 @@ test('WorkspaceService createCard calls repository.applyCommand and returns work
         stageId: 'doing',
         title: 'Ship service rewrite',
         detailsMarkdown: 'Server is the source of truth',
-        priority: 'urgent'
+        priority: 'urgent',
+        requiresReview: true
       }),
     expectedType: 'card.create',
     expectedPayload: {
@@ -551,7 +552,8 @@ test('WorkspaceService createCard calls repository.applyCommand and returns work
       stageId: 'doing',
       title: 'Ship service rewrite',
       detailsMarkdown: 'Server is the source of truth',
-      priority: 'urgent'
+      priority: 'urgent',
+      requiresReview: true
     }
   });
 });

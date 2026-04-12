@@ -573,6 +573,86 @@ test('card editor dispatches verify-locale with board, card, and locale payload'
   ]);
 });
 
+test('card editor submit serializes requiresReview into the save payload', () => {
+  const controller = Object.create(CardEditorController.prototype);
+  const dispatchedEvents = [];
+  const originalFormData = globalThis.FormData;
+  let prevented = false;
+  let closeCalls = 0;
+
+  globalThis.FormData = class FormDataDouble {
+    constructor(form) {
+      this.form = form;
+    }
+
+    get(name) {
+      return Object.prototype.hasOwnProperty.call(this.form.values, name)
+        ? this.form.values[name]
+        : null;
+    }
+  };
+
+  controller.isReadOnlyLocaleView = false;
+  controller.selectedLocale = null;
+  controller.formTarget = {
+    values: {
+      mode: 'create',
+      boardId: 'main',
+      cardId: '',
+      sourceStageId: '',
+      targetStageId: 'doing',
+      title: 'Create me',
+      detailsMarkdown: 'Needs approval',
+      priority: 'important',
+      requiresReview: 'true'
+    }
+  };
+  controller.dispatch = (name, payload) => {
+    dispatchedEvents.push({ name, payload });
+  };
+  controller.closeDialog = () => {
+    closeCalls += 1;
+  };
+
+  try {
+    CardEditorController.prototype.submit.call(controller, {
+      preventDefault() {
+        prevented = true;
+      }
+    });
+  } finally {
+    if (typeof originalFormData === 'undefined') {
+      delete globalThis.FormData;
+    } else {
+      globalThis.FormData = originalFormData;
+    }
+  }
+
+  assert.equal(prevented, true);
+  assert.equal(closeCalls, 1);
+  assert.deepEqual(dispatchedEvents, [
+    {
+      name: 'save',
+      payload: {
+        detail: {
+          mode: 'create',
+          boardId: 'main',
+          cardId: '',
+          locale: null,
+          sourceStageId: '',
+          targetStageId: 'doing',
+          input: {
+            title: 'Create me',
+            detailsMarkdown: 'Needs approval',
+            priority: 'important',
+            requiresReview: true
+          }
+        }
+      }
+    }
+  ]);
+});
+
 test('viewers stay read-only in the localized card dialog state', () => {
   const uiState = createLocalizedCardEditorUiState({
     board: createBoard(),

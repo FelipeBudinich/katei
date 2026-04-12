@@ -44,6 +44,8 @@ export default class extends Controller {
     'priorityOption',
     'titleInput',
     'markdownInput',
+    'workflowReviewSection',
+    'requiresReviewInput',
     'localeSection',
     'localeSelect',
     'localeSummary',
@@ -163,6 +165,9 @@ export default class extends Controller {
     this.sourceStageIdInputTarget.value = sourceStageId;
     this.targetStageIdInputTarget.value = targetStageId;
     this.priorityInputTarget.value = card?.priority ?? 'important';
+    if (this.hasRequiresReviewInputTarget) {
+      this.requiresReviewInputTarget.checked = false;
+    }
     this.closeStatusMenu();
     this.closePriorityMenu();
     this.ensureEditor().value('');
@@ -177,6 +182,7 @@ export default class extends Controller {
       sourceStageId,
       targetStageId
     });
+    this.syncWorkflowReviewSection({ isCreateMode: nextMode === 'create' });
 
     openSheetDialog(this.dialogTarget);
 
@@ -546,7 +552,8 @@ export default class extends Controller {
         input: {
           title: formData.get('title'),
           detailsMarkdown: formData.get('detailsMarkdown'),
-          priority: formData.get('priority')
+          priority: formData.get('priority'),
+          requiresReview: formData.get('requiresReview') === 'true'
         }
       }
     });
@@ -856,6 +863,21 @@ export default class extends Controller {
     });
   }
 
+  syncWorkflowReviewSection({ isCreateMode }) {
+    if (!this.hasWorkflowReviewSectionTarget || !this.hasRequiresReviewInputTarget) {
+      return;
+    }
+
+    const shouldShow = isCreateMode && !this.isReadOnlyLocaleView;
+
+    this.workflowReviewSectionTarget.hidden = !shouldShow;
+    this.requiresReviewInputTarget.disabled = !shouldShow;
+
+    if (!shouldShow) {
+      this.requiresReviewInputTarget.checked = false;
+    }
+  }
+
   renderLocalizedReadSection(localizedView) {
     const shouldShowLocaleSection = Boolean(this.card);
     this.localeSectionTarget.hidden = !shouldShowLocaleSection;
@@ -1081,6 +1103,15 @@ export default class extends Controller {
     this.triggerElement = null;
     this.isGeneratingLocale = false;
     this.pendingGenerateLocale = null;
+
+    if (this.hasWorkflowReviewSectionTarget) {
+      this.workflowReviewSectionTarget.hidden = true;
+    }
+
+    if (this.hasRequiresReviewInputTarget) {
+      this.requiresReviewInputTarget.checked = false;
+      this.requiresReviewInputTarget.disabled = true;
+    }
   }
 }
 

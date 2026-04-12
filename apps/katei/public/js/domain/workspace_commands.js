@@ -374,6 +374,10 @@ function validateCardCreatePayload(payload) {
     return invalid(`card.create payload.priority must be one of: ${PRIORITY_ORDER.join(', ')}`);
   }
 
+  if (payload.requiresReview != null && typeof payload.requiresReview !== 'boolean') {
+    return invalid('card.create payload.requiresReview must be a boolean when provided.');
+  }
+
   return valid();
 }
 

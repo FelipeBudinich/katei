@@ -172,7 +172,8 @@ test('validateWorkspaceCommand accepts valid command envelopes', () => {
         stageId: 'doing',
         title: 'Ship step 6b.1',
         detailsMarkdown: 'Contract only',
-        priority: 'urgent'
+        priority: 'urgent',
+        requiresReview: true
       }
     },
     {
@@ -716,6 +717,20 @@ test('validateWorkspaceCommand rejects invalid payloads', () => {
   assert.equal(
     validateWorkspaceCommand({
       clientMutationId: 'm4',
+      type: 'card.create',
+      payload: {
+        boardId: 'main',
+        stageId: 'doing',
+        title: 'Bad review flag',
+        requiresReview: 'yes'
+      }
+    }),
+    false
+  );
+
+  assert.equal(
+    validateWorkspaceCommand({
+      clientMutationId: 'm5',
       type: 'card.move',
       payload: {
         boardId: 'main',
@@ -728,7 +743,7 @@ test('validateWorkspaceCommand rejects invalid payloads', () => {
 
   assert.equal(
     validateWorkspaceCommand({
-      clientMutationId: 'm5',
+      clientMutationId: 'm6',
       type: 'board.update',
       payload: {
         boardId: 'main',

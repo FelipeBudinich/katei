@@ -21,6 +21,32 @@ test('createCard stores detailsMarkdown on new cards', () => {
   assert.equal(board.cards[cardId].priority, 'urgent');
 });
 
+test('createCard starts workflowReview as pending when the stage supports card.review', () => {
+  const workspace = createEmptyWorkspace();
+
+  workspace.boards.main.stages.backlog.actions = ['card.create', 'card.review'];
+  workspace.boards.main.stages.backlog.actionIds = ['card.create', 'card.review'];
+
+  const nextWorkspace = createCard(workspace, 'main', {
+    title: 'Workflow review card',
+    detailsMarkdown: 'Needs approval',
+    priority: 'important',
+    requiresReview: true
+  });
+  const board = nextWorkspace.boards.main;
+  const [cardId] = board.stages.backlog.cardIds;
+
+  assert.deepEqual(board.cards[cardId].workflowReview, {
+    required: true,
+    currentStageId: 'backlog',
+    status: 'pending',
+    decidedAt: null,
+    decidedBy: null,
+    decidedByRole: null
+  });
+  assert.equal(validateWorkspaceShape(nextWorkspace), true);
+});
+
 test('createCard inserts into an explicitly requested create-enabled stage', () => {
   const workspace = createEmptyWorkspace();
   const nextWorkspace = createCard(workspace, 'main', {
@@ -235,6 +261,33 @@ test('validateWorkspaceShape accepts cards with empty localeRequests', () => {
     }
   };
   board.stages.backlog.cardIds.push('card_1');
+
+  assert.equal(validateWorkspaceShape(workspace), true);
+});
+
+test('validateWorkspaceShape accepts existing cards without workflowReview', () => {
+  const workspace = createEmptyWorkspace();
+  const board = workspace.boards.main;
+
+  board.cards.card_existing = {
+    id: 'card_existing',
+    priority: 'important',
+    createdAt: '2026-03-31T09:00:00.000Z',
+    updatedAt: '2026-03-31T09:00:00.000Z',
+    localeRequests: {},
+    contentByLocale: {
+      en: {
+        title: 'Existing card',
+        detailsMarkdown: '',
+        provenance: {
+          actor: { type: 'human', id: 'viewer_123' },
+          timestamp: '2026-03-31T09:00:00.000Z',
+          includesHumanInput: true
+        }
+      }
+    }
+  };
+  board.stages.backlog.cardIds.push('card_existing');
 
   assert.equal(validateWorkspaceShape(workspace), true);
 });

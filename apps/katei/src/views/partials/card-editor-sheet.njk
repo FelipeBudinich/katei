@@ -210,6 +210,22 @@
           data-card-editor-target="markdownInput"
         ></textarea>
       </label>
+
+      <section class="space-y-2" hidden data-card-editor-target="workflowReviewSection">
+        <label class="flex items-start gap-3 text-sm leading-6 text-strong">
+          <input
+            type="checkbox"
+            name="requiresReview"
+            value="true"
+            disabled
+            data-card-editor-target="requiresReviewInput"
+          >
+          <span class="space-y-1">
+            <span>{{ t('cardEditor.requiresReviewLabel') }}</span>
+            <span class="block text-xs leading-5 text-muted">{{ t('cardEditor.requiresReviewHelp') }}</span>
+          </span>
+        </label>
+      </section>
     </form>
   </div>
 </dialog>

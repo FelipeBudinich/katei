@@ -2671,7 +2671,8 @@ test('create mode planning still uses createCard without regressing the old flow
     input: {
       title: 'Create me',
       detailsMarkdown: 'Still source-locale pinned for now',
-      priority: 'important'
+      priority: 'important',
+      requiresReview: true
     }
   });
 
@@ -2685,7 +2686,8 @@ test('create mode planning still uses createCard without regressing the old flow
           stageId: 'doing',
           title: 'Create me',
           detailsMarkdown: 'Still source-locale pinned for now',
-          priority: 'important'
+          priority: 'important',
+          requiresReview: true
         }
       ]
     }
