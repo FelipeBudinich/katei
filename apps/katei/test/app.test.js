@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import nunjucks from 'nunjucks';
@@ -50,6 +51,10 @@ const WORKSPACE_VENDOR_ASSET_PATHS = [
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const WORKSPACE_VIEWS_PATH = path.join(__dirname, '../src/views');
+const kateiPackageJson = JSON.parse(
+  await fs.readFile(new URL('../package.json', import.meta.url), 'utf8')
+);
+const EXPECTED_LOCAL_SW_BUILD_ID = `dev-${kateiPackageJson.version}`;
 
 function createTestApp({ env = {}, googleTokenVerifier, workspaceRecordRepository, portfolioReadModel } = {}) {
   return createApp({
@@ -156,8 +161,15 @@ test('GET /sw.js returns the Katei service worker', async () => {
   const response = await request(app).get('/sw.js');
 
   assert.equal(response.status, 200);
-  assert.match(response.text, /const CACHE_VERSION = 'v1';/);
+  assert.match(
+    response.text,
+    new RegExp(`const BUILD_ID = ["']${escapeForRegex(EXPECTED_LOCAL_SW_BUILD_ID)}["'];`)
+  );
+  assert.match(response.text, /katei-static-/);
   assert.match(response.text, /const OFFLINE_URL = '\/offline\.html';/);
+  assert.doesNotMatch(response.text, /const CACHE_VERSION = 'v1';/);
+  assert.doesNotMatch(response.text, /'BUILD_ID'/);
+  assert.doesNotMatch(response.text, /\/\* PRECACHE_URLS \*\//);
 });
 
 test('GET / localizes landing page chrome for es-CL', async () => {

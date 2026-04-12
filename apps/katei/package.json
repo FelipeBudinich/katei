@@ -1,15 +1,17 @@
 {
   "name": "@katei/app",
   "private": true,
+  "version": "0.0.0",
   "type": "module",
   "engines": {
-    "node": ">=20"
+    "node": "24.x"
   },
   "scripts": {
     "dev": "concurrently -k -n app \"npm:dev:server\"",
     "dev:server": "nodemon -L --watch src --watch public/js --watch styles --watch ../../packages/brand/src --ext js,njk,css --exec \"npm run build:css && node src/server.js\"",
     "build": "node -e \"console.log('No app-local build step. Prebuild public/assets/app.css from the monorepo before subtree deploy.')\"",
     "build:css": "tailwindcss -i ./styles/app.css -o ./public/assets/app.css",
+    "build:pwa": "node ./scripts/build_pwa_assets.mjs",
     "start": "node src/server.js",
     "test": "node --test"
   },

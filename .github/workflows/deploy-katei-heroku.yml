@@ -62,47 +62,32 @@ jobs:
           test "$HEROKU_API_KEY" != "YOUR_HEROKU_API_KEY" || { echo "Replace YOUR_HEROKU_API_KEY with a real Heroku API key as a Github Repository secret"; exit 1; }
           echo "Deploying branch '${GITHUB_REF_NAME}' to app '${HEROKU_APP_NAME}'"
 
-      - name: Create temporary deploy commit
-        id: prep
+      - name: Set PWA build id
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          git add apps/katei/public/assets/app.css
-
-          if ! git diff --cached --quiet; then
-            git commit -m "Build Katei CSS for Heroku deploy"
-          fi
-
-          echo "ref=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-
-      - name: Split Katei subtree
-        id: split
-        run: |
-          echo "sha=$(git subtree split --prefix=apps/katei ${{ steps.prep.outputs.ref }})" >> "$GITHUB_OUTPUT"
+          echo "PWA_BUILD_ID=${GITHUB_SHA}" >> "$GITHUB_ENV"
 
       - name: Prepare deploy directory
         run: |
-          rm -rf deploy-katei
-          mkdir -p deploy-katei
-          git archive ${{ steps.split.outputs.sha }} | tar -x -C deploy-katei
+          rm -rf "$RUNNER_TEMP/katei-deploy"
+          mkdir -p "$RUNNER_TEMP/katei-deploy"
+          rsync -a apps/katei/ "$RUNNER_TEMP/katei-deploy/"
+          cd "$RUNNER_TEMP/katei-deploy"
+          node ./scripts/build_pwa_assets.mjs
+          test -f public/sw.js
 
       - name: Verify Heroku git remote
         run: |
-          cd deploy-katei
+          cd "$RUNNER_TEMP/katei-deploy"
           git init
           git remote add heroku "https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git"
           git ls-remote heroku >/dev/null
 
       - name: Deploy to Heroku
         run: |
-          cd deploy-katei
-          git init
+          cd "$RUNNER_TEMP/katei-deploy"
           git config user.name "github-actions"
           git config user.email "actions@github.com"
-          git add .
+          git add -A
           git commit -m "Deploy Katei from ${GITHUB_SHA}"
           git branch -M main
-          git remote remove heroku || true
-          git remote add heroku "https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git"
-          git push heroku main:main --force
+          git push heroku HEAD:main --force

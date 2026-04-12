@@ -1,18 +1,8 @@
-const BUILD_ID = "dev-0.0.0";
+const BUILD_ID = 'BUILD_ID';
 const STATIC_CACHE_NAME = `katei-static-${BUILD_ID}`;
 const OFFLINE_CACHE_NAME = `katei-offline-${BUILD_ID}`;
 const OFFLINE_URL = '/offline.html';
-const PRECACHE_URLS = Object.freeze([
-  "/offline.html",
-  "/manifest.webmanifest",
-  "/favicon.svg",
-  "/background.webp",
-  "/assets/app.css",
-  "/js/app.js",
-  "/icons/icon-192.png",
-  "/icons/icon-512.png",
-  "/icons/icon-maskable-512.png"
-]);
+const PRECACHE_URLS = Object.freeze(/* PRECACHE_URLS */ []);
 const STATIC_PRECACHE_URLS = PRECACHE_URLS.filter((url) => url !== OFFLINE_URL);
 
 const CACHEABLE_PATH_PREFIXES = [

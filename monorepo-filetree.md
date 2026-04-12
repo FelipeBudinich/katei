@@ -80,13 +80,24 @@ katei/
 │       ├── public/
 │       │   ├── assets/
 │       │   │   └── …
+│       │   ├── icons/
+│       │   │   └── …
 │       │   ├── js/
 │       │   │   └── …
 │       │   ├── svg/
 │       │   │   └── …
 │       │   ├── background.webp
 │       │   ├── favicon.svg
-│       │   └── profile.svg
+│       │   ├── manifest.webmanifest
+│       │   ├── offline.html
+│       │   ├── profile.svg
+│       │   ├── sw.js
+│       │   ├── sw.template.js
+│       │   ├── switch.svg
+│       │   ├── traffic-green.svg
+│       │   └── traffic.svg
+│       ├── scripts/
+│       │   └── build_pwa_assets.mjs
 │       ├── src/
 │       │   ├── ai/
 │       │   │   └── …
@@ -130,12 +141,14 @@ katei/
 │       │   ├── board_schema.test.js
 │       │   ├── board_stage_config_controller.test.js
 │       │   ├── board_workflow.test.js
+│       │   ├── build_pwa_assets.test.js
 │       │   ├── card_editor_controller.test.js
 │       │   ├── card_localization.test.js
 │       │   ├── card_localization_requests.test.js
 │       │   ├── card_localization_runtime.test.js
 │       │   ├── config.test.js
 │       │   ├── debug_auth.test.js
+│       │   ├── default_workspace_title.test.js
 │       │   ├── dialog_initial_focus.test.js
 │       │   ├── google_identity.test.js
 │       │   ├── http_workspace_repository.test.js
@@ -146,12 +159,15 @@ katei/
 │       │   ├── localized_content_guard.test.js
 │       │   ├── markdown.test.js
 │       │   ├── mongo_client.test.js
+│       │   ├── mongo_portfolio_read_model.test.js
 │       │   ├── mongo_workspace_record_repository.test.js
 │       │   ├── mutation_context.test.js
 │       │   ├── openai_localizer.test.js
 │       │   ├── openai_stage_prompt_runner.test.js
+│       │   ├── portfolio_controller.test.js
 │       │   ├── session_controller.test.js
 │       │   ├── session_cookie.test.js
+│       │   ├── sheet_dialog.test.js
 │       │   ├── stage_ui.test.js
 │       │   ├── ui_locale_picker_controller.test.js
 │       │   ├── verify_google_id_token.test.js
