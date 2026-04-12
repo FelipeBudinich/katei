@@ -33,7 +33,7 @@ test('createCard writes source-locale content for new cards', () => {
     priority: 'urgent'
   });
   const board = nextWorkspace.boards.main;
-  const [cardId] = board.stages.backlog.cardIds;
+  const [cardId] = board.stages.todo.cardIds;
   const card = board.cards[cardId];
 
   assert.deepEqual(Object.keys(card.contentByLocale), ['ja']);
@@ -88,7 +88,7 @@ test('updateCard updates only source-locale content and provenance', () => {
       }
     }
   };
-  board.stages.backlog.cardIds.push('card_1');
+  board.stages.todo.cardIds.push('card_1');
 
   const nextWorkspace = updateCard(workspace, 'main', 'card_1', {
     detailsMarkdown: '更新された本文'

@@ -9,36 +9,28 @@ import { normalizeBoardStageReviewPolicy } from './board_stage_review_policy.js'
 
 const DEFAULT_BOARD_STAGES = Object.freeze([
   Object.freeze({
-    id: 'backlog',
-    title: 'Backlog',
+    id: 'todo',
+    title: 'Todo',
     allowedTransitionStageIds: Object.freeze(['doing', 'done']),
     templateIds: Object.freeze([]),
-    actions: Object.freeze(createBoardStageActions(getDefaultBoardStageActionIds('backlog'))),
-    actionIds: Object.freeze(getDefaultBoardStageActionIds('backlog'))
+    actions: Object.freeze(createBoardStageActions(['card.create'])),
+    actionIds: Object.freeze(['card.create'])
   }),
   Object.freeze({
     id: 'doing',
     title: 'Doing',
-    allowedTransitionStageIds: Object.freeze(['backlog', 'done']),
+    allowedTransitionStageIds: Object.freeze(['todo', 'done']),
     templateIds: Object.freeze([]),
-    actions: Object.freeze(createBoardStageActions(getDefaultBoardStageActionIds('doing'))),
-    actionIds: Object.freeze(getDefaultBoardStageActionIds('doing'))
+    actions: Object.freeze(createBoardStageActions([])),
+    actionIds: Object.freeze([])
   }),
   Object.freeze({
     id: 'done',
     title: 'Done',
-    allowedTransitionStageIds: Object.freeze(['backlog', 'doing', 'archived']),
+    allowedTransitionStageIds: Object.freeze(['todo', 'doing']),
     templateIds: Object.freeze([]),
-    actions: Object.freeze(createBoardStageActions(getDefaultBoardStageActionIds('done'))),
-    actionIds: Object.freeze(getDefaultBoardStageActionIds('done'))
-  }),
-  Object.freeze({
-    id: 'archived',
-    title: 'Archived',
-    allowedTransitionStageIds: Object.freeze(['backlog', 'doing', 'done']),
-    templateIds: Object.freeze([]),
-    actions: Object.freeze(createBoardStageActions(getDefaultBoardStageActionIds('archived'))),
-    actionIds: Object.freeze(getDefaultBoardStageActionIds('archived'))
+    actions: Object.freeze(createBoardStageActions(['card.review', 'card.delete'])),
+    actionIds: Object.freeze(['card.review', 'card.delete'])
   })
 ]);
 

@@ -1662,7 +1662,7 @@ test('GET /boards?lang=ja renders localized card content in server HTML and keep
     },
     localeRequests: {}
   };
-  board.stages.backlog.cardIds = [cardId];
+  board.stages.todo.cardIds = [cardId];
   board.languagePolicy = {
     sourceLocale: 'en',
     defaultLocale: 'en',
@@ -1697,7 +1697,7 @@ test('GET /boards?lang=ja renders localized card content in server HTML and keep
   assert.match(
     response.text,
     new RegExp(
-      `<header\\s+class="card-item-toolbar"[\\s\\S]*?data-action="click->workspace#openViewFromToolbar keydown->workspace#openViewFromToolbarKeydown"[\\s\\S]*?data-card-id="${escapeForRegex(cardId)}"[\\s\\S]*?data-stage-id="backlog"[\\s\\S]*?data-column-id="backlog"[\\s\\S]*?role="button"[\\s\\S]*?tabindex="0"[\\s\\S]*?aria-label="カードを表示"`
+      `<header\\s+class="card-item-toolbar"[\\s\\S]*?data-action="click->workspace#openViewFromToolbar keydown->workspace#openViewFromToolbarKeydown"[\\s\\S]*?data-card-id="${escapeForRegex(cardId)}"[\\s\\S]*?data-stage-id="todo"[\\s\\S]*?data-column-id="todo"[\\s\\S]*?role="button"[\\s\\S]*?tabindex="0"[\\s\\S]*?aria-label="カードを表示"`
     )
   );
   assert.match(response.text, /<h3 class="card-item-title text-base text-strong" data-card-field="title">日本語チェックリスト<\/h3>/);
@@ -1730,7 +1730,7 @@ test('GET /boards?lang=es-CL renders same-language card content when only generi
     },
     localeRequests: {}
   };
-  board.stages.backlog.cardIds = [cardId];
+  board.stages.todo.cardIds = [cardId];
   board.languagePolicy = {
     sourceLocale: 'en',
     defaultLocale: 'en',
@@ -1796,7 +1796,7 @@ test('GET /boards?lang=ja repairs legacy jp card content and language policy for
       }
     }
   };
-  board.stages.backlog.cardIds = [cardId];
+  board.stages.todo.cardIds = [cardId];
   board.languagePolicy = {
     sourceLocale: 'en',
     defaultLocale: 'jp',
@@ -2424,7 +2424,7 @@ test('GET /boards localizes server-rendered chrome for ja without changing user-
   assert.match(response.text, /aria-label="カードを追加"/);
   assert.match(response.text, /data-workspace-target="boardTitle">過程</);
   assert.match(response.text, />Tester</);
-  assert.match(response.text, />\s*Backlog\s*</);
+  assert.match(response.text, />\s*Todo\s*</);
   assert.match(response.text, /aria-label="0 件のカード"/);
   assert.match(response.text, /<option value="ja" selected>\s*日本語\s*<\/option>/);
   assert.match(response.text, /UI言語/);
@@ -2919,7 +2919,7 @@ test('POST /api/workspace/commands persists locale review activity for viewer ve
     includeInvite: false
   });
   const memberBoard = sharedRecord.workspace.boards.member;
-  const [cardId] = memberBoard.stages.backlog.cardIds;
+  const [cardId] = memberBoard.stages.todo.cardIds;
 
   memberBoard.languagePolicy = {
     sourceLocale: 'en',
@@ -3403,7 +3403,7 @@ test('buildWorkspacePageModel localizes fixed labels without rewriting user-auth
     createdAt: '2026-03-30T10:00:00.000Z',
     updatedAt: '2026-03-30T11:00:00.000Z'
   };
-  board.stages.backlog.cardIds = [cardId];
+  board.stages.todo.cardIds = [cardId];
 
   const viewModel = buildWorkspacePageModel(
     { sub: 'sub_123', name: 'Tester' },
@@ -3413,12 +3413,12 @@ test('buildWorkspacePageModel localizes fixed labels without rewriting user-auth
   );
 
   assert.equal(viewModel.board.title, 'Roadmap alpha');
-  assert.equal(viewModel.workspace.boards[board.id].stages.backlog.title, 'Backlog');
+  assert.equal(viewModel.workspace.boards[board.id].stages.todo.title, 'Todo');
   assert.equal(viewModel.board.cards[cardId].title, 'Ship launch checklist');
   assert.equal(viewModel.board.cards[cardId].detailsMarkdown, 'Owner: Mina');
   assert.equal(viewModel.workspace.boards[board.id].cards[cardId].contentByLocale.en.title, 'Ship launch checklist');
   assert.equal(viewModel.workspace.boards[board.id].cards[cardId].contentByLocale.en.detailsMarkdown, 'Owner: Mina');
-  assert.equal(viewModel.columnDefinitions.find((column) => column.id === 'backlog')?.title, 'バックログ');
+  assert.equal(viewModel.columnDefinitions.find((column) => column.id === 'todo')?.title, 'やること');
   assert.equal(viewModel.priorityDefinitions.find((priority) => priority.id === 'urgent')?.label, '緊急');
 });
 
@@ -3450,7 +3450,7 @@ test('buildWorkspacePageModel uses the ui locale for server-rendered card conten
     supportedLocales: ['en', 'ja'],
     requiredLocales: ['en']
   };
-  board.stages.backlog.cardIds = [cardId];
+  board.stages.todo.cardIds = [cardId];
 
   const viewModel = buildWorkspacePageModel(
     { sub: 'sub_ja', name: 'Tester' },
@@ -3491,7 +3491,7 @@ test('workspace page first paint uses the active ui locale for rendered board ca
     supportedLocales: ['en', 'ja'],
     requiredLocales: ['en']
   };
-  board.stages.backlog.cardIds = [cardId];
+  board.stages.todo.cardIds = [cardId];
   board.collaboration.memberships = [
     {
       actor: {

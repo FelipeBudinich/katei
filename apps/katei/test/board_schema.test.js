@@ -485,28 +485,22 @@ test('serializeBoardSchemaInput includes stage action ids', () => {
 
   assert.deepEqual(serializeBoardSchemaInput(board).stageDefinitions, [
     {
-      id: 'backlog',
-      title: 'Backlog',
+      id: 'todo',
+      title: 'Todo',
       allowedTransitionStageIds: ['doing', 'done'],
       actionIds: ['card.create']
     },
     {
       id: 'doing',
       title: 'Doing',
-      allowedTransitionStageIds: ['backlog', 'done'],
-      actionIds: ['card.create']
+      allowedTransitionStageIds: ['todo', 'done'],
+      actionIds: []
     },
     {
       id: 'done',
       title: 'Done',
-      allowedTransitionStageIds: ['backlog', 'doing', 'archived'],
-      actionIds: []
-    },
-    {
-      id: 'archived',
-      title: 'Archived',
-      allowedTransitionStageIds: ['backlog', 'doing', 'done'],
-      actionIds: ['card.delete']
+      allowedTransitionStageIds: ['todo', 'doing'],
+      actionIds: ['card.review', 'card.delete']
     }
   ]);
 });
@@ -660,7 +654,7 @@ test('assertBoardSchemaCompatibleWithBoard rejects removing occupied stages or c
       }
     }
   };
-  board.stages.backlog.cardIds.push('card_1');
+  board.stages.todo.cardIds.push('card_1');
 
   assert.throws(
     () =>

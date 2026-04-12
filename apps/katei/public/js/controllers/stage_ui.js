@@ -1,7 +1,7 @@
 import { stageSupportsAction } from '../domain/board_stage_actions.js';
 import { stageSupportsPromptRun } from '../domain/board_stage_prompt_action.js';
 
-export function getDefaultBoardStageId(board, fallbackStageId = 'backlog') {
+export function getDefaultBoardStageId(board, fallbackStageId = 'todo') {
   if (Array.isArray(board?.stageOrder) && board.stageOrder.length > 0) {
     return board.stageOrder[0];
   }

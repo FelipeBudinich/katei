@@ -373,7 +373,7 @@ test('loadOrCreateWorkspaceRecord keeps pending-invite boards visible as redacte
   assert.equal(record.workspace.ui.activeBoardId, 'invite');
   assert.deepEqual(record.workspace.boards.invite.cards, {});
   assert.equal(record.workspace.boards.invite.collaboration.invites[0].email, 'invitee@example.com');
-  assert.equal(record.workspace.boards.invite.stages.backlog.cardIds.length, 0);
+  assert.equal(record.workspace.boards.invite.stages.todo.cardIds.length, 0);
   assert.equal(
     firstCardTitle(collection.getDocument('workspace_shared_invite_projection').workspace.boards.invite),
     'Invite board card'

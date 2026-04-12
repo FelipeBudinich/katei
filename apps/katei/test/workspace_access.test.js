@@ -164,7 +164,7 @@ test('pending-invite viewers keep a visible redacted board shell for acceptance 
   assert.equal(filteredWorkspace.boards.invite.title, 'Invite board');
   assert.deepEqual(filteredWorkspace.boards.invite.cards, {});
   assert.equal(filteredWorkspace.boards.invite.collaboration.invites[0].email, 'invitee@example.com');
-  assert.equal(filteredWorkspace.boards.invite.stages.backlog.cardIds.length, 0);
+  assert.equal(filteredWorkspace.boards.invite.stages.todo.cardIds.length, 0);
 });
 
 test('unrelated viewers lose board visibility and workspace access', () => {

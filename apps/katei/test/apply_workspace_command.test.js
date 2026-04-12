@@ -154,7 +154,7 @@ function createWorkspaceWithCard({ memberships } = {}) {
       })
     }
   };
-  workspace.boards.main.stages.backlog.cardIds = ['card_1'];
+  workspace.boards.main.stages.todo.cardIds = ['card_1'];
   return workspace;
 }
 
@@ -641,7 +641,7 @@ test('card.create mints a server-side card id and stores the card in the request
       type: 'card.create',
       payload: {
         boardId: 'main',
-        stageId: 'doing',
+        stageId: 'todo',
         title: 'Ship service',
         detailsMarkdown: 'Server-authoritative',
         priority: 'urgent'
@@ -652,8 +652,8 @@ test('card.create mints a server-side card id and stores the card in the request
   });
 
   assert.equal(result.cardId, 'card_srv001');
-  assert.deepEqual(workspace.boards.main.stages.backlog.cardIds, []);
-  assert.deepEqual(workspace.boards.main.stages.doing.cardIds, ['card_srv001']);
+  assert.deepEqual(workspace.boards.main.stages.todo.cardIds, ['card_srv001']);
+  assert.deepEqual(workspace.boards.main.stages.doing.cardIds, []);
   assert.equal(workspace.boards.main.cards.card_srv001.createdAt, '2026-03-31T10:00:00.000Z');
   assert.equal(workspace.boards.main.cards.card_srv001.updatedAt, '2026-03-31T10:00:00.000Z');
   assert.deepEqual(workspace.boards.main.cards.card_srv001.workflowReview, {
@@ -688,7 +688,7 @@ test('card.create stores a required workflowReview without pending status outsid
       type: 'card.create',
       payload: {
         boardId: 'main',
-        stageId: 'doing',
+        stageId: 'todo',
         title: 'Needs workflow review',
         requiresReview: true
       }
@@ -709,8 +709,8 @@ test('card.create stores a required workflowReview without pending status outsid
 
 test('card.create starts workflowReview as pending in review-enabled stages', () => {
   const workspace = createWorkspaceForActor();
-  workspace.boards.main.stages.backlog.actions = ['card.create', 'card.review'];
-  workspace.boards.main.stages.backlog.actionIds = ['card.create', 'card.review'];
+  workspace.boards.main.stages.todo.actions = ['card.create', 'card.review'];
+  workspace.boards.main.stages.todo.actionIds = ['card.create', 'card.review'];
 
   const { workspace: nextWorkspace } = applyWorkspaceCommand({
     record: createRecord(workspace, 0),
@@ -719,7 +719,7 @@ test('card.create starts workflowReview as pending in review-enabled stages', ()
       type: 'card.create',
       payload: {
         boardId: 'main',
-        stageId: 'backlog',
+        stageId: 'todo',
         title: 'Ready for review',
         requiresReview: true
       }
@@ -730,7 +730,7 @@ test('card.create starts workflowReview as pending in review-enabled stages', ()
 
   assert.deepEqual(nextWorkspace.boards.main.cards.card_srv001.workflowReview, {
     required: true,
-    currentStageId: 'backlog',
+    currentStageId: 'todo',
     status: 'pending',
     decidedAt: null,
     decidedBy: null,
@@ -747,11 +747,11 @@ test('card.review.approve updates only workflowReview and keeps the card in the 
   const originalBoardUpdatedAt = workspace.boards.main.updatedAt;
   const originalCard = structuredClone(workspace.boards.main.cards.card_1);
 
-  workspace.boards.main.stages.backlog.actions = ['card.create', 'card.review'];
-  workspace.boards.main.stages.backlog.actionIds = ['card.create', 'card.review'];
+  workspace.boards.main.stages.todo.actions = ['card.create', 'card.review'];
+  workspace.boards.main.stages.todo.actionIds = ['card.create', 'card.review'];
   workspace.boards.main.cards.card_1.workflowReview = {
     required: true,
-    currentStageId: 'backlog',
+    currentStageId: 'todo',
     status: 'pending',
     decidedAt: null,
     decidedBy: null,
@@ -780,16 +780,16 @@ test('card.review.approve updates only workflowReview and keeps the card in the 
     noOp: false,
     boardId: 'main',
     cardId: 'card_1',
-    stageId: 'backlog',
+    stageId: 'todo',
     status: 'approved'
   });
-  assert.deepEqual(nextWorkspace.boards.main.stages.backlog.cardIds, ['card_1']);
+  assert.deepEqual(nextWorkspace.boards.main.stages.todo.cardIds, ['card_1']);
   assert.equal(nextWorkspace.boards.main.updatedAt, originalBoardUpdatedAt);
   assert.equal(nextWorkspace.boards.main.cards.card_1.updatedAt, originalCard.updatedAt);
   assert.equal(nextWorkspace.boards.main.cards.card_1.contentByLocale.en.title, originalCard.contentByLocale.en.title);
   assert.deepEqual(nextWorkspace.boards.main.cards.card_1.workflowReview, {
     required: true,
-    currentStageId: 'backlog',
+    currentStageId: 'todo',
     status: 'approved',
     decidedAt: '2026-03-31T11:00:00.000Z',
     decidedBy: {
@@ -805,7 +805,7 @@ test('card.review.approve updates only workflowReview and keeps the card in the 
     cardId: 'card_1'
   });
   assert.deepEqual(activityEvent.details, {
-    stageId: 'backlog',
+    stageId: 'todo',
     previousStatus: 'pending',
     nextStatus: 'approved',
     decidedByRole: 'editor',
@@ -820,11 +820,11 @@ test('card.review.reject records audit details without moving the card', () => {
     ]
   });
 
-  workspace.boards.main.stages.backlog.actions = ['card.create', 'card.review'];
-  workspace.boards.main.stages.backlog.actionIds = ['card.create', 'card.review'];
+  workspace.boards.main.stages.todo.actions = ['card.create', 'card.review'];
+  workspace.boards.main.stages.todo.actionIds = ['card.create', 'card.review'];
   workspace.boards.main.cards.card_1.workflowReview = {
     required: true,
-    currentStageId: 'backlog',
+    currentStageId: 'todo',
     status: 'approved',
     decidedAt: '2026-03-31T10:15:00.000Z',
     decidedBy: {
@@ -851,12 +851,12 @@ test('card.review.reject records audit details without moving the card', () => {
   });
 
   assert.equal(result.type, 'card.review.reject');
-  assert.equal(result.stageId, 'backlog');
+  assert.equal(result.stageId, 'todo');
   assert.equal(result.status, 'rejected');
-  assert.deepEqual(nextWorkspace.boards.main.stages.backlog.cardIds, ['card_1']);
+  assert.deepEqual(nextWorkspace.boards.main.stages.todo.cardIds, ['card_1']);
   assert.deepEqual(nextWorkspace.boards.main.cards.card_1.workflowReview, {
     required: true,
-    currentStageId: 'backlog',
+    currentStageId: 'todo',
     status: 'rejected',
     decidedAt: '2026-03-31T11:30:00.000Z',
     decidedBy: {
@@ -867,7 +867,7 @@ test('card.review.reject records audit details without moving the card', () => {
   });
   assert.equal(activityEvent.type, 'workspace.card.review.rejected');
   assert.deepEqual(activityEvent.details, {
-    stageId: 'backlog',
+    stageId: 'todo',
     previousStatus: 'approved',
     nextStatus: 'rejected',
     decidedByRole: 'admin',
@@ -882,8 +882,8 @@ test('card.review decision requires workflowReview.required to be true', () => {
     ]
   });
 
-  workspace.boards.main.stages.backlog.actions = ['card.create', 'card.review'];
-  workspace.boards.main.stages.backlog.actionIds = ['card.create', 'card.review'];
+  workspace.boards.main.stages.todo.actions = ['card.create', 'card.review'];
+  workspace.boards.main.stages.todo.actionIds = ['card.create', 'card.review'];
   workspace.boards.main.cards.card_1.workflowReview = {
     required: false,
     currentStageId: null,
@@ -921,7 +921,7 @@ test('card.review decision requires the current stage to support card.review', (
 
   workspace.boards.main.cards.card_1.workflowReview = {
     required: true,
-    currentStageId: 'backlog',
+    currentStageId: 'todo',
     status: 'pending',
     decidedAt: null,
     decidedBy: null,
@@ -954,11 +954,11 @@ test('card.review decision rejects viewers', () => {
     ]
   });
 
-  workspace.boards.main.stages.backlog.actions = ['card.create', 'card.review'];
-  workspace.boards.main.stages.backlog.actionIds = ['card.create', 'card.review'];
+  workspace.boards.main.stages.todo.actions = ['card.create', 'card.review'];
+  workspace.boards.main.stages.todo.actionIds = ['card.create', 'card.review'];
   workspace.boards.main.cards.card_1.workflowReview = {
     required: true,
-    currentStageId: 'backlog',
+    currentStageId: 'todo',
     status: 'pending',
     decidedAt: null,
     decidedBy: null,
@@ -992,14 +992,14 @@ test('card.review decision enforces an admin-only stage review policy', () => {
     ]
   });
 
-  workspace.boards.main.stages.backlog.actions = ['card.create', 'card.review'];
-  workspace.boards.main.stages.backlog.actionIds = ['card.create', 'card.review'];
-  workspace.boards.main.stages.backlog.reviewPolicy = {
+  workspace.boards.main.stages.todo.actions = ['card.create', 'card.review'];
+  workspace.boards.main.stages.todo.actionIds = ['card.create', 'card.review'];
+  workspace.boards.main.stages.todo.reviewPolicy = {
     approverRole: 'admin'
   };
   workspace.boards.main.cards.card_1.workflowReview = {
     required: true,
-    currentStageId: 'backlog',
+    currentStageId: 'todo',
     status: 'pending',
     decidedAt: null,
     decidedBy: null,
@@ -1062,7 +1062,7 @@ test('card.create writes only the board source locale when the command engine us
       type: 'card.create',
       payload: {
         boardId: 'main',
-        stageId: 'backlog',
+        stageId: 'todo',
         title: '日本語カード',
         detailsMarkdown: '日本語の本文'
       }
@@ -1085,7 +1085,7 @@ test('card.update changes updatedAt only and preserves createdAt', () => {
       type: 'card.create',
       payload: {
         boardId: 'main',
-        stageId: 'backlog',
+        stageId: 'todo',
         title: 'Original title'
       }
     },
@@ -1127,11 +1127,11 @@ test('card.update resets required workflowReview when source content changes', (
   const workspace = createWorkspaceWithCard({
     memberships: [createMembership({ id: 'viewer_123', role: 'editor' })]
   });
-  workspace.boards.main.stages.backlog.actions = ['card.create', 'card.review'];
-  workspace.boards.main.stages.backlog.actionIds = ['card.create', 'card.review'];
+  workspace.boards.main.stages.todo.actions = ['card.create', 'card.review'];
+  workspace.boards.main.stages.todo.actionIds = ['card.create', 'card.review'];
   workspace.boards.main.cards.card_1.workflowReview = {
     required: true,
-    currentStageId: 'backlog',
+    currentStageId: 'todo',
     status: 'approved',
     decidedAt: '2026-03-31T10:15:00.000Z',
     decidedBy: {
@@ -1160,7 +1160,7 @@ test('card.update resets required workflowReview when source content changes', (
 
   assert.deepEqual(nextWorkspace.boards.main.cards.card_1.workflowReview, {
     required: true,
-    currentStageId: 'backlog',
+    currentStageId: 'todo',
     status: 'pending',
     decidedAt: null,
     decidedBy: null,
@@ -1174,7 +1174,7 @@ test('card.update preserves workflowReview on priority-only changes', () => {
   });
   const workflowReview = {
     required: true,
-    currentStageId: 'backlog',
+    currentStageId: 'todo',
     status: 'approved',
     decidedAt: '2026-03-31T10:15:00.000Z',
     decidedBy: {
@@ -1283,7 +1283,7 @@ test('card.locale.upsert preserves workflowReview decisions', () => {
   });
   const workflowReview = {
     required: true,
-    currentStageId: 'backlog',
+    currentStageId: 'todo',
     status: 'approved',
     decidedAt: '2026-03-31T10:15:00.000Z',
     decidedBy: {
@@ -2143,7 +2143,7 @@ test('card.move changes the correct source and target columns', () => {
       type: 'card.create',
       payload: {
         boardId: 'main',
-        stageId: 'backlog',
+        stageId: 'todo',
         title: 'Move me'
       }
     },
@@ -2159,7 +2159,7 @@ test('card.move changes the correct source and target columns', () => {
       payload: {
         boardId: 'main',
         cardId: 'card_srv001',
-        sourceColumnId: 'backlog',
+        sourceColumnId: 'todo',
         targetColumnId: 'doing'
       }
     },
@@ -2169,10 +2169,10 @@ test('card.move changes the correct source and target columns', () => {
     })
   });
 
-  assert.deepEqual(workspace.boards.main.stages.backlog.cardIds, []);
+  assert.deepEqual(workspace.boards.main.stages.todo.cardIds, []);
   assert.deepEqual(workspace.boards.main.stages.doing.cardIds, ['card_srv001']);
   assert.equal(workspace.boards.main.cards.card_srv001.updatedAt, '2026-03-31T11:00:00.000Z');
-  assert.equal(result.sourceColumnId, 'backlog');
+  assert.equal(result.sourceColumnId, 'todo');
   assert.equal(result.targetColumnId, 'doing');
 });
 
@@ -2184,7 +2184,7 @@ test('card.move starts a new pending workflowReview cycle when entering a review
   workspace.boards.main.stages.doing.actionIds = ['card.review'];
   workspace.boards.main.cards.card_1.workflowReview = {
     required: true,
-    currentStageId: 'backlog',
+    currentStageId: 'todo',
     status: 'approved',
     decidedAt: '2026-03-31T10:15:00.000Z',
     decidedBy: {
@@ -2202,7 +2202,7 @@ test('card.move starts a new pending workflowReview cycle when entering a review
       payload: {
         boardId: 'main',
         cardId: 'card_1',
-        sourceColumnId: 'backlog',
+        sourceColumnId: 'todo',
         targetColumnId: 'doing'
       }
     },
@@ -2212,7 +2212,7 @@ test('card.move starts a new pending workflowReview cycle when entering a review
     })
   });
 
-  assert.deepEqual(nextWorkspace.boards.main.stages.backlog.cardIds, []);
+  assert.deepEqual(nextWorkspace.boards.main.stages.todo.cardIds, []);
   assert.deepEqual(nextWorkspace.boards.main.stages.doing.cardIds, ['card_1']);
   assert.deepEqual(nextWorkspace.boards.main.cards.card_1.workflowReview, {
     required: true,
@@ -2230,7 +2230,7 @@ test('card.move preserves workflowReview when moving into a non-review stage', (
   });
   const workflowReview = {
     required: true,
-    currentStageId: 'backlog',
+    currentStageId: 'todo',
     status: 'approved',
     decidedAt: '2026-03-31T10:15:00.000Z',
     decidedBy: {
@@ -2249,7 +2249,7 @@ test('card.move preserves workflowReview when moving into a non-review stage', (
       payload: {
         boardId: 'main',
         cardId: 'card_1',
-        sourceColumnId: 'backlog',
+        sourceColumnId: 'todo',
         targetColumnId: 'doing'
       }
     },
@@ -2270,7 +2270,7 @@ test('card.delete removes card references from columns and cards map', () => {
       type: 'card.create',
       payload: {
         boardId: 'main',
-        stageId: 'backlog',
+        stageId: 'todo',
         title: 'Delete me'
       }
     },
@@ -2279,8 +2279,8 @@ test('card.delete removes card references from columns and cards map', () => {
   }).workspace;
   const archivedWorkspace = structuredClone(createdWorkspace);
 
-  archivedWorkspace.boards.main.stages.backlog.cardIds = [];
-  archivedWorkspace.boards.main.stages.archived.cardIds = ['card_srv001'];
+  archivedWorkspace.boards.main.stages.todo.cardIds = [];
+  archivedWorkspace.boards.main.stages.done.cardIds = ['card_srv001'];
 
   const { workspace } = applyWorkspaceCommand({
     record: createRecord(archivedWorkspace, 1),
@@ -2297,7 +2297,7 @@ test('card.delete removes card references from columns and cards map', () => {
   });
 
   assert.equal(workspace.boards.main.cards.card_srv001, undefined);
-  assert.deepEqual(workspace.boards.main.stages.archived.cardIds, []);
+  assert.deepEqual(workspace.boards.main.stages.done.cardIds, []);
 });
 
 test('no-op command behavior is surfaced without creating an activity event', () => {
@@ -2960,7 +2960,7 @@ test('card create, update, move, and delete require edit permission', () => {
         type: 'card.create',
         payload: {
           boardId: 'main',
-          stageId: 'backlog',
+          stageId: 'todo',
           title: 'Blocked card'
         }
       }
@@ -2989,7 +2989,7 @@ test('card create, update, move, and delete require edit permission', () => {
         payload: {
           boardId: 'main',
           cardId: 'card_1',
-          sourceColumnId: 'backlog',
+          sourceColumnId: 'todo',
           targetColumnId: 'doing'
         }
       }

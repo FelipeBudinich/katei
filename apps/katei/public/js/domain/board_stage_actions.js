@@ -9,6 +9,7 @@ export const BOARD_STAGE_ACTION_IDS = Object.freeze([
 
 export function getDefaultBoardStageActionIds(stageId) {
   switch (stageId) {
+    case 'todo':
     case 'backlog':
     case 'doing':
       return ['card.create'];

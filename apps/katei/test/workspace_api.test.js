@@ -654,11 +654,11 @@ test('POST /api/workspace/commands approves card review without moving the card 
   const cardId = Object.keys(memberBoard.cards)[0];
   const contentUpdatedAt = memberBoard.cards[cardId].updatedAt;
 
-  memberBoard.stages.backlog.actions = ['card.create', 'card.review'];
-  memberBoard.stages.backlog.actionIds = ['card.create', 'card.review'];
+  memberBoard.stages.todo.actions = ['card.create', 'card.review'];
+  memberBoard.stages.todo.actionIds = ['card.create', 'card.review'];
   memberBoard.cards[cardId].workflowReview = {
     required: true,
-    currentStageId: 'backlog',
+    currentStageId: 'todo',
     status: 'pending',
     decidedAt: null,
     decidedBy: null,
@@ -691,10 +691,10 @@ test('POST /api/workspace/commands approves card review without moving the card 
     noOp: false,
     boardId: 'member',
     cardId,
-    stageId: 'backlog',
+    stageId: 'todo',
     status: 'approved'
   });
-  assert.deepEqual(response.body.workspace.boards.member.stages.backlog.cardIds, [cardId]);
+  assert.deepEqual(response.body.workspace.boards.member.stages.todo.cardIds, [cardId]);
 
   const persistedRecord = await workspaceRecordRepository.loadOrCreateAuthoritativeWorkspaceRecord({
     viewerSub: 'sub_member',
@@ -707,7 +707,7 @@ test('POST /api/workspace/commands approves card review without moving the card 
 
   assert.deepEqual(response.body.workspace.boards.member.cards[cardId].workflowReview, {
     required: true,
-    currentStageId: 'backlog',
+    currentStageId: 'todo',
     status: 'approved',
     decidedAt,
     decidedBy: {
@@ -722,7 +722,7 @@ test('POST /api/workspace/commands approves card review without moving the card 
 
   assert.equal(latestActivityEvent.type, 'workspace.card.review.approved');
   assert.deepEqual(latestActivityEvent.details, {
-    stageId: 'backlog',
+    stageId: 'todo',
     previousStatus: 'pending',
     nextStatus: 'approved',
     decidedByRole: 'editor',
@@ -738,11 +738,11 @@ test('POST /api/workspace/commands rejects viewer review decisions', async () =>
   const memberBoard = sharedRecord.workspace.boards.member;
   const cardId = Object.keys(memberBoard.cards)[0];
 
-  memberBoard.stages.backlog.actions = ['card.create', 'card.review'];
-  memberBoard.stages.backlog.actionIds = ['card.create', 'card.review'];
+  memberBoard.stages.todo.actions = ['card.create', 'card.review'];
+  memberBoard.stages.todo.actionIds = ['card.create', 'card.review'];
   memberBoard.cards[cardId].workflowReview = {
     required: true,
-    currentStageId: 'backlog',
+    currentStageId: 'todo',
     status: 'pending',
     decidedAt: null,
     decidedBy: null,
@@ -1584,7 +1584,7 @@ function configureBoardForLocalization(board, {
 }
 
 function configureBoardForStagePrompt(board, {
-  sourceStageId = 'backlog',
+  sourceStageId = 'todo',
   targetStageId = 'doing',
   includePromptRunAction = true,
   includePromptAction = true,

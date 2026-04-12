@@ -319,6 +319,7 @@ const EN_MESSAGES = freezeCatalog({
       discardLocaleConfirm: 'Discard localization'
     },
     columns: {
+      todo: 'Todo',
       backlog: 'Backlog',
       doing: 'Doing',
       done: 'Done',
@@ -520,7 +521,7 @@ const EN_MESSAGES = freezeCatalog({
     clearOpenAiApiKeyLabel: 'Clear the saved OpenAI API key',
     stagesLabel: 'Stages',
     stagesHelp:
-      'One line per stage: stage-id | Display title | target-a, target-b | action-a, action-b. Example: backlog | Backlog | doing, done | card.create',
+      'One line per stage: stage-id | Display title | target-a, target-b | action-a, action-b. Example: todo | Todo | doing, done | card.create',
     stageSummaryLabel: 'Current draft',
     stageSummaryEmpty: 'No stages configured.',
     stageSummaryValue: '{count} stages · {stages}',
@@ -952,6 +953,7 @@ const ES_CL_MESSAGES = freezeCatalog({
       discardLocaleConfirm: 'Descartar localización'
     },
     columns: {
+      todo: 'Por hacer',
       backlog: 'Pendientes',
       doing: 'En curso',
       done: 'Hecho',
@@ -1153,7 +1155,7 @@ const ES_CL_MESSAGES = freezeCatalog({
     clearOpenAiApiKeyLabel: 'Eliminar la clave de OpenAI guardada',
     stagesLabel: 'Etapas',
     stagesHelp:
-      'Una línea por etapa: stage-id | Título visible | destino-a, destino-b | acción-a, acción-b. Ejemplo: backlog | Backlog | doing, done | card.create',
+      'Una línea por etapa: stage-id | Título visible | destino-a, destino-b | acción-a, acción-b. Ejemplo: todo | Todo | doing, done | card.create',
     stageSummaryLabel: 'Borrador actual',
     stageSummaryEmpty: 'No hay etapas configuradas.',
     stageSummaryValue: '{count} etapas · {stages}',
@@ -1586,6 +1588,7 @@ const JA_MESSAGES = freezeCatalog({
       discardLocaleConfirm: 'ローカライズを破棄'
     },
     columns: {
+      todo: 'やること',
       backlog: 'バックログ',
       doing: '進行中',
       done: '完了',
@@ -1787,7 +1790,7 @@ const JA_MESSAGES = freezeCatalog({
     clearOpenAiApiKeyLabel: '保存済みの OpenAI API キーを削除する',
     stagesLabel: 'ステージ',
     stagesHelp:
-      '1 行ごとに入力: stage-id | 表示名 | 遷移先-a, 遷移先-b | action-a, action-b。例: backlog | Backlog | doing, done | card.create',
+      '1 行ごとに入力: stage-id | 表示名 | 遷移先-a, 遷移先-b | action-a, action-b。例: todo | Todo | doing, done | card.create',
     stageSummaryLabel: '現在の下書き',
     stageSummaryEmpty: '設定されたステージはありません。',
     stageSummaryValue: '{count} ステージ · {stages}',

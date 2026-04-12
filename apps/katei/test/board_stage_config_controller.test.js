@@ -109,7 +109,7 @@ test('board stage config apply enforces existing-board stage compatibility befor
       }
     }
   };
-  board.stages.backlog.cardIds.push('card_1');
+  board.stages.todo.cardIds.push('card_1');
 
   controller.currentBoard = board;
   controller.dialogTarget.open = true;

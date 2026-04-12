@@ -1,4 +1,5 @@
 const COLUMN_MESSAGE_KEYS = Object.freeze({
+  todo: 'workspace.columns.todo',
   backlog: 'workspace.columns.backlog',
   doing: 'workspace.columns.doing',
   done: 'workspace.columns.done',

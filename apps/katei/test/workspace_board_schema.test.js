@@ -7,18 +7,17 @@ test('default board creation includes stage order, stages, templates, and langua
   const workspace = createEmptyWorkspace();
   const board = workspace.boards.main;
 
-  assert.deepEqual(board.stageOrder, ['backlog', 'doing', 'done', 'archived']);
-  assert.deepEqual(Object.keys(board.stages), ['backlog', 'doing', 'done', 'archived']);
-  assert.deepEqual(board.stages.backlog.allowedTransitionStageIds, ['doing', 'done']);
-  assert.deepEqual(board.stages.backlog.actions, ['card.create']);
-  assert.deepEqual(board.stages.backlog.actionIds, ['card.create']);
-  assert.deepEqual(board.stages.doing.actions, ['card.create']);
-  assert.deepEqual(board.stages.doing.actionIds, ['card.create']);
-  assert.deepEqual(board.stages.done.allowedTransitionStageIds, ['backlog', 'doing', 'archived']);
-  assert.deepEqual(board.stages.done.actions, []);
-  assert.deepEqual(board.stages.done.actionIds, []);
-  assert.deepEqual(board.stages.archived.actions, ['card.delete']);
-  assert.deepEqual(board.stages.archived.actionIds, ['card.delete']);
+  assert.deepEqual(board.stageOrder, ['todo', 'doing', 'done']);
+  assert.deepEqual(Object.keys(board.stages), ['todo', 'doing', 'done']);
+  assert.deepEqual(board.stages.todo.allowedTransitionStageIds, ['doing', 'done']);
+  assert.deepEqual(board.stages.todo.actions, ['card.create']);
+  assert.deepEqual(board.stages.todo.actionIds, ['card.create']);
+  assert.deepEqual(board.stages.doing.allowedTransitionStageIds, ['todo', 'done']);
+  assert.deepEqual(board.stages.doing.actions, []);
+  assert.deepEqual(board.stages.doing.actionIds, []);
+  assert.deepEqual(board.stages.done.allowedTransitionStageIds, ['todo', 'doing']);
+  assert.deepEqual(board.stages.done.actions, ['card.review', 'card.delete']);
+  assert.deepEqual(board.stages.done.actionIds, ['card.review', 'card.delete']);
   assert.equal(board.collaboration.memberships[0].role, 'admin');
   assert.deepEqual(board.collaboration.invites, []);
   assert.deepEqual(board.templates, {
@@ -36,7 +35,7 @@ test('validateBoardStages rejects transition targets that do not exist', () => {
   const workspace = createEmptyWorkspace();
   const board = workspace.boards.main;
 
-  board.stages.backlog.allowedTransitionStageIds = ['review'];
+  board.stages.todo.allowedTransitionStageIds = ['review'];
 
   assert.equal(validateBoardStages(board), false);
 });
@@ -50,11 +49,11 @@ test('validateBoardTemplates requires initial stage ids and stage template ids t
       {
         id: 'template_1',
         title: 'Research note',
-        initialStageId: 'backlog'
+        initialStageId: 'todo'
       }
     ]
   };
-  board.stages.backlog.templateIds = ['template_1'];
+  board.stages.todo.templateIds = ['template_1'];
 
   assert.equal(validateBoardTemplates(board), true);
 

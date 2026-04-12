@@ -13,8 +13,8 @@ test('createDefaultBoardStages returns the default workflow stages as fresh obje
 
   assert.deepEqual(firstStages, [
     {
-      id: 'backlog',
-      title: 'Backlog',
+      id: 'todo',
+      title: 'Todo',
       cardIds: [],
       allowedTransitionStageIds: ['doing', 'done'],
       templateIds: [],
@@ -25,33 +25,24 @@ test('createDefaultBoardStages returns the default workflow stages as fresh obje
       id: 'doing',
       title: 'Doing',
       cardIds: [],
-      allowedTransitionStageIds: ['backlog', 'done'],
-      templateIds: [],
-      actions: ['card.create'],
-      actionIds: ['card.create']
-    },
-    {
-      id: 'done',
-      title: 'Done',
-      cardIds: [],
-      allowedTransitionStageIds: ['backlog', 'doing', 'archived'],
+      allowedTransitionStageIds: ['todo', 'done'],
       templateIds: [],
       actions: [],
       actionIds: []
     },
     {
-      id: 'archived',
-      title: 'Archived',
+      id: 'done',
+      title: 'Done',
       cardIds: [],
-      allowedTransitionStageIds: ['backlog', 'doing', 'done'],
+      allowedTransitionStageIds: ['todo', 'doing'],
       templateIds: [],
-      actions: ['card.delete'],
-      actionIds: ['card.delete']
+      actions: ['card.review', 'card.delete'],
+      actionIds: ['card.review', 'card.delete']
     }
   ]);
 
   firstStages[0].title = 'Changed';
-  assert.equal(secondStages[0].title, 'Backlog');
+  assert.equal(secondStages[0].title, 'Todo');
 });
 
 test('validateBoardStages accepts boards that match the current workflow schema', () => {
@@ -105,7 +96,7 @@ test('validateBoardStages rejects duplicate stage ids or invalid stage definitio
     updatedAt: '2026-03-31T10:00:00.000Z'
   });
 
-  board.stageOrder = ['backlog', 'doing', 'done', 'done'];
+  board.stageOrder = ['todo', 'doing', 'done', 'done'];
   assert.equal(validateBoardStages(board), false);
 
   const boardWithBadTitle = createWorkspaceBoard({
@@ -126,7 +117,7 @@ test('validateBoardStages rejects unknown or duplicate stage action ids', () => 
     createdAt: '2026-03-31T10:00:00.000Z',
     updatedAt: '2026-03-31T10:00:00.000Z'
   });
-  boardWithUnknownAction.stages.backlog.actionIds = ['board.delete'];
+  boardWithUnknownAction.stages.todo.actionIds = ['board.delete'];
 
   assert.equal(validateBoardStages(boardWithUnknownAction), false);
 
@@ -136,7 +127,7 @@ test('validateBoardStages rejects unknown or duplicate stage action ids', () => 
     createdAt: '2026-03-31T10:00:00.000Z',
     updatedAt: '2026-03-31T10:00:00.000Z'
   });
-  boardWithDuplicateActions.stages.archived.actionIds = ['card.delete', 'card.delete'];
+  boardWithDuplicateActions.stages.done.actionIds = ['card.delete', 'card.delete'];
 
   assert.equal(validateBoardStages(boardWithDuplicateActions), false);
 });
@@ -154,11 +145,11 @@ test('validateBoardTemplates accepts synced templates and rejects malformed ones
       {
         id: 'template_1',
         title: 'Reusable draft',
-        initialStageId: 'backlog'
+        initialStageId: 'todo'
       }
     ]
   };
-  board.stages.backlog.templateIds = ['template_1'];
+  board.stages.todo.templateIds = ['template_1'];
 
   assert.equal(validateBoardTemplates(board), true);
 

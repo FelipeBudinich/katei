@@ -225,7 +225,6 @@ test('renderBoardState shows stage-local create buttons only for create-enabled 
   assert.equal(regions.desktopColumns.children[0].createButton.hidden, false);
   assert.equal(regions.desktopColumns.children[0].createButton.disabled, false);
   assert.equal(regions.desktopColumns.children[2].createButton.hidden, true);
-  assert.equal(regions.desktopColumns.children[3].createButton.hidden, true);
 
   renderBoardState({
     board,
@@ -259,8 +258,8 @@ test('renderBoardState hides the empty-stage add-card control when canonical sta
     { locale: 'en' }
   );
 
-  board.stages.backlog.actions = [];
-  board.stages.backlog.actionIds = ['card.create'];
+  board.stages.todo.actions = [];
+  board.stages.todo.actionIds = ['card.create'];
 
   renderBoardState({
     board,
@@ -299,7 +298,7 @@ test('renderBoardState wires both header toggle buttons for each stage panel', (
     board,
     canReadBoard: true,
     canEditBoard: true,
-    collapsedColumns: { backlog: true },
+    collapsedColumns: { todo: true },
     regions,
     templates: {
       columnTemplate: createColumnTemplateDouble(),
@@ -308,21 +307,21 @@ test('renderBoardState wires both header toggle buttons for each stage panel', (
     t
   });
 
-  const backlogPanel = regions.desktopColumns.children[0];
+  const todoPanel = regions.desktopColumns.children[0];
 
-  assert.equal(backlogPanel.titleToggleElement.dataset.stageId, 'backlog');
-  assert.equal(backlogPanel.titleToggleElement.dataset.columnId, 'backlog');
-  assert.equal(backlogPanel.titleToggleElement.attributes['aria-expanded'], 'false');
-  assert.equal(backlogPanel.titleToggleElement.attributes['aria-controls'], 'column-panel-body-backlog');
-  assert.equal(backlogPanel.titleToggleElement.disabled, false);
-  assert.equal(backlogPanel.titleToggleElement.attributes['aria-disabled'], 'false');
+  assert.equal(todoPanel.titleToggleElement.dataset.stageId, 'todo');
+  assert.equal(todoPanel.titleToggleElement.dataset.columnId, 'todo');
+  assert.equal(todoPanel.titleToggleElement.attributes['aria-expanded'], 'false');
+  assert.equal(todoPanel.titleToggleElement.attributes['aria-controls'], 'column-panel-body-todo');
+  assert.equal(todoPanel.titleToggleElement.disabled, false);
+  assert.equal(todoPanel.titleToggleElement.attributes['aria-disabled'], 'false');
 
-  assert.equal(backlogPanel.chipToggleElement.dataset.stageId, 'backlog');
-  assert.equal(backlogPanel.chipToggleElement.dataset.columnId, 'backlog');
-  assert.equal(backlogPanel.chipToggleElement.attributes['aria-expanded'], 'false');
-  assert.equal(backlogPanel.chipToggleElement.attributes['aria-controls'], 'column-panel-body-backlog');
-  assert.equal(backlogPanel.chipToggleElement.disabled, false);
-  assert.equal(backlogPanel.chipToggleElement.attributes['aria-disabled'], 'false');
+  assert.equal(todoPanel.chipToggleElement.dataset.stageId, 'todo');
+  assert.equal(todoPanel.chipToggleElement.dataset.columnId, 'todo');
+  assert.equal(todoPanel.chipToggleElement.attributes['aria-expanded'], 'false');
+  assert.equal(todoPanel.chipToggleElement.attributes['aria-controls'], 'column-panel-body-todo');
+  assert.equal(todoPanel.chipToggleElement.disabled, false);
+  assert.equal(todoPanel.chipToggleElement.attributes['aria-disabled'], 'false');
 });
 
 test('renderBoardState does not query a board-card prompt-run button', () => {

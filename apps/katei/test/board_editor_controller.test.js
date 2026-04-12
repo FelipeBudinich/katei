@@ -14,16 +14,17 @@ test('createBoardEditorFormState serializes the current board schema without exp
     {
       id: 'starter',
       title: 'Starter',
-      initialStageId: 'backlog'
+      initialStageId: 'todo'
     }
   ];
-  board.stages.backlog.templateIds = ['starter'];
+  board.stages.todo.templateIds = ['starter'];
 
   const formState = createBoardEditorFormState(board);
 
   assert.equal(formState.title, '過程');
-  assert.match(formState.stageDefinitions, /backlog \| Backlog \| doing, done \| card\.create/);
-  assert.match(formState.stageDefinitions, /archived \| Archived \| backlog, doing, done \| card\.delete/);
+  assert.match(formState.stageDefinitions, /todo \| Todo \| doing, done \| card\.create/);
+  assert.match(formState.stageDefinitions, /doing \| Doing \| todo, done/);
+  assert.match(formState.stageDefinitions, /done \| Done \| todo, doing \| card\.review, card\.delete/);
   assert.equal(formState.stagePromptActions, '');
   assert.equal(formState.stageReviewPolicies, '');
   assert.equal(Object.prototype.hasOwnProperty.call(formState, 'templates'), false);
@@ -444,7 +445,7 @@ test('parseBoardEditorFormInput rejects source-locale changes that existing card
       }
     }
   };
-  board.stages.backlog.cardIds.push('card_1');
+  board.stages.todo.cardIds.push('card_1');
 
   assert.throws(
     () =>
@@ -455,7 +456,7 @@ test('parseBoardEditorFormInput rejects source-locale changes that existing card
           defaultLocale: 'ja',
           supportedLocales: 'en, ja',
           requiredLocales: 'ja',
-          stageDefinitions: ['backlog | Backlog | doing', 'doing | Doing | backlog'].join('\n')
+          stageDefinitions: ['todo | Todo | doing', 'doing | Doing | todo'].join('\n')
         },
         {
           currentBoard: board
@@ -471,10 +472,10 @@ test('parseBoardEditorFormInput clears legacy templates when editing an existing
     {
       id: 'starter',
       title: 'Starter',
-      initialStageId: 'backlog'
+      initialStageId: 'todo'
     }
   ];
-  board.stages.backlog.templateIds = ['starter'];
+  board.stages.todo.templateIds = ['starter'];
 
   const parsedInput = parseBoardEditorFormInput(
     {
@@ -483,8 +484,8 @@ test('parseBoardEditorFormInput clears legacy templates when editing an existing
       defaultLocale: 'en',
       supportedLocales: 'en',
       requiredLocales: 'en',
-      stageDefinitions: ['backlog | Backlog | review', 'review | Review | backlog'].join('\n'),
-      templates: 'Starter template | backlog'
+      stageDefinitions: ['todo | Todo | review', 'review | Review | todo'].join('\n'),
+      templates: 'Starter template | todo'
     },
     {
       currentBoard: board
@@ -493,15 +494,15 @@ test('parseBoardEditorFormInput clears legacy templates when editing an existing
 
   assert.deepEqual(parsedInput.stageDefinitions, [
     {
-      id: 'backlog',
-      title: 'Backlog',
+      id: 'todo',
+      title: 'Todo',
       allowedTransitionStageIds: ['review'],
       actionIds: []
     },
     {
       id: 'review',
       title: 'Review',
-      allowedTransitionStageIds: ['backlog'],
+      allowedTransitionStageIds: ['todo'],
       actionIds: []
     }
   ]);
@@ -580,7 +581,7 @@ test('board editor initializes the stage summary from the opened board draft', a
   assert.equal(controller.stageDefinitionsInputTarget.value, createBoardEditorFormState(board).stageDefinitions);
   assert.equal(controller.stagePromptActionsInputTarget.value, createBoardEditorFormState(board).stagePromptActions);
   assert.equal(controller.stageReviewPoliciesInputTarget.value, createBoardEditorFormState(board).stageReviewPolicies);
-  assert.equal(controller.stageSummaryTarget.textContent, '4 stages · backlog, doing, done, archived');
+  assert.equal(controller.stageSummaryTarget.textContent, '3 stages · todo, doing, done');
   assert.equal(controller.titleInputTarget.focused, true);
 });
 

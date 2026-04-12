@@ -13,7 +13,7 @@ test('createCard stores detailsMarkdown on new cards', () => {
     priority: 'urgent'
   });
   const board = nextWorkspace.boards.main;
-  const [cardId] = board.stages.backlog.cardIds;
+  const [cardId] = board.stages.todo.cardIds;
 
   assert.deepEqual(board.cards[cardId].contentByLocale.en.title, 'Write launch notes');
   assert.deepEqual(board.cards[cardId].contentByLocale.en.detailsMarkdown, '## Launch\n\n- confirm copy');
@@ -24,8 +24,8 @@ test('createCard stores detailsMarkdown on new cards', () => {
 test('createCard starts workflowReview as pending when the stage supports card.review', () => {
   const workspace = createEmptyWorkspace();
 
-  workspace.boards.main.stages.backlog.actions = ['card.create', 'card.review'];
-  workspace.boards.main.stages.backlog.actionIds = ['card.create', 'card.review'];
+  workspace.boards.main.stages.todo.actions = ['card.create', 'card.review'];
+  workspace.boards.main.stages.todo.actionIds = ['card.create', 'card.review'];
 
   const nextWorkspace = createCard(workspace, 'main', {
     title: 'Workflow review card',
@@ -34,11 +34,11 @@ test('createCard starts workflowReview as pending when the stage supports card.r
     requiresReview: true
   });
   const board = nextWorkspace.boards.main;
-  const [cardId] = board.stages.backlog.cardIds;
+  const [cardId] = board.stages.todo.cardIds;
 
   assert.deepEqual(board.cards[cardId].workflowReview, {
     required: true,
-    currentStageId: 'backlog',
+    currentStageId: 'todo',
     status: 'pending',
     decidedAt: null,
     decidedBy: null,
@@ -50,15 +50,15 @@ test('createCard starts workflowReview as pending when the stage supports card.r
 test('createCard inserts into an explicitly requested create-enabled stage', () => {
   const workspace = createEmptyWorkspace();
   const nextWorkspace = createCard(workspace, 'main', {
-    stageId: 'doing',
+    stageId: 'todo',
     title: 'Review analytics',
     detailsMarkdown: 'Check the new retention slice',
     priority: 'important'
   });
   const board = nextWorkspace.boards.main;
-  const [cardId] = board.stages.doing.cardIds;
+  const [cardId] = board.stages.todo.cardIds;
 
-  assert.equal(board.stages.backlog.cardIds.length, 0);
+  assert.equal(board.stages.doing.cardIds.length, 0);
   assert.equal(cardId in board.cards, true);
 });
 
@@ -69,7 +69,7 @@ test('updateCard updates detailsMarkdown on existing cards', () => {
     priority: 'important'
   });
   const board = workspace.boards.main;
-  const [cardId] = board.stages.backlog.cardIds;
+  const [cardId] = board.stages.todo.cardIds;
   const nextWorkspace = updateCard(workspace, 'main', cardId, {
     detailsMarkdown: 'Updated **markdown**'
   });
@@ -89,10 +89,10 @@ test('updateCard resets workflowReview when source content changes', () => {
     requiresReview: true
   });
   const board = workspace.boards.main;
-  const [cardId] = board.stages.backlog.cardIds;
+  const [cardId] = board.stages.todo.cardIds;
   board.cards[cardId].workflowReview = {
     required: true,
-    currentStageId: 'backlog',
+    currentStageId: 'todo',
     status: 'approved',
     decidedAt: '2026-04-12T10:00:00.000Z',
     decidedBy: {
@@ -108,7 +108,7 @@ test('updateCard resets workflowReview when source content changes', () => {
 
   assert.deepEqual(nextWorkspace.boards.main.cards[cardId].workflowReview, {
     required: true,
-    currentStageId: 'backlog',
+    currentStageId: 'todo',
     status: 'pending',
     decidedAt: null,
     decidedBy: null,
@@ -124,12 +124,12 @@ test('moveCard starts a pending workflowReview cycle when entering a review-enab
     requiresReview: true
   });
   const board = workspace.boards.main;
-  const [cardId] = board.stages.backlog.cardIds;
+  const [cardId] = board.stages.todo.cardIds;
   board.stages.doing.actions = ['card.review'];
   board.stages.doing.actionIds = ['card.review'];
   board.cards[cardId].workflowReview = {
     required: true,
-    currentStageId: 'backlog',
+    currentStageId: 'todo',
     status: 'approved',
     decidedAt: '2026-04-12T10:00:00.000Z',
     decidedBy: {
@@ -139,9 +139,9 @@ test('moveCard starts a pending workflowReview cycle when entering a review-enab
     decidedByRole: 'admin'
   };
 
-  const nextWorkspace = moveCard(workspace, 'main', cardId, 'backlog', 'doing');
+  const nextWorkspace = moveCard(workspace, 'main', cardId, 'todo', 'doing');
 
-  assert.deepEqual(nextWorkspace.boards.main.stages.backlog.cardIds, []);
+  assert.deepEqual(nextWorkspace.boards.main.stages.todo.cardIds, []);
   assert.deepEqual(nextWorkspace.boards.main.stages.doing.cardIds, [cardId]);
   assert.deepEqual(nextWorkspace.boards.main.cards[cardId].workflowReview, {
     required: true,
@@ -207,7 +207,7 @@ test('validateWorkspaceShape rejects legacy cards that only use description', ()
     createdAt: '2026-03-30T00:00:00.000Z',
     updatedAt: '2026-03-30T00:00:00.000Z'
   };
-  board.stages.backlog.cardIds.push('card_legacy');
+  board.stages.todo.cardIds.push('card_legacy');
 
   assert.equal(validateWorkspaceShape(workspace), false);
 });
@@ -332,7 +332,7 @@ test('validateWorkspaceShape accepts cards with empty localeRequests', () => {
       }
     }
   };
-  board.stages.backlog.cardIds.push('card_1');
+  board.stages.todo.cardIds.push('card_1');
 
   assert.equal(validateWorkspaceShape(workspace), true);
 });
@@ -359,7 +359,7 @@ test('validateWorkspaceShape accepts existing cards without workflowReview', () 
       }
     }
   };
-  board.stages.backlog.cardIds.push('card_existing');
+  board.stages.todo.cardIds.push('card_existing');
 
   assert.equal(validateWorkspaceShape(workspace), true);
 });
@@ -376,8 +376,8 @@ test('findColumnIdByCardId returns the containing column id', () => {
     priority: 'normal'
   });
   const board = workspace.boards.main;
-  const [cardId] = board.stages.backlog.cardIds;
+  const [cardId] = board.stages.todo.cardIds;
 
-  assert.equal(findColumnIdByCardId(board, cardId), 'backlog');
+  assert.equal(findColumnIdByCardId(board, cardId), 'todo');
   assert.equal(findColumnIdByCardId(board, 'missing_card'), null);
 });

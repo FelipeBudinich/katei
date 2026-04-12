@@ -61,8 +61,8 @@ test('openCreateCard dispatches create mode for the requested create-enabled sta
   const dispatchedEvents = [];
   const triggerElement = {
     dataset: {
-      stageId: 'doing',
-      columnId: 'doing'
+      stageId: 'todo',
+      columnId: 'todo'
     }
   };
 
@@ -93,7 +93,7 @@ test('openCreateCard dispatches create mode for the requested create-enabled sta
         board: workspace.boards.main,
         currentActorRole: 'editor',
         canEditLocalizedContent: true,
-        stageId: 'doing',
+        stageId: 'todo',
         triggerElement
       }
     }
@@ -821,8 +821,8 @@ test('toggleColumn keeps collapse state client-local and updates the DOM without
   const workspace = createViewerWorkspace('workspace_local_columns', viewerActor);
   const controller = Object.create(WorkspaceController.prototype);
   const panel = createColumnPanelDouble({
-    stageId: 'backlog',
-    columnId: 'backlog',
+    stageId: 'todo',
+    columnId: 'todo',
     cardCount: 2
   });
   const service = {
@@ -849,7 +849,7 @@ test('toggleColumn keeps collapse state client-local and updates the DOM without
   assert.equal(panel.titleToggleElement.attributes['aria-expanded'], 'false');
   assert.equal(panel.chipToggleElement.attributes['aria-expanded'], 'false');
   assert.equal(panel.bodyElement.hidden, true);
-  assert.equal(controller.getCollapsedColumnsForBoard(workspace.boards.main).backlog, true);
+  assert.equal(controller.getCollapsedColumnsForBoard(workspace.boards.main).todo, true);
   assert.equal(announcements.length, 1);
 });
 
@@ -858,8 +858,8 @@ test('toggleColumn updates aria-expanded on both header toggle buttons', () => {
   const workspace = createViewerWorkspace('workspace_toggle_pair', viewerActor);
   const controller = Object.create(WorkspaceController.prototype);
   const panel = createColumnPanelDouble({
-    stageId: 'backlog',
-    columnId: 'backlog',
+    stageId: 'todo',
+    columnId: 'todo',
     cardCount: 1
   });
 
@@ -885,41 +885,37 @@ test('workspace controller scopes transient collapse state by workspace id and p
   const controller = Object.create(WorkspaceController.prototype);
 
   controller.workspace = workspaceA;
-  controller.setColumnCollapsed(workspaceA.boards.main, 'backlog', true);
+  controller.setColumnCollapsed(workspaceA.boards.main, 'todo', true);
   controller.setColumnCollapsed(workspaceA.boards.main, 'doing', false);
 
   assert.deepEqual(controller.getCollapsedColumnsForBoard(workspaceA.boards.main), {
-    backlog: true,
+    todo: true,
     doing: false,
-    done: false,
-    archived: false
+    done: false
   });
 
   controller.workspace = workspaceB;
 
   assert.deepEqual(controller.getCollapsedColumnsForBoard(workspaceB.boards.main), {
-    backlog: false,
+    todo: false,
     doing: false,
-    done: false,
-    archived: false
+    done: false
   });
 
   controller.setColumnCollapsed(workspaceB.boards.main, 'doing', true);
 
   assert.deepEqual(controller.getCollapsedColumnsForBoard(workspaceB.boards.main), {
-    backlog: false,
+    todo: false,
     doing: true,
-    done: false,
-    archived: false
+    done: false
   });
 
   controller.workspace = workspaceA;
 
   assert.deepEqual(controller.getCollapsedColumnsForBoard(workspaceA.boards.main), {
-    backlog: true,
+    todo: true,
     doing: false,
-    done: false,
-    archived: false
+    done: false
   });
 });
 
@@ -2326,11 +2322,11 @@ test('syncViewDialog hides the prompt-run button and clears datasets for ineligi
   }
 });
 
-test('openView hides the delete button for backlog, doing, and done cards', () => {
+test('openView hides the delete button for todo and doing cards', () => {
   const restoreDom = installViewDialogDomStubs();
 
   try {
-    for (const stageId of ['backlog', 'doing', 'done']) {
+    for (const stageId of ['todo', 'doing']) {
       const defaultBoard = createEmptyWorkspace().boards.main;
       const { controller, card } = createViewDialogController({
         board: defaultBoard,
@@ -2354,7 +2350,7 @@ test('openView hides the delete button for backlog, doing, and done cards', () =
   }
 });
 
-test('openView shows the delete button for archived cards', () => {
+test('openView shows the delete button for done cards', () => {
   const restoreDom = installViewDialogDomStubs();
 
   try {
@@ -2362,11 +2358,11 @@ test('openView shows the delete button for archived cards', () => {
     const { controller, board, card } = createViewDialogController({
       board: defaultBoard,
       viewerRole: 'editor',
-      cardStageId: 'archived'
+      cardStageId: 'done'
     });
 
     WorkspaceController.prototype.openView.call(controller, {
-      currentTarget: createViewTriggerDouble(card.id, 'archived', { requestedLocale: 'es-CL' })
+      currentTarget: createViewTriggerDouble(card.id, 'done', { requestedLocale: 'es-CL' })
     });
 
     assert.equal(controller.viewActionRegionTarget.hidden, true);
@@ -2382,7 +2378,7 @@ test('openView shows the delete button for archived cards', () => {
   }
 });
 
-test('opening an archived card before a doing card hides the delete button again', () => {
+test('opening a done card before a doing card hides the delete button again', () => {
   const restoreDom = installViewDialogDomStubs();
 
   try {
@@ -2390,7 +2386,7 @@ test('opening an archived card before a doing card hides the delete button again
     const { controller, board, card } = createViewDialogController({
       board: defaultBoard,
       viewerRole: 'editor',
-      cardStageId: 'archived'
+      cardStageId: 'done'
     });
     const doingCard = {
       ...structuredClone(card),
@@ -2402,7 +2398,7 @@ test('opening an archived card before a doing card hides the delete button again
     board.stages.doing.cardIds = [doingCard.id];
 
     WorkspaceController.prototype.openView.call(controller, {
-      currentTarget: createViewTriggerDouble(card.id, 'archived')
+      currentTarget: createViewTriggerDouble(card.id, 'done')
     });
 
     assert.equal(controller.viewDeleteButtonTarget.hidden, false);
