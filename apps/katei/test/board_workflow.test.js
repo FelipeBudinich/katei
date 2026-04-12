@@ -71,6 +71,14 @@ test('validateBoardStages accepts boards that define their own stages and transi
   assert.equal(validateBoardStages(board), true);
 });
 
+test('validateBoardStages accepts card.review as a valid stage action id', () => {
+  const board = createCustomWorkflowBoard();
+
+  board.stages.review.actionIds = ['card.review'];
+
+  assert.equal(validateBoardStages(board), true);
+});
+
 test('validateBoardStages rejects duplicate stage ids or invalid stage definitions', () => {
   const board = createWorkspaceBoard({
     id: 'main',

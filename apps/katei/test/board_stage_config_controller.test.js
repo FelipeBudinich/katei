@@ -151,6 +151,38 @@ test('board stage config apply dispatches board-stage-config:apply on window for
   assert.equal(controller.restoreFocusElement, null);
 });
 
+test('board stage config apply preserves card.review stage actions', async () => {
+  const controller = createBoardStageConfigControllerDouble();
+  const dispatchedEvents = [];
+  const stageDefinitions = [
+    'draft | Draft | review',
+    'review | Review | doing, done | card.review',
+    'doing | Doing | review, done',
+    'done | Done | review'
+  ].join('\n');
+
+  controller.dialogTarget.open = true;
+  controller.currentBoard = createEmptyWorkspace().boards.main;
+  controller.restoreFocusElement = createFocusableElement();
+  controller.definitionsInputTarget.value = stageDefinitions;
+  controller.promptActionDrafts = {};
+  controller.syncPromptActionRows();
+
+  await withWindowDispatchCapture(dispatchedEvents, () => {
+    BoardStageConfigController.prototype.apply.call(controller, {
+      preventDefault() {}
+    });
+  });
+
+  assert.equal(controller.dialogTarget.open, false);
+  assert.equal(controller.errorTarget.hidden, true);
+  assert.equal(dispatchedEvents.length, 1);
+  assert.deepEqual(dispatchedEvents[0].detail, {
+    stageDefinitions,
+    stagePromptActions: ''
+  });
+});
+
 test('board stage config close restores focus predictably', () => {
   const controller = createBoardStageConfigControllerDouble();
   const triggerElement = createFocusableElement();

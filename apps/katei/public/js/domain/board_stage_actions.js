@@ -3,6 +3,7 @@ export const BOARD_STAGE_PROMPT_RUN_ACTION_ID = 'card.prompt.run';
 export const BOARD_STAGE_ACTION_IDS = Object.freeze([
   'card.create',
   'card.delete',
+  'card.review',
   BOARD_STAGE_PROMPT_RUN_ACTION_ID
 ]);
 

@@ -521,7 +521,7 @@ const EN_MESSAGES = freezeCatalog({
     sectionLabel: 'Stages',
     heading: 'Configure stages',
     help:
-      'Use one line per stage: stage-id | Title | target-a, target-b | action-a, action-b. You can omit the third or fourth segment, and leave transitions empty before actions when needed.',
+      'Use one line per stage: stage-id | Title | target-a, target-b | action-a, action-b. You can omit the third or fourth segment, and leave transitions empty before actions when needed. Example: review | Review | doing, done | card.review',
     definitionsLabel: 'Stage definitions',
     promptActionSectionLabel: 'Prompt actions',
     promptActionEnableLabel: 'Enable prompt run',
@@ -1130,7 +1130,7 @@ const ES_CL_MESSAGES = freezeCatalog({
     sectionLabel: 'Etapas',
     heading: 'Configurar etapas',
     help:
-      'Usa una línea por etapa: stage-id | Título | destino-a, destino-b | acción-a, acción-b. Puedes omitir el tercer o cuarto segmento y dejar vacías las transiciones antes de las acciones cuando haga falta.',
+      'Usa una línea por etapa: stage-id | Título | destino-a, destino-b | acción-a, acción-b. Puedes omitir el tercer o cuarto segmento y dejar vacías las transiciones antes de las acciones cuando haga falta. Ejemplo: review | Review | doing, done | card.review',
     definitionsLabel: 'Definiciones de etapas',
     promptActionSectionLabel: 'Acciones con prompt',
     promptActionEnableLabel: 'Activar prompt',
@@ -1740,7 +1740,7 @@ const JA_MESSAGES = freezeCatalog({
     sectionLabel: 'ステージ',
     heading: 'ステージを設定',
     help:
-      '1 行ごとに入力: stage-id | Title | target-a, target-b | action-a, action-b。必要に応じて 3 つ目や 4 つ目の区切りは省略でき、action の前で遷移先を空にすることもできます。',
+      '1 行ごとに入力: stage-id | Title | target-a, target-b | action-a, action-b。必要に応じて 3 つ目や 4 つ目の区切りは省略でき、action の前で遷移先を空にすることもできます。例: review | Review | doing, done | card.review',
     definitionsLabel: 'ステージ定義',
     promptActionSectionLabel: 'プロンプト操作',
     promptActionEnableLabel: 'プロンプト実行を有効化',

@@ -284,6 +284,49 @@ test('normalizeBoardSchemaInput preserves valid prompt-run stage actions', () =>
   });
 });
 
+test('normalizeBoardSchemaInput preserves card.review stage actions', () => {
+  const normalizedSchema = normalizeBoardSchemaInput({
+    languagePolicy: {
+      sourceLocale: 'en',
+      defaultLocale: 'en',
+      supportedLocales: ['en'],
+      requiredLocales: ['en']
+    },
+    stageDefinitions: [
+      {
+        id: 'draft',
+        title: 'Draft',
+        allowedTransitionStageIds: ['review'],
+        actionIds: []
+      },
+      {
+        id: 'review',
+        title: 'Review',
+        allowedTransitionStageIds: ['draft'],
+        actionIds: ['card.review']
+      }
+    ],
+    templates: []
+  });
+
+  assert.deepEqual(normalizedSchema.stageDefinitions, [
+    {
+      id: 'draft',
+      title: 'Draft',
+      allowedTransitionStageIds: ['review'],
+      actionIds: []
+    },
+    {
+      id: 'review',
+      title: 'Review',
+      allowedTransitionStageIds: ['draft'],
+      actionIds: ['card.review']
+    }
+  ]);
+  assert.deepEqual(normalizedSchema.stages.review.actions, ['card.review']);
+  assert.deepEqual(normalizedSchema.stages.review.actionIds, ['card.review']);
+});
+
 test('normalizeBoardSchemaInput rejects invalid prompt-run stage prompt action combinations', () => {
   assert.throws(
     () =>
@@ -438,6 +481,45 @@ test('serializeBoardSchemaInput includes prompt action data for prompt-run stage
       title: 'Doing',
       allowedTransitionStageIds: ['backlog'],
       actionIds: []
+    }
+  ]);
+});
+
+test('serializeBoardSchemaInput includes card.review stage actions', () => {
+  const board = createEmptyWorkspace().boards.main;
+
+  board.stageOrder = ['draft', 'review'];
+  board.stages = {
+    draft: {
+      id: 'draft',
+      title: 'Draft',
+      cardIds: [],
+      allowedTransitionStageIds: ['review'],
+      templateIds: [],
+      actionIds: []
+    },
+    review: {
+      id: 'review',
+      title: 'Review',
+      cardIds: [],
+      allowedTransitionStageIds: ['draft'],
+      templateIds: [],
+      actionIds: ['card.review']
+    }
+  };
+
+  assert.deepEqual(serializeBoardSchemaInput(board).stageDefinitions, [
+    {
+      id: 'draft',
+      title: 'Draft',
+      allowedTransitionStageIds: ['review'],
+      actionIds: []
+    },
+    {
+      id: 'review',
+      title: 'Review',
+      allowedTransitionStageIds: ['draft'],
+      actionIds: ['card.review']
     }
   ]);
 });

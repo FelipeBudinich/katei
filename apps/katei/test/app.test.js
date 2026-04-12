@@ -2098,6 +2098,8 @@ test('workspace template renders the board editor without a templates field', ()
   assert.match(boardStageConfigDialog, /workspace:open-board-stage-config@window->board-stage-config#openFromEvent/);
   assert.match(boardStageConfigDialog, /data-board-stage-config-target="definitionsInput"/);
   assert.match(boardStageConfigDialog, /data-board-stage-config-target="error"/);
+  assert.match(boardStageConfigDialog, /placeholder="review \| Review \| doing, done \| card\.review"/);
+  assert.match(boardStageConfigDialog, /Example: review \| Review \| doing, done \| card\.review/);
   assert.match(
     boardStageConfigDialog,
     /class="touch-button-secondary touch-button-secondary--icon touch-button-secondary--close"[\s\S]*?aria-label="Close"[\s\S]*?data-action="board-stage-config#close"[\s\S]*?<span class="sr-only">Close<\/span>/
