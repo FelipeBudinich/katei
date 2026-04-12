@@ -1594,19 +1594,10 @@ export default class extends Controller {
       return '';
     }
 
-    const { board, card, stageId, localizedView, shouldShowPriority } = viewCardState;
+    const { localizedView } = viewCardState;
     const bodyMarkdown = normalizeOptionalString(localizedView?.variant?.detailsMarkdown);
-    const resolvedLocale = normalizeOptionalWorkspaceId(
-      localizedView?.selectedLocale ?? localizedView?.renderedLocale ?? this.viewDialogState?.selectedLocale ?? null
-    );
 
     return formatCardDetailsCopyText({
-      t: this.t,
-      title: normalizeOptionalString(localizedView?.variant?.title),
-      locale: resolvedLocale,
-      stageTitle: normalizeOptionalString(stageId ? getBoardStageTitle(board, stageId) : ''),
-      priority: shouldShowPriority ? normalizeOptionalString(getPriorityDisplayLabel(card?.priority, this.t)) : '',
-      cardId: normalizeOptionalWorkspaceId(card?.id),
       body: bodyMarkdown ? markdownToPlainText(bodyMarkdown) : this.t('workspace.view.noDetails')
     });
   }
@@ -2338,37 +2329,8 @@ function createStagePromptRunRequestKey({ boardId, cardId } = {}) {
   return `${normalizedBoardId}::${normalizedCardId}`;
 }
 
-function formatCardDetailsCopyText({ t, title, locale, stageTitle, priority, cardId, body } = {}) {
-  const lines = [];
-
-  appendCopyFieldLine(lines, t?.('cardViewDialog.copyFields.title'), title);
-  appendCopyFieldLine(lines, t?.('cardViewDialog.copyFields.locale'), locale);
-  appendCopyFieldLine(lines, t?.('cardViewDialog.copyFields.stage'), stageTitle);
-  appendCopyFieldLine(lines, t?.('cardViewDialog.copyFields.priority'), priority);
-  appendCopyFieldLine(lines, t?.('cardViewDialog.copyFields.cardId'), cardId);
-
-  const normalizedBody = normalizeOptionalCopyText(body);
-
-  if (normalizedBody) {
-    if (lines.length > 0) {
-      lines.push('');
-    }
-
-    lines.push(normalizedBody);
-  }
-
-  return lines.join('\n');
-}
-
-function appendCopyFieldLine(lines, label, value) {
-  const normalizedLabel = normalizeOptionalCopyText(label);
-  const normalizedValue = normalizeOptionalCopyText(value);
-
-  if (!normalizedLabel || !normalizedValue) {
-    return;
-  }
-
-  lines.push(`${normalizedLabel}: ${normalizedValue}`);
+function formatCardDetailsCopyText({ body } = {}) {
+  return normalizeOptionalCopyText(body);
 }
 
 async function copyTextToClipboard(text, { navigatorRef = null, documentRef = null } = {}) {

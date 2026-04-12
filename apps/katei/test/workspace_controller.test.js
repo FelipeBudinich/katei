@@ -1964,7 +1964,7 @@ test('openView shows the copy button and dismissViewDialog resets it', () => {
   }
 });
 
-test('copyViewCardDetails uses the active locale and omits empty metadata fields', async () => {
+test('copyViewCardDetails uses the active locale and copies only the body text', async () => {
   const restoreDom = installViewDialogDomStubs();
   const restoreNavigator = installNavigatorStub({
     clipboard: {
@@ -2005,12 +2005,8 @@ test('copyViewCardDetails uses the active locale and omits empty metadata fields
     assert.equal(copied, true);
     assert.equal(controller.viewDialogState.selectedLocale, 'en');
     assert.equal(controller.viewCopyButtonTarget.focused, true);
-    assert.equal(
-      copiedText,
-      'Title: English source\nLocale: en\nStage: Done\nCard ID: card_localized\n\nEnglish details'
-    );
+    assert.equal(copiedText, 'English details');
     assert.equal(announcements.at(-1), 'Card details copied');
-    assert.doesNotMatch(copiedText, /Priority:/);
   } finally {
     restoreNavigator();
     restoreDom();
@@ -2049,7 +2045,57 @@ test('copyViewCardDetails falls back to execCommand when navigator.clipboard is 
     assert.deepEqual(execCommands, ['copy']);
     assert.equal(controller.viewCopyButtonTarget.focused, true);
     assert.equal(globalThis.document.body.children.length, 0);
-    assert.match(copiedText, /^Title: Titulo por defecto\nLocale: es-CL\nStage: Ready for Review\nPriority: Important\nCard ID: card_localized\n\nDetalles por defecto$/);
+    assert.equal(copiedText, 'Detalles por defecto');
+    assert.equal(announcements.at(-1), 'Card details copied');
+  } finally {
+    restoreNavigator();
+    restoreDom();
+  }
+});
+
+test('copyViewCardDetails uses the no-details fallback when the body is empty', async () => {
+  const restoreDom = installViewDialogDomStubs();
+  const restoreNavigator = installNavigatorStub({
+    clipboard: {
+      async writeText(text) {
+        copiedText = text;
+      }
+    }
+  });
+  let copiedText = '';
+
+  try {
+    const { controller, card } = createViewDialogController({
+      contentByLocale: {
+        en: {
+          title: 'English source',
+          detailsMarkdown: ''
+        }
+      },
+      languagePolicy: {
+        sourceLocale: 'en',
+        defaultLocale: 'en',
+        supportedLocales: ['en'],
+        requiredLocales: []
+      }
+    });
+    const announcements = [];
+
+    controller.announce = (message) => {
+      announcements.push(message);
+    };
+
+    WorkspaceController.prototype.openView.call(controller, {
+      currentTarget: createViewTriggerDouble(card.id, 'review', { requestedLocale: 'en' })
+    });
+
+    const copied = await WorkspaceController.prototype.copyViewCardDetails.call(controller, {
+      preventDefault() {},
+      currentTarget: controller.viewCopyButtonTarget
+    });
+
+    assert.equal(copied, true);
+    assert.equal(copiedText, 'No details added.');
     assert.equal(announcements.at(-1), 'Card details copied');
   } finally {
     restoreNavigator();
