@@ -1082,6 +1082,88 @@ test('card.update changes updatedAt only and preserves createdAt', () => {
   });
 });
 
+test('card.update resets required workflowReview when source content changes', () => {
+  const workspace = createWorkspaceWithCard({
+    memberships: [createMembership({ id: 'viewer_123', role: 'editor' })]
+  });
+  workspace.boards.main.stages.backlog.actions = ['card.create', 'card.review'];
+  workspace.boards.main.stages.backlog.actionIds = ['card.create', 'card.review'];
+  workspace.boards.main.cards.card_1.workflowReview = {
+    required: true,
+    currentStageId: 'backlog',
+    status: 'approved',
+    decidedAt: '2026-03-31T10:15:00.000Z',
+    decidedBy: {
+      type: 'human',
+      id: 'viewer_previous'
+    },
+    decidedByRole: 'admin'
+  };
+
+  const { workspace: nextWorkspace } = applyWorkspaceCommand({
+    record: createRecord(workspace, 0),
+    command: {
+      clientMutationId: 'reset_review_on_source_edit',
+      type: 'card.update',
+      payload: {
+        boardId: 'main',
+        cardId: 'card_1',
+        title: 'Updated source title'
+      }
+    },
+    expectedRevision: 0,
+    context: createContext({
+      now: '2026-03-31T11:00:00.000Z'
+    })
+  });
+
+  assert.deepEqual(nextWorkspace.boards.main.cards.card_1.workflowReview, {
+    required: true,
+    currentStageId: 'backlog',
+    status: 'pending',
+    decidedAt: null,
+    decidedBy: null,
+    decidedByRole: null
+  });
+});
+
+test('card.update preserves workflowReview on priority-only changes', () => {
+  const workspace = createWorkspaceWithCard({
+    memberships: [createMembership({ id: 'viewer_123', role: 'editor' })]
+  });
+  const workflowReview = {
+    required: true,
+    currentStageId: 'backlog',
+    status: 'approved',
+    decidedAt: '2026-03-31T10:15:00.000Z',
+    decidedBy: {
+      type: 'human',
+      id: 'viewer_previous'
+    },
+    decidedByRole: 'admin'
+  };
+  workspace.boards.main.cards.card_1.workflowReview = structuredClone(workflowReview);
+
+  const { workspace: nextWorkspace } = applyWorkspaceCommand({
+    record: createRecord(workspace, 0),
+    command: {
+      clientMutationId: 'keep_review_on_priority_edit',
+      type: 'card.update',
+      payload: {
+        boardId: 'main',
+        cardId: 'card_1',
+        priority: 'urgent'
+      }
+    },
+    expectedRevision: 0,
+    context: createContext({
+      now: '2026-03-31T11:00:00.000Z'
+    })
+  });
+
+  assert.deepEqual(nextWorkspace.boards.main.cards.card_1.workflowReview, workflowReview);
+});
+
 test('admin and editor can upsert a selected locale without changing other locale variants', () => {
   for (const role of ['admin', 'editor']) {
     const workspace = createWorkspaceWithCard({
@@ -1152,6 +1234,51 @@ test('admin and editor can upsert a selected locale without changing other local
     });
     assert.deepEqual(nextWorkspace.boards.main.cards.card_1.localeRequests, {});
   }
+});
+
+test('card.locale.upsert preserves workflowReview decisions', () => {
+  const workspace = createWorkspaceWithCard({
+    memberships: [createMembership({ id: 'viewer_123', role: 'editor' })]
+  });
+  const workflowReview = {
+    required: true,
+    currentStageId: 'backlog',
+    status: 'approved',
+    decidedAt: '2026-03-31T10:15:00.000Z',
+    decidedBy: {
+      type: 'human',
+      id: 'viewer_previous'
+    },
+    decidedByRole: 'admin'
+  };
+  workspace.boards.main.languagePolicy = {
+    sourceLocale: 'en',
+    defaultLocale: 'en',
+    supportedLocales: ['en', 'ja'],
+    requiredLocales: ['en']
+  };
+  workspace.boards.main.cards.card_1.workflowReview = structuredClone(workflowReview);
+
+  const { workspace: nextWorkspace } = applyWorkspaceCommand({
+    record: createRecord(workspace, 0),
+    command: {
+      clientMutationId: 'keep_review_on_locale_edit',
+      type: 'card.locale.upsert',
+      payload: {
+        boardId: 'main',
+        cardId: 'card_1',
+        locale: 'ja',
+        title: '日本語タイトル',
+        detailsMarkdown: '日本語本文'
+      }
+    },
+    expectedRevision: 0,
+    context: createContext({
+      now: '2026-03-31T11:00:00.000Z'
+    })
+  });
+
+  assert.deepEqual(nextWorkspace.boards.main.cards.card_1.workflowReview, workflowReview);
 });
 
 test('human actors can overwrite an existing human-authored localized variant', () => {
@@ -2006,6 +2133,92 @@ test('card.move changes the correct source and target columns', () => {
   assert.equal(workspace.boards.main.cards.card_srv001.updatedAt, '2026-03-31T11:00:00.000Z');
   assert.equal(result.sourceColumnId, 'backlog');
   assert.equal(result.targetColumnId, 'doing');
+});
+
+test('card.move starts a new pending workflowReview cycle when entering a review-enabled stage', () => {
+  const workspace = createWorkspaceWithCard({
+    memberships: [createMembership({ id: 'viewer_123', role: 'editor' })]
+  });
+  workspace.boards.main.stages.doing.actions = ['card.review'];
+  workspace.boards.main.stages.doing.actionIds = ['card.review'];
+  workspace.boards.main.cards.card_1.workflowReview = {
+    required: true,
+    currentStageId: 'backlog',
+    status: 'approved',
+    decidedAt: '2026-03-31T10:15:00.000Z',
+    decidedBy: {
+      type: 'human',
+      id: 'viewer_previous'
+    },
+    decidedByRole: 'admin'
+  };
+
+  const { workspace: nextWorkspace } = applyWorkspaceCommand({
+    record: createRecord(workspace, 0),
+    command: {
+      clientMutationId: 'restart_review_on_review_stage_move',
+      type: 'card.move',
+      payload: {
+        boardId: 'main',
+        cardId: 'card_1',
+        sourceColumnId: 'backlog',
+        targetColumnId: 'doing'
+      }
+    },
+    expectedRevision: 0,
+    context: createContext({
+      now: '2026-03-31T11:00:00.000Z'
+    })
+  });
+
+  assert.deepEqual(nextWorkspace.boards.main.stages.backlog.cardIds, []);
+  assert.deepEqual(nextWorkspace.boards.main.stages.doing.cardIds, ['card_1']);
+  assert.deepEqual(nextWorkspace.boards.main.cards.card_1.workflowReview, {
+    required: true,
+    currentStageId: 'doing',
+    status: 'pending',
+    decidedAt: null,
+    decidedBy: null,
+    decidedByRole: null
+  });
+});
+
+test('card.move preserves workflowReview when moving into a non-review stage', () => {
+  const workspace = createWorkspaceWithCard({
+    memberships: [createMembership({ id: 'viewer_123', role: 'editor' })]
+  });
+  const workflowReview = {
+    required: true,
+    currentStageId: 'backlog',
+    status: 'approved',
+    decidedAt: '2026-03-31T10:15:00.000Z',
+    decidedBy: {
+      type: 'human',
+      id: 'viewer_previous'
+    },
+    decidedByRole: 'admin'
+  };
+  workspace.boards.main.cards.card_1.workflowReview = structuredClone(workflowReview);
+
+  const { workspace: nextWorkspace } = applyWorkspaceCommand({
+    record: createRecord(workspace, 0),
+    command: {
+      clientMutationId: 'keep_review_on_non_review_move',
+      type: 'card.move',
+      payload: {
+        boardId: 'main',
+        cardId: 'card_1',
+        sourceColumnId: 'backlog',
+        targetColumnId: 'doing'
+      }
+    },
+    expectedRevision: 0,
+    context: createContext({
+      now: '2026-03-31T11:00:00.000Z'
+    })
+  });
+
+  assert.deepEqual(nextWorkspace.boards.main.cards.card_1.workflowReview, workflowReview);
 });
 
 test('card.delete removes card references from columns and cards map', () => {

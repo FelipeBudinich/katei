@@ -5,7 +5,10 @@ import {
   getStoredCardContentVariant,
   upsertCardContentVariant
 } from './card_localization.js';
-import { createCardWorkflowReview } from './card_workflow_review.js';
+import {
+  createCardWorkflowReview,
+  resetCardWorkflowReview
+} from './card_workflow_review.js';
 import { stageSupportsAction } from './board_stage_actions.js';
 import {
   DEFAULT_PRIORITY,
@@ -177,8 +180,10 @@ export function updateCard(workspace, boardId, cardId, updates) {
   const nextDetailsMarkdown = hasOwn(updates, 'detailsMarkdown')
     ? normalizeDetailsMarkdown(updates.detailsMarkdown)
     : (currentVariant?.detailsMarkdown ?? '');
+  const sourceContentChanged =
+    currentVariant?.title !== nextTitle || currentVariant?.detailsMarkdown !== nextDetailsMarkdown;
 
-  board.cards[cardId] = upsertCardContentVariant(
+  let nextCard = upsertCardContentVariant(
     {
       ...card,
       priority: hasOwn(updates, 'priority') ? normalizePriority(updates.priority) : card.priority,
@@ -198,8 +203,18 @@ export function updateCard(workspace, boardId, cardId, updates) {
       includesHumanInput: true
     }
   );
+
+  if (sourceContentChanged && card.workflowReview?.required === true) {
+    nextCard = {
+      ...nextCard,
+      workflowReview: resetCardWorkflowReview(card.workflowReview, {
+        currentStageId: card.workflowReview.currentStageId
+      })
+    };
+  }
+
   board.cards[cardId] = {
-    ...board.cards[cardId],
+    ...nextCard,
     priority: hasOwn(updates, 'priority') ? normalizePriority(updates.priority) : card.priority
   };
   board.updatedAt = timestamp;
@@ -248,10 +263,25 @@ export function moveCard(workspace, boardId, cardId, sourceColumnId, targetColum
   board.stages[targetColumnId].cardIds = [...board.stages[targetColumnId].cardIds, cardId];
 
   const timestamp = createTimestamp();
-  board.cards[cardId] = {
+  let nextCard = {
     ...card,
     updatedAt: timestamp
   };
+
+  if (
+    card.workflowReview?.required === true &&
+    stageSupportsAction(board, targetColumnId, 'card.review') &&
+    card.workflowReview.currentStageId !== targetColumnId
+  ) {
+    nextCard = {
+      ...nextCard,
+      workflowReview: resetCardWorkflowReview(card.workflowReview, {
+        currentStageId: targetColumnId
+      })
+    };
+  }
+
+  board.cards[cardId] = nextCard;
   board.updatedAt = timestamp;
 
   return nextWorkspace;

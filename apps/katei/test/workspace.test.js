@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createEmptyWorkspace } from '../public/js/domain/workspace_read_model.js';
 import { findColumnIdByCardId, getActiveBoard } from '../public/js/domain/workspace_selectors.js';
 import { validateWorkspaceShape } from '../public/js/domain/workspace_validation.js';
-import { createCard, updateCard } from '../public/js/domain/workspace_mutations.js';
+import { createCard, moveCard, updateCard } from '../public/js/domain/workspace_mutations.js';
 
 test('createCard stores detailsMarkdown on new cards', () => {
   const workspace = createEmptyWorkspace();
@@ -79,6 +79,78 @@ test('updateCard updates detailsMarkdown on existing cards', () => {
     'Updated **markdown**'
   );
   assert.equal(nextWorkspace.boards.main.cards[cardId].priority, 'important');
+});
+
+test('updateCard resets workflowReview when source content changes', () => {
+  const workspace = createCard(createEmptyWorkspace(), 'main', {
+    title: 'Write launch notes',
+    detailsMarkdown: 'Initial note',
+    priority: 'important',
+    requiresReview: true
+  });
+  const board = workspace.boards.main;
+  const [cardId] = board.stages.backlog.cardIds;
+  board.cards[cardId].workflowReview = {
+    required: true,
+    currentStageId: 'backlog',
+    status: 'approved',
+    decidedAt: '2026-04-12T10:00:00.000Z',
+    decidedBy: {
+      type: 'human',
+      id: 'reviewer_1'
+    },
+    decidedByRole: 'admin'
+  };
+
+  const nextWorkspace = updateCard(workspace, 'main', cardId, {
+    detailsMarkdown: 'Updated **markdown**'
+  });
+
+  assert.deepEqual(nextWorkspace.boards.main.cards[cardId].workflowReview, {
+    required: true,
+    currentStageId: 'backlog',
+    status: 'pending',
+    decidedAt: null,
+    decidedBy: null,
+    decidedByRole: null
+  });
+});
+
+test('moveCard starts a pending workflowReview cycle when entering a review-enabled stage', () => {
+  const workspace = createCard(createEmptyWorkspace(), 'main', {
+    title: 'Review me',
+    detailsMarkdown: 'Ready for workflow review',
+    priority: 'important',
+    requiresReview: true
+  });
+  const board = workspace.boards.main;
+  const [cardId] = board.stages.backlog.cardIds;
+  board.stages.doing.actions = ['card.review'];
+  board.stages.doing.actionIds = ['card.review'];
+  board.cards[cardId].workflowReview = {
+    required: true,
+    currentStageId: 'backlog',
+    status: 'approved',
+    decidedAt: '2026-04-12T10:00:00.000Z',
+    decidedBy: {
+      type: 'human',
+      id: 'reviewer_1'
+    },
+    decidedByRole: 'admin'
+  };
+
+  const nextWorkspace = moveCard(workspace, 'main', cardId, 'backlog', 'doing');
+
+  assert.deepEqual(nextWorkspace.boards.main.stages.backlog.cardIds, []);
+  assert.deepEqual(nextWorkspace.boards.main.stages.doing.cardIds, [cardId]);
+  assert.deepEqual(nextWorkspace.boards.main.cards[cardId].workflowReview, {
+    required: true,
+    currentStageId: 'doing',
+    status: 'pending',
+    decidedAt: null,
+    decidedBy: null,
+    decidedByRole: null
+  });
 });
 
 test('validateWorkspaceShape accepts cards that use detailsMarkdown', () => {

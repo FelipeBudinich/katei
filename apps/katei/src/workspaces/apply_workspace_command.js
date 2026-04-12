@@ -48,7 +48,10 @@ import {
   getOpenLocalizationRequest,
   requestCardLocale
 } from '../../public/js/domain/card_localization_requests.js';
-import { createCardWorkflowReview } from '../../public/js/domain/card_workflow_review.js';
+import {
+  createCardWorkflowReview,
+  resetCardWorkflowReview
+} from '../../public/js/domain/card_workflow_review.js';
 import {
   cloneWorkspace,
   createWorkspaceBoard,
@@ -868,10 +871,11 @@ function applyCardUpdate(workspace, command, context) {
   const nextPriority = hasOwn(command.payload, 'priority')
     ? normalizePriority(command.payload.priority)
     : currentCard.priority;
+  const sourceContentChanged =
+    currentVariant?.title !== nextTitle || currentVariant?.detailsMarkdown !== nextDetailsMarkdown;
 
   if (
-    currentVariant?.title === nextTitle &&
-    currentVariant?.detailsMarkdown === nextDetailsMarkdown &&
+    !sourceContentChanged &&
     currentCard.priority === nextPriority
   ) {
     return {
@@ -887,7 +891,7 @@ function applyCardUpdate(workspace, command, context) {
   const nextWorkspace = cloneWorkspace(workspace);
   const board = getBoard(nextWorkspace, command.payload.boardId);
   const card = getCard(board, command.payload.cardId);
-  board.cards[card.id] = upsertCardContentVariant(
+  let nextCard = upsertCardContentVariant(
     {
       ...card,
       priority: nextPriority,
@@ -907,6 +911,17 @@ function applyCardUpdate(workspace, command, context) {
       includesHumanInput: true
     }
   );
+
+  if (sourceContentChanged && card.workflowReview?.required === true) {
+    nextCard = {
+      ...nextCard,
+      workflowReview: resetCardWorkflowReview(card.workflowReview, {
+        currentStageId: card.workflowReview.currentStageId
+      })
+    };
+  }
+
+  board.cards[card.id] = nextCard;
   board.updatedAt = context.now;
 
   return {
@@ -1437,10 +1452,25 @@ function applyCardMove(workspace, command, context) {
     (currentCardId) => currentCardId !== cardId
   );
   board.stages[targetColumnId].cardIds = [...board.stages[targetColumnId].cardIds, cardId];
-  board.cards[card.id] = {
+  let nextCard = {
     ...card,
     updatedAt: context.now
   };
+
+  if (
+    card.workflowReview?.required === true &&
+    stageSupportsAction(board, targetColumnId, 'card.review') &&
+    card.workflowReview.currentStageId !== targetColumnId
+  ) {
+    nextCard = {
+      ...nextCard,
+      workflowReview: resetCardWorkflowReview(card.workflowReview, {
+        currentStageId: targetColumnId
+      })
+    };
+  }
+
+  board.cards[card.id] = nextCard;
   board.updatedAt = context.now;
 
   return {
