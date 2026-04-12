@@ -74,6 +74,7 @@ jobs:
           cd "$RUNNER_TEMP/katei-deploy"
           node ./scripts/build_pwa_assets.mjs
           test -f public/sw.js
+          test -f public/build-meta.json
 
       - name: Verify Heroku git remote
         run: |

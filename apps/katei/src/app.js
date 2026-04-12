@@ -8,6 +8,7 @@ import { createGoogleIdTokenVerifier } from './auth/verify_google_id_token.js';
 import { createAttachSessionMiddleware } from './middleware/attach_session.js';
 import { createAttachUiLocaleMiddleware } from './middleware/attach_ui_locale.js';
 import { createWebRouter } from './routes/web.js';
+import { loadPwaBuildMeta } from './lib/pwa_build_meta.js';
 import { createMongoPortfolioReadModel } from './workspaces/mongo_portfolio_read_model.js';
 import { createMongoWorkspaceRecordRepository } from './workspaces/mongo_workspace_record_repository.js';
 
@@ -25,6 +26,7 @@ export function createApp({
 } = {}) {
   const app = express();
   const config = createRuntimeConfig(env);
+  const pwaBuildMeta = loadPwaBuildMeta({ appRootPath: appRoot });
   const viewsPath = path.join(__dirname, 'views');
   const verifyGoogleIdToken = googleTokenVerifier || createGoogleIdTokenVerifier({
     clientId: config.googleClientId
@@ -36,6 +38,7 @@ export function createApp({
 
   app.set('view engine', 'njk');
   app.set('views', viewsPath);
+  Object.assign(app.locals, pwaBuildMeta);
 
   nunjucks.configure(viewsPath, {
     autoescape: true,

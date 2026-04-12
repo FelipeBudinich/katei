@@ -33,11 +33,24 @@
       </div>
 
       <div class="profile-options-locale-slot">
-        {% set uiLocalePickerId = profileUiLocalePickerId %}
-        {% set uiLocalePickerAction = profileUiLocalePickerAction %}
-        {% set uiLocalePickerVariant = 'icon-modal' %}
-        {% set uiLocalePickerBadgeValue = uiLocaleCurrent.label %}
-        {% include "partials/ui-locale-picker.njk" %}
+        <div class="profile-options-badge-stack">
+          {% set uiLocalePickerId = profileUiLocalePickerId %}
+          {% set uiLocalePickerAction = profileUiLocalePickerAction %}
+          {% set uiLocalePickerVariant = 'icon-modal' %}
+          {% set uiLocalePickerBadgeValue = uiLocaleCurrent.label %}
+          {% include "partials/ui-locale-picker.njk" %}
+
+          <div class="ui-locale-badge ui-locale-badge--build">
+            <span class="ui-locale-badge-label">{{ t('profileOptionsDialog.buildLabel') }}</span>
+            <span
+              class="ui-locale-badge-value"
+              title="{{ pwaBuildId }}"
+              aria-label="{{ t('profileOptionsDialog.buildLabel') }} {{ pwaBuildId }}"
+            >
+              {{ pwaBuildIdShort }}
+            </span>
+          </div>
+        </div>
       </div>
 
       <div

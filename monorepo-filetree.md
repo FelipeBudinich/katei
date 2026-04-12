@@ -87,6 +87,7 @@ katei/
 │       │   ├── svg/
 │       │   │   └── …
 │       │   ├── background.webp
+│       │   ├── build-meta.json
 │       │   ├── favicon.svg
 │       │   ├── manifest.webmanifest
 │       │   ├── offline.html
@@ -165,6 +166,7 @@ katei/
 │       │   ├── openai_localizer.test.js
 │       │   ├── openai_stage_prompt_runner.test.js
 │       │   ├── portfolio_controller.test.js
+│       │   ├── pwa_build_meta.test.js
 │       │   ├── session_controller.test.js
 │       │   ├── session_cookie.test.js
 │       │   ├── sheet_dialog.test.js

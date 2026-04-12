@@ -248,11 +248,17 @@
 
   .profile-options-locale-slot {
     display: inline-flex;
-    align-items: center;
+    align-items: flex-start;
   }
 
   .profile-options-locale-slot .ui-locale-picker--icon-menu {
     min-width: auto;
+  }
+
+  .profile-options-badge-stack {
+    display: grid;
+    gap: 0.5rem;
+    justify-items: start;
   }
 
   .view-locale-menu--ui {

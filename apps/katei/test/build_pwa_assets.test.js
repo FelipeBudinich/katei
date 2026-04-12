@@ -36,6 +36,66 @@ test('resolveBuildId prefers explicit CI metadata and falls back to the package 
 });
 
 test('buildPwaAssets filters missing precache files and writes deterministic output', async (t) => {
+  const tempAppRoot = await createTempPwaFixture(t, { version: '9.9.9' });
+
+  const appRootUrl = pathToFileURL(`${tempAppRoot}${path.sep}`);
+  const firstBuild = await buildPwaAssets({
+    appRootUrl,
+    env: {
+      GITHUB_SHA: 'abcdef123456'
+    }
+  });
+  const firstOutput = await fs.readFile(path.join(tempAppRoot, 'public', 'sw.js'), 'utf8');
+  const firstBuildMeta = JSON.parse(
+    await fs.readFile(path.join(tempAppRoot, 'public', 'build-meta.json'), 'utf8')
+  );
+  const secondBuild = await buildPwaAssets({
+    appRootUrl,
+    env: {
+      GITHUB_SHA: 'abcdef123456'
+    }
+  });
+  const secondOutput = await fs.readFile(path.join(tempAppRoot, 'public', 'sw.js'), 'utf8');
+
+  assert.equal(firstBuild.buildId, 'abcdef123456');
+  assert.deepEqual(firstBuild.buildMeta, {
+    pwaBuildId: 'abcdef123456',
+    pwaBuildIdShort: 'abcdef1'
+  });
+  assert.deepEqual(firstBuildMeta, firstBuild.buildMeta);
+  assert.deepEqual(firstBuild.precacheUrls, [
+    '/offline.html',
+    '/assets/app.css',
+    '/js/app.js'
+  ]);
+  assert.equal(firstOutput, secondOutput);
+  assert.equal(secondBuild.buildId, 'abcdef123456');
+  assert.match(firstOutput, /const BUILD_ID = "abcdef123456";/);
+  assert.doesNotMatch(firstOutput, /'BUILD_ID'/);
+  assert.doesNotMatch(firstOutput, /\/\* PRECACHE_URLS \*\//);
+});
+
+test('buildPwaAssets keeps non-commit fallback ids unchanged in build metadata', async (t) => {
+  const tempAppRoot = await createTempPwaFixture(t, { version: '1.2.3' });
+  const appRootUrl = pathToFileURL(`${tempAppRoot}${path.sep}`);
+
+  const build = await buildPwaAssets({
+    appRootUrl,
+    env: {}
+  });
+  const buildMeta = JSON.parse(
+    await fs.readFile(path.join(tempAppRoot, 'public', 'build-meta.json'), 'utf8')
+  );
+
+  assert.equal(build.buildId, 'dev-1.2.3');
+  assert.deepEqual(build.buildMeta, {
+    pwaBuildId: 'dev-1.2.3',
+    pwaBuildIdShort: 'dev-1.2.3'
+  });
+  assert.deepEqual(buildMeta, build.buildMeta);
+});
+
+async function createTempPwaFixture(t, { version }) {
   const tempAppRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'katei-pwa-assets-'));
   t.after(async () => {
     await fs.rm(tempAppRoot, { recursive: true, force: true });
@@ -46,7 +106,7 @@ test('buildPwaAssets filters missing precache files and writes deterministic out
 
   await fs.writeFile(
     path.join(tempAppRoot, 'package.json'),
-    JSON.stringify({ name: '@katei/app', version: '9.9.9' }, null, 2)
+    JSON.stringify({ name: '@katei/app', version }, null, 2)
   );
   await fs.writeFile(
     path.join(tempAppRoot, 'public', 'sw.template.js'),
@@ -60,31 +120,5 @@ test('buildPwaAssets filters missing precache files and writes deterministic out
   await fs.writeFile(path.join(tempAppRoot, 'public', 'assets', 'app.css'), 'body {}');
   await fs.writeFile(path.join(tempAppRoot, 'public', 'js', 'app.js'), 'console.log("katei");');
 
-  const appRootUrl = pathToFileURL(`${tempAppRoot}${path.sep}`);
-  const firstBuild = await buildPwaAssets({
-    appRootUrl,
-    env: {
-      GITHUB_SHA: 'abcdef123456'
-    }
-  });
-  const firstOutput = await fs.readFile(path.join(tempAppRoot, 'public', 'sw.js'), 'utf8');
-  const secondBuild = await buildPwaAssets({
-    appRootUrl,
-    env: {
-      GITHUB_SHA: 'abcdef123456'
-    }
-  });
-  const secondOutput = await fs.readFile(path.join(tempAppRoot, 'public', 'sw.js'), 'utf8');
-
-  assert.equal(firstBuild.buildId, 'abcdef123456');
-  assert.deepEqual(firstBuild.precacheUrls, [
-    '/offline.html',
-    '/assets/app.css',
-    '/js/app.js'
-  ]);
-  assert.equal(firstOutput, secondOutput);
-  assert.equal(secondBuild.buildId, 'abcdef123456');
-  assert.match(firstOutput, /const BUILD_ID = "abcdef123456";/);
-  assert.doesNotMatch(firstOutput, /'BUILD_ID'/);
-  assert.doesNotMatch(firstOutput, /\/\* PRECACHE_URLS \*\//);
-});
+  return tempAppRoot;
+}

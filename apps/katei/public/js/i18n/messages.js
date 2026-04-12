@@ -362,7 +362,8 @@ const EN_MESSAGES = freezeCatalog({
   },
   profileOptionsDialog: {
     sectionLabel: 'Profile',
-    heading: 'Profile options'
+    heading: 'Profile options',
+    buildLabel: 'Build'
   },
   collaborators: {
     sectionLabel: 'Collaboration',
@@ -970,7 +971,8 @@ const ES_CL_MESSAGES = freezeCatalog({
   },
   profileOptionsDialog: {
     sectionLabel: 'Perfil',
-    heading: 'Opciones de perfil'
+    heading: 'Opciones de perfil',
+    buildLabel: 'Compilación'
   },
   collaborators: {
     sectionLabel: 'Colaboración',
@@ -1579,7 +1581,8 @@ const JA_MESSAGES = freezeCatalog({
   },
   profileOptionsDialog: {
     sectionLabel: 'プロフィール',
-    heading: 'プロフィール設定'
+    heading: 'プロフィール設定',
+    buildLabel: 'ビルド'
   },
   collaborators: {
     sectionLabel: '共同編集',

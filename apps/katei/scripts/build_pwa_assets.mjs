@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { createPwaBuildMeta } from '../src/lib/pwa_build_meta.js';
 
 export const DEFAULT_PRECACHE_URLS = Object.freeze([
   '/offline.html',
@@ -87,11 +88,17 @@ export async function buildPwaAssets({
     buildId,
     precacheUrls: resolvedPrecacheUrls
   });
+  const buildMeta = createPwaBuildMeta(buildId);
 
   await fs.writeFile(new URL('public/sw.js', appRootUrl), output);
+  await fs.writeFile(
+    new URL('public/build-meta.json', appRootUrl),
+    `${JSON.stringify(buildMeta, null, 2)}\n`
+  );
 
   return {
     buildId,
+    buildMeta,
     precacheUrls: resolvedPrecacheUrls,
     output
   };

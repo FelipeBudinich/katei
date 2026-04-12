@@ -51,10 +51,11 @@ const WORKSPACE_VENDOR_ASSET_PATHS = [
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const WORKSPACE_VIEWS_PATH = path.join(__dirname, '../src/views');
-const kateiPackageJson = JSON.parse(
-  await fs.readFile(new URL('../package.json', import.meta.url), 'utf8')
+const kateiBuildMeta = JSON.parse(
+  await fs.readFile(new URL('../public/build-meta.json', import.meta.url), 'utf8')
 );
-const EXPECTED_LOCAL_SW_BUILD_ID = `dev-${kateiPackageJson.version}`;
+const EXPECTED_LOCAL_SW_BUILD_ID = kateiBuildMeta.pwaBuildId;
+const EXPECTED_LOCAL_PWA_BUILD_ID_SHORT = kateiBuildMeta.pwaBuildIdShort;
 
 function createTestApp({ env = {}, googleTokenVerifier, workspaceRecordRepository, portfolioReadModel } = {}) {
   return createApp({
@@ -3998,7 +3999,12 @@ function extractDialogByTarget(html, targetName) {
   return match[0];
 }
 
-function assertSharedProfileOptionsDialog(dialogHtml, { localeFormAction, localePickerId }) {
+function assertSharedProfileOptionsDialog(dialogHtml, {
+  localeFormAction,
+  localePickerId,
+  pwaBuildId = EXPECTED_LOCAL_SW_BUILD_ID,
+  pwaBuildIdShort = EXPECTED_LOCAL_PWA_BUILD_ID_SHORT
+}) {
   assert.match(dialogHtml, /class="sheet-panel"/);
   assert.match(dialogHtml, /class="dialog-handle mx-auto h-1\.5 w-16 rounded-full lg:hidden"/);
   assert.match(dialogHtml, /class="dialog-header-row mt-4"/);
@@ -4010,12 +4016,23 @@ function assertSharedProfileOptionsDialog(dialogHtml, { localeFormAction, locale
   assert.match(dialogHtml, /class="profile-options-identity-row mt-4"/);
   assert.match(dialogHtml, /class="viewer-chip"/);
   assert.match(dialogHtml, /class="profile-options-locale-slot"/);
+  assert.match(dialogHtml, /class="profile-options-badge-stack"/);
   assert.match(dialogHtml, new RegExp(`id="${escapeForRegex(localePickerId)}"`));
   assert.match(dialogHtml, /class="ui-locale-badge ui-locale-badge--with-picker"/);
   assert.match(
     dialogHtml,
     new RegExp(
       `<form[\\s\\S]*?method="get"[\\s\\S]*?action="${escapeForRegex(localeFormAction)}"[\\s\\S]*?class="ui-locale-picker ui-locale-picker--icon-menu"[\\s\\S]*?data-controller="ui-locale-picker"[\\s\\S]*?<div class="ui-locale-badge ui-locale-badge--with-picker">[\\s\\S]*?<span class="ui-locale-badge-value">\\s*English\\s*<\\/span>[\\s\\S]*?<div class="view-locale-picker">`
+    )
+  );
+  assert.match(dialogHtml, /class="ui-locale-badge ui-locale-badge--build"/);
+  assert.match(dialogHtml, /<span class="ui-locale-badge-label">\s*Build\s*<\/span>/);
+  assert.match(dialogHtml, new RegExp(`title="${escapeForRegex(pwaBuildId)}"`));
+  assert.match(dialogHtml, new RegExp(`aria-label="${escapeForRegex(`Build ${pwaBuildId}`)}"`));
+  assert.match(
+    dialogHtml,
+    new RegExp(
+      `<span[\\s\\S]*?class="ui-locale-badge-value"[\\s\\S]*?>\\s*${escapeForRegex(pwaBuildIdShort)}\\s*<\\/span>`
     )
   );
   assert.match(dialogHtml, /aria-haspopup="dialog"/);
@@ -4081,6 +4098,8 @@ function renderPortfolioPage(viewModel, { uiLocale = 'en' } = {}) {
       }
     ],
     uiLocalePickerAction: '/portfolio',
+    pwaBuildId: EXPECTED_LOCAL_SW_BUILD_ID,
+    pwaBuildIdShort: EXPECTED_LOCAL_PWA_BUILD_ID_SHORT,
     t: createTranslator(uiLocale),
     ...viewModel
   });
@@ -4120,6 +4139,8 @@ function renderWorkspacePage(viewModel, { uiLocale = 'en' } = {}) {
       }
     ],
     uiLocalePickerAction: '/boards',
+    pwaBuildId: EXPECTED_LOCAL_SW_BUILD_ID,
+    pwaBuildIdShort: EXPECTED_LOCAL_PWA_BUILD_ID_SHORT,
     t: createTranslator(uiLocale),
     ...viewModel
   });
