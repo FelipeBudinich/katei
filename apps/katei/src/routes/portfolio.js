@@ -41,6 +41,10 @@ export function buildPortfolioPageModel({ viewer, t, portfolio = createEmptyPort
     normalizedPortfolio.agentProposalItems,
     normalizedSearchQuery
   );
+  const filteredPendingCardReviewItems = filterPortfolioEntries(
+    normalizedPortfolio.pendingCardReviewItems,
+    normalizedSearchQuery
+  );
   const filteredMissingRequiredLocalizationItems = filterPortfolioEntries(
     normalizedPortfolio.missingRequiredLocalizationItems,
     normalizedSearchQuery
@@ -58,6 +62,9 @@ export function buildPortfolioPageModel({ viewer, t, portfolio = createEmptyPort
     timestampLabel: t('portfolio.agentProposals.proposedAtColumnLabel'),
     timestamp: entry?.proposedAt
   }));
+  const pendingCardReviewEntries = filteredPendingCardReviewItems.map((entry) =>
+    createPendingCardReviewEntryViewModel(entry, t)
+  );
   const missingRequiredLocalizationEntries = filteredMissingRequiredLocalizationItems.map((entry) =>
     createMissingRequiredLocalizationEntryViewModel(entry)
   );
@@ -134,6 +141,10 @@ export function buildPortfolioPageModel({ viewer, t, portfolio = createEmptyPort
       {
         label: t('portfolio.summary.agentProposalCountLabel'),
         value: normalizedPortfolio.totals.agentProposalCount
+      },
+      {
+        label: t('cardEditor.workflowReview.pending'),
+        value: normalizedPortfolio.totals.pendingCardReviewCount
       }
     ],
     boardDirectoryEntries,
@@ -145,6 +156,9 @@ export function buildPortfolioPageModel({ viewer, t, portfolio = createEmptyPort
     agentProposalEntries,
     agentProposalWorkspaceGroups: createWorkspaceGroupsViewModels(agentProposalEntries),
     agentProposalCount: agentProposalEntries.length,
+    pendingCardReviewEntries,
+    pendingCardReviewWorkspaceGroups: createWorkspaceGroupsViewModels(pendingCardReviewEntries),
+    pendingCardReviewCount: pendingCardReviewEntries.length,
     missingRequiredLocalizationEntries,
     missingRequiredLocalizationWorkspaceGroups: createWorkspaceGroupsViewModels(missingRequiredLocalizationEntries),
     missingRequiredLocalizationCount: missingRequiredLocalizationEntries.length,
@@ -162,6 +176,7 @@ function createEmptyPortfolioData() {
     boardDirectory: [],
     awaitingHumanVerificationItems: [],
     agentProposalItems: [],
+    pendingCardReviewItems: [],
     missingRequiredLocalizationItems: []
   };
 }
@@ -173,16 +188,24 @@ function normalizePortfolio(portfolio) {
     ? portfolio.awaitingHumanVerificationItems
     : [];
   const agentProposalItems = Array.isArray(portfolio?.agentProposalItems) ? portfolio.agentProposalItems : [];
+  const pendingCardReviewItems = Array.isArray(portfolio?.pendingCardReviewItems)
+    ? portfolio.pendingCardReviewItems
+    : [];
   const missingRequiredLocalizationItems = Array.isArray(portfolio?.missingRequiredLocalizationItems)
     ? portfolio.missingRequiredLocalizationItems
     : [];
 
   return {
-    totals: normalizePortfolioTotals(portfolio?.totals, { workspaces, boardDirectory }),
+    totals: normalizePortfolioTotals(portfolio?.totals, {
+      workspaces,
+      boardDirectory,
+      pendingCardReviewItems
+    }),
     workspaces,
     boardDirectory,
     awaitingHumanVerificationItems,
     agentProposalItems,
+    pendingCardReviewItems,
     missingRequiredLocalizationItems
   };
 }
@@ -368,6 +391,26 @@ function createMissingRequiredLocalizationEntryViewModel(entry) {
   };
 }
 
+function createPendingCardReviewEntryViewModel(entry, t) {
+  const workspaceId = normalizeOptionalString(entry?.workspaceId);
+  const workspaceTitle = normalizeOptionalString(entry?.workspaceTitle);
+  const boardTitle = normalizeOptionalString(entry?.boardTitle) || normalizeOptionalString(entry?.boardId);
+  const cardTitle = normalizeOptionalString(entry?.cardTitle) || normalizeOptionalString(entry?.cardId);
+  const stageTitle = normalizeOptionalString(entry?.stageTitle) || normalizeOptionalString(entry?.stageId);
+
+  return {
+    workspaceId,
+    workspaceTitle,
+    workspaceLabel: workspaceTitle || workspaceId,
+    boardTitle,
+    cardTitle,
+    stageTitle,
+    stateLabel: t('cardEditor.workflowReview.pending'),
+    updatedAt: normalizeOptionalString(entry?.cardUpdatedAt),
+    openBoardHref: buildBoardHref(entry)
+  };
+}
+
 function createIncompleteCoverageEntryViewModel(entry, t) {
   const workspaceId = normalizeOptionalString(entry?.workspaceId);
   const workspaceTitle = normalizeOptionalString(entry?.workspaceTitle);
@@ -449,11 +492,16 @@ function createEmptyPortfolioTotals() {
     cardsMissingRequiredLocales: 0,
     openLocaleRequestCount: 0,
     awaitingHumanVerificationCount: 0,
-    agentProposalCount: 0
+    agentProposalCount: 0,
+    pendingCardReviewCount: 0
   };
 }
 
-function normalizePortfolioTotals(totals, { workspaces = [], boardDirectory = [] } = {}) {
+function normalizePortfolioTotals(totals, {
+  workspaces = [],
+  boardDirectory = [],
+  pendingCardReviewItems = []
+} = {}) {
   return {
     workspaces: normalizeNonNegativeInteger(totals?.workspaces, workspaces.length),
     boards: normalizeNonNegativeInteger(totals?.boards, boardDirectory.length),
@@ -467,7 +515,11 @@ function normalizePortfolioTotals(totals, { workspaces = [], boardDirectory = []
     cardsMissingRequiredLocales: normalizeNonNegativeInteger(totals?.cardsMissingRequiredLocales),
     openLocaleRequestCount: normalizeNonNegativeInteger(totals?.openLocaleRequestCount),
     awaitingHumanVerificationCount: normalizeNonNegativeInteger(totals?.awaitingHumanVerificationCount),
-    agentProposalCount: normalizeNonNegativeInteger(totals?.agentProposalCount)
+    agentProposalCount: normalizeNonNegativeInteger(totals?.agentProposalCount),
+    pendingCardReviewCount: normalizeNonNegativeInteger(
+      totals?.pendingCardReviewCount,
+      pendingCardReviewItems.length
+    )
   };
 }
 
@@ -489,6 +541,8 @@ function getPortfolioEntrySearchValue(entry) {
     entry?.boardId,
     entry?.cardTitle,
     entry?.cardId,
+    entry?.stageTitle,
+    entry?.stageId,
     entry?.localizedTitle,
     entry?.locale,
     entry?.localePolicy?.sourceLocale,
