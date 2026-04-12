@@ -11,6 +11,9 @@ import {
   listCardLocales
 } from '../../public/js/domain/card_localization.js';
 import { listCardLocaleStatuses } from '../../public/js/domain/card_localization_requests.js';
+import { normalizeCardWorkflowReview } from '../../public/js/domain/card_workflow_review.js';
+import { stageSupportsAction } from '../../public/js/domain/board_stage_actions.js';
+import { findColumnIdByCardId } from '../../public/js/domain/workspace_selectors.js';
 
 export function createMongoPortfolioReadModel(options = {}) {
   return new MongoPortfolioReadModel(options);
@@ -37,6 +40,7 @@ export class MongoPortfolioReadModel {
     const boardDirectory = [];
     const awaitingHumanVerificationItems = [];
     const agentProposalItems = [];
+    const pendingCardReviewItems = [];
     const missingRequiredLocalizationItems = [];
 
     for (const record of records) {
@@ -58,6 +62,7 @@ export class MongoPortfolioReadModel {
         boardDirectory.push(boardSummary);
         awaitingHumanVerificationItems.push(...boardPortfolioDetails.awaitingHumanVerificationItems);
         agentProposalItems.push(...boardPortfolioDetails.agentProposalItems);
+        pendingCardReviewItems.push(...boardPortfolioDetails.pendingCardReviewItems);
         missingRequiredLocalizationItems.push(...boardPortfolioDetails.missingRequiredLocalizationItems);
         accumulatePortfolioTotals(totals, boardSummary);
       }
@@ -72,6 +77,7 @@ export class MongoPortfolioReadModel {
       boardDirectory,
       awaitingHumanVerificationItems: awaitingHumanVerificationItems.sort(compareAwaitingHumanVerificationItems),
       agentProposalItems: agentProposalItems.sort(compareAgentProposalItems),
+      pendingCardReviewItems: pendingCardReviewItems.sort(comparePendingCardReviewItems),
       missingRequiredLocalizationItems: missingRequiredLocalizationItems.sort(compareMissingRequiredLocalizationItems)
     };
   }
@@ -149,12 +155,38 @@ function createBoardPortfolioDetails(record, board, boardId, localePolicy) {
   const aging = createEmptyBoardAging();
   const awaitingHumanVerificationItems = [];
   const agentProposalItems = [];
+  const pendingCardReviewItems = [];
   const missingRequiredLocalizationItems = [];
   const boardTitle = normalizeOptionalString(board?.title) || boardId;
+  const validStageIds = new Set(Array.isArray(board?.stageOrder) ? board.stageOrder : []);
 
   for (const [cardId, card] of Object.entries(board?.cards ?? {}).sort(compareCardEntries)) {
     if (!card || typeof card !== 'object') {
       continue;
+    }
+
+    const currentStageId = findColumnIdByCardId(board, cardId);
+    const workflowReview = normalizeCardWorkflowReview(card.workflowReview, { validStageIds });
+
+    if (
+      workflowReview?.required === true &&
+      workflowReview.status === 'pending' &&
+      workflowReview.currentStageId === currentStageId &&
+      stageSupportsAction(board, currentStageId, 'card.review')
+    ) {
+      summary.pendingCardReviewCount += 1;
+      pendingCardReviewItems.push({
+        ...createCardPortfolioItemBase({
+          record,
+          boardId,
+          boardTitle,
+          cardId,
+          card,
+          localePolicy
+        }),
+        stageId: currentStageId,
+        stageTitle: normalizeOptionalString(board?.stages?.[currentStageId]?.title) || currentStageId
+      });
     }
 
     const missingRequiredLocales = getMissingRequiredLocales(board, card);
@@ -250,6 +282,7 @@ function createBoardPortfolioDetails(record, board, boardId, localePolicy) {
     aging,
     awaitingHumanVerificationItems,
     agentProposalItems,
+    pendingCardReviewItems,
     missingRequiredLocalizationItems
   };
 }
@@ -329,6 +362,10 @@ function compareAgentProposalItems(left, right) {
   return comparePortfolioItemsByTimestamp(left?.proposedAt, right?.proposedAt, left, right);
 }
 
+function comparePendingCardReviewItems(left, right) {
+  return comparePortfolioItemsByTimestamp(left?.cardUpdatedAt, right?.cardUpdatedAt, left, right);
+}
+
 function compareMissingRequiredLocalizationItems(left, right) {
   return comparePortfolioItemsByTimestamp(left?.cardUpdatedAt, right?.cardUpdatedAt, left, right);
 }
@@ -402,7 +439,8 @@ function createEmptyPortfolioTotals() {
     cardsMissingRequiredLocales: 0,
     openLocaleRequestCount: 0,
     awaitingHumanVerificationCount: 0,
-    agentProposalCount: 0
+    agentProposalCount: 0,
+    pendingCardReviewCount: 0
   };
 }
 
@@ -411,7 +449,8 @@ function createEmptyBoardLocalizationSummary() {
     cardsMissingRequiredLocales: 0,
     openLocaleRequestCount: 0,
     awaitingHumanVerificationCount: 0,
-    agentProposalCount: 0
+    agentProposalCount: 0,
+    pendingCardReviewCount: 0
   };
 }
 
@@ -437,6 +476,9 @@ function accumulatePortfolioTotals(totals, boardSummary) {
     : 0;
   totals.agentProposalCount += Number.isInteger(boardSummary?.localizationSummary?.agentProposalCount)
     ? boardSummary.localizationSummary.agentProposalCount
+    : 0;
+  totals.pendingCardReviewCount += Number.isInteger(boardSummary?.localizationSummary?.pendingCardReviewCount)
+    ? boardSummary.localizationSummary.pendingCardReviewCount
     : 0;
 }
 

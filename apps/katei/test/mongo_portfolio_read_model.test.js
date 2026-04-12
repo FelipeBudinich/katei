@@ -178,7 +178,8 @@ test('loadPortfolioSummary returns deterministic summary rollups with localizati
     cardsMissingRequiredLocales: 1,
     openLocaleRequestCount: 2,
     awaitingHumanVerificationCount: 1,
-    agentProposalCount: 1
+    agentProposalCount: 1,
+    pendingCardReviewCount: 0
   });
   assert.deepEqual(summary.workspaces, [
     {
@@ -229,7 +230,8 @@ test('loadPortfolioSummary returns deterministic summary rollups with localizati
       cardsMissingRequiredLocales: 0,
       openLocaleRequestCount: 0,
       awaitingHumanVerificationCount: 0,
-      agentProposalCount: 0
+      agentProposalCount: 0,
+      pendingCardReviewCount: 0
     },
     aging: {
       oldestMissingRequiredLocaleUpdatedAt: null,
@@ -264,7 +266,8 @@ test('loadPortfolioSummary returns deterministic summary rollups with localizati
       cardsMissingRequiredLocales: 1,
       openLocaleRequestCount: 2,
       awaitingHumanVerificationCount: 1,
-      agentProposalCount: 1
+      agentProposalCount: 1,
+      pendingCardReviewCount: 0
     },
     aging: {
       oldestMissingRequiredLocaleUpdatedAt: '2026-04-02T09:10:00.000Z',
@@ -327,6 +330,7 @@ test('loadPortfolioSummary returns deterministic summary rollups with localizati
       }
     ]
   );
+  assert.deepEqual(summary.pendingCardReviewItems, []);
   assert.deepEqual(
     summary.missingRequiredLocalizationItems.map((item) => ({
       workspaceId: item.workspaceId,
@@ -364,12 +368,14 @@ test('loadPortfolioSummary handles an empty database cleanly', async () => {
       cardsMissingRequiredLocales: 0,
       openLocaleRequestCount: 0,
       awaitingHumanVerificationCount: 0,
-      agentProposalCount: 0
+      agentProposalCount: 0,
+      pendingCardReviewCount: 0
     },
     workspaces: [],
     boardDirectory: [],
     awaitingHumanVerificationItems: [],
     agentProposalItems: [],
+    pendingCardReviewItems: [],
     missingRequiredLocalizationItems: []
   });
 });
@@ -730,6 +736,7 @@ test('loadPortfolioSummary keeps workspace and board grouping stable and sorts q
   for (const item of [
     ...summary.awaitingHumanVerificationItems,
     ...summary.agentProposalItems,
+    ...summary.pendingCardReviewItems,
     ...summary.missingRequiredLocalizationItems
   ]) {
     assert.equal(Object.hasOwn(item, 'contentByLocale'), false);
@@ -738,6 +745,165 @@ test('loadPortfolioSummary keeps workspace and board grouping stable and sorts q
     assert.equal(Object.hasOwn(item, 'provenance'), false);
     assert.equal(Object.hasOwn(item, 'review'), false);
   }
+});
+
+test('loadPortfolioSummary includes cards with active pending workflow review in the current review-enabled stage', async () => {
+  const record = createPortfolioRecordFixture({
+    workspaceId: 'workspace_pending_review_included',
+    viewerSub: 'sub_pending_review_included',
+    recordCreatedAt: '2026-04-05T09:00:00.000Z',
+    recordUpdatedAt: '2026-04-05T10:00:00.000Z',
+    boards: [
+      {
+        boardId: 'main',
+        title: 'Editorial board',
+        createdAt: '2026-04-05T09:05:00.000Z',
+        updatedAt: '2026-04-05T09:55:00.000Z',
+        cards: [
+          {
+            title: 'Approve publishing copy',
+            detailsMarkdown: 'Ready for workflow review',
+            createdAt: '2026-04-05T09:10:00.000Z',
+            updatedAt: '2026-04-05T09:40:00.000Z',
+            stageId: 'done',
+            workflowReview: {
+              required: true,
+              currentStageId: 'done',
+              status: 'pending',
+              decidedAt: null,
+              decidedBy: null,
+              decidedByRole: null
+            }
+          }
+        ]
+      }
+    ]
+  });
+  const readModel = new MongoPortfolioReadModel({
+    collection: createCollectionDouble([
+      toWorkspaceRecordDocument(record)
+    ])
+  });
+
+  const summary = await readModel.loadPortfolioSummary();
+
+  assert.equal(summary.totals.pendingCardReviewCount, 1);
+  assert.equal(summary.boardDirectory[0].localizationSummary.pendingCardReviewCount, 1);
+  assert.equal(summary.pendingCardReviewItems.length, 1);
+  assert.deepEqual(
+    summary.pendingCardReviewItems.map((item) => ({
+      workspaceId: item.workspaceId,
+      boardId: item.boardId,
+      boardTitle: item.boardTitle,
+      cardTitle: item.cardTitle,
+      cardUpdatedAt: item.cardUpdatedAt,
+      stageId: item.stageId,
+      stageTitle: item.stageTitle
+    })),
+    [
+      {
+        workspaceId: 'workspace_pending_review_included',
+        boardId: 'main',
+        boardTitle: 'Editorial board',
+        cardTitle: 'Approve publishing copy',
+        cardUpdatedAt: '2026-04-05T09:40:00.000Z',
+        stageId: 'done',
+        stageTitle: 'Done'
+      }
+    ]
+  );
+});
+
+test('loadPortfolioSummary excludes stale pending workflow review when the card moved away from its review stage', async () => {
+  const record = createPortfolioRecordFixture({
+    workspaceId: 'workspace_pending_review_stale',
+    viewerSub: 'sub_pending_review_stale',
+    recordCreatedAt: '2026-04-06T09:00:00.000Z',
+    recordUpdatedAt: '2026-04-06T10:00:00.000Z',
+    boards: [
+      {
+        boardId: 'main',
+        title: 'Ops board',
+        createdAt: '2026-04-06T09:05:00.000Z',
+        updatedAt: '2026-04-06T09:55:00.000Z',
+        cards: [
+          {
+            title: 'Moved after review request',
+            detailsMarkdown: 'Pending state should be stale',
+            createdAt: '2026-04-06T09:10:00.000Z',
+            updatedAt: '2026-04-06T09:40:00.000Z',
+            stageId: 'doing',
+            workflowReview: {
+              required: true,
+              currentStageId: 'done',
+              status: 'pending',
+              decidedAt: null,
+              decidedBy: null,
+              decidedByRole: null
+            }
+          }
+        ]
+      }
+    ]
+  });
+  record.workspace.boards.main.stages.doing.actions = ['card.review'];
+  record.workspace.boards.main.stages.doing.actionIds = ['card.review'];
+  const readModel = new MongoPortfolioReadModel({
+    collection: createCollectionDouble([
+      toWorkspaceRecordDocument(record)
+    ])
+  });
+
+  const summary = await readModel.loadPortfolioSummary();
+
+  assert.equal(summary.totals.pendingCardReviewCount, 0);
+  assert.equal(summary.boardDirectory[0].localizationSummary.pendingCardReviewCount, 0);
+  assert.equal(summary.pendingCardReviewItems.length, 0);
+});
+
+test('loadPortfolioSummary excludes pending workflow review cards in stages without card.review support', async () => {
+  const record = createPortfolioRecordFixture({
+    workspaceId: 'workspace_pending_review_unsupported',
+    viewerSub: 'sub_pending_review_unsupported',
+    recordCreatedAt: '2026-04-07T09:00:00.000Z',
+    recordUpdatedAt: '2026-04-07T10:00:00.000Z',
+    boards: [
+      {
+        boardId: 'main',
+        title: 'Draft board',
+        createdAt: '2026-04-07T09:05:00.000Z',
+        updatedAt: '2026-04-07T09:55:00.000Z',
+        cards: [
+          {
+            title: 'Still drafting',
+            detailsMarkdown: 'This stage cannot be reviewed yet',
+            createdAt: '2026-04-07T09:10:00.000Z',
+            updatedAt: '2026-04-07T09:40:00.000Z',
+            stageId: 'doing',
+            workflowReview: {
+              required: true,
+              currentStageId: 'doing',
+              status: 'pending',
+              decidedAt: null,
+              decidedBy: null,
+              decidedByRole: null
+            }
+          }
+        ]
+      }
+    ]
+  });
+  const readModel = new MongoPortfolioReadModel({
+    collection: createCollectionDouble([
+      toWorkspaceRecordDocument(record)
+    ])
+  });
+
+  const summary = await readModel.loadPortfolioSummary();
+
+  assert.equal(summary.totals.pendingCardReviewCount, 0);
+  assert.equal(summary.boardDirectory[0].localizationSummary.pendingCardReviewCount, 0);
+  assert.equal(summary.pendingCardReviewItems.length, 0);
 });
 
 function createPortfolioRecordFixture({
@@ -839,7 +1005,9 @@ function addBoardCard(workspace, boardId, {
   createdAt = null,
   updatedAt = null,
   localeRequests = null,
-  localizedContent = []
+  localizedContent = [],
+  stageId = 'todo',
+  workflowReview = null
 }) {
   const previousCardIds = new Set(Object.keys(workspace.boards[boardId].cards ?? {}));
   const nextWorkspace = createCard(workspace, boardId, {
@@ -865,7 +1033,24 @@ function addBoardCard(workspace, boardId, {
     card.contentByLocale[variant.locale] = createStoredLocalizedVariant(variant);
   }
 
+  if (workflowReview) {
+    card.workflowReview = structuredClone(workflowReview);
+  }
+
+  if (stageId !== 'todo') {
+    moveBoardCardToStage(nextWorkspace.boards[boardId], cardId, stageId);
+  }
+
   return nextWorkspace;
+}
+
+function moveBoardCardToStage(board, cardId, stageId) {
+  for (const candidateStageId of board.stageOrder) {
+    board.stages[candidateStageId].cardIds = board.stages[candidateStageId].cardIds
+      .filter((candidateCardId) => candidateCardId !== cardId);
+  }
+
+  board.stages[stageId].cardIds.push(cardId);
 }
 
 function createStoredLocalizedVariant({
