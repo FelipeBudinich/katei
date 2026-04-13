@@ -101,7 +101,8 @@ export function createWorkspaceRecord({
     workspace: cloneWorkspace(
       validateWorkspaceSnapshot(workspace, {
         workspaceId: normalizedWorkspaceId,
-        ownerSub: normalizedViewerSub
+        ownerSub: normalizedViewerSub,
+        allowEmptyWorkspace: true
       })
     ),
     revision: normalizeRevision(revision),
@@ -230,7 +231,10 @@ export function fromWorkspaceRecordDocument(document) {
   });
 }
 
-export function validateWorkspaceSnapshot(workspace, { workspaceId = null, ownerSub = null, ownerActor = null } = {}) {
+export function validateWorkspaceSnapshot(
+  workspace,
+  { workspaceId = null, ownerSub = null, ownerActor = null, allowEmptyWorkspace = false } = {}
+) {
   const normalizedOwnerSub = normalizeOptionalString(ownerSub) || null;
   const migratedWorkspace = migrateWorkspaceSnapshot(workspace, {
     workspaceId,
@@ -244,11 +248,31 @@ export function validateWorkspaceSnapshot(workspace, { workspaceId = null, owner
 
   normalizedWorkspace.workspaceId = normalizedWorkspaceId;
 
-  if (!validateWorkspaceShape(normalizedWorkspace)) {
+  if (!validateWorkspaceShape(normalizedWorkspace) && !(allowEmptyWorkspace && isPersistableEmptyWorkspace(normalizedWorkspace))) {
     throw new Error('Cannot save an invalid workspace.');
   }
 
   return normalizedWorkspace;
+}
+
+function isPersistableEmptyWorkspace(workspace) {
+  return Boolean(
+    workspace
+      && typeof workspace === 'object'
+      && workspace.version != null
+      && normalizeOptionalString(workspace.workspaceId)
+      && (workspace.title == null || normalizeOptionalString(workspace.title))
+      && Array.isArray(workspace.boardOrder)
+      && workspace.boardOrder.length === 0
+      && workspace.boards
+      && typeof workspace.boards === 'object'
+      && !Array.isArray(workspace.boards)
+      && Object.keys(workspace.boards).length === 0
+      && workspace.ui
+      && typeof workspace.ui === 'object'
+      && !Array.isArray(workspace.ui)
+      && (workspace.ui.activeBoardId == null || !normalizeOptionalString(workspace.ui.activeBoardId))
+  );
 }
 
 export function createWorkspaceActivityEvent({

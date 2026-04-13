@@ -38,6 +38,22 @@ export class WorkspaceBoardRoleAssignmentPermissionError extends Error {
   }
 }
 
+export class WorkspaceBoardDeletionPermissionError extends Error {
+  constructor(message = 'Board deletion is only available to super admins.') {
+    super(message);
+    this.name = 'WorkspaceBoardDeletionPermissionError';
+    this.code = 'WORKSPACE_BOARD_DELETION_FORBIDDEN';
+  }
+}
+
+export class WorkspaceDeletionPermissionError extends Error {
+  constructor(message = 'Workspace deletion is only available to super admins.') {
+    super(message);
+    this.name = 'WorkspaceDeletionPermissionError';
+    this.code = 'WORKSPACE_DELETION_FORBIDDEN';
+  }
+}
+
 export class WorkspaceCreationPermissionError extends Error {
   constructor(message = 'Workspace creation is only available to super admins.') {
     super(message);
@@ -48,6 +64,10 @@ export class WorkspaceCreationPermissionError extends Error {
 
 export class WorkspaceRecordRepository {
   async loadOrCreateWorkspaceRecord({ viewerSub, workspaceId, viewerEmail, viewerName } = {}) {
+    throw new Error('Not implemented');
+  }
+
+  async resolvePreferredWorkspaceForViewer({ viewerSub, viewerEmail, viewerName, requestedWorkspaceId = null } = {}) {
     throw new Error('Not implemented');
   }
 
@@ -72,6 +92,14 @@ export class WorkspaceRecordRepository {
   }
 
   async loadWorkspaceRecordForSuperAdminBoardRoleAssignment({ viewerIsSuperAdmin, workspaceId } = {}) {
+    throw new Error('Not implemented');
+  }
+
+  async loadWorkspaceRecordForSuperAdminBoardDeletion({ viewerIsSuperAdmin, workspaceId } = {}) {
+    throw new Error('Not implemented');
+  }
+
+  async deleteWorkspaceForSuperAdmin({ viewerIsSuperAdmin, workspaceId } = {}) {
     throw new Error('Not implemented');
   }
 

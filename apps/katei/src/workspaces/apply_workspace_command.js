@@ -722,15 +722,31 @@ function applyBoardMemberRemove(workspace, command, context) {
 }
 
 function applyBoardDelete(workspace, command, context) {
-  const currentBoard = getBoard(workspace, command.payload.boardId);
-  assertActorCanAdminBoard(currentBoard, context.actor);
+  const boardId = command.payload.boardId;
+  const nextWorkspace = removeBoardFromWorkspace(workspace, boardId, {
+    actor: context.actor
+  });
 
-  if (workspace.boardOrder.length === 1) {
+  return {
+    workspace: nextWorkspace,
+    result: createCommandResult(command, {
+      boardId
+    })
+  };
+}
+
+export function removeBoardFromWorkspace(workspace, boardId, { actor = null, allowDeleteLastBoard = false } = {}) {
+  const currentBoard = getBoard(workspace, boardId);
+
+  if (actor) {
+    assertActorCanAdminBoard(currentBoard, actor);
+  }
+
+  if (!allowDeleteLastBoard && workspace.boardOrder.length === 1) {
     throw new Error('Cannot delete the last remaining board.');
   }
 
   const nextWorkspace = cloneWorkspace(workspace);
-  const boardId = command.payload.boardId;
   const boardIndex = nextWorkspace.boardOrder.indexOf(boardId);
 
   if (boardIndex === -1 || !nextWorkspace.boards[boardId]) {
@@ -740,18 +756,18 @@ function applyBoardDelete(workspace, command, context) {
   nextWorkspace.boardOrder = nextWorkspace.boardOrder.filter((currentBoardId) => currentBoardId !== boardId);
   delete nextWorkspace.boards[boardId];
 
+  if (nextWorkspace.boardOrder.length === 0) {
+    nextWorkspace.ui.activeBoardId = null;
+    return nextWorkspace;
+  }
+
   if (nextWorkspace.ui.activeBoardId === boardId) {
     const nextBoardId =
       nextWorkspace.boardOrder[boardIndex] ?? nextWorkspace.boardOrder[boardIndex - 1] ?? nextWorkspace.boardOrder[0];
-    nextWorkspace.ui.activeBoardId = nextBoardId;
+    nextWorkspace.ui.activeBoardId = nextBoardId ?? null;
   }
 
-  return {
-    workspace: nextWorkspace,
-    result: createCommandResult(command, {
-      boardId
-    })
-  };
+  return nextWorkspace;
 }
 
 function applyBoardReset(workspace, command, context) {

@@ -1547,12 +1547,12 @@ test('GET /boards renders the server workspace and bootstrap payload for authent
       .en.title,
     'Ship launch checklist'
   );
-  assert.deepEqual(workspaceRecordRepository.loadCalls, [
+  assert.deepEqual(workspaceRecordRepository.resolveCalls, [
     {
       viewerSub: 'sub_123',
       viewerEmail: null,
       viewerName: 'Tester',
-      workspaceId: null
+      requestedWorkspaceId: null
     }
   ]);
   assert.deepEqual(portfolioReadModel.loadCalls, []);
@@ -1770,12 +1770,23 @@ test('GET /boards redirects super-admin drill-downs back to /portfolio when the 
   );
 });
 
-test('GET /boards redirects super-admin drill-downs back to /portfolio when the requested workspace no longer exists', async () => {
-  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble();
+test('GET /boards redirects stale workspace requests to the canonical fallback invite workspace URL', async () => {
+  const olderInviteRecord = createSharedWorkspaceRecordFixture('workspace_other_invite', {
+    memberSub: 'sub_123',
+    memberEmail: 'tester@example.com'
+  });
+  const newerInviteRecord = createCrossWorkspaceInviteRecordFixture('workspace_invited_casa', {
+    viewerSub: 'sub_123',
+    viewerEmail: 'tester@example.com'
+  });
+
+  newerInviteRecord.workspace.boards.casa.collaboration.invites[0].invitedAt = '2026-04-02T10:20:00.000Z';
+
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([
+    olderInviteRecord,
+    newerInviteRecord
+  ]);
   const app = createTestApp({
-    env: {
-      SUPER_ADMINS: 'tester@example.com'
-    },
     googleTokenVerifier: async () => ({ sub: 'sub_123' }),
     workspaceRecordRepository
   });
@@ -1789,17 +1800,21 @@ test('GET /boards redirects super-admin drill-downs back to /portfolio when the 
     }));
 
   assert.equal(response.status, 302);
-  assert.equal(response.headers.location, '/portfolio');
+  assert.equal(response.headers.location, '/boards?workspaceId=workspace_other_invite&boardId=invite');
   assert.match(
     findSetCookie(response, KATEI_LAST_SURFACE_COOKIE_NAME) ?? '',
-    new RegExp(escapeForRegex(createLastSurfaceCookieValue({ surface: 'portfolio' })))
+    new RegExp(escapeForRegex(createLastSurfaceCookieValue({
+      surface: 'board',
+      workspaceId: 'workspace_other_invite',
+      boardId: 'invite'
+    })))
   );
-  assert.deepEqual(workspaceRecordRepository.loadCalls, [
+  assert.deepEqual(workspaceRecordRepository.resolveCalls, [
     {
       viewerSub: 'sub_123',
       viewerEmail: 'tester@example.com',
       viewerName: 'Tester',
-      workspaceId: 'workspace_missing_board_target'
+      requestedWorkspaceId: 'workspace_missing_board_target'
     }
   ]);
 });
@@ -2413,18 +2428,22 @@ test('GET /boards bootstraps normalized workspace snapshots when the loaded reco
 });
 
 test('GET /boards bootstrap includes pendingWorkspaceInvites and matches the API payload field', async () => {
-  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([
+  const initialRecords = [
     createCrossWorkspaceInviteRecordFixture('workspace_invited_casa')
-  ]);
-  const app = createTestApp({
+  ];
+  const boardsApp = createTestApp({
     googleTokenVerifier: async () => ({ sub: 'sub_123' }),
-    workspaceRecordRepository
+    workspaceRecordRepository: createWorkspaceRecordRepositoryDouble(initialRecords)
+  });
+  const apiApp = createTestApp({
+    googleTokenVerifier: async () => ({ sub: 'sub_123' }),
+    workspaceRecordRepository: createWorkspaceRecordRepositoryDouble(initialRecords)
   });
 
-  const boardsResponse = await request(app)
+  const boardsResponse = await request(boardsApp)
     .get('/boards')
     .set('Cookie', createSessionCookieHeader({ sub: 'sub_123', email: 'member@example.com', name: 'Tester' }));
-  const apiResponse = await request(app)
+  const apiResponse = await request(apiApp)
     .get('/api/workspace')
     .set('Cookie', createSessionCookieHeader({ sub: 'sub_123', email: 'member@example.com', name: 'Tester' }));
   const bootstrapPayload = readWorkspaceBootstrapPayload(boardsResponse.text);
@@ -2448,7 +2467,20 @@ test('GET /boards bootstrap includes pendingWorkspaceInvites and matches the API
       }
     }
   ]);
-  assert.deepEqual(bootstrapPayload.accessibleWorkspaces, []);
+  assert.deepEqual(bootstrapPayload.accessibleWorkspaces, [
+    {
+      workspaceId: createHomeWorkspaceId('sub_123'),
+      workspaceTitle: 'Tester 1',
+      isHomeWorkspace: true,
+      boards: [
+        {
+          boardId: 'main',
+          boardTitle: '過程',
+          role: 'admin'
+        }
+      ]
+    }
+  ]);
 });
 
 test('GET /boards bootstrap includes accessibleWorkspaces and matches the API payload field', async () => {
@@ -2554,7 +2586,7 @@ test('GET /boards bootstrap treats another viewer home workspace as an external 
   ]);
 });
 
-test('GET /boards loads an accessible shared workspace by workspaceId and rejects inaccessible ones', async () => {
+test('GET /boards loads an accessible shared workspace by workspaceId and falls back to a new home when inaccessible', async () => {
   const sharedWorkspace = createCard(createEmptyWorkspace({ workspaceId: 'workspace_shared_1' }), 'main', {
     title: 'Shared roadmap',
     detailsMarkdown: 'Visible to collaborators',
@@ -2605,19 +2637,52 @@ test('GET /boards loads an accessible shared workspace by workspaceId and reject
       ]
     }
   ]);
-  assert.deepEqual(workspaceRecordRepository.loadCalls[0], {
+  assert.deepEqual(workspaceRecordRepository.resolveCalls[0], {
     viewerSub: 'sub_collab',
     viewerEmail: null,
     viewerName: null,
-    workspaceId: 'workspace_shared_1'
+    requestedWorkspaceId: 'workspace_shared_1'
   });
 
   const inaccessibleResponse = await request(app)
     .get('/boards?workspaceId=workspace_shared_1')
     .set('Cookie', createSessionCookieHeader({ sub: 'sub_blocked' }));
 
-  assert.equal(inaccessibleResponse.status, 404);
-  assert.match(inaccessibleResponse.text, /Workspace not found\./);
+  assert.equal(inaccessibleResponse.status, 302);
+  assert.equal(inaccessibleResponse.headers.location, '/boards?boardId=main');
+});
+
+test('GET /boards keeps workspaceId in the canonical redirect when the fallback target is another viewer home workspace', async () => {
+  const foreignHomeRecord = createHomeWorkspaceRecordFixture({
+    viewerSub: 'sub_owner_casa',
+    workspaceTitle: 'Casa workspace',
+    boardTitle: 'Casa'
+  });
+
+  foreignHomeRecord.workspace.boards.main.collaboration.memberships.push({
+    actor: { type: 'human', id: 'sub_member', email: 'member@example.com' },
+    role: 'viewer',
+    joinedAt: '2026-04-02T10:05:00.000Z'
+  });
+  foreignHomeRecord.createdAt = '2026-03-01T09:00:00.000Z';
+  foreignHomeRecord.workspace.boards.main.createdAt = '2026-03-01T09:05:00.000Z';
+
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([foreignHomeRecord]);
+  const app = createTestApp({
+    googleTokenVerifier: async () => ({ sub: 'sub_member' }),
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .get('/boards?workspaceId=workspace_missing_foreign_home')
+    .set('Cookie', createSessionCookieHeader({
+      sub: 'sub_member',
+      name: 'Member',
+      email: 'member@example.com'
+    }));
+
+  assert.equal(response.status, 302);
+  assert.equal(response.headers.location, `/boards?workspaceId=${createHomeWorkspaceId('sub_owner_casa')}&boardId=main`);
 });
 
 test('GET /boards localizes server-rendered chrome for ja without changing user-authored viewer content', async () => {
@@ -2682,12 +2747,12 @@ test('GET /api/workspace returns the authenticated viewer workspace JSON', async
     lastChangedBy: null,
     isPristine: true
   });
-  assert.deepEqual(workspaceRecordRepository.loadCalls, [
+  assert.deepEqual(workspaceRecordRepository.resolveCalls, [
     {
       viewerSub: 'sub_123',
       viewerEmail: null,
       viewerName: 'Tester',
-      workspaceId: null
+      requestedWorkspaceId: null
     }
   ]);
 });
@@ -4536,6 +4601,14 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = []) {
     initialRecords.map((record) => [record.workspaceId, structuredClone(record)])
   );
 
+  function findExistingHomeRecord(viewerSub) {
+    const homeWorkspaceId = createHomeWorkspaceId(viewerSub);
+
+    return records.get(homeWorkspaceId)
+      ?? records.get(viewerSub)
+      ?? [...records.values()].find((record) => record.viewerSub === viewerSub && record.isHomeWorkspace);
+  }
+
   function projectRecord(record, { viewerSub, viewerEmail = null } = {}) {
     const normalizedRecord = createWorkspaceRecord(record);
 
@@ -4548,6 +4621,210 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = []) {
         workspace: normalizedRecord.workspace
       })
     };
+  }
+
+  function resolveVisibleBoardId(workspace) {
+    const activeBoardId =
+      typeof workspace?.ui?.activeBoardId === 'string' && workspace.ui.activeBoardId.trim()
+        ? workspace.ui.activeBoardId.trim()
+        : null;
+
+    if (activeBoardId && workspace?.boards?.[activeBoardId]) {
+      return activeBoardId;
+    }
+
+    return Array.isArray(workspace?.boardOrder) && workspace.boardOrder.length > 0
+      ? workspace.boardOrder[0]
+      : null;
+  }
+
+  function createResolvedWorkspaceResult(record, { viewerSub, resolvedBoardId, resolution } = {}) {
+    const normalizedBoardId = typeof resolvedBoardId === 'string' && resolvedBoardId.trim()
+      ? resolvedBoardId.trim()
+      : null;
+    const normalizedRecord = structuredClone(record);
+
+    if (!normalizedBoardId || !normalizedRecord?.workspace?.boards?.[normalizedBoardId]) {
+      return null;
+    }
+
+    normalizedRecord.isHomeWorkspace = normalizedRecord.workspaceId === createHomeWorkspaceId(viewerSub);
+    normalizedRecord.workspace.ui = {
+      ...(normalizedRecord.workspace.ui ?? {}),
+      activeBoardId: normalizedBoardId
+    };
+
+    return {
+      record: normalizedRecord,
+      resolvedWorkspaceId: normalizedRecord.workspaceId,
+      resolvedBoardId: normalizedBoardId,
+      resolution
+    };
+  }
+
+  function createHomeRecord(viewerSub, viewerName = null, viewerEmail = null) {
+    return createInitialWorkspaceRecord(viewerSub, {
+      title: typeof viewerName === 'string' && viewerName.trim() ? `${viewerName.trim()} 1` : 'Workspace 1',
+      now: '2026-04-02T10:00:00.000Z',
+      creator: {
+        email: viewerEmail,
+        displayName: viewerName
+      }
+    });
+  }
+
+  function repairHomeRecord(existingRecord, viewerSub, viewerName = null, viewerEmail = null) {
+    const homeWorkspaceId = createHomeWorkspaceId(viewerSub);
+    const repairedRecord = createHomeRecord(viewerSub, viewerName, viewerEmail);
+    repairedRecord.workspaceId = homeWorkspaceId;
+    repairedRecord.workspace.workspaceId = homeWorkspaceId;
+    repairedRecord.workspace.title = existingRecord?.workspace?.title ?? repairedRecord.workspace.title;
+    repairedRecord.createdAt = existingRecord?.createdAt ?? repairedRecord.createdAt;
+    repairedRecord.updatedAt = '2026-04-02T11:00:00.000Z';
+    repairedRecord.revision = (Number.isInteger(existingRecord?.revision) ? existingRecord.revision : 0) + 1;
+    repairedRecord.isHomeWorkspace = true;
+    return repairedRecord;
+  }
+
+  async function resolvePreferredWorkspace({ viewerSub, viewerEmail = null, viewerName = null, requestedWorkspaceId = null } = {}) {
+    const normalizedRequestedWorkspaceId =
+      typeof requestedWorkspaceId === 'string' && requestedWorkspaceId.trim()
+        ? requestedWorkspaceId.trim()
+        : null;
+
+    if (normalizedRequestedWorkspaceId) {
+      try {
+        const requestedRecord = projectRecord(
+          await loadFullRecord({ viewerSub, viewerEmail, viewerName, workspaceId: normalizedRequestedWorkspaceId }),
+          { viewerSub, viewerEmail }
+        );
+        const requestedBoardId = resolveVisibleBoardId(requestedRecord.workspace);
+
+        if (requestedBoardId) {
+          return createResolvedWorkspaceResult(requestedRecord, {
+            viewerSub,
+            resolvedBoardId: requestedBoardId,
+            resolution: 'requested-workspace'
+          });
+        }
+      } catch (error) {
+        if (!(error instanceof WorkspaceAccessDeniedError)) {
+          throw error;
+        }
+      }
+    } else {
+      const existingHomeRecord = findExistingHomeRecord(viewerSub);
+
+      if (existingHomeRecord) {
+        const projectedHomeRecord = projectRecord(existingHomeRecord, { viewerSub, viewerEmail });
+        const homeBoardId = resolveVisibleBoardId(projectedHomeRecord.workspace);
+
+        if (homeBoardId) {
+          return createResolvedWorkspaceResult(projectedHomeRecord, {
+            viewerSub,
+            resolvedBoardId: homeBoardId,
+            resolution: 'fallback-existing-home'
+          });
+        }
+      }
+    }
+
+    const pendingInvite = listPendingWorkspaceInvites(records.values(), { viewerSub, viewerEmail })
+      .sort(compareInviteSummaries)[0] ?? null;
+
+    if (pendingInvite) {
+      const inviteRecord = projectRecord(
+        await loadFullRecord({ viewerSub, viewerEmail, viewerName, workspaceId: pendingInvite.workspaceId }),
+        { viewerSub, viewerEmail }
+      );
+
+      if (inviteRecord.workspace.boards?.[pendingInvite.boardId]) {
+        return createResolvedWorkspaceResult(inviteRecord, {
+          viewerSub,
+          resolvedBoardId: pendingInvite.boardId,
+          resolution: 'fallback-pending-invite'
+        });
+      }
+    }
+
+    const accessibleBoardCandidates = [];
+
+    for (const record of records.values()) {
+      const projectedRecord = projectRecord(record, { viewerSub, viewerEmail });
+
+      if (projectedRecord.workspaceId === createHomeWorkspaceId(viewerSub)) {
+        continue;
+      }
+
+      for (const boardId of projectedRecord.workspace.boardOrder ?? []) {
+        const board = projectedRecord.workspace.boards?.[boardId];
+        const membership = board?.collaboration?.memberships?.find((entry) => entry?.actor?.id === viewerSub);
+
+        if (!board?.title || !membership?.role) {
+          continue;
+        }
+
+        accessibleBoardCandidates.push({
+          record: projectedRecord,
+          workspaceId: projectedRecord.workspaceId,
+          boardId,
+          workspaceCreatedAt: projectedRecord.createdAt ?? '',
+          boardCreatedAt: board.createdAt ?? ''
+        });
+      }
+    }
+
+    accessibleBoardCandidates.sort(compareAccessibleBoardCandidates);
+
+    if (accessibleBoardCandidates.length > 0) {
+      const firstCandidate = accessibleBoardCandidates[0];
+
+      return createResolvedWorkspaceResult(firstCandidate.record, {
+        viewerSub,
+        resolvedBoardId: firstCandidate.boardId,
+        resolution: 'fallback-accessible-board'
+      });
+    }
+
+    if (normalizedRequestedWorkspaceId) {
+      const existingHomeRecord = findExistingHomeRecord(viewerSub);
+
+      if (existingHomeRecord) {
+        const projectedHomeRecord = projectRecord(existingHomeRecord, { viewerSub, viewerEmail });
+        const homeBoardId = resolveVisibleBoardId(projectedHomeRecord.workspace);
+
+        if (homeBoardId) {
+          return createResolvedWorkspaceResult(projectedHomeRecord, {
+            viewerSub,
+            resolvedBoardId: homeBoardId,
+            resolution: 'fallback-existing-home'
+          });
+        }
+      }
+    }
+
+    const existingHomeRecord = findExistingHomeRecord(viewerSub);
+
+    if (!existingHomeRecord) {
+      const createdHomeRecord = await loadFullRecord({ viewerSub, viewerEmail, viewerName });
+      const projectedHomeRecord = projectRecord(createdHomeRecord, { viewerSub, viewerEmail });
+
+      return createResolvedWorkspaceResult(projectedHomeRecord, {
+        viewerSub,
+        resolvedBoardId: resolveVisibleBoardId(projectedHomeRecord.workspace),
+        resolution: 'fallback-created-home'
+      });
+    }
+
+    const repairedHomeRecord = repairHomeRecord(existingHomeRecord, viewerSub, viewerName, viewerEmail);
+    records.set(repairedHomeRecord.workspaceId, structuredClone(repairedHomeRecord));
+    const projectedRepairedHomeRecord = projectRecord(repairedHomeRecord, { viewerSub, viewerEmail });
+
+    return createResolvedWorkspaceResult(projectedRepairedHomeRecord, {
+      viewerSub,
+      resolvedBoardId: resolveVisibleBoardId(projectedRepairedHomeRecord.workspace),
+      resolution: 'fallback-repaired-home'
+    });
   }
 
   async function loadFullRecord({ viewerSub, viewerEmail = null, viewerName = null, workspaceId = null } = {}) {
@@ -4570,23 +4847,14 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = []) {
     }
 
     const homeWorkspaceId = createHomeWorkspaceId(viewerSub);
-    const existingHomeRecord =
-      records.get(homeWorkspaceId)
-      ?? records.get(viewerSub)
-      ?? [...records.values()].find((record) => record.viewerSub === viewerSub && record.isHomeWorkspace);
+    const existingHomeRecord = findExistingHomeRecord(viewerSub);
 
     if (existingHomeRecord) {
       return createWorkspaceRecord(existingHomeRecord);
     }
 
     if (!records.has(homeWorkspaceId)) {
-      records.set(
-        homeWorkspaceId,
-        createInitialWorkspaceRecord(viewerSub, {
-          title: typeof viewerName === 'string' && viewerName.trim() ? `${viewerName.trim()} 1` : 'Workspace 1',
-          now: '2026-04-02T10:00:00.000Z'
-        })
-      );
+      records.set(homeWorkspaceId, createHomeRecord(viewerSub, viewerName, viewerEmail));
     }
 
     return createWorkspaceRecord(records.get(homeWorkspaceId));
@@ -4616,6 +4884,7 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = []) {
 
   return {
     loadCalls: [],
+    resolveCalls: [],
     loadAuthoritativeCalls: [],
     loadSuperAdminTitleManagementCalls: [],
     loadSuperAdminBoardRoleAssignmentCalls: [],
@@ -4636,6 +4905,27 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = []) {
         await loadFullRecord({ viewerSub, viewerEmail, viewerName, workspaceId }),
         { viewerSub, viewerEmail }
       );
+    },
+
+    async resolvePreferredWorkspaceForViewer({
+      viewerSub,
+      viewerEmail = null,
+      viewerName = null,
+      requestedWorkspaceId = null
+    } = {}) {
+      this.resolveCalls.push({
+        viewerSub,
+        viewerEmail,
+        viewerName,
+        requestedWorkspaceId
+      });
+
+      return resolvePreferredWorkspace({
+        viewerSub,
+        viewerEmail,
+        viewerName,
+        requestedWorkspaceId
+      });
     },
 
     async loadOrCreateAuthoritativeWorkspaceRecord({ viewerSub, viewerEmail = null, viewerName = null, workspaceId = null } = {}) {
@@ -5215,6 +5505,50 @@ function listPendingWorkspaceInvites(records, { viewerSub, viewerEmail = null } 
   }
 
   return inviteSummaries;
+}
+
+function compareInviteSummaries(left, right) {
+  const invitedAtComparison = String(left?.invitedAt ?? '').localeCompare(String(right?.invitedAt ?? ''));
+
+  if (invitedAtComparison !== 0) {
+    return invitedAtComparison;
+  }
+
+  const workspaceComparison = String(left?.workspaceId ?? '').localeCompare(String(right?.workspaceId ?? ''));
+
+  if (workspaceComparison !== 0) {
+    return workspaceComparison;
+  }
+
+  const boardComparison = String(left?.boardId ?? '').localeCompare(String(right?.boardId ?? ''));
+
+  if (boardComparison !== 0) {
+    return boardComparison;
+  }
+
+  return String(left?.inviteId ?? '').localeCompare(String(right?.inviteId ?? ''));
+}
+
+function compareAccessibleBoardCandidates(left, right) {
+  const workspaceCreatedAtComparison = String(left?.workspaceCreatedAt ?? '').localeCompare(String(right?.workspaceCreatedAt ?? ''));
+
+  if (workspaceCreatedAtComparison !== 0) {
+    return workspaceCreatedAtComparison;
+  }
+
+  const boardCreatedAtComparison = String(left?.boardCreatedAt ?? '').localeCompare(String(right?.boardCreatedAt ?? ''));
+
+  if (boardCreatedAtComparison !== 0) {
+    return boardCreatedAtComparison;
+  }
+
+  const workspaceComparison = String(left?.workspaceId ?? '').localeCompare(String(right?.workspaceId ?? ''));
+
+  if (workspaceComparison !== 0) {
+    return workspaceComparison;
+  }
+
+  return String(left?.boardId ?? '').localeCompare(String(right?.boardId ?? ''));
 }
 
 function normalizeOptionalEmail(value) {

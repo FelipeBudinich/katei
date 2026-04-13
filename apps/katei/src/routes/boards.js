@@ -11,6 +11,7 @@ import { getColumnDisplayLabel, getPriorityDisplayLabel } from '../../public/js/
 import { buildInviteResponseDebugFields, createInviteDebugLogger } from '../lib/invite_debug.js';
 import { setBoardSurfaceCookie, setPortfolioSurfaceCookie } from '../auth/last_surface_cookie.js';
 import { WorkspaceAccessDeniedError } from '../workspaces/workspace_record_repository.js';
+import { createHomeWorkspaceId } from '../workspaces/workspace_record.js';
 
 export function createBoardsRouter({ requireSession, workspaceRecordRepository, config }) {
   const router = Router();
@@ -29,20 +30,28 @@ export function createBoardsRouter({ requireSession, workspaceRecordRepository, 
         viewerEmail: request.viewer?.email ?? null,
         viewerName: typeof request.viewer?.name === 'string' && request.viewer.name.trim() ? request.viewer.name.trim() : null
       });
-      const [record, pendingWorkspaceInvites] = await Promise.all([
-        workspaceRecordRepository.loadOrCreateWorkspaceRecord({
+      const {
+        record,
+        resolvedWorkspaceId,
+        resolvedBoardId
+      } = await workspaceRecordRepository.resolvePreferredWorkspaceForViewer({
           viewerSub: request.viewer.sub,
           viewerEmail: request.viewer.email ?? null,
           viewerName: request.viewer.name ?? null,
-          workspaceId: requestedWorkspaceId,
+          requestedWorkspaceId,
           debugLog
-        }),
-        workspaceRecordRepository.listPendingWorkspaceInvitesForViewer({
+        });
+
+      if (requestedWorkspaceId && resolvedWorkspaceId !== requestedWorkspaceId) {
+        setBoardSurfaceCookie(response, record, config);
+        response.redirect(buildCanonicalBoardsHref({
           viewerSub: request.viewer.sub,
-          viewerEmail: request.viewer.email ?? null,
-          debugLog
-        })
-      ]);
+          workspaceId: resolvedWorkspaceId,
+          boardId: resolvedBoardId
+        }));
+        return;
+      }
+
       if (shouldFallbackSuperAdminBoardRequestToPortfolio(request.viewer, {
         requestedWorkspaceId,
         requestedBoardId,
@@ -53,13 +62,20 @@ export function createBoardsRouter({ requireSession, workspaceRecordRepository, 
         return;
       }
 
-      const accessibleWorkspaces = await workspaceRecordRepository.listAccessibleWorkspacesForViewer({
-        viewerSub: request.viewer.sub,
-        viewerEmail: request.viewer.email ?? null,
-        viewerName: request.viewer.name ?? null,
-        excludeWorkspaceId: record.workspaceId,
-        debugLog
-      });
+      const [pendingWorkspaceInvites, accessibleWorkspaces] = await Promise.all([
+        workspaceRecordRepository.listPendingWorkspaceInvitesForViewer({
+          viewerSub: request.viewer.sub,
+          viewerEmail: request.viewer.email ?? null,
+          debugLog
+        }),
+        workspaceRecordRepository.listAccessibleWorkspacesForViewer({
+          viewerSub: request.viewer.sub,
+          viewerEmail: request.viewer.email ?? null,
+          viewerName: request.viewer.name ?? null,
+          excludeWorkspaceId: record.workspaceId,
+          debugLog
+        })
+      ]);
       const workspaceForPage = applyRequestedBoardSelection(record.workspace, requestedBoardId);
 
       const pageModel = buildWorkspacePageModel(
@@ -243,6 +259,23 @@ function resolveRequestedBoardId(request) {
   return typeof request?.query?.boardId === 'string' && request.query.boardId.trim()
     ? request.query.boardId.trim()
     : null;
+}
+
+function buildCanonicalBoardsHref({ viewerSub, workspaceId = null, boardId = null } = {}) {
+  const normalizedWorkspaceId = normalizeOptionalString(workspaceId);
+  const normalizedBoardId = normalizeOptionalString(boardId);
+  const query = new URLSearchParams();
+
+  if (normalizedWorkspaceId && normalizedWorkspaceId !== createHomeWorkspaceId(viewerSub)) {
+    query.set('workspaceId', normalizedWorkspaceId);
+  }
+
+  if (normalizedBoardId) {
+    query.set('boardId', normalizedBoardId);
+  }
+
+  const queryString = query.toString();
+  return queryString ? `/boards?${queryString}` : '/boards';
 }
 
 function applyRequestedBoardSelection(workspace, requestedBoardId) {

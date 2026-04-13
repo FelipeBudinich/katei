@@ -20,8 +20,10 @@ import {
 } from '../src/workspaces/workspace_record.js';
 import {
   WorkspaceAccessDeniedError,
+  WorkspaceBoardDeletionPermissionError,
   WorkspaceBoardRoleAssignmentPermissionError,
   WorkspaceCreationPermissionError,
+  WorkspaceDeletionPermissionError,
   WorkspaceImportConflictError,
   WorkspaceRevisionConflictError,
   WorkspaceTitleManagementPermissionError
@@ -169,6 +171,48 @@ test('GET /api/workspace treats another viewer home workspace as an external acc
   ]);
 });
 
+test('GET /api/workspace falls back from a stale workspaceId to the oldest pending invite board', async () => {
+  const homeRecord = createHomeWorkspaceRecordFixture({
+    viewerSub: 'sub_member',
+    workspaceTitle: 'Member home'
+  });
+  const olderInviteRecord = createCrossWorkspaceInviteRecordFixture('workspace_invited_old', {
+    viewerSub: 'sub_member',
+    viewerEmail: 'member@example.com'
+  });
+  const newerInviteRecord = createCrossWorkspaceInviteRecordFixture('workspace_invited_new', {
+    viewerSub: 'sub_member',
+    viewerEmail: 'member@example.com'
+  });
+
+  olderInviteRecord.workspace.boards.casa.collaboration.invites[0].invitedAt = '2026-04-04T10:10:00.000Z';
+  newerInviteRecord.workspace.boards.casa.collaboration.invites[0].invitedAt = '2026-04-04T10:20:00.000Z';
+
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([
+    homeRecord,
+    olderInviteRecord,
+    newerInviteRecord
+  ]);
+  const app = createTestApp({ workspaceRecordRepository });
+
+  const response = await request(app)
+    .get('/api/workspace?workspaceId=workspace_missing_target')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_member', email: 'member@example.com', name: 'Member' }));
+
+  assert.equal(response.status, 200);
+  assert.equal(response.body.activeWorkspace.workspaceId, 'workspace_invited_old');
+  assert.equal(response.body.activeWorkspace.isHomeWorkspace, false);
+  assert.equal(response.body.workspace.ui.activeBoardId, 'casa');
+  assert.deepEqual(workspaceRecordRepository.resolveCalls, [
+    {
+      viewerSub: 'sub_member',
+      viewerEmail: 'member@example.com',
+      viewerName: 'Member',
+      requestedWorkspaceId: 'workspace_missing_target'
+    }
+  ]);
+});
+
 test('POST /api/workspace/create lets super admins create a workspace with a default stored title', async () => {
   const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble();
   const app = createTestApp({
@@ -241,6 +285,199 @@ test('POST /api/workspace/create rejects non-super-admin callers', async () => {
   assert.equal(response.status, 403);
   assert.equal(response.body.ok, false);
   assert.equal(response.body.error, 'Workspace creation is only available to super admins.');
+});
+
+test('POST /api/workspace/boards/delete lets super admins delete a board without board membership', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_api_admin_board_delete', {
+    includeInvite: false
+  });
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord]);
+  const app = createTestApp({
+    env: {
+      SUPER_ADMINS: 'admin@example.com'
+    },
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .post('/api/workspace/boards/delete')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_admin', email: 'admin@example.com', name: 'Admin' }))
+    .send({
+      workspaceId: sharedRecord.workspaceId,
+      boardId: 'main'
+    });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(response.body, {
+    ok: true,
+    result: {
+      workspaceId: sharedRecord.workspaceId,
+      boardId: 'main'
+    }
+  });
+  assert.deepEqual(workspaceRecordRepository.loadSuperAdminBoardDeletionCalls, [
+    {
+      viewerIsSuperAdmin: true,
+      workspaceId: sharedRecord.workspaceId
+    }
+  ]);
+  assert.equal(workspaceRecordRepository.loadAuthoritativeCalls.length, 0);
+  assert.equal(workspaceRecordRepository.replaceRecordCalls.length, 1);
+  assert.deepEqual(workspaceRecordRepository.getStoredRecord(sharedRecord.workspaceId)?.workspace.boardOrder, ['member']);
+  assert.equal(workspaceRecordRepository.getStoredRecord(sharedRecord.workspaceId)?.workspace.ui.activeBoardId, 'member');
+});
+
+test('POST /api/workspace/boards/delete lets super admins delete the last remaining board', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_api_admin_delete_last_board', {
+    includeInvite: false
+  });
+  sharedRecord.workspace.boardOrder = ['main'];
+  sharedRecord.workspace.boards = {
+    main: structuredClone(sharedRecord.workspace.boards.main)
+  };
+  sharedRecord.workspace.ui.activeBoardId = 'main';
+
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord]);
+  const app = createTestApp({
+    env: {
+      SUPER_ADMINS: 'admin@example.com'
+    },
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .post('/api/workspace/boards/delete')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_admin', email: 'admin@example.com', name: 'Admin' }))
+    .send({
+      workspaceId: sharedRecord.workspaceId,
+      boardId: 'main'
+    });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(response.body, {
+    ok: true,
+    result: {
+      workspaceId: sharedRecord.workspaceId,
+      boardId: 'main'
+    }
+  });
+  assert.deepEqual(workspaceRecordRepository.getStoredRecord(sharedRecord.workspaceId)?.workspace.boardOrder, []);
+  assert.deepEqual(workspaceRecordRepository.getStoredRecord(sharedRecord.workspaceId)?.workspace.boards, {});
+  assert.equal(workspaceRecordRepository.getStoredRecord(sharedRecord.workspaceId)?.workspace.ui.activeBoardId, null);
+});
+
+test('POST /api/workspace/delete lets super admins delete an entire workspace', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_api_admin_workspace_delete');
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord]);
+  const app = createTestApp({
+    env: {
+      SUPER_ADMINS: 'admin@example.com'
+    },
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .post('/api/workspace/delete')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_admin', email: 'admin@example.com', name: 'Admin' }))
+    .send({
+      workspaceId: sharedRecord.workspaceId
+    });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(response.body, {
+    ok: true,
+    result: {
+      workspaceId: sharedRecord.workspaceId
+    }
+  });
+  assert.deepEqual(workspaceRecordRepository.deleteWorkspaceForSuperAdminCalls, [
+    {
+      viewerIsSuperAdmin: true,
+      workspaceId: sharedRecord.workspaceId
+    }
+  ]);
+  assert.equal(workspaceRecordRepository.getStoredRecord(sharedRecord.workspaceId), null);
+});
+
+test('POST /api/workspace/boards/delete rejects non-super-admin callers', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_api_admin_delete_forbidden');
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord]);
+  const app = createTestApp({ workspaceRecordRepository });
+
+  const response = await request(app)
+    .post('/api/workspace/boards/delete')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_member', email: 'member@example.com', name: 'Member' }))
+    .send({
+      workspaceId: sharedRecord.workspaceId,
+      boardId: 'main'
+    });
+
+  assert.equal(response.status, 403);
+  assert.deepEqual(response.body, {
+    ok: false,
+    error: 'Board deletion is only available to super admins.'
+  });
+  assert.deepEqual(workspaceRecordRepository.loadSuperAdminBoardDeletionCalls, [
+    {
+      viewerIsSuperAdmin: false,
+      workspaceId: sharedRecord.workspaceId
+    }
+  ]);
+  assert.equal(workspaceRecordRepository.replaceRecordCalls.length, 0);
+});
+
+test('POST /api/workspace/delete returns 404 when the workspace is missing', async () => {
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble();
+  const app = createTestApp({
+    env: {
+      SUPER_ADMINS: 'admin@example.com'
+    },
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .post('/api/workspace/delete')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_admin', email: 'admin@example.com', name: 'Admin' }))
+    .send({
+      workspaceId: 'workspace_missing_delete_target'
+    });
+
+  assert.equal(response.status, 404);
+  assert.deepEqual(response.body, {
+    ok: false,
+    error: 'Workspace not found.'
+  });
+  assert.deepEqual(workspaceRecordRepository.deleteWorkspaceForSuperAdminCalls, [
+    {
+      viewerIsSuperAdmin: true,
+      workspaceId: 'workspace_missing_delete_target'
+    }
+  ]);
+});
+
+test('POST /api/workspace/boards/delete returns 404 when the board is missing', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_api_admin_missing_board');
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord]);
+  const app = createTestApp({
+    env: {
+      SUPER_ADMINS: 'admin@example.com'
+    },
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .post('/api/workspace/boards/delete')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_admin', email: 'admin@example.com', name: 'Admin' }))
+    .send({
+      workspaceId: sharedRecord.workspaceId,
+      boardId: 'missing_board'
+    });
+
+  assert.equal(response.status, 404);
+  assert.deepEqual(response.body, {
+    ok: false,
+    error: 'Board not found.'
+  });
 });
 
 test('POST /api/workspace/commands returns the filtered resulting workspace', async () => {
@@ -1666,6 +1903,14 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = [], { allowInval
     Array.isArray(allowInvalidWorkspaceIds) ? allowInvalidWorkspaceIds : []
   );
 
+  function findExistingHomeRecord(viewerSub) {
+    const homeWorkspaceId = createHomeWorkspaceId(viewerSub);
+
+    return records.get(homeWorkspaceId)
+      ?? records.get(viewerSub)
+      ?? [...records.values()].find((record) => record.viewerSub === viewerSub && record.isHomeWorkspace);
+  }
+
   function projectRecord(record, { viewerSub, viewerEmail = null } = {}) {
     const normalizedRecord = createWorkspaceRecord(record);
 
@@ -1678,6 +1923,210 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = [], { allowInval
         workspace: normalizedRecord.workspace
       })
     };
+  }
+
+  function resolveVisibleBoardId(workspace) {
+    const activeBoardId =
+      typeof workspace?.ui?.activeBoardId === 'string' && workspace.ui.activeBoardId.trim()
+        ? workspace.ui.activeBoardId.trim()
+        : null;
+
+    if (activeBoardId && workspace?.boards?.[activeBoardId]) {
+      return activeBoardId;
+    }
+
+    return Array.isArray(workspace?.boardOrder) && workspace.boardOrder.length > 0
+      ? workspace.boardOrder[0]
+      : null;
+  }
+
+  function createResolvedWorkspaceResult(record, { viewerSub, resolvedBoardId, resolution } = {}) {
+    const normalizedBoardId = typeof resolvedBoardId === 'string' && resolvedBoardId.trim()
+      ? resolvedBoardId.trim()
+      : null;
+    const normalizedRecord = structuredClone(record);
+
+    if (!normalizedBoardId || !normalizedRecord?.workspace?.boards?.[normalizedBoardId]) {
+      return null;
+    }
+
+    normalizedRecord.isHomeWorkspace = normalizedRecord.workspaceId === createHomeWorkspaceId(viewerSub);
+    normalizedRecord.workspace.ui = {
+      ...(normalizedRecord.workspace.ui ?? {}),
+      activeBoardId: normalizedBoardId
+    };
+
+    return {
+      record: normalizedRecord,
+      resolvedWorkspaceId: normalizedRecord.workspaceId,
+      resolvedBoardId: normalizedBoardId,
+      resolution
+    };
+  }
+
+  function createHomeRecord(viewerSub, viewerName = null, viewerEmail = null) {
+    return createInitialWorkspaceRecord(viewerSub, {
+      title: typeof viewerName === 'string' && viewerName.trim() ? `${viewerName.trim()} 1` : 'Workspace 1',
+      now: '2026-04-04T10:00:00.000Z',
+      creator: {
+        email: viewerEmail,
+        displayName: viewerName
+      }
+    });
+  }
+
+  function repairHomeRecord(existingRecord, viewerSub, viewerName = null, viewerEmail = null) {
+    const homeWorkspaceId = createHomeWorkspaceId(viewerSub);
+    const repairedRecord = createHomeRecord(viewerSub, viewerName, viewerEmail);
+    repairedRecord.workspaceId = homeWorkspaceId;
+    repairedRecord.workspace.workspaceId = homeWorkspaceId;
+    repairedRecord.workspace.title = existingRecord?.workspace?.title ?? repairedRecord.workspace.title;
+    repairedRecord.createdAt = existingRecord?.createdAt ?? repairedRecord.createdAt;
+    repairedRecord.updatedAt = '2026-04-04T11:00:00.000Z';
+    repairedRecord.revision = (Number.isInteger(existingRecord?.revision) ? existingRecord.revision : 0) + 1;
+    repairedRecord.isHomeWorkspace = true;
+    return repairedRecord;
+  }
+
+  async function resolvePreferredWorkspace({ viewerSub, viewerEmail = null, viewerName = null, requestedWorkspaceId = null } = {}) {
+    const normalizedRequestedWorkspaceId =
+      typeof requestedWorkspaceId === 'string' && requestedWorkspaceId.trim()
+        ? requestedWorkspaceId.trim()
+        : null;
+
+    if (normalizedRequestedWorkspaceId) {
+      try {
+        const requestedRecord = projectRecord(
+          await loadFullRecord({ viewerSub, viewerEmail, viewerName, workspaceId: normalizedRequestedWorkspaceId }),
+          { viewerSub, viewerEmail }
+        );
+        const requestedBoardId = resolveVisibleBoardId(requestedRecord.workspace);
+
+        if (requestedBoardId) {
+          return createResolvedWorkspaceResult(requestedRecord, {
+            viewerSub,
+            resolvedBoardId: requestedBoardId,
+            resolution: 'requested-workspace'
+          });
+        }
+      } catch (error) {
+        if (!(error instanceof WorkspaceAccessDeniedError)) {
+          throw error;
+        }
+      }
+    } else {
+      const existingHomeRecord = findExistingHomeRecord(viewerSub);
+
+      if (existingHomeRecord) {
+        const projectedHomeRecord = projectRecord(existingHomeRecord, { viewerSub, viewerEmail });
+        const homeBoardId = resolveVisibleBoardId(projectedHomeRecord.workspace);
+
+        if (homeBoardId) {
+          return createResolvedWorkspaceResult(projectedHomeRecord, {
+            viewerSub,
+            resolvedBoardId: homeBoardId,
+            resolution: 'fallback-existing-home'
+          });
+        }
+      }
+    }
+
+    const pendingInvite = listPendingWorkspaceInvites(records.values(), { viewerSub, viewerEmail })
+      .sort(compareInviteSummaries)[0] ?? null;
+
+    if (pendingInvite) {
+      const inviteRecord = projectRecord(
+        await loadFullRecord({ viewerSub, viewerEmail, viewerName, workspaceId: pendingInvite.workspaceId }),
+        { viewerSub, viewerEmail }
+      );
+
+      if (inviteRecord.workspace.boards?.[pendingInvite.boardId]) {
+        return createResolvedWorkspaceResult(inviteRecord, {
+          viewerSub,
+          resolvedBoardId: pendingInvite.boardId,
+          resolution: 'fallback-pending-invite'
+        });
+      }
+    }
+
+    const accessibleBoardCandidates = [];
+
+    for (const record of records.values()) {
+      const projectedRecord = projectRecord(record, { viewerSub, viewerEmail });
+
+      if (projectedRecord.workspaceId === createHomeWorkspaceId(viewerSub)) {
+        continue;
+      }
+
+      for (const boardId of projectedRecord.workspace.boardOrder ?? []) {
+        const board = projectedRecord.workspace.boards?.[boardId];
+        const membership = board?.collaboration?.memberships?.find((entry) => entry?.actor?.id === viewerSub);
+
+        if (!board?.title || !membership?.role) {
+          continue;
+        }
+
+        accessibleBoardCandidates.push({
+          record: projectedRecord,
+          workspaceId: projectedRecord.workspaceId,
+          boardId,
+          workspaceCreatedAt: projectedRecord.createdAt ?? '',
+          boardCreatedAt: board.createdAt ?? ''
+        });
+      }
+    }
+
+    accessibleBoardCandidates.sort(compareAccessibleBoardCandidates);
+
+    if (accessibleBoardCandidates.length > 0) {
+      const firstCandidate = accessibleBoardCandidates[0];
+
+      return createResolvedWorkspaceResult(firstCandidate.record, {
+        viewerSub,
+        resolvedBoardId: firstCandidate.boardId,
+        resolution: 'fallback-accessible-board'
+      });
+    }
+
+    if (normalizedRequestedWorkspaceId) {
+      const existingHomeRecord = findExistingHomeRecord(viewerSub);
+
+      if (existingHomeRecord) {
+        const projectedHomeRecord = projectRecord(existingHomeRecord, { viewerSub, viewerEmail });
+        const homeBoardId = resolveVisibleBoardId(projectedHomeRecord.workspace);
+
+        if (homeBoardId) {
+          return createResolvedWorkspaceResult(projectedHomeRecord, {
+            viewerSub,
+            resolvedBoardId: homeBoardId,
+            resolution: 'fallback-existing-home'
+          });
+        }
+      }
+    }
+
+    const existingHomeRecord = findExistingHomeRecord(viewerSub);
+
+    if (!existingHomeRecord) {
+      const createdHomeRecord = await loadFullRecord({ viewerSub, viewerEmail, viewerName });
+      const projectedHomeRecord = projectRecord(createdHomeRecord, { viewerSub, viewerEmail });
+
+      return createResolvedWorkspaceResult(projectedHomeRecord, {
+        viewerSub,
+        resolvedBoardId: resolveVisibleBoardId(projectedHomeRecord.workspace),
+        resolution: 'fallback-created-home'
+      });
+    }
+
+    const repairedHomeRecord = repairHomeRecord(existingHomeRecord, viewerSub, viewerName, viewerEmail);
+    records.set(repairedHomeRecord.workspaceId, structuredClone(repairedHomeRecord));
+    const projectedRepairedHomeRecord = projectRecord(repairedHomeRecord, { viewerSub, viewerEmail });
+
+    return createResolvedWorkspaceResult(projectedRepairedHomeRecord, {
+      viewerSub,
+      resolvedBoardId: resolveVisibleBoardId(projectedRepairedHomeRecord.workspace),
+      resolution: 'fallback-repaired-home'
+    });
   }
 
   async function loadFullRecord({ viewerSub, viewerEmail = null, viewerName = null, workspaceId = null } = {}) {
@@ -1704,23 +2153,14 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = [], { allowInval
     }
 
     const homeWorkspaceId = createHomeWorkspaceId(viewerSub);
-    const existingHomeRecord =
-      records.get(homeWorkspaceId)
-      ?? records.get(viewerSub)
-      ?? [...records.values()].find((record) => record.viewerSub === viewerSub && record.isHomeWorkspace);
+    const existingHomeRecord = findExistingHomeRecord(viewerSub);
 
     if (existingHomeRecord) {
       return createWorkspaceRecord(existingHomeRecord);
     }
 
     if (!records.has(homeWorkspaceId)) {
-      records.set(
-        homeWorkspaceId,
-        createInitialWorkspaceRecord(viewerSub, {
-          title: typeof viewerName === 'string' && viewerName.trim() ? `${viewerName.trim()} 1` : 'Workspace 1',
-          now: '2026-04-04T10:00:00.000Z'
-        })
-      );
+      records.set(homeWorkspaceId, createHomeRecord(viewerSub, viewerName, viewerEmail));
     }
 
     return createWorkspaceRecord(records.get(homeWorkspaceId));
@@ -1738,18 +2178,42 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = [], { allowInval
   }
 
   return {
+    resolveCalls: [],
     replaceCalls: [],
     replaceRecordCalls: [],
     loadAuthoritativeCalls: [],
     loadSuperAdminTitleManagementCalls: [],
     loadSuperAdminBoardRoleAssignmentCalls: [],
+    loadSuperAdminBoardDeletionCalls: [],
     createWorkspaceForSuperAdminCalls: [],
+    deleteWorkspaceForSuperAdminCalls: [],
 
     async loadOrCreateWorkspaceRecord({ viewerSub, viewerEmail = null, viewerName = null, workspaceId = null } = {}) {
       return projectRecord(
         await loadFullRecord({ viewerSub, viewerEmail, viewerName, workspaceId }),
         { viewerSub, viewerEmail }
       );
+    },
+
+    async resolvePreferredWorkspaceForViewer({
+      viewerSub,
+      viewerEmail = null,
+      viewerName = null,
+      requestedWorkspaceId = null
+    } = {}) {
+      this.resolveCalls.push({
+        viewerSub,
+        viewerEmail,
+        viewerName,
+        requestedWorkspaceId
+      });
+
+      return resolvePreferredWorkspace({
+        viewerSub,
+        viewerEmail,
+        viewerName,
+        requestedWorkspaceId
+      });
     },
 
     async loadOrCreateAuthoritativeWorkspaceRecord({ viewerSub, viewerEmail = null, viewerName = null, workspaceId = null } = {}) {
@@ -1824,6 +2288,33 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = [], { allowInval
       }
 
       return loadRecordForSuperAdminTitleManagement(workspaceId);
+    },
+
+    async loadWorkspaceRecordForSuperAdminBoardDeletion({ viewerIsSuperAdmin = false, workspaceId } = {}) {
+      this.loadSuperAdminBoardDeletionCalls.push({
+        viewerIsSuperAdmin,
+        workspaceId
+      });
+
+      if (viewerIsSuperAdmin !== true) {
+        throw new WorkspaceBoardDeletionPermissionError();
+      }
+
+      return loadRecordForSuperAdminTitleManagement(workspaceId);
+    },
+
+    async deleteWorkspaceForSuperAdmin({ viewerIsSuperAdmin = false, workspaceId } = {}) {
+      this.deleteWorkspaceForSuperAdminCalls.push({
+        viewerIsSuperAdmin,
+        workspaceId
+      });
+
+      if (viewerIsSuperAdmin !== true) {
+        throw new WorkspaceDeletionPermissionError();
+      }
+
+      await loadRecordForSuperAdminTitleManagement(workspaceId);
+      records.delete(workspaceId);
     },
 
     async listPendingWorkspaceInvitesForViewer({ viewerSub, viewerEmail = null } = {}) {
@@ -1907,6 +2398,11 @@ function createWorkspaceRecordRepositoryDouble(initialRecords = [], { allowInval
 
       records.set(record.workspaceId, structuredClone(record));
       return createWorkspaceRecord(record);
+    },
+
+    getStoredRecord(workspaceId) {
+      const record = records.get(workspaceId);
+      return record ? createWorkspaceRecord(record) : null;
     }
   };
 }
@@ -2127,6 +2623,50 @@ function listPendingWorkspaceInvites(records, { viewerSub, viewerEmail = null } 
   }
 
   return inviteSummaries;
+}
+
+function compareInviteSummaries(left, right) {
+  const invitedAtComparison = String(left?.invitedAt ?? '').localeCompare(String(right?.invitedAt ?? ''));
+
+  if (invitedAtComparison !== 0) {
+    return invitedAtComparison;
+  }
+
+  const workspaceComparison = String(left?.workspaceId ?? '').localeCompare(String(right?.workspaceId ?? ''));
+
+  if (workspaceComparison !== 0) {
+    return workspaceComparison;
+  }
+
+  const boardComparison = String(left?.boardId ?? '').localeCompare(String(right?.boardId ?? ''));
+
+  if (boardComparison !== 0) {
+    return boardComparison;
+  }
+
+  return String(left?.inviteId ?? '').localeCompare(String(right?.inviteId ?? ''));
+}
+
+function compareAccessibleBoardCandidates(left, right) {
+  const workspaceCreatedAtComparison = String(left?.workspaceCreatedAt ?? '').localeCompare(String(right?.workspaceCreatedAt ?? ''));
+
+  if (workspaceCreatedAtComparison !== 0) {
+    return workspaceCreatedAtComparison;
+  }
+
+  const boardCreatedAtComparison = String(left?.boardCreatedAt ?? '').localeCompare(String(right?.boardCreatedAt ?? ''));
+
+  if (boardCreatedAtComparison !== 0) {
+    return boardCreatedAtComparison;
+  }
+
+  const workspaceComparison = String(left?.workspaceId ?? '').localeCompare(String(right?.workspaceId ?? ''));
+
+  if (workspaceComparison !== 0) {
+    return workspaceComparison;
+  }
+
+  return String(left?.boardId ?? '').localeCompare(String(right?.boardId ?? ''));
 }
 
 function listAccessibleWorkspaces(records, { viewerSub, viewerEmail = null, excludeWorkspaceId = null } = {}) {

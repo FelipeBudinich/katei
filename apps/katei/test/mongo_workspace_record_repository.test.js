@@ -10,6 +10,7 @@ import {
   createMongoWorkspaceRecordRepository,
   getWorkspaceRecordCollection
 } from '../src/workspaces/mongo_workspace_record_repository.js';
+import { removeBoardFromWorkspace } from '../src/workspaces/apply_workspace_command.js';
 import { encryptBoardSecret } from '../src/security/board_secret_crypto.js';
 import {
   WORKSPACE_RECORD_COLLECTION_NAME,
@@ -411,6 +412,166 @@ test('loadOrCreateAuthoritativeWorkspaceRecord still rejects inaccessible shared
   );
 });
 
+test('resolvePreferredWorkspaceForViewer resolves an existing non-empty home workspace when no requestedWorkspaceId is provided', async () => {
+  const homeRecord = createHomeWorkspaceRecordFixture({
+    viewerSub: 'sub_home',
+    workspaceTitle: 'Home base',
+    boardTitle: 'Home board'
+  });
+  const collection = createWorkspaceRecordCollectionDouble([toWorkspaceRecordDocument(homeRecord)]);
+  const repository = new MongoWorkspaceRecordRepository({ collection });
+
+  const result = await repository.resolvePreferredWorkspaceForViewer({
+    viewerSub: 'sub_home'
+  });
+
+  assert.equal(result.resolution, 'fallback-existing-home');
+  assert.equal(result.resolvedWorkspaceId, createHomeWorkspaceId('sub_home'));
+  assert.equal(result.resolvedBoardId, 'main');
+  assert.equal(result.record.isHomeWorkspace, true);
+  assert.equal(result.record.workspace.ui.activeBoardId, 'main');
+  assert.equal(result.record.workspace.title, 'Home base');
+});
+
+test('resolvePreferredWorkspaceForViewer returns the oldest pending invite board when the requested workspace is gone', async () => {
+  const homeRecord = createHomeWorkspaceRecordFixture({
+    viewerSub: 'sub_invited',
+    workspaceTitle: 'Invitee home'
+  });
+  const olderInviteRecord = createSharedWorkspaceRecordFixture('workspace_other_invite');
+  const newerInviteRecord = createInviteWorkspaceRecordFixture('workspace_invited_casa', {
+    viewerSub: 'sub_invited',
+    viewerEmail: 'invitee@example.com'
+  });
+
+  newerInviteRecord.workspace.boards.casa.collaboration.invites[0].invitedAt = '2026-04-01T10:30:00.000Z';
+
+  const collection = createWorkspaceRecordCollectionDouble([
+    toWorkspaceRecordDocument(homeRecord),
+    toWorkspaceRecordDocument(olderInviteRecord),
+    toWorkspaceRecordDocument(newerInviteRecord)
+  ]);
+  const repository = new MongoWorkspaceRecordRepository({ collection });
+
+  const result = await repository.resolvePreferredWorkspaceForViewer({
+    viewerSub: 'sub_invited',
+    viewerEmail: 'invitee@example.com',
+    requestedWorkspaceId: 'workspace_missing'
+  });
+
+  assert.equal(result.resolution, 'fallback-pending-invite');
+  assert.equal(result.resolvedWorkspaceId, 'workspace_other_invite');
+  assert.equal(result.resolvedBoardId, 'invite');
+  assert.equal(result.record.isHomeWorkspace, false);
+  assert.equal(result.record.workspace.ui.activeBoardId, 'invite');
+  assert.deepEqual(result.record.workspace.boardOrder, ['invite']);
+});
+
+test('resolvePreferredWorkspaceForViewer returns the oldest readable external board when there are no pending invites', async () => {
+  const homeRecord = createHomeWorkspaceRecordFixture({
+    viewerSub: 'sub_member',
+    workspaceTitle: 'Member home'
+  });
+  const foreignHomeRecord = createHomeWorkspaceRecordFixture({
+    viewerSub: 'sub_owner_casa',
+    workspaceTitle: 'Casa workspace',
+    boardTitle: 'Casa'
+  });
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_later', {
+    workspaceTitle: 'Later workspace'
+  });
+
+  foreignHomeRecord.workspace.boards.main.collaboration.memberships.push({
+    actor: { type: 'human', id: 'sub_member', email: 'member@example.com' },
+    role: 'viewer',
+    joinedAt: '2026-04-01T10:05:00.000Z'
+  });
+  foreignHomeRecord.createdAt = '2026-03-01T09:00:00.000Z';
+  foreignHomeRecord.updatedAt = '2026-03-01T09:30:00.000Z';
+  foreignHomeRecord.workspace.boards.main.createdAt = '2026-03-01T09:05:00.000Z';
+  foreignHomeRecord.workspace.boards.main.updatedAt = '2026-03-01T09:35:00.000Z';
+  sharedRecord.createdAt = '2026-04-01T09:00:00.000Z';
+  sharedRecord.updatedAt = '2026-04-01T09:30:00.000Z';
+  sharedRecord.workspace.boards.member.createdAt = '2026-04-01T09:05:00.000Z';
+  sharedRecord.workspace.boards.member.updatedAt = '2026-04-01T09:35:00.000Z';
+
+  const collection = createWorkspaceRecordCollectionDouble([
+    toWorkspaceRecordDocument(homeRecord),
+    toWorkspaceRecordDocument(foreignHomeRecord),
+    toWorkspaceRecordDocument(sharedRecord)
+  ]);
+  const repository = new MongoWorkspaceRecordRepository({ collection });
+
+  const result = await repository.resolvePreferredWorkspaceForViewer({
+    viewerSub: 'sub_member',
+    viewerEmail: 'member@example.com',
+    requestedWorkspaceId: 'workspace_missing'
+  });
+
+  assert.equal(result.resolution, 'fallback-accessible-board');
+  assert.equal(result.resolvedWorkspaceId, createHomeWorkspaceId('sub_owner_casa'));
+  assert.equal(result.resolvedBoardId, 'main');
+  assert.equal(result.record.isHomeWorkspace, false);
+  assert.equal(result.record.workspace.ui.activeBoardId, 'main');
+});
+
+test('resolvePreferredWorkspaceForViewer creates a home workspace with one default board when no usable workspace remains', async () => {
+  const collection = createWorkspaceRecordCollectionDouble();
+  const repository = new MongoWorkspaceRecordRepository({
+    collection,
+    now: () => '2026-04-01T10:00:00.000Z'
+  });
+
+  const result = await repository.resolvePreferredWorkspaceForViewer({
+    viewerSub: 'sub_new',
+    viewerName: 'New User'
+  });
+
+  assert.equal(result.resolution, 'fallback-created-home');
+  assert.equal(result.resolvedWorkspaceId, createHomeWorkspaceId('sub_new'));
+  assert.equal(result.resolvedBoardId, 'main');
+  assert.equal(result.record.isHomeWorkspace, true);
+  assert.deepEqual(result.record.workspace.boardOrder, ['main']);
+  assert.equal(result.record.workspace.ui.activeBoardId, 'main');
+  assert.equal(result.record.workspace.title, 'New User 1');
+  assert.equal(collection.size(), 1);
+});
+
+test('resolvePreferredWorkspaceForViewer repairs an empty home workspace when there is no better fallback', async () => {
+  const damagedHomeDocument = toWorkspaceRecordDocument(
+    createHomeWorkspaceRecordFixture({
+      viewerSub: 'sub_repair',
+      workspaceTitle: 'Damaged home'
+    })
+  );
+
+  damagedHomeDocument.workspace.boardOrder = [];
+  damagedHomeDocument.workspace.boards = {};
+  damagedHomeDocument.workspace.ui.activeBoardId = null;
+
+  const collection = createWorkspaceRecordCollectionDouble([damagedHomeDocument]);
+  const repository = new MongoWorkspaceRecordRepository({
+    collection,
+    now: () => '2026-04-01T11:00:00.000Z'
+  });
+
+  const result = await repository.resolvePreferredWorkspaceForViewer({
+    viewerSub: 'sub_repair',
+    viewerName: 'Repair User'
+  });
+  const storedDocument = collection.getDocument(createHomeWorkspaceId('sub_repair'));
+
+  assert.equal(result.resolution, 'fallback-repaired-home');
+  assert.equal(result.resolvedWorkspaceId, createHomeWorkspaceId('sub_repair'));
+  assert.equal(result.resolvedBoardId, 'main');
+  assert.equal(result.record.isHomeWorkspace, true);
+  assert.equal(result.record.workspace.title, 'Damaged home');
+  assert.deepEqual(result.record.workspace.boardOrder, ['main']);
+  assert.equal(result.record.workspace.ui.activeBoardId, 'main');
+  assert.deepEqual(storedDocument.workspace.boardOrder, ['main']);
+  assert.equal(storedDocument.workspace.title, 'Damaged home');
+});
+
 test('loadWorkspaceRecordForSuperAdminTitleManagement loads a targeted workspace for super admins without changing normal membership access rules', async () => {
   const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_title_admin_target');
   const collection = createWorkspaceRecordCollectionDouble([toWorkspaceRecordDocument(sharedRecord)]);
@@ -511,6 +672,105 @@ test('loadWorkspaceRecordForSuperAdminBoardRoleAssignment returns not found when
     }),
     WorkspaceAccessDeniedError
   );
+});
+
+test('super-admin board deletion flow preserves next and previous active-board fallback when other boards remain', async () => {
+  const nextFallbackRecord = createSharedWorkspaceRecordFixture('workspace_shared_board_delete_next_fallback');
+  nextFallbackRecord.workspace.ui.activeBoardId = 'member';
+  const nextFallbackCollection = createWorkspaceRecordCollectionDouble([toWorkspaceRecordDocument(nextFallbackRecord)]);
+  const nextFallbackRepository = new MongoWorkspaceRecordRepository({ collection: nextFallbackCollection });
+  const nextFallbackCurrentRecord = await nextFallbackRepository.loadWorkspaceRecordForSuperAdminBoardDeletion({
+    viewerIsSuperAdmin: true,
+    workspaceId: nextFallbackRecord.workspaceId
+  });
+  const nextFallbackWorkspace = removeBoardFromWorkspace(nextFallbackCurrentRecord.workspace, 'member', {
+    allowDeleteLastBoard: true
+  });
+  const nextFallbackPersistedRecord = await nextFallbackRepository.replaceWorkspaceRecord({
+    record: createUpdatedWorkspaceRecord(nextFallbackCurrentRecord, {
+      workspace: nextFallbackWorkspace,
+      actor: { type: 'human', id: 'sub_super_admin' },
+      now: '2026-04-01T12:00:00.000Z'
+    }),
+    expectedRevision: nextFallbackCurrentRecord.revision
+  });
+
+  assert.deepEqual(nextFallbackPersistedRecord.workspace.boardOrder, ['main', 'invite']);
+  assert.equal(nextFallbackPersistedRecord.workspace.ui.activeBoardId, 'invite');
+
+  const previousFallbackRecord = createSharedWorkspaceRecordFixture('workspace_shared_board_delete_previous_fallback');
+  previousFallbackRecord.workspace.ui.activeBoardId = 'invite';
+  const previousFallbackCollection = createWorkspaceRecordCollectionDouble([toWorkspaceRecordDocument(previousFallbackRecord)]);
+  const previousFallbackRepository = new MongoWorkspaceRecordRepository({ collection: previousFallbackCollection });
+  const previousFallbackCurrentRecord = await previousFallbackRepository.loadWorkspaceRecordForSuperAdminBoardDeletion({
+    viewerIsSuperAdmin: true,
+    workspaceId: previousFallbackRecord.workspaceId
+  });
+  const previousFallbackWorkspace = removeBoardFromWorkspace(previousFallbackCurrentRecord.workspace, 'invite', {
+    allowDeleteLastBoard: true
+  });
+  const previousFallbackPersistedRecord = await previousFallbackRepository.replaceWorkspaceRecord({
+    record: createUpdatedWorkspaceRecord(previousFallbackCurrentRecord, {
+      workspace: previousFallbackWorkspace,
+      actor: { type: 'human', id: 'sub_super_admin' },
+      now: '2026-04-01T12:05:00.000Z'
+    }),
+    expectedRevision: previousFallbackCurrentRecord.revision
+  });
+
+  assert.deepEqual(previousFallbackPersistedRecord.workspace.boardOrder, ['main', 'member']);
+  assert.equal(previousFallbackPersistedRecord.workspace.ui.activeBoardId, 'member');
+});
+
+test('super-admin board deletion flow persists an empty workspace when deleting the last board', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_delete_last_board_empty_state');
+  sharedRecord.workspace.boardOrder = ['main'];
+  sharedRecord.workspace.boards = {
+    main: structuredClone(sharedRecord.workspace.boards.main)
+  };
+  sharedRecord.workspace.ui.activeBoardId = 'main';
+  const collection = createWorkspaceRecordCollectionDouble([toWorkspaceRecordDocument(sharedRecord)]);
+  const repository = new MongoWorkspaceRecordRepository({ collection });
+  const currentRecord = await repository.loadWorkspaceRecordForSuperAdminBoardDeletion({
+    viewerIsSuperAdmin: true,
+    workspaceId: sharedRecord.workspaceId
+  });
+  const nextWorkspace = removeBoardFromWorkspace(currentRecord.workspace, 'main', {
+    allowDeleteLastBoard: true
+  });
+  const persistedRecord = await repository.replaceWorkspaceRecord({
+    record: createUpdatedWorkspaceRecord(currentRecord, {
+      workspace: nextWorkspace,
+      actor: { type: 'human', id: 'sub_super_admin' },
+      now: '2026-04-01T12:10:00.000Z'
+    }),
+    expectedRevision: currentRecord.revision
+  });
+  const reloadedRecord = await repository.loadWorkspaceRecordForSuperAdminBoardDeletion({
+    viewerIsSuperAdmin: true,
+    workspaceId: sharedRecord.workspaceId
+  });
+
+  assert.deepEqual(persistedRecord.workspace.boardOrder, []);
+  assert.deepEqual(persistedRecord.workspace.boards, {});
+  assert.equal(persistedRecord.workspace.ui.activeBoardId, null);
+  assert.deepEqual(reloadedRecord.workspace.boardOrder, []);
+  assert.deepEqual(reloadedRecord.workspace.boards, {});
+  assert.equal(reloadedRecord.workspace.ui.activeBoardId, null);
+  assert.deepEqual(collection.getDocument(sharedRecord.workspaceId)?.workspace.boardOrder, []);
+});
+
+test('deleteWorkspaceForSuperAdmin removes the record document', async () => {
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_delete_document');
+  const collection = createWorkspaceRecordCollectionDouble([toWorkspaceRecordDocument(sharedRecord)]);
+  const repository = new MongoWorkspaceRecordRepository({ collection });
+
+  await repository.deleteWorkspaceForSuperAdmin({
+    viewerIsSuperAdmin: true,
+    workspaceId: sharedRecord.workspaceId
+  });
+
+  assert.equal(collection.getDocument(sharedRecord.workspaceId), null);
 });
 
 test('saveWorkspaceTitleForSuperAdmin trims titles, clears blank titles, and persists revisions for admin title management', async () => {

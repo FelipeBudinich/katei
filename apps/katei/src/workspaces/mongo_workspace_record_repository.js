@@ -7,8 +7,10 @@ import {
 } from '../../public/js/domain/board_collaboration.js';
 import {
   WorkspaceAccessDeniedError,
+  WorkspaceBoardDeletionPermissionError,
   WorkspaceBoardRoleAssignmentPermissionError,
   WorkspaceCreationPermissionError,
+  WorkspaceDeletionPermissionError,
   WorkspaceImportConflictError,
   WorkspaceRecordRepository,
   WorkspaceRevisionConflictError,
@@ -113,6 +115,92 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
     });
   }
 
+  async resolvePreferredWorkspaceForViewer({
+    viewerSub,
+    viewerEmail = null,
+    viewerName = null,
+    requestedWorkspaceId = null,
+    debugLog = null
+  } = {}) {
+    const normalizedViewerSub = normalizeViewerSub(viewerSub);
+    const normalizedViewerEmail = normalizeOptionalEmail(viewerEmail);
+    const normalizedRequestedWorkspaceId = normalizeOptionalWorkspaceId(requestedWorkspaceId);
+
+    if (normalizedRequestedWorkspaceId) {
+      const requestedWorkspaceResolution = await this.#resolveRequestedWorkspaceForViewer({
+        viewerSub: normalizedViewerSub,
+        viewerEmail: normalizedViewerEmail,
+        workspaceId: normalizedRequestedWorkspaceId,
+        debugLog
+      });
+
+      if (requestedWorkspaceResolution) {
+        return requestedWorkspaceResolution;
+      }
+    } else {
+      const existingHomeResolution = await this.#resolveExistingHomeWorkspaceForViewer({
+        viewerSub: normalizedViewerSub,
+        viewerEmail: normalizedViewerEmail,
+        debugLog
+      });
+
+      if (existingHomeResolution) {
+        return existingHomeResolution;
+      }
+    }
+
+    const pendingInviteResolution = await this.#resolvePendingInviteWorkspaceForViewer({
+      viewerSub: normalizedViewerSub,
+      viewerEmail: normalizedViewerEmail,
+      debugLog
+    });
+
+    if (pendingInviteResolution) {
+      return pendingInviteResolution;
+    }
+
+    const accessibleBoardResolution = await this.#resolveAccessibleBoardWorkspaceForViewer({
+      viewerSub: normalizedViewerSub,
+      viewerEmail: normalizedViewerEmail,
+      debugLog
+    });
+
+    if (accessibleBoardResolution) {
+      return accessibleBoardResolution;
+    }
+
+    if (normalizedRequestedWorkspaceId) {
+      const existingHomeResolution = await this.#resolveExistingHomeWorkspaceForViewer({
+        viewerSub: normalizedViewerSub,
+        viewerEmail: normalizedViewerEmail,
+        debugLog
+      });
+
+      if (existingHomeResolution) {
+        return existingHomeResolution;
+      }
+    }
+
+    const rawHomeDocument = await this.#loadHomeWorkspaceRawDocument(normalizedViewerSub);
+
+    if (!rawHomeDocument) {
+      return this.#createPreferredHomeWorkspaceForViewer({
+        viewerSub: normalizedViewerSub,
+        viewerEmail: normalizedViewerEmail,
+        viewerName,
+        debugLog
+      });
+    }
+
+    return this.#repairPreferredHomeWorkspaceForViewer({
+      viewerSub: normalizedViewerSub,
+      viewerEmail: normalizedViewerEmail,
+      viewerName,
+      rawHomeDocument,
+      debugLog
+    });
+  }
+
   async createWorkspaceForSuperAdmin({
     viewerIsSuperAdmin = false,
     viewerSub,
@@ -151,6 +239,24 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
     assertSuperAdminBoardRoleAssignmentAccess(viewerIsSuperAdmin);
 
     return this.#loadWorkspaceRecordForSuperAdminTargetedAccess(workspaceId);
+  }
+
+  async loadWorkspaceRecordForSuperAdminBoardDeletion({ viewerIsSuperAdmin = false, workspaceId } = {}) {
+    assertSuperAdminBoardDeletionAccess(viewerIsSuperAdmin);
+
+    return this.#loadWorkspaceRecordForSuperAdminTargetedAccess(workspaceId);
+  }
+
+  async deleteWorkspaceForSuperAdmin({ viewerIsSuperAdmin = false, workspaceId } = {}) {
+    assertSuperAdminWorkspaceDeletionAccess(viewerIsSuperAdmin);
+
+    const record = await this.#loadWorkspaceRecordForSuperAdminTargetedAccess(workspaceId);
+    const documentId = normalizeOptionalString(record?.documentId) || normalizeOptionalString(record?.workspaceId);
+    const result = await this.#getCollection().deleteOne({ _id: documentId });
+
+    if (typeof result?.deletedCount === 'number' && result.deletedCount < 1) {
+      throw new WorkspaceAccessDeniedError();
+    }
   }
 
   async saveWorkspaceTitleForSuperAdmin({
@@ -194,43 +300,17 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
   }
 
   async listPendingWorkspaceInvitesForViewer({ viewerSub, viewerEmail = null, debugLog = null } = {}) {
-    const collection = this.#getCollection();
     const normalizedViewerSub = normalizeViewerSub(viewerSub);
     const normalizedViewerEmail = normalizeOptionalEmail(viewerEmail);
-    const documents = await collection.find({}).toArray();
-    const summaries = [];
-    const seenInviteKeys = new Set();
 
-    for (const document of documents) {
-      const record = fromWorkspaceRecordDocument(document);
-
-      if (!record?.workspace?.boards || typeof record.workspace.boards !== 'object') {
-        continue;
+    return this.#collectPendingWorkspaceInviteSummaries(
+      await this.#listWorkspaceDocuments(),
+      {
+        viewerSub: normalizedViewerSub,
+        viewerEmail: normalizedViewerEmail,
+        debugLog
       }
-
-      for (const [boardId, board] of Object.entries(record.workspace.boards)) {
-        const inviteSummaries = createPendingWorkspaceInviteSummaries(board, {
-          workspaceId: record.workspaceId,
-          boardId,
-          viewerSub: normalizedViewerSub,
-          viewerEmail: normalizedViewerEmail,
-          debugLog
-        });
-
-        for (const inviteSummary of inviteSummaries) {
-          const inviteKey = `${inviteSummary.workspaceId}:${inviteSummary.boardId}:${inviteSummary.inviteId}`;
-
-          if (seenInviteKeys.has(inviteKey)) {
-            continue;
-          }
-
-          seenInviteKeys.add(inviteKey);
-          summaries.push(inviteSummary);
-        }
-      }
-    }
-
-    return summaries;
+    );
   }
 
   async listAccessibleWorkspacesForViewer({
@@ -240,25 +320,22 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
     excludeWorkspaceId = null,
     debugLog = null
   } = {}) {
-    const collection = this.#getCollection();
     const normalizedViewerSub = normalizeViewerSub(viewerSub);
     const normalizedViewerEmail = normalizeOptionalEmail(viewerEmail);
     const normalizedExcludeWorkspaceId = normalizeOptionalWorkspaceId(excludeWorkspaceId);
 
-    await this.#loadOrCreateWorkspaceRecord({
+    await this.#ensureHomeWorkspaceDocumentExists({
       viewerSub: normalizedViewerSub,
       viewerEmail: normalizedViewerEmail,
-      viewerName,
-      debugLog,
-      projectForViewer: true
+      viewerName
     });
 
-    const documents = await collection.find({}).toArray();
+    const documents = await this.#listWorkspaceDocuments();
     const summaries = [];
     const seenWorkspaceIds = new Set();
 
     for (const document of documents) {
-      const record = fromWorkspaceRecordDocument(document);
+      const record = this.#tryCreateWorkspaceRecordFromDocument(document);
 
       if (!record) {
         continue;
@@ -434,7 +511,322 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
     return record;
   }
 
-  async #loadRequiredWorkspaceRecord(workspaceId) {
+  async #resolveRequestedWorkspaceForViewer({ viewerSub, viewerEmail, workspaceId, debugLog = null } = {}) {
+    const record = await this.#loadProjectedAccessibleWorkspaceRecord({
+      viewerSub,
+      viewerEmail,
+      workspaceId,
+      debugLog
+    });
+
+    if (!record) {
+      return null;
+    }
+
+    const resolvedBoardId = resolveVisibleWorkspaceBoardId(record.workspace);
+
+    if (!resolvedBoardId) {
+      return null;
+    }
+
+    return createPreferredWorkspaceResolution({
+      record,
+      viewerSub,
+      resolvedBoardId,
+      resolution: 'requested-workspace'
+    });
+  }
+
+  async #resolveExistingHomeWorkspaceForViewer({ viewerSub, viewerEmail, debugLog = null } = {}) {
+    const rawHomeDocument = await this.#loadHomeWorkspaceRawDocument(viewerSub);
+
+    if (!rawHomeDocument) {
+      return null;
+    }
+
+    const record = this.#tryCreateWorkspaceRecordFromDocument(rawHomeDocument);
+
+    if (!record) {
+      return null;
+    }
+
+    const projectedRecord = projectRecordForViewer(record, {
+      viewerSub,
+      viewerEmail,
+      debugLog
+    });
+    const resolvedBoardId = resolveVisibleWorkspaceBoardId(projectedRecord.workspace);
+
+    if (!resolvedBoardId) {
+      return null;
+    }
+
+    return createPreferredWorkspaceResolution({
+      record: projectedRecord,
+      viewerSub,
+      resolvedBoardId,
+      resolution: 'fallback-existing-home'
+    });
+  }
+
+  async #resolvePendingInviteWorkspaceForViewer({ viewerSub, viewerEmail, debugLog = null } = {}) {
+    const pendingInvites = this.#collectPendingWorkspaceInviteSummaries(
+      await this.#listWorkspaceDocuments(),
+      {
+        viewerSub,
+        viewerEmail,
+        debugLog
+      }
+    ).sort(comparePendingWorkspaceInviteSummaries);
+
+    for (const pendingInvite of pendingInvites) {
+      const record = await this.#loadProjectedAccessibleWorkspaceRecord({
+        viewerSub,
+        viewerEmail,
+        workspaceId: pendingInvite.workspaceId,
+        debugLog
+      });
+
+      if (!record?.workspace?.boards?.[pendingInvite.boardId]) {
+        continue;
+      }
+
+      return createPreferredWorkspaceResolution({
+        record,
+        viewerSub,
+        resolvedBoardId: pendingInvite.boardId,
+        resolution: 'fallback-pending-invite'
+      });
+    }
+
+    return null;
+  }
+
+  async #resolveAccessibleBoardWorkspaceForViewer({ viewerSub, viewerEmail, debugLog = null } = {}) {
+    const viewerHomeWorkspaceId = createHomeWorkspaceId(viewerSub);
+    const candidates = [];
+
+    for (const document of await this.#listWorkspaceDocuments()) {
+      const record = this.#tryCreateWorkspaceRecordFromDocument(document);
+
+      if (!record || record.workspaceId === viewerHomeWorkspaceId) {
+        continue;
+      }
+
+      const projectedRecord = projectRecordForViewer(record, {
+        viewerSub,
+        viewerEmail,
+        debugLog
+      });
+
+      for (const boardId of collectWorkspaceBoardIds(projectedRecord.workspace)) {
+        const board = projectedRecord.workspace?.boards?.[boardId];
+
+        if (!canViewerReadBoard({ viewerSub, viewerEmail, board })) {
+          continue;
+        }
+
+        candidates.push({
+          record: projectedRecord,
+          workspaceId: projectedRecord.workspaceId,
+          boardId,
+          workspaceCreatedAt: normalizeOptionalIsoString(record.createdAt) ?? '',
+          boardCreatedAt: normalizeOptionalIsoString(board?.createdAt) ?? ''
+        });
+      }
+    }
+
+    candidates.sort(compareAccessibleBoardCandidates);
+
+    const firstCandidate = candidates[0] ?? null;
+
+    if (!firstCandidate) {
+      return null;
+    }
+
+    return createPreferredWorkspaceResolution({
+      record: firstCandidate.record,
+      viewerSub,
+      resolvedBoardId: firstCandidate.boardId,
+      resolution: 'fallback-accessible-board'
+    });
+  }
+
+  async #createPreferredHomeWorkspaceForViewer({ viewerSub, viewerEmail = null, viewerName = null, debugLog = null } = {}) {
+    const collection = this.#getCollection();
+    const initialRecord = await this.#buildInitialWorkspaceRecord({
+      viewerSub,
+      viewerEmail,
+      viewerName,
+      workspaceId: null,
+      title: undefined
+    });
+
+    await collection.updateOne(
+      { _id: initialRecord.workspaceId },
+      { $setOnInsert: toWorkspaceRecordDocument(initialRecord) },
+      { upsert: true }
+    );
+
+    const record = await this.#loadRequiredWorkspaceRecord(initialRecord.workspaceId);
+    const projectedRecord = projectRecordForViewer(record, {
+      viewerSub,
+      viewerEmail,
+      debugLog
+    });
+    const resolvedBoardId = resolveVisibleWorkspaceBoardId(projectedRecord.workspace);
+
+    if (!resolvedBoardId) {
+      throw new WorkspaceAccessDeniedError();
+    }
+
+    return createPreferredWorkspaceResolution({
+      record: projectedRecord,
+      viewerSub,
+      resolvedBoardId,
+      resolution: 'fallback-created-home'
+    });
+  }
+
+  async #repairPreferredHomeWorkspaceForViewer({
+    viewerSub,
+    viewerEmail = null,
+    viewerName = null,
+    rawHomeDocument,
+    debugLog = null
+  } = {}) {
+    const repairedRecord = await this.#repairHomeWorkspaceRecord({
+      viewerSub,
+      viewerEmail,
+      viewerName,
+      rawHomeDocument
+    });
+    const projectedRecord = projectRecordForViewer(repairedRecord, {
+      viewerSub,
+      viewerEmail,
+      debugLog
+    });
+    const resolvedBoardId = resolveVisibleWorkspaceBoardId(projectedRecord.workspace);
+
+    if (!resolvedBoardId) {
+      throw new WorkspaceAccessDeniedError();
+    }
+
+    return createPreferredWorkspaceResolution({
+      record: projectedRecord,
+      viewerSub,
+      resolvedBoardId,
+      resolution: 'fallback-repaired-home'
+    });
+  }
+
+  async #repairHomeWorkspaceRecord({ viewerSub, viewerEmail = null, viewerName = null, rawHomeDocument } = {}) {
+    const workspaceId =
+      normalizeOptionalWorkspaceId(rawHomeDocument?.workspaceId)
+      ?? normalizeOptionalWorkspaceId(rawHomeDocument?._id)
+      ?? createHomeWorkspaceId(viewerSub);
+    const documentId = normalizeOptionalWorkspaceId(rawHomeDocument?._id) ?? workspaceId;
+    const currentRevision = normalizeRevisionNumber(rawHomeDocument?.revision);
+    const createdAt =
+      normalizeOptionalIsoString(rawHomeDocument?.createdAt)
+      ?? normalizeOptionalIsoString(rawHomeDocument?.updatedAt)
+      ?? this.now();
+    const updatedAt =
+      normalizeOptionalIsoString(rawHomeDocument?.updatedAt)
+      ?? createdAt;
+    const repairedWorkspace = (
+      await this.#buildInitialWorkspaceRecord({
+        viewerSub,
+        viewerEmail,
+        viewerName,
+        workspaceId,
+        title: normalizeOptionalString(rawHomeDocument?.workspace?.title) || undefined
+      })
+    ).workspace;
+    const baseRecord = createWorkspaceRecord({
+      workspaceId,
+      viewerSub,
+      isHomeWorkspace: true,
+      documentId,
+      workspace: repairedWorkspace,
+      revision: currentRevision,
+      createdAt,
+      updatedAt,
+      lastChangedBy: rawHomeDocument?.lastChangedBy ?? null,
+      activityEvents: Array.isArray(rawHomeDocument?.activityEvents) ? rawHomeDocument.activityEvents : [],
+      commandReceipts: Array.isArray(rawHomeDocument?.commandReceipts) ? rawHomeDocument.commandReceipts : []
+    });
+    const nextRecord = createUpdatedWorkspaceRecord(baseRecord, {
+      workspace: repairedWorkspace,
+      actor: null,
+      now: this.now(),
+      activityType: 'workspace.repaired',
+      createActivityEventId: this.createActivityEventId
+    });
+
+    return this.#persistWorkspaceRecord({
+      currentDocumentId: documentId,
+      nextRecord,
+      expectedRevision: baseRecord.revision,
+      conflictErrorClass: WorkspaceRevisionConflictError
+    });
+  }
+
+  async #ensureHomeWorkspaceDocumentExists({ viewerSub, viewerEmail = null, viewerName = null } = {}) {
+    const existingDocument = await this.#loadHomeWorkspaceRawDocument(viewerSub);
+
+    if (existingDocument) {
+      return existingDocument;
+    }
+
+    const collection = this.#getCollection();
+    const initialRecord = await this.#buildInitialWorkspaceRecord({
+      viewerSub,
+      viewerEmail,
+      viewerName,
+      workspaceId: null,
+      title: undefined
+    });
+
+    await collection.updateOne(
+      { _id: initialRecord.workspaceId },
+      { $setOnInsert: toWorkspaceRecordDocument(initialRecord) },
+      { upsert: true }
+    );
+
+    return collection.findOne({ _id: initialRecord.workspaceId });
+  }
+
+  async #listWorkspaceDocuments() {
+    return this.#getCollection().find({}).toArray();
+  }
+
+  async #loadProjectedAccessibleWorkspaceRecord({ viewerSub, viewerEmail, workspaceId, debugLog = null } = {}) {
+    const record = this.#tryCreateWorkspaceRecordFromDocument(
+      await this.#loadWorkspaceDocument(workspaceId)
+    );
+
+    if (!record) {
+      return null;
+    }
+
+    if (
+      !canViewerAccessWorkspace({
+        viewerSub,
+        viewerEmail,
+        ownerSub: record.viewerSub,
+        workspace: record.workspace,
+        debugLog
+      })
+    ) {
+      return null;
+    }
+
+    const projectedRecord = projectRecordForViewer(record, { viewerSub, viewerEmail, debugLog });
+    return resolveVisibleWorkspaceBoardId(projectedRecord.workspace) ? projectedRecord : null;
+  }
+
+  async #loadWorkspaceDocument(workspaceId) {
     const collection = this.#getCollection();
     const normalizedWorkspaceId = normalizeWorkspaceId(workspaceId);
     let document = await collection.findOne({ _id: normalizedWorkspaceId });
@@ -446,6 +838,12 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
         document = await collection.findOne({ _id: legacyHomeWorkspaceId });
       }
     }
+
+    return document;
+  }
+
+  async #loadRequiredWorkspaceRecord(workspaceId) {
+    const document = await this.#loadWorkspaceDocument(workspaceId);
 
     const record = fromWorkspaceRecordDocument(document);
 
@@ -471,13 +869,17 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
   }
 
   async #loadHomeWorkspaceRecord(viewerSub) {
-    const collection = this.#getCollection();
-    const homeDocument =
-      (await collection.findOne({ viewerSub, isHomeWorkspace: true })) ??
-      (await collection.findOne({ _id: createHomeWorkspaceId(viewerSub) })) ??
-      (await collection.findOne({ _id: viewerSub }));
+    return fromWorkspaceRecordDocument(await this.#loadHomeWorkspaceRawDocument(viewerSub));
+  }
 
-    return fromWorkspaceRecordDocument(homeDocument);
+  async #loadHomeWorkspaceRawDocument(viewerSub) {
+    const collection = this.#getCollection();
+
+    return (
+      (await collection.findOne({ viewerSub, isHomeWorkspace: true }))
+      ?? (await collection.findOne({ _id: createHomeWorkspaceId(viewerSub) }))
+      ?? (await collection.findOne({ _id: viewerSub }))
+    );
   }
 
   async #loadAccessibleWorkspaceRecord({ viewerSub, viewerEmail, workspaceId, debugLog = null, projectForViewer = true }) {
@@ -510,6 +912,52 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
     }
 
     return record;
+  }
+
+  #collectPendingWorkspaceInviteSummaries(documents, { viewerSub, viewerEmail = null, debugLog = null } = {}) {
+    const summaries = [];
+    const seenInviteKeys = new Set();
+
+    for (const document of documents) {
+      const workspaceId =
+        normalizeOptionalWorkspaceId(document?.workspaceId)
+        ?? normalizeOptionalWorkspaceId(document?._id);
+
+      if (!workspaceId || !document?.workspace?.boards || typeof document.workspace.boards !== 'object') {
+        continue;
+      }
+
+      for (const [boardId, board] of Object.entries(document.workspace.boards)) {
+        const inviteSummaries = createPendingWorkspaceInviteSummaries(board, {
+          workspaceId,
+          boardId,
+          viewerSub,
+          viewerEmail,
+          debugLog
+        });
+
+        for (const inviteSummary of inviteSummaries) {
+          const inviteKey = `${inviteSummary.workspaceId}:${inviteSummary.boardId}:${inviteSummary.inviteId}`;
+
+          if (seenInviteKeys.has(inviteKey)) {
+            continue;
+          }
+
+          seenInviteKeys.add(inviteKey);
+          summaries.push(inviteSummary);
+        }
+      }
+    }
+
+    return summaries;
+  }
+
+  #tryCreateWorkspaceRecordFromDocument(document) {
+    try {
+      return fromWorkspaceRecordDocument(document);
+    } catch (error) {
+      return null;
+    }
   }
 
   async #persistWorkspaceRecord({ currentDocumentId, nextRecord, expectedRevision, conflictErrorClass }) {
@@ -600,7 +1048,7 @@ export class MongoWorkspaceRecordRepository extends WorkspaceRecordRepository {
     const documents = await collection.find({ viewerSub }).toArray();
 
     return documents
-      .map((document) => fromWorkspaceRecordDocument(document))
+      .map((document) => this.#tryCreateWorkspaceRecordFromDocument(document))
       .filter(Boolean)
       .map((record) => resolveWorkspaceTitle(record.workspace))
       .filter(Boolean);
@@ -620,6 +1068,18 @@ function assertSuperAdminTitleManagementAccess(viewerIsSuperAdmin) {
 function assertSuperAdminBoardRoleAssignmentAccess(viewerIsSuperAdmin) {
   if (viewerIsSuperAdmin !== true) {
     throw new WorkspaceBoardRoleAssignmentPermissionError();
+  }
+}
+
+function assertSuperAdminBoardDeletionAccess(viewerIsSuperAdmin) {
+  if (viewerIsSuperAdmin !== true) {
+    throw new WorkspaceBoardDeletionPermissionError();
+  }
+}
+
+function assertSuperAdminWorkspaceDeletionAccess(viewerIsSuperAdmin) {
+  if (viewerIsSuperAdmin !== true) {
+    throw new WorkspaceDeletionPermissionError();
   }
 }
 
@@ -794,6 +1254,62 @@ function createAccessibleWorkspaceBoardSummary(board, { boardId, viewerSub, view
   };
 }
 
+function comparePendingWorkspaceInviteSummaries(left, right) {
+  const invitedAtComparison = compareAscendingStrings(
+    normalizeOptionalIsoString(left?.invitedAt) ?? '',
+    normalizeOptionalIsoString(right?.invitedAt) ?? ''
+  );
+
+  if (invitedAtComparison !== 0) {
+    return invitedAtComparison;
+  }
+
+  const workspaceComparison = compareAscendingStrings(
+    normalizeOptionalString(left?.workspaceId),
+    normalizeOptionalString(right?.workspaceId)
+  );
+
+  if (workspaceComparison !== 0) {
+    return workspaceComparison;
+  }
+
+  const boardComparison = compareAscendingStrings(
+    normalizeOptionalString(left?.boardId),
+    normalizeOptionalString(right?.boardId)
+  );
+
+  if (boardComparison !== 0) {
+    return boardComparison;
+  }
+
+  return compareAscendingStrings(
+    normalizeOptionalString(left?.inviteId),
+    normalizeOptionalString(right?.inviteId)
+  );
+}
+
+function compareAccessibleBoardCandidates(left, right) {
+  const workspaceCreatedAtComparison = compareAscendingStrings(left?.workspaceCreatedAt ?? '', right?.workspaceCreatedAt ?? '');
+
+  if (workspaceCreatedAtComparison !== 0) {
+    return workspaceCreatedAtComparison;
+  }
+
+  const boardCreatedAtComparison = compareAscendingStrings(left?.boardCreatedAt ?? '', right?.boardCreatedAt ?? '');
+
+  if (boardCreatedAtComparison !== 0) {
+    return boardCreatedAtComparison;
+  }
+
+  const workspaceComparison = compareAscendingStrings(left?.workspaceId ?? '', right?.workspaceId ?? '');
+
+  if (workspaceComparison !== 0) {
+    return workspaceComparison;
+  }
+
+  return compareAscendingStrings(left?.boardId ?? '', right?.boardId ?? '');
+}
+
 function compareAccessibleWorkspaceSummaries(left, right) {
   if (left?.isHomeWorkspace === true && right?.isHomeWorkspace !== true) {
     return -1;
@@ -804,6 +1320,16 @@ function compareAccessibleWorkspaceSummaries(left, right) {
   }
 
   return normalizeOptionalString(left?.workspaceId).localeCompare(normalizeOptionalString(right?.workspaceId));
+}
+
+function resolveVisibleWorkspaceBoardId(workspace) {
+  const activeBoardId = normalizeOptionalWorkspaceId(workspace?.ui?.activeBoardId);
+
+  if (activeBoardId && workspace?.boards?.[activeBoardId]) {
+    return activeBoardId;
+  }
+
+  return collectWorkspaceBoardIds(workspace)[0] ?? null;
 }
 
 function collectWorkspaceBoardIds(workspace) {
@@ -880,6 +1406,41 @@ function normalizeOptionalIsoString(value) {
 
   const parsedValue = new Date(value);
   return Number.isNaN(parsedValue.getTime()) ? null : parsedValue.toISOString();
+}
+
+function normalizeRevisionNumber(value) {
+  return Number.isInteger(value) && value >= 0 ? value : 0;
+}
+
+function createPreferredWorkspaceResolution({ record, viewerSub, resolvedBoardId, resolution } = {}) {
+  const normalizedWorkspaceId =
+    normalizeOptionalWorkspaceId(record?.workspaceId)
+    ?? normalizeOptionalWorkspaceId(record?.workspace?.workspaceId);
+  const normalizedResolvedBoardId = normalizeOptionalWorkspaceId(resolvedBoardId);
+
+  if (!normalizedWorkspaceId || !normalizedResolvedBoardId || !record?.workspace?.boards?.[normalizedResolvedBoardId]) {
+    return null;
+  }
+
+  const nextRecord = structuredClone(record);
+
+  nextRecord.isHomeWorkspace = normalizedWorkspaceId === createHomeWorkspaceId(viewerSub);
+  nextRecord.workspace = structuredClone(record.workspace);
+  nextRecord.workspace.ui = {
+    ...(nextRecord.workspace.ui ?? {}),
+    activeBoardId: normalizedResolvedBoardId
+  };
+
+  return {
+    record: nextRecord,
+    resolvedWorkspaceId: normalizedWorkspaceId,
+    resolvedBoardId: normalizedResolvedBoardId,
+    resolution
+  };
+}
+
+function compareAscendingStrings(left, right) {
+  return String(left ?? '').localeCompare(String(right ?? ''));
 }
 
 function didPersistWorkspaceDocument(result) {

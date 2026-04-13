@@ -27,7 +27,11 @@ import {
   createOpenAiStagePromptRunner,
   OpenAiStagePromptRunnerError
 } from '../ai/openai_stage_prompt_runner.js';
-import { applyWorkspaceCommand, WorkspaceCommandPermissionError } from '../workspaces/apply_workspace_command.js';
+import {
+  applyWorkspaceCommand,
+  removeBoardFromWorkspace,
+  WorkspaceCommandPermissionError
+} from '../workspaces/apply_workspace_command.js';
 import { buildInviteResponseDebugFields, createInviteAcceptDebugLogger, createInviteDebugLogger } from '../lib/invite_debug.js';
 import { setBoardSurfaceCookie } from '../auth/last_surface_cookie.js';
 import { decryptBoardSecret } from '../security/board_secret_crypto.js';
@@ -37,13 +41,16 @@ import {
   createCommandReceipt,
   createHomeWorkspaceId,
   createWorkspaceActivityEvent,
+  createUpdatedWorkspaceRecord,
   createWorkspaceRecord,
   findCommandReceipt
 } from '../workspaces/workspace_record.js';
 import {
   WorkspaceAccessDeniedError,
+  WorkspaceBoardDeletionPermissionError,
   WorkspaceBoardRoleAssignmentPermissionError,
   WorkspaceCreationPermissionError,
+  WorkspaceDeletionPermissionError,
   WorkspaceImportConflictError,
   WorkspaceRevisionConflictError,
   WorkspaceTitleManagementPermissionError
@@ -74,11 +81,12 @@ export function createWorkspaceApiRouter({
 
     try {
       logViewerIdentity(debugLog, 'GET /api/workspace', request);
-      const record = await workspaceRecordRepository.loadOrCreateWorkspaceRecord({
+      const requestedWorkspaceId = resolveRequestedWorkspaceId(request);
+      const { record } = await workspaceRecordRepository.resolvePreferredWorkspaceForViewer({
         viewerSub: request.viewer.sub,
         viewerEmail: request.viewer.email ?? null,
         viewerName: request.viewer.name ?? null,
-        workspaceId: resolveRequestedWorkspaceId(request),
+        requestedWorkspaceId,
         debugLog
       });
       const extras = await listActorFacingWorkspaceExtras(
@@ -788,6 +796,132 @@ export function createWorkspaceApiRouter({
         response.status(409).json({
           ok: false,
           error: error.message
+        });
+        return;
+      }
+
+      next(error);
+    }
+  });
+
+  router.post('/api/workspace/boards/delete', requireSession, async (request, response, next) => {
+    const workspaceId = normalizeOptionalString(request.body?.workspaceId);
+    const boardId = normalizeOptionalString(request.body?.boardId);
+
+    if (!workspaceId) {
+      response.status(400).json({
+        ok: false,
+        error: 'workspaceId is required.'
+      });
+      return;
+    }
+
+    if (!boardId) {
+      response.status(400).json({
+        ok: false,
+        error: 'boardId is required.'
+      });
+      return;
+    }
+
+    try {
+      const currentRecord = createWorkspaceRecord(
+        await workspaceRecordRepository.loadWorkspaceRecordForSuperAdminBoardDeletion({
+          viewerIsSuperAdmin: request.viewer?.isSuperAdmin === true,
+          workspaceId
+        })
+      );
+      const nextWorkspace = removeBoardFromWorkspace(currentRecord.workspace, boardId, {
+        allowDeleteLastBoard: true
+      });
+      const persistedRecord = await workspaceRecordRepository.replaceWorkspaceRecord({
+        record: createUpdatedWorkspaceRecord(currentRecord, {
+          workspace: nextWorkspace,
+          actor: createViewerMutationActor(request.viewer)
+        }),
+        expectedRevision: currentRecord.revision
+      });
+
+      response.json({
+        ok: true,
+        result: {
+          workspaceId: persistedRecord.workspaceId,
+          boardId
+        }
+      });
+    } catch (error) {
+      if (error instanceof WorkspaceBoardDeletionPermissionError || error?.code === 'WORKSPACE_BOARD_DELETION_FORBIDDEN') {
+        response.status(403).json({
+          ok: false,
+          error: error.message
+        });
+        return;
+      }
+
+      if (error instanceof WorkspaceAccessDeniedError || error?.code === 'WORKSPACE_ACCESS_DENIED') {
+        response.status(404).json({
+          ok: false,
+          error: 'Workspace not found.'
+        });
+        return;
+      }
+
+      if (error instanceof WorkspaceRevisionConflictError || error?.code === 'WORKSPACE_REVISION_CONFLICT') {
+        response.status(409).json({
+          ok: false,
+          error: error.message
+        });
+        return;
+      }
+
+      if (error?.message === 'Board not found.') {
+        response.status(404).json({
+          ok: false,
+          error: error.message
+        });
+        return;
+      }
+
+      next(error);
+    }
+  });
+
+  router.post('/api/workspace/delete', requireSession, async (request, response, next) => {
+    const workspaceId = normalizeOptionalString(request.body?.workspaceId);
+
+    if (!workspaceId) {
+      response.status(400).json({
+        ok: false,
+        error: 'workspaceId is required.'
+      });
+      return;
+    }
+
+    try {
+      await workspaceRecordRepository.deleteWorkspaceForSuperAdmin({
+        viewerIsSuperAdmin: request.viewer?.isSuperAdmin === true,
+        workspaceId
+      });
+
+      response.json({
+        ok: true,
+        result: {
+          workspaceId
+        }
+      });
+    } catch (error) {
+      if (error instanceof WorkspaceDeletionPermissionError || error?.code === 'WORKSPACE_DELETION_FORBIDDEN') {
+        response.status(403).json({
+          ok: false,
+          error: error.message
+        });
+        return;
+      }
+
+      if (error instanceof WorkspaceAccessDeniedError || error?.code === 'WORKSPACE_ACCESS_DENIED') {
+        response.status(404).json({
+          ok: false,
+          error: 'Workspace not found.'
         });
         return;
       }
