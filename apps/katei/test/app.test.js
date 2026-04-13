@@ -1291,6 +1291,10 @@ test('GET /portfolio renders the pending card reviews section and summary count'
     response.text,
     translator('portfolio.pendingCardReviews.heading')
   );
+  const boardDirectorySection = extractPortfolioSectionHtml(
+    response.text,
+    translator('portfolio.directory.heading')
+  );
   const portfolioSummaryGrid = response.text.match(
     /<section class="env-inventory-status-grid">[\s\S]*?<\/section>/
   )?.[0] ?? '';
@@ -1303,6 +1307,19 @@ test('GET /portfolio renders the pending card reviews section and summary count'
   assert.doesNotMatch(pendingSection, /Verification requested/);
   assert.match(pendingSection, /2026-04-03T10:20:00.000Z/);
   assert.match(pendingSection, /Open board/);
+  assert.match(
+    pendingSection,
+    /\/boards\?workspaceId=workspace_portfolio_reviews&amp;boardId=main&amp;cardId=card_pending_review&amp;view=card/
+  );
+  assert.match(pendingSection, /workspaceId=workspace_portfolio_reviews/);
+  assert.match(pendingSection, /boardId=main/);
+  assert.match(pendingSection, /cardId=card_pending_review/);
+  assert.match(pendingSection, /view=card/);
+  assert.match(
+    boardDirectorySection,
+    /href="\/boards\?workspaceId=workspace_portfolio_reviews&amp;boardId=main"/
+  );
+  assert.doesNotMatch(boardDirectorySection, /cardId=/);
   assert.match(
     portfolioSummaryGrid,
     new RegExp(

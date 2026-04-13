@@ -406,8 +406,10 @@ function createPendingCardReviewEntryViewModel(entry, t) {
     cardTitle,
     stageTitle,
     stateLabel: t('cardEditor.workflowReview.pending'),
+    cardId: normalizeOptionalString(entry?.cardId),
     updatedAt: normalizeOptionalString(entry?.cardUpdatedAt),
-    openBoardHref: buildBoardHref(entry)
+    openBoardHref: buildBoardHref(entry),
+    openCardHref: buildBoardCardHref(entry, { view: 'card' })
   };
 }
 
@@ -570,6 +572,32 @@ function buildBoardHref(entry) {
 
   const queryString = searchParams.toString();
 
+  return queryString ? `/boards?${queryString}` : '/boards';
+}
+
+function buildBoardCardHref(entry, { view = 'card' } = {}) {
+  const workspaceId = normalizeOptionalString(entry?.workspaceId);
+  const boardId = normalizeOptionalString(entry?.boardId);
+  const cardId = normalizeOptionalString(entry?.cardId);
+  const searchParams = new URLSearchParams();
+
+  if (workspaceId) {
+    searchParams.set('workspaceId', workspaceId);
+  }
+
+  if (boardId) {
+    searchParams.set('boardId', boardId);
+  }
+
+  if (cardId) {
+    searchParams.set('cardId', cardId);
+  }
+
+  if (view) {
+    searchParams.set('view', view);
+  }
+
+  const queryString = searchParams.toString();
   return queryString ? `/boards?${queryString}` : '/boards';
 }
 
