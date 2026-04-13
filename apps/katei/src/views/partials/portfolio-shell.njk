@@ -377,7 +377,7 @@
                         <div class="portfolio-table-primary">{{ entry.timestamp }}</div>
                       </td>
                       <td>
-                        <a href="{{ entry.openBoardHref }}" class="touch-button-secondary">{{ t('portfolio.awaitingApproval.openBoardAction') }}</a>
+                        <a href="{{ entry.openCardHref }}" class="touch-button-secondary">{{ t('portfolio.awaitingApproval.openBoardAction') }}</a>
                       </td>
                     </tr>
                   {% endfor %}
@@ -456,7 +456,7 @@
                         <div class="portfolio-table-primary">{{ entry.timestamp }}</div>
                       </td>
                       <td>
-                        <a href="{{ entry.openBoardHref }}" class="touch-button-secondary">{{ t('portfolio.agentProposals.openBoardAction') }}</a>
+                        <a href="{{ entry.openCardHref }}" class="touch-button-secondary">{{ t('portfolio.agentProposals.openBoardAction') }}</a>
                       </td>
                     </tr>
                   {% endfor %}
@@ -525,7 +525,7 @@
                       <td><div class="portfolio-table-primary">{{ entry.missingLocales }}</div></td>
                       <td><div class="portfolio-table-primary">{{ entry.cardUpdatedAt }}</div></td>
                       <td>
-                        <a href="{{ entry.openBoardHref }}" class="touch-button-secondary">{{ t('portfolio.missingRequiredLocalizations.openBoardAction') }}</a>
+                        <a href="{{ entry.openCardHref }}" class="touch-button-secondary">{{ t('portfolio.missingRequiredLocalizations.openBoardAction') }}</a>
                       </td>
                     </tr>
                   {% endfor %}

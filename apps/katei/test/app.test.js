@@ -462,7 +462,8 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
         cardsMissingRequiredLocales: 1,
         openLocaleRequestCount: 2,
         awaitingHumanVerificationCount: 1,
-        agentProposalCount: 1
+        agentProposalCount: 1,
+        pendingCardReviewCount: 1
       },
       workspaces: [
         {
@@ -540,6 +541,19 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
           proposedAt: '2026-04-03T09:30:00.000Z'
         }
       ],
+      pendingCardReviewItems: [
+        {
+          workspaceId: 'workspace_portfolio_alpha',
+          workspaceTitle: null,
+          boardId: 'main',
+          boardTitle: 'Executive roadmap',
+          cardId: 'card_pending_review',
+          cardTitle: 'Approve launch brief',
+          cardUpdatedAt: '2026-04-03T10:20:00.000Z',
+          stageId: 'review',
+          stageTitle: 'Final review'
+        }
+      ],
       missingRequiredLocalizationItems: [
         {
           workspaceId: 'workspace_portfolio_alpha',
@@ -562,6 +576,7 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
     workspaceRecordRepository,
     portfolioReadModel
   });
+  const translator = createTranslator('en');
 
   const response = await request(app)
     .get('/portfolio')
@@ -585,6 +600,9 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
   assert.match(response.text, /Executive roadmap/);
   assert.match(response.text, /workspace_portfolio_alpha/);
   assert.match(response.text, /1 matching boards/);
+  assert.match(response.text, /Pending review/);
+  assert.match(response.text, /Approve launch brief/);
+  assert.match(response.text, /Final review/);
   assert.match(response.text, /Awaiting approval/);
   assert.match(response.text, /Verification requested/);
   assert.match(response.text, /Await approval/);
@@ -653,9 +671,34 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
   const portfolioSummaryGrid = response.text.match(
     /<section class="env-inventory-status-grid">[\s\S]*?<\/section>/
   )?.[0] ?? '';
-  const boardDirectorySection = response.text.match(
-    /<section class="paper-panel portfolio-section inventory-panel">[\s\S]*?<h2 class="font-serif text-3xl text-strong">Board directory<\/h2>[\s\S]*?<\/section>/
-  )?.[0] ?? '';
+  const boardDirectorySection = extractPortfolioSectionHtml(
+    response.text,
+    translator('portfolio.directory.heading')
+  );
+  const pendingSection = extractPortfolioSectionHtml(
+    response.text,
+    translator('portfolio.pendingCardReviews.heading')
+  );
+  const awaitingApprovalSection = extractPortfolioSectionHtml(
+    response.text,
+    translator('portfolio.awaitingApproval.heading')
+  );
+  const agentProposalsSection = extractPortfolioSectionHtml(
+    response.text,
+    translator('portfolio.agentProposals.heading')
+  );
+  const missingRequiredLocalizationsSection = extractPortfolioSectionHtml(
+    response.text,
+    translator('portfolio.missingRequiredLocalizations.heading')
+  );
+  const incompleteCoverageSection = extractPortfolioSectionHtml(
+    response.text,
+    translator('portfolio.incompleteCoverage.heading')
+  );
+  const agingSection = extractPortfolioSectionHtml(
+    response.text,
+    translator('portfolio.aging.heading')
+  );
   const profileOptionsDialog = extractDialogHtml(response.text, 'profile-options');
 
   assert.doesNotMatch(portfolioHeader, /field-label text-sm font-semibold/);
@@ -680,6 +723,32 @@ test('GET /portfolio renders the dedicated portfolio shell for super admins', as
   assert.match(boardDirectorySection, /class="env-inventory-control-actions"/);
   assert.match(boardDirectorySection, />\s*Apply\s*</);
   assert.match(boardDirectorySection, /<div class="text-sm leading-6 text-muted">\s*1 matching boards\s*<\/div>/);
+  assert.match(
+    pendingSection,
+    /href="\/boards\?workspaceId=workspace_portfolio_alpha&amp;boardId=main&amp;cardId=card_pending_review&amp;view=card"/
+  );
+  assert.match(
+    awaitingApprovalSection,
+    /href="\/boards\?workspaceId=workspace_portfolio_alpha&amp;boardId=main&amp;cardId=card_awaiting&amp;view=card"/
+  );
+  assert.match(
+    agentProposalsSection,
+    /href="\/boards\?workspaceId=workspace_portfolio_alpha&amp;boardId=main&amp;cardId=card_agent&amp;view=card"/
+  );
+  assert.match(
+    missingRequiredLocalizationsSection,
+    /href="\/boards\?workspaceId=workspace_portfolio_alpha&amp;boardId=main&amp;cardId=card_missing&amp;view=card"/
+  );
+  assert.match(
+    incompleteCoverageSection,
+    /href="\/boards\?workspaceId=workspace_portfolio_alpha&amp;boardId=main"/
+  );
+  assert.doesNotMatch(incompleteCoverageSection, /cardId=/);
+  assert.match(
+    agingSection,
+    /href="\/boards\?workspaceId=workspace_portfolio_alpha&amp;boardId=main"/
+  );
+  assert.doesNotMatch(agingSection, /cardId=/);
   assert.doesNotMatch(boardDirectorySection, /portfolio-toolbar/);
   assert.doesNotMatch(boardDirectorySection, /portfolio-search-form/);
   assert.doesNotMatch(boardDirectorySection, /portfolio-search-input/);
@@ -4157,18 +4226,25 @@ function extractDialogByTarget(html, targetName) {
 }
 
 function extractPortfolioSectionHtml(html, heading) {
-  const match = html.match(
-    new RegExp(
-      `<section class="paper-panel portfolio-section inventory-panel">[\\s\\S]*?<h2 class="font-serif text-3xl text-strong">${escapeForRegex(heading)}<\\/h2>[\\s\\S]*?<\\/section>`,
-      's'
-    )
-  );
+  const sectionMarker = '<section class="paper-panel portfolio-section inventory-panel">';
+  const headingMarker = `<h2 class="font-serif text-3xl text-strong">${heading}</h2>`;
+  const headingIndex = html.indexOf(headingMarker);
 
-  if (!match) {
+  if (headingIndex === -1) {
     throw new Error(`Portfolio section "${heading}" was not rendered.`);
   }
 
-  return match[0];
+  const sectionStart = html.lastIndexOf(sectionMarker, headingIndex);
+
+  if (sectionStart === -1) {
+    throw new Error(`Portfolio section "${heading}" could not be located.`);
+  }
+
+  const nextSectionStart = html.indexOf(sectionMarker, headingIndex + headingMarker.length);
+
+  return nextSectionStart === -1
+    ? html.slice(sectionStart)
+    : html.slice(sectionStart, nextSectionStart);
 }
 
 function assertSectionOrder(html, headings) {

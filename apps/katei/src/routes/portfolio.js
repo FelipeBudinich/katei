@@ -366,10 +366,12 @@ function createReviewQueueEntryViewModel(entry, t, { stateKey, timestampLabel, t
     cardTitle,
     localizedTitle: localizedTitle && localizedTitle !== cardTitle ? localizedTitle : '',
     locale: normalizeOptionalString(entry?.locale),
+    cardId: normalizeOptionalString(entry?.cardId),
     stateLabel: t(stateKey),
     timestampLabel,
     timestamp: normalizeOptionalString(timestamp),
-    openBoardHref: buildBoardHref(entry)
+    openBoardHref: buildBoardHref(entry),
+    openCardHref: buildBoardCardHref(entry, { view: 'card' })
   };
 }
 
@@ -385,9 +387,11 @@ function createMissingRequiredLocalizationEntryViewModel(entry) {
     workspaceLabel: workspaceTitle || workspaceId,
     boardTitle,
     cardTitle,
+    cardId: normalizeOptionalString(entry?.cardId),
     missingLocales: joinValues(entry?.missingLocales),
     cardUpdatedAt: normalizeOptionalString(entry?.cardUpdatedAt),
-    openBoardHref: buildBoardHref(entry)
+    openBoardHref: buildBoardHref(entry),
+    openCardHref: buildBoardCardHref(entry, { view: 'card' })
   };
 }
 
