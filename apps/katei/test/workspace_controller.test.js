@@ -1960,6 +1960,84 @@ test('openView shows the copy button and dismissViewDialog resets it', () => {
   }
 });
 
+test('render opens the deep-linked card on initial render', () => {
+  const restoreDom = installViewDialogDomStubs();
+
+  try {
+    const { controller } = createInitialCardDeepLinkRenderController({
+      href: 'http://localhost/boards?workspaceId=workspace_home&boardId=main&cardId=card_localized&view=card'
+    });
+
+    WorkspaceController.prototype.render.call(controller);
+
+    assert.equal(controller.viewDialogTarget.open, true);
+    assert.equal(controller.viewDialogState.card.id, 'card_localized');
+  } finally {
+    restoreDom();
+  }
+});
+
+test('render does nothing when the deep-linked card is missing', () => {
+  const restoreDom = installViewDialogDomStubs();
+
+  try {
+    const { controller } = createInitialCardDeepLinkRenderController({
+      href: 'http://localhost/boards?workspaceId=workspace_home&boardId=main&cardId=card_missing&view=card'
+    });
+
+    WorkspaceController.prototype.render.call(controller);
+
+    assert.equal(controller.viewDialogTarget.open, false);
+    assert.equal(controller.hasAppliedInitialCardDeepLink, true);
+  } finally {
+    restoreDom();
+  }
+});
+
+test('dismissViewDialog removes cardId and view from the URL after a deep-linked open', () => {
+  const restoreDom = installViewDialogDomStubs();
+
+  try {
+    const { controller } = createInitialCardDeepLinkRenderController({
+      href: 'http://localhost/boards?workspaceId=workspace_home&boardId=main&cardId=card_localized&view=card'
+    });
+
+    WorkspaceController.prototype.render.call(controller);
+    WorkspaceController.prototype.dismissViewDialog.call(controller, { restoreFocus: false });
+
+    const latestReplaceCall = controller.browserHistory.calls.at(-1);
+
+    assert.equal(controller.viewDialogTarget.open, false);
+    assert.ok(latestReplaceCall);
+    assert.equal(latestReplaceCall.href.includes('cardId='), false);
+    assert.equal(latestReplaceCall.href.includes('view='), false);
+    assert.equal(latestReplaceCall.href.includes('workspaceId=workspace_home'), true);
+    assert.equal(latestReplaceCall.href.includes('boardId=main'), true);
+  } finally {
+    restoreDom();
+  }
+});
+
+test('render does not reopen the deep-linked card on subsequent renders', () => {
+  const restoreDom = installViewDialogDomStubs();
+
+  try {
+    const { controller } = createInitialCardDeepLinkRenderController({
+      href: 'http://localhost/boards?workspaceId=workspace_home&boardId=main&cardId=card_localized&view=card'
+    });
+
+    WorkspaceController.prototype.render.call(controller);
+    WorkspaceController.prototype.dismissViewDialog.call(controller, { restoreFocus: false });
+    WorkspaceController.prototype.render.call(controller);
+
+    assert.equal(controller.viewDialogTarget.open, false);
+    assert.equal(controller.viewDialogState, null);
+    assert.equal(controller.hasAppliedInitialCardDeepLink, true);
+  } finally {
+    restoreDom();
+  }
+});
+
 test('copyViewCardDetails uses the active locale and copies only the body text', async () => {
   const restoreDom = installViewDialogDomStubs();
   const restoreNavigator = installNavigatorStub({
@@ -3772,6 +3850,70 @@ function createViewDialogController({
   };
 }
 
+function createInitialCardDeepLinkRenderController({
+  href = 'http://localhost/boards?workspaceId=workspace_home&boardId=main&cardId=card_localized&view=card'
+} = {}) {
+  const board = createBoardWithCustomStages();
+  board.id = 'main';
+
+  const { controller, workspace, card } = createViewDialogController({
+    board,
+    cardStageId: 'review'
+  });
+  const expectedSelector = `.card-item-toolbar[data-card-id="${card.id}"][data-stage-id="review"]`;
+  const triggerElement = createViewTriggerDouble(card.id, 'review');
+  const parsedUrl = new URL(href);
+
+  workspace.workspaceId = 'workspace_home';
+  controller.hasWorkspaceLabelTarget = false;
+  controller.hasBoardAccessNoticeTarget = true;
+  controller.boardAccessNoticeTarget = {
+    hidden: true,
+    textContent: ''
+  };
+  controller.hasBoardTitleTarget = true;
+  controller.boardTitleTarget = {
+    textContent: ''
+  };
+  controller.hasDesktopColumnsTarget = true;
+  controller.desktopColumnsTarget = createColumnsRegionDouble();
+  controller.templates = createBoardRenderTemplates();
+  controller.dispatchWorkspaceEvent = () => {};
+  controller.service = {
+    getActiveWorkspaceId() {
+      return 'workspace_home';
+    },
+    getIsHomeWorkspace() {
+      return false;
+    }
+  };
+  controller.browserLocation = {
+    href
+  };
+  controller.browserHistory = createBrowserHistoryDouble(controller.browserLocation);
+  controller.initialRequestedCardId = parsedUrl.searchParams.get('cardId')?.trim() || null;
+  controller.initialRequestedView = parsedUrl.searchParams.get('view')?.trim() || '';
+  controller.hasAppliedInitialCardDeepLink = false;
+  controller.hasSyncedWorkspaceHistory = false;
+  controller.nextWorkspaceHistoryAction = 'replace';
+  Object.defineProperty(controller, 'element', {
+    configurable: true,
+    value: {
+      querySelector(selector) {
+        return selector === expectedSelector ? triggerElement : null;
+      }
+    }
+  });
+
+  return {
+    controller,
+    workspace,
+    board,
+    card,
+    triggerElement
+  };
+}
+
 function createViewTriggerDouble(cardId, stageId, { requestedLocale = null } = {}) {
   const containedNodes = new Set();
   const trigger = {
@@ -3816,6 +3958,53 @@ function createToolbarDescendantDouble(container, { matchToken = null } = {}) {
   return container.addContainedNode(descendant);
 }
 
+function createBoardRenderTemplates() {
+  return {
+    columnTemplate: {
+      content: {
+        firstElementChild: {
+          cloneNode() {
+            return createBoardRenderColumnNodeDouble();
+          }
+        }
+      }
+    },
+    cardTemplate: {
+      content: {
+        firstElementChild: {
+          cloneNode() {
+            return createBoardRenderCardNodeDouble();
+          }
+        }
+      }
+    }
+  };
+}
+
+function createColumnsRegionDouble() {
+  return {
+    hidden: false,
+    children: [],
+    replaceChildren(...children) {
+      this.children = children;
+    }
+  };
+}
+
+function createBrowserHistoryDouble(location) {
+  return {
+    calls: [],
+    replaceState(state, _title, href) {
+      this.calls.push({
+        method: 'replaceState',
+        state,
+        href
+      });
+      location.href = `http://localhost${href}`;
+    }
+  };
+}
+
 function createDialogDouble() {
   return {
     open: false,
@@ -3836,6 +4025,143 @@ function createDialogDouble() {
       return {
         focus() {}
       };
+    }
+  };
+}
+
+function createBoardRenderColumnNodeDouble() {
+  const titleElement = { textContent: '' };
+  const countElement = { textContent: '' };
+  const countChipElement = createAttributeElementDouble();
+  const createButton = {
+    dataset: {},
+    hidden: false,
+    disabled: false,
+    ...createAttributeElementDouble()
+  };
+  const bodyElement = {
+    hidden: false,
+    id: ''
+  };
+  const cardsContainer = {
+    childElementCount: 0,
+    children: [],
+    _innerHTML: '',
+    appendChild(node) {
+      this.children.push(node);
+      this.childElementCount = this.children.length;
+      return node;
+    },
+    set innerHTML(value) {
+      this._innerHTML = String(value);
+
+      if (!this._innerHTML) {
+        this.children = [];
+        this.childElementCount = 0;
+      }
+    },
+    get innerHTML() {
+      return this._innerHTML;
+    }
+  };
+  const toggleElements = [createColumnToggleDouble(), createColumnToggleDouble()];
+
+  return {
+    dataset: {},
+    querySelector(selector) {
+      if (selector === '[data-column-field="title"]') {
+        return titleElement;
+      }
+
+      if (selector === '[data-column-field="count"]') {
+        return countElement;
+      }
+
+      if (selector === '.count-chip') {
+        return countChipElement;
+      }
+
+      if (selector === '[data-column-create]') {
+        return createButton;
+      }
+
+      if (selector === '.column-panel-body') {
+        return bodyElement;
+      }
+
+      if (selector === '[data-column-cards]') {
+        return cardsContainer;
+      }
+
+      return null;
+    },
+    querySelectorAll(selector) {
+      if (selector === '[data-column-toggle]') {
+        return toggleElements;
+      }
+
+      return [];
+    }
+  };
+}
+
+function createBoardRenderCardNodeDouble() {
+  const titleElement = { textContent: '' };
+  const previewElement = {
+    textContent: '',
+    classList: {
+      toggle(_className, _force) {}
+    }
+  };
+  const metaElement = { textContent: '' };
+  const toolbarElement = {
+    dataset: {}
+  };
+
+  return {
+    dataset: {},
+    querySelector(selector) {
+      if (selector === '[data-card-field="title"]') {
+        return titleElement;
+      }
+
+      if (selector === '[data-card-field="preview"]') {
+        return previewElement;
+      }
+
+      if (selector === '[data-card-field="meta"]') {
+        return metaElement;
+      }
+
+      return null;
+    },
+    querySelectorAll(selector) {
+      if (selector === '[data-card-id]') {
+        return [toolbarElement];
+      }
+
+      if (selector === '[data-column-id], [data-stage-id]') {
+        return [toolbarElement];
+      }
+
+      return [];
+    }
+  };
+}
+
+function createColumnToggleDouble() {
+  return {
+    dataset: {},
+    disabled: false,
+    ...createAttributeElementDouble()
+  };
+}
+
+function createAttributeElementDouble() {
+  return {
+    attributes: {},
+    setAttribute(name, value) {
+      this.attributes[name] = String(value);
     }
   };
 }

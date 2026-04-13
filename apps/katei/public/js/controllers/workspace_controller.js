@@ -90,6 +90,9 @@ export default class extends Controller {
     this.handlePopState = this.handlePopState.bind(this);
     this.nextWorkspaceHistoryAction = 'replace';
     this.hasSyncedWorkspaceHistory = false;
+    this.initialRequestedCardId = resolveRequestedCardIdFromLocation(this.browserLocation);
+    this.initialRequestedView = resolveRequestedViewFromLocation(this.browserLocation);
+    this.hasAppliedInitialCardDeepLink = false;
 
     if (!this.hasViewerSubValue || !this.viewerSubValue.trim()) {
       console.error('Workspace viewer sub is missing.');
@@ -682,6 +685,16 @@ export default class extends Controller {
     });
 
     return true;
+  }
+
+  findCardViewTriggerElement({ cardId, stageId } = {}) {
+    if (!cardId || !stageId || typeof this.element?.querySelector !== 'function') {
+      return null;
+    }
+
+    return this.element.querySelector(
+      `.card-item-toolbar[data-card-id="${cssEscape(cardId)}"][data-stage-id="${cssEscape(stageId)}"]`
+    );
   }
 
   isEventFromInteractiveDescendant(event, container) {
@@ -1545,6 +1558,7 @@ export default class extends Controller {
       });
       this.syncOpenViewDialogState();
       this.syncWorkspaceHistory();
+      this.syncInitialCardDeepLink();
       return;
     }
 
@@ -1577,6 +1591,7 @@ export default class extends Controller {
     });
     this.syncOpenViewDialogState();
     this.syncWorkspaceHistory();
+    this.syncInitialCardDeepLink();
   }
 
   announce(message) {
@@ -1596,6 +1611,7 @@ export default class extends Controller {
     this.closeViewLocaleMenu({ restoreFocus: false });
 
     closeSheetDialog(this.viewDialogTarget);
+    this.clearCardDeepLinkFromHistory();
 
     if (restoreFocus && this.viewTriggerElement?.isConnected) {
       this.viewTriggerElement.focus();
@@ -2094,6 +2110,30 @@ export default class extends Controller {
     this.browserHistory.replaceState(state, '', href);
   }
 
+  clearCardDeepLinkFromHistory() {
+    if (
+      !this.browserHistory
+      || typeof this.browserHistory.replaceState !== 'function'
+    ) {
+      return;
+    }
+
+    const url = parseLocationUrl(this.browserLocation);
+
+    if (!url) {
+      return;
+    }
+
+    url.searchParams.delete('cardId');
+    url.searchParams.delete('view');
+
+    this.browserHistory.replaceState(
+      { workspaceId: this.service?.getActiveWorkspaceId?.() ?? null },
+      '',
+      `${url.pathname}${url.search}${url.hash}`
+    );
+  }
+
   getCollapsedColumnsForBoard(board) {
     if (!board || !Array.isArray(board.stageOrder)) {
       return {};
@@ -2312,6 +2352,45 @@ export default class extends Controller {
       locale: this.viewDialogState?.selectedLocale ?? null
     });
   }
+
+  syncInitialCardDeepLink() {
+    if (this.hasAppliedInitialCardDeepLink) {
+      return;
+    }
+
+    if (this.initialRequestedView !== 'card') {
+      return;
+    }
+
+    if (!this.initialRequestedCardId) {
+      return;
+    }
+
+    const board = this.activeBoard;
+    const cardId = this.initialRequestedCardId;
+
+    if (!board?.cards?.[cardId]) {
+      this.hasAppliedInitialCardDeepLink = true;
+      return;
+    }
+
+    const stageId = resolveBoardStageId(board, { cardId });
+
+    if (!stageId) {
+      this.hasAppliedInitialCardDeepLink = true;
+      return;
+    }
+
+    const triggerElement = this.findCardViewTriggerElement({ cardId, stageId });
+
+    if (!triggerElement) {
+      this.hasAppliedInitialCardDeepLink = true;
+      return;
+    }
+
+    this.hasAppliedInitialCardDeepLink = true;
+    this.openViewForCardTrigger(triggerElement);
+  }
 }
 
 function createColumnCollapseCacheKey(workspaceId, boardId) {
@@ -2512,6 +2591,16 @@ function resolveWorkspaceIdFromLocation(location) {
   return normalizeOptionalWorkspaceId(url?.searchParams.get('workspaceId'));
 }
 
+function resolveRequestedCardIdFromLocation(location) {
+  const url = parseLocationUrl(location);
+  return normalizeOptionalWorkspaceId(url?.searchParams.get('cardId'));
+}
+
+function resolveRequestedViewFromLocation(location) {
+  const url = parseLocationUrl(location);
+  return normalizeOptionalString(url?.searchParams.get('view'));
+}
+
 function buildWorkspaceBoardsHref(location, { workspaceId = null, isHomeWorkspace = false } = {}) {
   const url = parseLocationUrl(location);
   const normalizedWorkspaceId = normalizeOptionalWorkspaceId(workspaceId);
@@ -2541,6 +2630,16 @@ function parseLocationUrl(location) {
   } catch (error) {
     return null;
   }
+}
+
+function cssEscape(value) {
+  const normalizedValue = String(value ?? '');
+
+  if (typeof globalThis.CSS?.escape === 'function') {
+    return globalThis.CSS.escape(normalizedValue);
+  }
+
+  return normalizedValue.replace(/["\\]/g, '\\$&');
 }
 
 function normalizeOptionalWorkspaceId(value) {
