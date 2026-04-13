@@ -456,6 +456,56 @@ test('portfolio controller shows the confirm dialog error surface when deletion 
   });
 });
 
+test('portfolio controller localizes delete confirmations and delete errors through the active UI translator', async () => {
+  await withMockDocument(async () => {
+    const controller = createPortfolioControllerDouble({
+      workspaceId: 'workspace_alpha',
+      workspaceTitle: 'Studio HQ',
+      boardRoleRows: [
+        {
+          workspaceId: 'workspace_alpha',
+          boardId: 'main',
+          boardTitle: 'Executive roadmap',
+          currentRole: 'viewer'
+        }
+      ]
+    });
+    const originalConsoleError = console.error;
+
+    controller.t = createTranslator('es-CL');
+    controller.service = {
+      async deleteBoard() {
+        throw new Error('Workspace not found.');
+      }
+    };
+
+    console.error = () => {};
+
+    try {
+      PortfolioController.prototype.openDeleteBoardConfirm.call(controller, {
+        currentTarget: controller.boardDeleteButtons[0],
+        preventDefault() {}
+      });
+
+      assert.equal(controller.confirmTitleTarget.textContent, '¿Eliminar tablero?');
+      assert.equal(
+        controller.confirmMessageTarget.textContent,
+        'Esto elimina "Executive roadmap" de "Studio HQ". Las personas serán redirigidas a otro tablero disponible o recibirán un nuevo tablero inicial en su próxima carga.'
+      );
+      assert.equal(controller.confirmButtonTarget.textContent, 'Eliminar tablero');
+
+      await PortfolioController.prototype.confirmPendingAction.call(controller, {
+        preventDefault() {}
+      });
+    } finally {
+      console.error = originalConsoleError;
+    }
+
+    assert.equal(controller.confirmErrorTarget.hidden, false);
+    assert.equal(controller.confirmErrorTarget.textContent, 'No se encontró el espacio de trabajo.');
+  });
+});
+
 test('portfolio controller saves a board self-role, updates the current role, and enables open board access', async () => {
   await withMockDocument(async () => {
     const controller = createPortfolioControllerDouble({

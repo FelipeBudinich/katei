@@ -86,6 +86,11 @@ Current access behavior:
 - The browser app uses `HttpWorkspaceRepository` in both the workspace and portfolio controllers, so the current app reads and writes through server APIs rather than browser-only persistence.
 - `PUT /api/workspace` replaces a full workspace snapshot and enforces `expectedRevision`.
 - `POST /api/workspace/commands` handles board, collaboration, and card mutation commands such as workspace title changes, board create/update/reset/delete, invites, role changes, card CRUD, localization request/review updates, card review decisions, and board switching.
+- `POST /api/workspace/boards/delete` is a super-admin-only targeted delete endpoint for removing a specific board by `workspaceId` and `boardId`. It intentionally allows deleting the last board so the affected workspace can recover on the viewer's next load.
+- `POST /api/workspace/delete` is a super-admin-only targeted delete endpoint for removing an entire workspace record by `workspaceId`.
+- Preferred workspace recovery for `/boards` and `GET /api/workspace` is deterministic: honor the requested workspace when it is still readable and has a visible board, otherwise prefer the existing non-empty home workspace when no explicit workspace was requested, then the oldest pending invite, then the oldest readable external board, and finally create or repair the viewer home workspace with a fresh default board.
+- When a requested `workspaceId` or `boardId` is stale, `/boards` redirects to the canonical fallback URL instead of returning `404` as long as one of those fallback targets exists.
+- Current non-goal: Katei does not push live board/workspace deletion updates to viewers who are already looking at a deleted surface; recovery happens on the next login, refresh, or workspace load.
 - `POST /api/workspace/import` only succeeds while the target server record is still pristine.
 - Legacy browser storage still exists as an import path. On a pristine home workspace load, `HttpWorkspaceRepository` checks `localStorage` for `katei.workspace.v4:<viewerSub>` and attempts a one-time import through `/api/workspace/import`.
 - `LocalWorkspaceRepository` is still present in source, but it is not the wired persistence path for the current server-rendered app.

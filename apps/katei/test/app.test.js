@@ -1919,6 +1919,149 @@ test('GET /boards redirects stale workspace requests to the canonical fallback i
   ]);
 });
 
+test('GET /boards repairs a deleted last-board home workspace into a fresh default board', async () => {
+  const homeRecord = createHomeWorkspaceRecordFixture({
+    viewerSub: 'sub_deleted_home',
+    workspaceTitle: 'Deleted home',
+    boardTitle: 'Only board'
+  });
+
+  homeRecord.workspace.boardOrder = [];
+  homeRecord.workspace.boards = {};
+  homeRecord.workspace.ui.activeBoardId = null;
+
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([homeRecord]);
+  const app = createTestApp({
+    googleTokenVerifier: async () => ({ sub: 'sub_deleted_home' }),
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .get('/boards')
+    .set('Cookie', createSessionCookieHeader({
+      sub: 'sub_deleted_home',
+      name: 'Deleted Home User',
+      email: 'deleted-home@example.com'
+    }));
+  const bootstrapPayload = readWorkspaceBootstrapPayload(response.text);
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(bootstrapPayload.activeWorkspace, {
+    workspaceId: createHomeWorkspaceId('sub_deleted_home'),
+    workspaceTitle: 'Deleted home',
+    isHomeWorkspace: true
+  });
+  assert.deepEqual(bootstrapPayload.workspace.boardOrder, ['main']);
+  assert.equal(bootstrapPayload.workspace.ui.activeBoardId, 'main');
+  assert.equal(bootstrapPayload.workspace.boards.main.title, '過程');
+  assert.deepEqual(bootstrapPayload.workspace.boards.main.cards, {});
+});
+
+test('GET /boards lands on the oldest invite when the viewer home workspace was deleted', async () => {
+  const olderInviteRecord = createSharedWorkspaceRecordFixture('workspace_other_invite', {
+    memberSub: 'sub_deleted_invited',
+    memberEmail: 'deleted@example.com'
+  });
+  const newerInviteRecord = createCrossWorkspaceInviteRecordFixture('workspace_invited_casa', {
+    viewerSub: 'sub_deleted_invited',
+    viewerEmail: 'deleted@example.com'
+  });
+
+  newerInviteRecord.workspace.boards.casa.collaboration.invites[0].invitedAt = '2026-04-02T10:20:00.000Z';
+
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([
+    olderInviteRecord,
+    newerInviteRecord
+  ]);
+  const app = createTestApp({
+    googleTokenVerifier: async () => ({ sub: 'sub_deleted_invited' }),
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .get('/boards')
+    .set('Cookie', createSessionCookieHeader({
+      sub: 'sub_deleted_invited',
+      name: 'Deleted Invitee',
+      email: 'deleted@example.com'
+    }));
+  const bootstrapPayload = readWorkspaceBootstrapPayload(response.text);
+
+  assert.equal(response.status, 200);
+  assert.equal(bootstrapPayload.activeWorkspace.workspaceId, 'workspace_other_invite');
+  assert.equal(bootstrapPayload.activeWorkspace.isHomeWorkspace, false);
+  assert.equal(bootstrapPayload.workspace.ui.activeBoardId, 'invite');
+});
+
+test('GET /boards lands on an invited workspace when the viewer no longer owns a home workspace', async () => {
+  const inviteRecord = createCrossWorkspaceInviteRecordFixture('workspace_invited_casa', {
+    viewerSub: 'sub_orphaned',
+    viewerEmail: 'orphaned@example.com'
+  });
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([inviteRecord]);
+  const app = createTestApp({
+    googleTokenVerifier: async () => ({ sub: 'sub_orphaned' }),
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .get('/boards')
+    .set('Cookie', createSessionCookieHeader({
+      sub: 'sub_orphaned',
+      name: 'Orphaned User',
+      email: 'orphaned@example.com'
+    }));
+  const bootstrapPayload = readWorkspaceBootstrapPayload(response.text);
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(bootstrapPayload.activeWorkspace, {
+    workspaceId: 'workspace_invited_casa',
+    workspaceTitle: null,
+    isHomeWorkspace: false
+  });
+  assert.equal(bootstrapPayload.workspace.ui.activeBoardId, 'casa');
+  assert.match(
+    findSetCookie(response, KATEI_LAST_SURFACE_COOKIE_NAME) ?? '',
+    new RegExp(escapeForRegex(createLastSurfaceCookieValue({
+      surface: 'board',
+      workspaceId: 'workspace_invited_casa',
+      boardId: 'casa'
+    })))
+  );
+});
+
+test('GET /boards redirects a stale deleted workspaceId to the canonical fallback URL instead of 404', async () => {
+  const inviteRecord = createCrossWorkspaceInviteRecordFixture('workspace_invited_casa', {
+    viewerSub: 'sub_orphaned',
+    viewerEmail: 'orphaned@example.com'
+  });
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([inviteRecord]);
+  const app = createTestApp({
+    googleTokenVerifier: async () => ({ sub: 'sub_orphaned' }),
+    workspaceRecordRepository
+  });
+
+  const response = await request(app)
+    .get(`/boards?workspaceId=${createHomeWorkspaceId('sub_orphaned')}&boardId=main`)
+    .set('Cookie', createSessionCookieHeader({
+      sub: 'sub_orphaned',
+      name: 'Orphaned User',
+      email: 'orphaned@example.com'
+    }));
+
+  assert.equal(response.status, 302);
+  assert.notEqual(response.status, 404);
+  assert.equal(response.headers.location, '/boards?workspaceId=workspace_invited_casa&boardId=casa');
+  assert.deepEqual(workspaceRecordRepository.resolveCalls, [
+    {
+      viewerSub: 'sub_orphaned',
+      viewerEmail: 'orphaned@example.com',
+      viewerName: 'Orphaned User',
+      requestedWorkspaceId: createHomeWorkspaceId('sub_orphaned')
+    }
+  ]);
+});
+
 test('GET /boards renders the Portfolio action in the workspace top bar for super admins', async () => {
   const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble();
   const portfolioReadModel = createPortfolioReadModelDouble();

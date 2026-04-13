@@ -130,6 +130,14 @@ test('localizeErrorMessage translates known current UI errors and falls back saf
     localizeErrorMessage(new Error('This workspace changed elsewhere. Refresh to continue.'), translate),
     'Este espacio cambió en otro lugar. Actualiza para continuar.'
   );
+  assert.equal(
+    localizeErrorMessage(new Error('Workspace not found.'), translate),
+    'No se encontró el espacio de trabajo.'
+  );
+  assert.equal(
+    localizeErrorMessage(new Error('Workspace deletion is only available to super admins.'), translate),
+    'La eliminación de espacios solo está disponible para super admins.'
+  );
   assert.equal(localizeErrorMessage(new Error('Custom exploded.'), translate), 'Custom exploded.');
   assert.equal(localizeErrorMessage(null, translate), 'Algo salió mal.');
 });

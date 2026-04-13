@@ -657,6 +657,12 @@ const EN_MESSAGES = freezeCatalog({
     stagePromptActionDisabled: 'This stage does not allow prompt runs.',
     stagePromptActionConfigMissing: 'This stage needs a valid prompt action configuration first.',
     stagePromptRunFailed: 'Unable to run the stage prompt right now.',
+    workspaceNotFound: 'Workspace not found.',
+    workspaceTitleManagementPermissionDenied: 'Workspace title management is only available to super admins.',
+    workspaceBoardRoleAssignmentPermissionDenied: 'Board self-role assignment is only available to super admins.',
+    workspaceBoardDeletionPermissionDenied: 'Board deletion is only available to super admins.',
+    workspaceDeletionPermissionDenied: 'Workspace deletion is only available to super admins.',
+    workspaceCreationPermissionDenied: 'Workspace creation is only available to super admins.',
     workspaceConflict: 'This workspace changed elsewhere. Refresh to continue.',
     requestUnavailable: 'Unable to complete the request.'
   }
@@ -1323,6 +1329,13 @@ const ES_CL_MESSAGES = freezeCatalog({
     stagePromptActionDisabled: 'Esta etapa no permite ejecutar prompts.',
     stagePromptActionConfigMissing: 'Esta etapa necesita primero una configuración de prompt válida.',
     stagePromptRunFailed: 'No se pudo ejecutar el prompt de la etapa en este momento.',
+    workspaceNotFound: 'No se encontró el espacio de trabajo.',
+    workspaceTitleManagementPermissionDenied: 'La gestión del título del espacio solo está disponible para super admins.',
+    workspaceBoardRoleAssignmentPermissionDenied:
+      'La asignación de tu rol en tableros solo está disponible para super admins.',
+    workspaceBoardDeletionPermissionDenied: 'La eliminación de tableros solo está disponible para super admins.',
+    workspaceDeletionPermissionDenied: 'La eliminación de espacios solo está disponible para super admins.',
+    workspaceCreationPermissionDenied: 'La creación de espacios solo está disponible para super admins.',
     workspaceConflict: 'Este espacio cambió en otro lugar. Actualiza para continuar.',
     requestUnavailable: 'No se pudo completar la solicitud.'
   }
@@ -1989,6 +2002,12 @@ const JA_MESSAGES = freezeCatalog({
     stagePromptActionDisabled: 'このステージではプロンプト実行を使えません。',
     stagePromptActionConfigMissing: 'このステージには有効なプロンプト設定が必要です。',
     stagePromptRunFailed: '現在ステージのプロンプトを実行できません。',
+    workspaceNotFound: 'ワークスペースが見つかりません。',
+    workspaceTitleManagementPermissionDenied: 'ワークスペース名の管理はスーパー管理者のみ利用できます。',
+    workspaceBoardRoleAssignmentPermissionDenied: 'ボード上の自分の役割の割り当てはスーパー管理者のみ利用できます。',
+    workspaceBoardDeletionPermissionDenied: 'ボードの削除はスーパー管理者のみ利用できます。',
+    workspaceDeletionPermissionDenied: 'ワークスペースの削除はスーパー管理者のみ利用できます。',
+    workspaceCreationPermissionDenied: 'ワークスペースの作成はスーパー管理者のみ利用できます。',
     workspaceConflict: 'このワークスペースは別の場所で変更されました。更新して続行してください。',
     requestUnavailable: 'リクエストを完了できませんでした。'
   }

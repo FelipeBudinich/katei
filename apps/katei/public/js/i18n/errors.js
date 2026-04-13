@@ -73,6 +73,12 @@ const KNOWN_ERROR_KEY_BY_MESSAGE = Object.freeze({
   'You do not have permission to administer this board.': 'errors.boardAdminPermissionDenied',
   'You do not have permission to manage this board.': 'errors.boardAdminPermissionDenied',
   'You do not have permission to respond to this invite.': 'errors.inviteResponsePermissionDenied',
+  'Workspace not found.': 'errors.workspaceNotFound',
+  'Workspace title management is only available to super admins.': 'errors.workspaceTitleManagementPermissionDenied',
+  'Board self-role assignment is only available to super admins.': 'errors.workspaceBoardRoleAssignmentPermissionDenied',
+  'Board deletion is only available to super admins.': 'errors.workspaceBoardDeletionPermissionDenied',
+  'Workspace deletion is only available to super admins.': 'errors.workspaceDeletionPermissionDenied',
+  'Workspace creation is only available to super admins.': 'errors.workspaceCreationPermissionDenied',
   'This workspace changed elsewhere. Refresh to continue.': 'errors.workspaceConflict',
   'Unable to complete the request.': 'errors.requestUnavailable'
 });

@@ -399,6 +399,158 @@ test('POST /api/workspace/delete lets super admins delete an entire workspace', 
   assert.equal(workspaceRecordRepository.getStoredRecord(sharedRecord.workspaceId), null);
 });
 
+test("POST /api/workspace/boards/delete repairs a deleted last home board on the viewer's next workspace load", async () => {
+  const homeRecord = createHomeWorkspaceRecordFixture({
+    viewerSub: 'sub_member',
+    workspaceTitle: 'Member home',
+    boardTitle: 'Only board'
+  });
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([homeRecord]);
+  const app = createTestApp({
+    env: {
+      SUPER_ADMINS: 'admin@example.com'
+    },
+    workspaceRecordRepository
+  });
+
+  const deleteResponse = await request(app)
+    .post('/api/workspace/boards/delete')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_admin', email: 'admin@example.com', name: 'Admin' }))
+    .send({
+      workspaceId: homeRecord.workspaceId,
+      boardId: 'main'
+    });
+
+  assert.equal(deleteResponse.status, 200);
+  assert.deepEqual(workspaceRecordRepository.getStoredRecord(homeRecord.workspaceId)?.workspace.boardOrder, []);
+  assert.deepEqual(workspaceRecordRepository.getStoredRecord(homeRecord.workspaceId)?.workspace.boards, {});
+  assert.equal(workspaceRecordRepository.getStoredRecord(homeRecord.workspaceId)?.workspace.ui.activeBoardId, null);
+
+  const response = await request(app)
+    .get('/api/workspace')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_member', email: 'member@example.com', name: 'Member' }));
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(response.body.activeWorkspace, {
+    workspaceId: homeRecord.workspaceId,
+    workspaceTitle: 'Member home',
+    isHomeWorkspace: true
+  });
+  assert.deepEqual(response.body.workspace.boardOrder, ['main']);
+  assert.equal(response.body.workspace.ui.activeBoardId, 'main');
+  assert.equal(response.body.workspace.boards.main.title, '過程');
+  assert.deepEqual(response.body.workspace.boards.main.cards, {});
+  assert.deepEqual(workspaceRecordRepository.getStoredRecord(homeRecord.workspaceId)?.workspace.boardOrder, ['main']);
+});
+
+test('POST /api/workspace/delete sends the next workspace load to the oldest invite when the viewer home workspace is gone', async () => {
+  const homeRecord = createHomeWorkspaceRecordFixture({
+    viewerSub: 'sub_member',
+    workspaceTitle: 'Member home'
+  });
+  const olderInviteRecord = createCrossWorkspaceInviteRecordFixture('workspace_invited_old', {
+    viewerSub: 'sub_member',
+    viewerEmail: 'member@example.com'
+  });
+  const newerInviteRecord = createCrossWorkspaceInviteRecordFixture('workspace_invited_new', {
+    viewerSub: 'sub_member',
+    viewerEmail: 'member@example.com'
+  });
+
+  olderInviteRecord.workspace.boards.casa.collaboration.invites[0].invitedAt = '2026-04-04T10:10:00.000Z';
+  newerInviteRecord.workspace.boards.casa.collaboration.invites[0].invitedAt = '2026-04-04T10:20:00.000Z';
+
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([
+    homeRecord,
+    olderInviteRecord,
+    newerInviteRecord
+  ]);
+  const app = createTestApp({
+    env: {
+      SUPER_ADMINS: 'admin@example.com'
+    },
+    workspaceRecordRepository
+  });
+
+  const deleteResponse = await request(app)
+    .post('/api/workspace/delete')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_admin', email: 'admin@example.com', name: 'Admin' }))
+    .send({
+      workspaceId: homeRecord.workspaceId
+    });
+
+  assert.equal(deleteResponse.status, 200);
+  assert.equal(workspaceRecordRepository.getStoredRecord(homeRecord.workspaceId), null);
+
+  const response = await request(app)
+    .get('/api/workspace')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_member', email: 'member@example.com', name: 'Member' }));
+
+  assert.equal(response.status, 200);
+  assert.equal(response.body.activeWorkspace.workspaceId, 'workspace_invited_old');
+  assert.equal(response.body.activeWorkspace.isHomeWorkspace, false);
+  assert.equal(response.body.workspace.ui.activeBoardId, 'casa');
+});
+
+test('POST /api/workspace/delete sends the next workspace load to the oldest accessible board when no invite remains', async () => {
+  const homeRecord = createHomeWorkspaceRecordFixture({
+    viewerSub: 'sub_member',
+    workspaceTitle: 'Member home'
+  });
+  const foreignHomeRecord = createHomeWorkspaceRecordFixture({
+    viewerSub: 'sub_owner_casa',
+    boardTitle: 'Casa'
+  });
+  const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_later', {
+    includeInvite: false
+  });
+
+  foreignHomeRecord.workspace.boards.main.collaboration.memberships.push({
+    actor: { type: 'human', id: 'sub_member', email: 'member@example.com' },
+    role: 'viewer',
+    joinedAt: '2026-04-04T10:05:00.000Z'
+  });
+  foreignHomeRecord.createdAt = '2026-03-01T09:00:00.000Z';
+  foreignHomeRecord.updatedAt = '2026-03-01T09:30:00.000Z';
+  foreignHomeRecord.workspace.boards.main.createdAt = '2026-03-01T09:05:00.000Z';
+  foreignHomeRecord.workspace.boards.main.updatedAt = '2026-03-01T09:35:00.000Z';
+  sharedRecord.createdAt = '2026-04-04T09:00:00.000Z';
+  sharedRecord.updatedAt = '2026-04-04T09:30:00.000Z';
+  sharedRecord.workspace.boards.member.createdAt = '2026-04-04T09:05:00.000Z';
+  sharedRecord.workspace.boards.member.updatedAt = '2026-04-04T09:35:00.000Z';
+
+  const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([
+    homeRecord,
+    foreignHomeRecord,
+    sharedRecord
+  ]);
+  const app = createTestApp({
+    env: {
+      SUPER_ADMINS: 'admin@example.com'
+    },
+    workspaceRecordRepository
+  });
+
+  const deleteResponse = await request(app)
+    .post('/api/workspace/delete')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_admin', email: 'admin@example.com', name: 'Admin' }))
+    .send({
+      workspaceId: homeRecord.workspaceId
+    });
+
+  assert.equal(deleteResponse.status, 200);
+  assert.equal(workspaceRecordRepository.getStoredRecord(homeRecord.workspaceId), null);
+
+  const response = await request(app)
+    .get('/api/workspace')
+    .set('Cookie', createSessionCookieHeader({ sub: 'sub_member', email: 'member@example.com', name: 'Member' }));
+
+  assert.equal(response.status, 200);
+  assert.equal(response.body.activeWorkspace.workspaceId, foreignHomeRecord.workspaceId);
+  assert.equal(response.body.activeWorkspace.isHomeWorkspace, false);
+  assert.equal(response.body.workspace.ui.activeBoardId, 'main');
+});
+
 test('POST /api/workspace/boards/delete rejects non-super-admin callers', async () => {
   const sharedRecord = createSharedWorkspaceRecordFixture('workspace_shared_api_admin_delete_forbidden');
   const workspaceRecordRepository = createWorkspaceRecordRepositoryDouble([sharedRecord]);
