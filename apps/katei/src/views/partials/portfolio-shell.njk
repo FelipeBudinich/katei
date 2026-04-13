@@ -90,17 +90,30 @@
                   </h3>
 
                   {% if canManageWorkspaceTitles %}
-                    <button
-                      type="button"
-                      class="touch-button-secondary"
-                      data-action="portfolio#openRenameDialog"
-                      data-portfolio-action="rename-workspace-title"
-                      data-workspace-id="{{ group.workspaceId }}"
-                      data-workspace-title="{{ group.workspaceTitle }}"
-                      data-workspace-fallback-label="{{ group.workspaceId }}"
-                    >
-                      {{ t(group.workspaceTitle and 'portfolio.workspaceTitleEditor.editAction' or 'portfolio.workspaceTitleEditor.assignAction') }}
-                    </button>
+                    <div class="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        class="touch-button-secondary"
+                        data-action="portfolio#openRenameDialog"
+                        data-portfolio-action="rename-workspace-title"
+                        data-workspace-id="{{ group.workspaceId }}"
+                        data-workspace-title="{{ group.workspaceTitle }}"
+                        data-workspace-fallback-label="{{ group.workspaceId }}"
+                      >
+                        {{ t(group.workspaceTitle and 'portfolio.workspaceTitleEditor.editAction' or 'portfolio.workspaceTitleEditor.assignAction') }}
+                      </button>
+                      <button
+                        type="button"
+                        class="touch-button-danger"
+                        data-action="portfolio#openDeleteWorkspaceConfirm"
+                        data-portfolio-action="delete-workspace"
+                        data-workspace-id="{{ group.workspaceId }}"
+                        data-workspace-title="{{ group.workspaceLabel }}"
+                        data-board-count="{{ group.boardCount }}"
+                      >
+                        {{ t('portfolio.deleteWorkspaceAction') }}
+                      </button>
+                    </div>
                   {% endif %}
                 </div>
 
@@ -224,6 +237,19 @@
                             >
                               {{ t('portfolio.directory.openBoardAction') }}
                             </a>
+                            <button
+                              type="button"
+                              class="touch-button-danger"
+                              data-action="portfolio#openDeleteBoardConfirm"
+                              data-portfolio-action="delete-board"
+                              data-workspace-id="{{ entry.workspaceId }}"
+                              data-workspace-title="{{ group.workspaceLabel }}"
+                              data-board-id="{{ entry.boardId }}"
+                              data-board-title="{{ entry.title }}"
+                              data-board-count="{{ group.boardCount }}"
+                            >
+                              {{ t('portfolio.deleteBoardAction') }}
+                            </button>
                           </form>
                         {% else %}
                           <a href="{{ entry.openBoardHref }}" class="touch-button-secondary">{{ t('portfolio.directory.openBoardAction') }}</a>
@@ -741,6 +767,36 @@
             </button>
           </div>
         </form>
+      </div>
+    </dialog>
+
+    <dialog
+      class="sheet-dialog confirm-dialog"
+      data-portfolio-target="confirmDialog"
+    >
+      <div class="confirm-panel">
+        <div class="space-y-2">
+          <h2 class="font-serif text-3xl text-strong" data-portfolio-target="confirmTitle">
+            {{ t('portfolio.confirmations.deleteBoardTitle') }}
+          </h2>
+          <p class="text-sm leading-6 text-muted" data-portfolio-target="confirmMessage">
+            {{ t('portfolio.confirmations.deleteBoardMessage', {
+              board: t('portfolio.deleteBoardAction'),
+              workspace: t('portfolio.summary.workspacesLabel')
+            }) }}
+          </p>
+        </div>
+
+        <p class="portfolio-dialog-status text-sm mt-4" hidden data-portfolio-target="confirmError"></p>
+
+        <div class="confirm-actions dialog-actions mt-6">
+          <button type="button" class="touch-button-secondary" data-action="portfolio#closeConfirmDialog">
+            {{ t('common.cancel') }}
+          </button>
+          <button type="button" class="touch-button-danger" data-portfolio-target="confirmButton" data-action="portfolio#confirmPendingAction">
+            {{ t('portfolio.confirmations.deleteBoardConfirm') }}
+          </button>
+        </div>
       </div>
     </dialog>
   {% endif %}

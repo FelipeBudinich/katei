@@ -241,6 +241,221 @@ test('portfolio controller creates a workspace and reloads the portfolio page', 
   });
 });
 
+test('portfolio controller confirms board deletion, calls service.deleteBoard, and reloads the portfolio page', async () => {
+  await withMockDocument(async () => {
+    const controller = createPortfolioControllerDouble({
+      workspaceId: 'workspace_alpha',
+      workspaceTitle: 'Studio HQ',
+      boardRoleRows: [
+        {
+          workspaceId: 'workspace_alpha',
+          boardId: 'main',
+          boardTitle: 'Executive roadmap',
+          currentRole: 'viewer'
+        }
+      ],
+      workspaceBoardCount: 2
+    });
+    const serviceCalls = [];
+    let reloadCalls = 0;
+
+    controller.browserWindow.location = {
+      reload() {
+        reloadCalls += 1;
+      }
+    };
+    controller.service = {
+      async deleteBoard(workspaceId, boardId) {
+        serviceCalls.push({ workspaceId, boardId });
+        return {
+          ok: true,
+          result: {
+            workspaceId,
+            boardId
+          }
+        };
+      }
+    };
+
+    PortfolioController.prototype.openDeleteBoardConfirm.call(controller, {
+      currentTarget: controller.boardDeleteButtons[0],
+      preventDefault() {}
+    });
+
+    assert.equal(controller.confirmDialogTarget.open, true);
+    assert.equal(controller.confirmTitleTarget.textContent, 'Delete board?');
+    assert.equal(
+      controller.confirmMessageTarget.textContent,
+      'This removes "Executive roadmap" from "Studio HQ". Users will be redirected to another available board or get a new home board on their next load.'
+    );
+
+    await PortfolioController.prototype.confirmPendingAction.call(controller, {
+      preventDefault() {}
+    });
+
+    assert.deepEqual(serviceCalls, [
+      {
+        workspaceId: 'workspace_alpha',
+        boardId: 'main'
+      }
+    ]);
+    assert.equal(reloadCalls, 1);
+    assert.equal(controller.confirmDialogTarget.open, false);
+    assert.equal(controller.confirmDialogTarget.closeCalls, 1);
+  });
+});
+
+test('portfolio controller confirms workspace deletion, calls service.deleteWorkspace, and reloads the portfolio page', async () => {
+  await withMockDocument(async () => {
+    const controller = createPortfolioControllerDouble({
+      workspaceId: 'workspace_alpha',
+      workspaceTitle: 'Studio HQ',
+      workspaceBoardCount: 3
+    });
+    const serviceCalls = [];
+    let reloadCalls = 0;
+
+    controller.browserWindow.location = {
+      reload() {
+        reloadCalls += 1;
+      }
+    };
+    controller.service = {
+      async deleteWorkspace(workspaceId) {
+        serviceCalls.push(workspaceId);
+        return {
+          ok: true,
+          result: {
+            workspaceId
+          }
+        };
+      }
+    };
+
+    PortfolioController.prototype.openDeleteWorkspaceConfirm.call(controller, {
+      currentTarget: controller.workspaceDeleteButtons[0],
+      preventDefault() {}
+    });
+
+    assert.equal(controller.confirmDialogTarget.open, true);
+    assert.equal(controller.confirmTitleTarget.textContent, 'Delete workspace?');
+    assert.equal(
+      controller.confirmMessageTarget.textContent,
+      'This permanently removes "Studio HQ" and all of its boards.'
+    );
+
+    await PortfolioController.prototype.confirmPendingAction.call(controller, {
+      preventDefault() {}
+    });
+
+    assert.deepEqual(serviceCalls, ['workspace_alpha']);
+    assert.equal(reloadCalls, 1);
+    assert.equal(controller.confirmDialogTarget.open, false);
+    assert.equal(controller.confirmDialogTarget.closeCalls, 1);
+  });
+});
+
+test('portfolio controller disables the clicked delete button and confirm button while deletion is in flight', async () => {
+  await withMockDocument(async () => {
+    const controller = createPortfolioControllerDouble({
+      workspaceId: 'workspace_alpha',
+      workspaceTitle: 'Studio HQ',
+      boardRoleRows: [
+        {
+          workspaceId: 'workspace_alpha',
+          boardId: 'main',
+          boardTitle: 'Executive roadmap',
+          currentRole: 'viewer'
+        }
+      ],
+      workspaceBoardCount: 2
+    });
+    let reloadCalls = 0;
+    const deferred = createDeferred();
+
+    controller.browserWindow.location = {
+      reload() {
+        reloadCalls += 1;
+      }
+    };
+    controller.service = {
+      deleteBoard() {
+        return deferred.promise;
+      }
+    };
+
+    PortfolioController.prototype.openDeleteBoardConfirm.call(controller, {
+      currentTarget: controller.boardDeleteButtons[0],
+      preventDefault() {}
+    });
+
+    const pendingDelete = PortfolioController.prototype.confirmPendingAction.call(controller, {
+      preventDefault() {}
+    });
+
+    assert.equal(controller.boardDeleteButtons[0].disabled, true);
+    assert.equal(controller.confirmButtonTarget.disabled, true);
+
+    deferred.resolve({
+      ok: true,
+      result: {
+        workspaceId: 'workspace_alpha',
+        boardId: 'main'
+      }
+    });
+    await pendingDelete;
+
+    assert.equal(controller.boardDeleteButtons[0].disabled, false);
+    assert.equal(controller.confirmButtonTarget.disabled, false);
+    assert.equal(reloadCalls, 1);
+  });
+});
+
+test('portfolio controller shows the confirm dialog error surface when deletion fails', async () => {
+  await withMockDocument(async () => {
+    const controller = createPortfolioControllerDouble({
+      workspaceId: 'workspace_alpha',
+      workspaceTitle: 'Studio HQ',
+      boardRoleRows: [
+        {
+          workspaceId: 'workspace_alpha',
+          boardId: 'main',
+          boardTitle: 'Executive roadmap',
+          currentRole: 'viewer'
+        }
+      ]
+    });
+    const originalConsoleError = console.error;
+
+    controller.service = {
+      async deleteBoard() {
+        throw new Error('Board not found.');
+      }
+    };
+
+    console.error = () => {};
+
+    try {
+      PortfolioController.prototype.openDeleteBoardConfirm.call(controller, {
+        currentTarget: controller.boardDeleteButtons[0],
+        preventDefault() {}
+      });
+
+      await PortfolioController.prototype.confirmPendingAction.call(controller, {
+        preventDefault() {}
+      });
+    } finally {
+      console.error = originalConsoleError;
+    }
+
+    assert.equal(controller.confirmDialogTarget.open, true);
+    assert.equal(controller.confirmErrorTarget.hidden, false);
+    assert.equal(controller.confirmErrorTarget.textContent, 'Board not found.');
+    assert.equal(controller.boardDeleteButtons[0].disabled, false);
+    assert.equal(controller.confirmButtonTarget.disabled, false);
+  });
+});
+
 test('portfolio controller saves a board self-role, updates the current role, and enables open board access', async () => {
   await withMockDocument(async () => {
     const controller = createPortfolioControllerDouble({
@@ -373,16 +588,29 @@ function createPortfolioControllerDouble({
   workspaceId,
   workspaceTitle,
   extraWorkspaceLabels = [],
-  boardRoleRows = []
+  boardRoleRows = [],
+  workspaceBoardCount = Math.max(boardRoleRows.length, 1)
 }) {
   const controller = Object.create(PortfolioController.prototype);
   const renameButton = createRenameButtonElement(workspaceId, workspaceTitle);
+  const workspaceDeleteButton = createWorkspaceDeleteButtonElement({
+    workspaceId,
+    workspaceTitle: workspaceTitle || workspaceId,
+    boardCount: workspaceBoardCount
+  });
   const workspaceLabelElements = [
     createWorkspaceLabelElement(workspaceId, workspaceTitle || workspaceId),
     createWorkspaceLabelElement(workspaceId, workspaceTitle || workspaceId),
     ...extraWorkspaceLabels
   ];
   const boardRoleForms = boardRoleRows.map((row) => createBoardRoleFormElement(row));
+  const boardDeleteButtons = boardRoleRows.map((row) => createBoardDeleteButtonElement({
+    workspaceId: row.workspaceId,
+    workspaceTitle: workspaceTitle || workspaceId,
+    boardId: row.boardId,
+    boardTitle: row.boardTitle,
+    boardCount: workspaceBoardCount
+  }));
 
   controller.t = createTranslator('en');
   controller.hasViewerSuperAdminValue = true;
@@ -394,15 +622,24 @@ function createPortfolioControllerDouble({
     document: globalThis.document,
     fetch: async () => {
       throw new Error('fetch should not be called in this test');
+    },
+    requestAnimationFrame(callback) {
+      callback();
+      return 1;
     }
   };
   controller.restoreFocusElement = null;
   controller.currentWorkspaceId = null;
   controller.currentWorkspaceFallbackLabel = null;
+  controller.pendingConfirmation = null;
+  controller.confirmTriggerElement = null;
   controller.isSubmitting = false;
+  controller.isConfirming = false;
   controller.renameButtons = [renameButton];
+  controller.workspaceDeleteButtons = [workspaceDeleteButton];
   controller.workspaceLabelElements = workspaceLabelElements;
   controller.boardRoleForms = boardRoleForms;
+  controller.boardDeleteButtons = boardDeleteButtons;
   Object.defineProperty(controller, 'element', {
     configurable: true,
     value: {
@@ -413,6 +650,14 @@ function createPortfolioControllerDouble({
 
         if (selector === '[data-portfolio-action="rename-workspace-title"]') {
           return [renameButton];
+        }
+
+        if (selector === '[data-portfolio-action="delete-workspace"]') {
+          return [workspaceDeleteButton];
+        }
+
+        if (selector === '[data-portfolio-action="delete-board"]') {
+          return boardDeleteButtons;
         }
 
         if (selector === '[data-portfolio-board-role-form]') {
@@ -433,6 +678,11 @@ function createPortfolioControllerDouble({
   controller.cancelButtonTarget = createButtonElement();
   controller.closeButtonTarget = createButtonElement();
   controller.announcerTarget = createTextTarget();
+  controller.confirmDialogTarget = createDialogTarget();
+  controller.confirmTitleTarget = createTextTarget();
+  controller.confirmMessageTarget = createTextTarget();
+  controller.confirmButtonTarget = createButtonElement();
+  controller.confirmErrorTarget = createErrorTarget();
   controller.hasDialogTarget = true;
   controller.hasHeadingTarget = true;
   controller.hasTitleInputTarget = true;
@@ -442,6 +692,11 @@ function createPortfolioControllerDouble({
   controller.hasCancelButtonTarget = true;
   controller.hasCloseButtonTarget = true;
   controller.hasAnnouncerTarget = true;
+  controller.hasConfirmDialogTarget = true;
+  controller.hasConfirmTitleTarget = true;
+  controller.hasConfirmMessageTarget = true;
+  controller.hasConfirmButtonTarget = true;
+  controller.hasConfirmErrorTarget = true;
 
   PortfolioController.prototype.resetDialogState.call(controller);
   PortfolioController.prototype.syncBoardSelfRoleForms.call(controller);
@@ -478,6 +733,42 @@ function createRenameButtonElement(workspaceId, workspaceTitle = '') {
     workspaceFallbackLabel: workspaceId
   };
   button.textContent = workspaceTitle ? 'Edit title' : 'Assign title';
+
+  return button;
+}
+
+function createWorkspaceDeleteButtonElement({ workspaceId, workspaceTitle, boardCount }) {
+  const button = createButtonElement();
+
+  button.dataset = {
+    portfolioAction: 'delete-workspace',
+    workspaceId,
+    workspaceTitle,
+    boardCount: String(boardCount)
+  };
+  button.textContent = 'Delete workspace';
+
+  return button;
+}
+
+function createBoardDeleteButtonElement({
+  workspaceId,
+  workspaceTitle,
+  boardId,
+  boardTitle,
+  boardCount
+}) {
+  const button = createButtonElement();
+
+  button.dataset = {
+    portfolioAction: 'delete-board',
+    workspaceId,
+    workspaceTitle,
+    boardId,
+    boardTitle,
+    boardCount: String(boardCount)
+  };
+  button.textContent = 'Delete board';
 
   return button;
 }
@@ -627,6 +918,21 @@ function createErrorTarget() {
   return {
     hidden: true,
     textContent: ''
+  };
+}
+
+function createDeferred() {
+  let resolve;
+  let reject;
+  const promise = new Promise((nextResolve, nextReject) => {
+    resolve = nextResolve;
+    reject = nextReject;
+  });
+
+  return {
+    promise,
+    resolve,
+    reject
   };
 }
 

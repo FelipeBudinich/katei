@@ -199,6 +199,22 @@ test('WorkspaceService createWorkspace delegates to repository.createWorkspace w
   });
 });
 
+test('WorkspaceService deleteWorkspace delegates to repository.deleteWorkspace', async () => {
+  const workspace = createEmptyWorkspace({ workspaceId: 'workspace_home' });
+  const repository = createRepositoryDouble({ workspace });
+  const service = new WorkspaceService(repository);
+
+  const result = await service.deleteWorkspace('workspace_shared');
+
+  assert.deepEqual(repository.deleteWorkspaceCalls, ['workspace_shared']);
+  assert.deepEqual(result, {
+    ok: true,
+    result: {
+      workspaceId: 'workspace_shared'
+    }
+  });
+});
+
 test('WorkspaceService createBoard calls repository.applyCommand and returns workspace', async () => {
   await assertServiceCommand({
     action: (service) => service.createBoard({ title: 'Roadmap' }),
@@ -311,6 +327,28 @@ test('WorkspaceService deleteBoard calls repository.applyCommand and returns wor
     action: (service) => service.deleteBoard('main'),
     expectedType: 'board.delete',
     expectedPayload: {
+      boardId: 'main'
+    }
+  });
+});
+
+test('WorkspaceService deleteBoard with workspace scope delegates to repository.deleteBoard', async () => {
+  const workspace = createEmptyWorkspace({ workspaceId: 'workspace_home' });
+  const repository = createRepositoryDouble({ workspace });
+  const service = new WorkspaceService(repository);
+
+  const result = await service.deleteBoard('workspace_shared', 'main');
+
+  assert.deepEqual(repository.deleteBoardCalls, [
+    {
+      workspaceId: 'workspace_shared',
+      boardId: 'main'
+    }
+  ]);
+  assert.deepEqual(result, {
+    ok: true,
+    result: {
+      workspaceId: 'workspace_shared',
       boardId: 'main'
     }
   });
@@ -805,6 +843,8 @@ function createRepositoryDouble({
     setWorkspaceTitleCalls: [],
     setWorkspaceTitleContexts: [],
     createWorkspaceCalls: [],
+    deleteWorkspaceCalls: [],
+    deleteBoardCalls: [],
     generateCardLocalizationCalls: [],
     generateCardLocalizationContexts: [],
     runStagePromptCalls: [],
@@ -912,6 +952,28 @@ function createRepositoryDouble({
         result: {
           workspaceId: 'workspace_created_1',
           workspaceTitle: typeof request?.title === 'string' && request.title.trim() ? request.title.trim() : 'Workspace 1'
+        }
+      };
+    },
+    async deleteWorkspace(workspaceId) {
+      this.deleteWorkspaceCalls.push(workspaceId ?? null);
+      return {
+        ok: true,
+        result: {
+          workspaceId: workspaceId ?? null
+        }
+      };
+    },
+    async deleteBoard(workspaceId, boardId) {
+      this.deleteBoardCalls.push({
+        workspaceId: workspaceId ?? null,
+        boardId: boardId ?? null
+      });
+      return {
+        ok: true,
+        result: {
+          workspaceId: workspaceId ?? null,
+          boardId: boardId ?? null
         }
       };
     },

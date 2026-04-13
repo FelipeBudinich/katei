@@ -226,6 +226,63 @@ export class HttpWorkspaceRepository extends WorkspaceRepository {
     };
   }
 
+  async deleteWorkspace(workspaceId) {
+    const targetWorkspaceId = normalizeOptionalWorkspaceId(workspaceId);
+    const response = await this.fetchImpl('/api/workspace/delete', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        ...(targetWorkspaceId ? { workspaceId: targetWorkspaceId } : {})
+      })
+    });
+    const data = await parseJsonResponse(response);
+
+    if (!response.ok) {
+      throw createWorkspaceApiError(response, data, 'Unable to delete workspace.');
+    }
+
+    return {
+      ...(isPlainObject(data) ? data : { ok: true }),
+      result: {
+        workspaceId: normalizeOptionalWorkspaceId(data?.result?.workspaceId) ?? targetWorkspaceId
+      }
+    };
+  }
+
+  async deleteBoard(workspaceId, boardId) {
+    const targetWorkspaceId = normalizeOptionalWorkspaceId(workspaceId);
+    const targetBoardId = normalizeOptionalString(boardId);
+    const response = await this.fetchImpl('/api/workspace/boards/delete', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        ...(targetWorkspaceId ? { workspaceId: targetWorkspaceId } : {}),
+        ...(targetBoardId ? { boardId: targetBoardId } : {})
+      })
+    });
+    const data = await parseJsonResponse(response);
+
+    if (!response.ok) {
+      throw createWorkspaceApiError(response, data, 'Unable to delete board.');
+    }
+
+    return {
+      ...(isPlainObject(data) ? data : { ok: true }),
+      result: {
+        workspaceId: normalizeOptionalWorkspaceId(data?.result?.workspaceId) ?? targetWorkspaceId,
+        boardId: normalizeOptionalString(data?.result?.boardId) || targetBoardId || null
+      }
+    };
+  }
+
   async generateCardLocalization(
     {
       clientMutationId,

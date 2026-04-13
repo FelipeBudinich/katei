@@ -121,6 +121,14 @@ export class WorkspaceService {
     });
   }
 
+  async deleteWorkspace(workspaceId) {
+    if (typeof this.repository.deleteWorkspace !== 'function') {
+      throw new Error('Workspace deletion is not available for this repository.');
+    }
+
+    return this.repository.deleteWorkspace(workspaceId);
+  }
+
   async createBoard(input) {
     return this.#applyCommand('board.create', {
       title: input?.title,
@@ -146,9 +154,17 @@ export class WorkspaceService {
     });
   }
 
-  async deleteBoard(boardId) {
+  async deleteBoard(workspaceIdOrBoardId, maybeBoardId = undefined) {
+    if (arguments.length > 1) {
+      if (typeof this.repository.deleteBoard !== 'function') {
+        throw new Error('Board deletion is not available for this repository.');
+      }
+
+      return this.repository.deleteBoard(workspaceIdOrBoardId, maybeBoardId);
+    }
+
     return this.#applyCommand('board.delete', {
-      boardId
+      boardId: workspaceIdOrBoardId
     });
   }
 

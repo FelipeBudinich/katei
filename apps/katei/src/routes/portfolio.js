@@ -31,6 +31,7 @@ export function createPortfolioRouter({ requireSession, requireSuperAdmin, portf
 export function buildPortfolioPageModel({ viewer, t, portfolio = createEmptyPortfolioData(), searchQuery = '' }) {
   const normalizedPortfolio = normalizePortfolio(portfolio);
   const normalizedSearchQuery = normalizeOptionalString(searchQuery);
+  const workspaceSummaryById = createPortfolioWorkspaceSummaryLookup(normalizedPortfolio.workspaces);
   const filteredBoardDirectory = filterPortfolioEntries(normalizedPortfolio.boardDirectory, normalizedSearchQuery);
   const boardDirectoryEntries = filteredBoardDirectory.map((entry) => createBoardDirectoryEntryViewModel(entry, t));
   const filteredAwaitingHumanVerificationItems = filterPortfolioEntries(
@@ -148,7 +149,7 @@ export function buildPortfolioPageModel({ viewer, t, portfolio = createEmptyPort
       }
     ],
     boardDirectoryEntries,
-    boardDirectoryWorkspaceGroups: createBoardDirectoryWorkspaceGroupsViewModels(boardDirectoryEntries),
+    boardDirectoryWorkspaceGroups: createBoardDirectoryWorkspaceGroupsViewModels(boardDirectoryEntries, workspaceSummaryById),
     boardDirectoryCount: boardDirectoryEntries.length,
     awaitingApprovalEntries,
     awaitingApprovalWorkspaceGroups: createWorkspaceGroupsViewModels(awaitingApprovalEntries),
@@ -276,11 +277,12 @@ function createBoardDirectoryEntryViewModel(entry, t) {
   };
 }
 
-function createBoardDirectoryWorkspaceGroupsViewModels(entries) {
+function createBoardDirectoryWorkspaceGroupsViewModels(entries, workspaceSummaryById = new Map()) {
   const groups = new Map();
 
   for (const entry of entries) {
     const workspaceId = normalizeOptionalString(entry?.workspaceId) || normalizeOptionalString(entry?.workspaceLabel);
+    const workspaceSummary = workspaceSummaryById.get(workspaceId) ?? null;
 
     if (!workspaceId) {
       continue;
@@ -289,8 +291,12 @@ function createBoardDirectoryWorkspaceGroupsViewModels(entries) {
     if (!groups.has(workspaceId)) {
       groups.set(workspaceId, {
         workspaceId,
-        workspaceTitle: normalizeOptionalString(entry?.workspaceTitle),
-        workspaceLabel: normalizeOptionalString(entry?.workspaceLabel) || workspaceId,
+        workspaceTitle: normalizeOptionalString(entry?.workspaceTitle) || normalizeOptionalString(workspaceSummary?.workspaceTitle),
+        workspaceLabel:
+          normalizeOptionalString(entry?.workspaceLabel)
+          || normalizeOptionalString(workspaceSummary?.workspaceTitle)
+          || workspaceId,
+        boardCount: normalizeNonNegativeInteger(workspaceSummary?.boardCount),
         entries: []
       });
     }
@@ -306,7 +312,29 @@ function createBoardDirectoryWorkspaceGroupsViewModels(entries) {
     currentGroup.entries.push(entry);
   }
 
-  return Array.from(groups.values());
+  return Array.from(groups.values()).map((group) => ({
+    ...group,
+    boardCount: normalizeNonNegativeInteger(group.boardCount) || group.entries.length
+  }));
+}
+
+function createPortfolioWorkspaceSummaryLookup(workspaces) {
+  const lookup = new Map();
+
+  for (const workspace of workspaces) {
+    const workspaceId = normalizeOptionalString(workspace?.workspaceId);
+
+    if (!workspaceId) {
+      continue;
+    }
+
+    lookup.set(workspaceId, {
+      workspaceTitle: normalizeOptionalString(workspace?.workspaceTitle),
+      boardCount: normalizeNonNegativeInteger(workspace?.boardCount)
+    });
+  }
+
+  return lookup;
 }
 
 function createWorkspaceGroupsViewModels(entries) {

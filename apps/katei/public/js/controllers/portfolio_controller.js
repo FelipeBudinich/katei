@@ -7,7 +7,7 @@ import { HttpWorkspaceRepository } from '../repositories/http_workspace_reposito
 import { WorkspaceService } from '../services/workspace_service.js';
 import { createWorkspaceViewerActor, getBoardRoleTranslationKey } from './board_collaboration_state.js';
 import { openDialogWithInitialFocus } from './dialog_initial_focus.js';
-import { closeSheetDialog } from './sheet_dialog.js';
+import { closeSheetDialog, openSheetDialog } from './sheet_dialog.js';
 
 export default class extends Controller {
   static values = {
@@ -24,7 +24,12 @@ export default class extends Controller {
     'saveButton',
     'cancelButton',
     'closeButton',
-    'announcer'
+    'announcer',
+    'confirmDialog',
+    'confirmTitle',
+    'confirmMessage',
+    'confirmButton',
+    'confirmError'
   ];
 
   connect() {
@@ -35,7 +40,10 @@ export default class extends Controller {
     this.dialogMode = 'rename';
     this.currentWorkspaceId = null;
     this.currentWorkspaceFallbackLabel = null;
+    this.pendingConfirmation = null;
+    this.confirmTriggerElement = null;
     this.isSubmitting = false;
+    this.isConfirming = false;
     this.setDialogMode('rename');
     this.resetDialogState();
     this.syncBoardSelfRoleForms();
@@ -109,6 +117,88 @@ export default class extends Controller {
     }));
   }
 
+  openDeleteWorkspaceConfirm(event) {
+    if (event) {
+      event.preventDefault();
+    }
+
+    if (
+      !this.canManageWorkspaceTitles()
+      || !this.service
+      || !this.hasConfirmDialogTarget
+      || !this.hasConfirmTitleTarget
+      || !this.hasConfirmMessageTarget
+      || !this.hasConfirmButtonTarget
+    ) {
+      return;
+    }
+
+    const triggerElement = event?.currentTarget ?? null;
+    const workspaceId = normalizeOptionalString(triggerElement?.dataset?.workspaceId);
+
+    if (!workspaceId) {
+      return;
+    }
+
+    const workspaceTitle = normalizeOptionalString(triggerElement?.dataset?.workspaceTitle) || workspaceId;
+
+    this.openConfirmDialog({
+      triggerElement,
+      confirmation: {
+        type: 'delete-workspace',
+        workspaceId,
+        title: this.t('portfolio.confirmations.deleteWorkspaceTitle'),
+        message: this.t('portfolio.confirmations.deleteWorkspaceMessage', {
+          workspace: workspaceTitle
+        }),
+        confirmLabel: this.t('portfolio.confirmations.deleteWorkspaceConfirm')
+      }
+    });
+  }
+
+  openDeleteBoardConfirm(event) {
+    if (event) {
+      event.preventDefault();
+    }
+
+    if (
+      !this.canManageWorkspaceTitles()
+      || !this.service
+      || !this.hasConfirmDialogTarget
+      || !this.hasConfirmTitleTarget
+      || !this.hasConfirmMessageTarget
+      || !this.hasConfirmButtonTarget
+    ) {
+      return;
+    }
+
+    const triggerElement = event?.currentTarget ?? null;
+    const workspaceId = normalizeOptionalString(triggerElement?.dataset?.workspaceId);
+    const boardId = normalizeOptionalString(triggerElement?.dataset?.boardId);
+
+    if (!workspaceId || !boardId) {
+      return;
+    }
+
+    const workspaceTitle = normalizeOptionalString(triggerElement?.dataset?.workspaceTitle) || workspaceId;
+    const boardTitle = normalizeOptionalString(triggerElement?.dataset?.boardTitle) || boardId;
+
+    this.openConfirmDialog({
+      triggerElement,
+      confirmation: {
+        type: 'delete-board',
+        workspaceId,
+        boardId,
+        title: this.t('portfolio.confirmations.deleteBoardTitle'),
+        message: this.t('portfolio.confirmations.deleteBoardMessage', {
+          board: boardTitle,
+          workspace: workspaceTitle
+        }),
+        confirmLabel: this.t('portfolio.confirmations.deleteBoardConfirm')
+      }
+    });
+  }
+
   handleTitleInput() {
     this.hideError();
   }
@@ -123,6 +213,18 @@ export default class extends Controller {
     }
 
     this.closeDialog();
+  }
+
+  closeConfirmDialog(event) {
+    if (event) {
+      event.preventDefault();
+    }
+
+    if (this.isConfirming) {
+      return;
+    }
+
+    this.dismissConfirmDialog();
   }
 
   async saveWorkspaceTitle(event) {
@@ -233,6 +335,58 @@ export default class extends Controller {
     }
   }
 
+  async confirmPendingAction(event) {
+    if (event) {
+      event.preventDefault();
+    }
+
+    if (!this.pendingConfirmation || this.isConfirming || !this.service) {
+      return;
+    }
+
+    const confirmation = this.pendingConfirmation;
+    const triggerElement = this.confirmTriggerElement ?? null;
+
+    this.hideConfirmError();
+    this.isConfirming = true;
+
+    if (this.hasConfirmButtonTarget) {
+      this.confirmButtonTarget.disabled = true;
+    }
+
+    this.setDeleteTriggerSubmittingState(triggerElement, true);
+
+    let success = false;
+
+    try {
+      if (confirmation.type === 'delete-workspace') {
+        await this.service.deleteWorkspace(confirmation.workspaceId);
+        success = true;
+      } else if (confirmation.type === 'delete-board') {
+        await this.service.deleteBoard(confirmation.workspaceId, confirmation.boardId);
+        success = true;
+      }
+    } catch (error) {
+      console.error(error);
+      this.showConfirmError(localizeErrorMessage(error, this.t));
+    } finally {
+      this.isConfirming = false;
+
+      if (this.hasConfirmButtonTarget) {
+        this.confirmButtonTarget.disabled = false;
+      }
+
+      this.setDeleteTriggerSubmittingState(triggerElement, false);
+    }
+
+    if (!success) {
+      return;
+    }
+
+    this.dismissConfirmDialog({ restoreFocus: false });
+    this.reloadPortfolioPage();
+  }
+
   closeDialog({ restoreFocus = true } = {}) {
     const restoreFocusElement = this.restoreFocusElement;
 
@@ -247,6 +401,23 @@ export default class extends Controller {
     this.resetDialogState();
 
     if (restoreFocus && restoreFocusElement?.isConnected) {
+      restoreFocusElement.focus();
+    }
+  }
+
+  dismissConfirmDialog({ restoreFocus = true } = {}) {
+    const restoreFocusElement = this.confirmTriggerElement;
+    const triggerDialog = restoreFocusElement?.closest?.('dialog');
+
+    if (this.hasConfirmDialogTarget) {
+      closeSheetDialog(this.confirmDialogTarget);
+    }
+
+    this.pendingConfirmation = null;
+    this.confirmTriggerElement = null;
+    this.hideConfirmError();
+
+    if (restoreFocus && restoreFocusElement?.isConnected && (!triggerDialog || triggerDialog.open)) {
       restoreFocusElement.focus();
     }
   }
@@ -351,6 +522,24 @@ export default class extends Controller {
     this.errorTarget.textContent = '';
   }
 
+  showConfirmError(message) {
+    if (!this.hasConfirmErrorTarget) {
+      return;
+    }
+
+    this.confirmErrorTarget.hidden = false;
+    this.confirmErrorTarget.textContent = message;
+  }
+
+  hideConfirmError() {
+    if (!this.hasConfirmErrorTarget) {
+      return;
+    }
+
+    this.confirmErrorTarget.hidden = true;
+    this.confirmErrorTarget.textContent = '';
+  }
+
   announce(message) {
     if (!this.hasAnnouncerTarget) {
       return;
@@ -383,6 +572,14 @@ export default class extends Controller {
           ? 'portfolio.workspaceTitleEditor.editAction'
           : 'portfolio.workspaceTitleEditor.assignAction'
       );
+    }
+
+    for (const button of this.getWorkspaceDeleteButtons(workspaceId)) {
+      button.dataset.workspaceTitle = workspaceLabel;
+    }
+
+    for (const button of this.getBoardDeleteButtons(workspaceId)) {
+      button.dataset.workspaceTitle = workspaceLabel;
     }
   }
 
@@ -418,6 +615,38 @@ export default class extends Controller {
     if (typeof browserWindow?.location?.reload === 'function') {
       browserWindow.location.reload();
     }
+  }
+
+  openConfirmDialog({ triggerElement, confirmation }) {
+    if (
+      !confirmation
+      || !this.hasConfirmDialogTarget
+      || !this.hasConfirmTitleTarget
+      || !this.hasConfirmMessageTarget
+      || !this.hasConfirmButtonTarget
+    ) {
+      return;
+    }
+
+    this.pendingConfirmation = confirmation;
+    this.confirmTriggerElement = triggerElement ?? null;
+    this.hideConfirmError();
+    this.confirmTitleTarget.textContent = confirmation.title;
+    this.confirmMessageTarget.textContent = confirmation.message;
+    this.confirmButtonTarget.disabled = false;
+    this.confirmButtonTarget.textContent = confirmation.confirmLabel;
+
+    openSheetDialog(this.confirmDialogTarget);
+
+    const requestAnimationFrameImpl =
+      this.browserWindow?.requestAnimationFrame ?? globalThis.requestAnimationFrame;
+
+    if (typeof requestAnimationFrameImpl === 'function') {
+      requestAnimationFrameImpl(() => this.confirmButtonTarget?.focus?.());
+      return;
+    }
+
+    this.confirmButtonTarget?.focus?.();
   }
 
   syncBoardSelfRoleForms() {
@@ -571,6 +800,16 @@ export default class extends Controller {
       .filter((element) => normalizeOptionalString(element?.dataset?.workspaceId) === workspaceId);
   }
 
+  getWorkspaceDeleteButtons(workspaceId) {
+    return Array.from(this.element?.querySelectorAll?.('[data-portfolio-action="delete-workspace"]') ?? [])
+      .filter((element) => normalizeOptionalString(element?.dataset?.workspaceId) === workspaceId);
+  }
+
+  getBoardDeleteButtons(workspaceId) {
+    return Array.from(this.element?.querySelectorAll?.('[data-portfolio-action="delete-board"]') ?? [])
+      .filter((element) => normalizeOptionalString(element?.dataset?.workspaceId) === workspaceId);
+  }
+
   getBoardRoleForms() {
     return Array.from(this.element?.querySelectorAll?.('[data-portfolio-board-role-form]') ?? []);
   }
@@ -613,6 +852,14 @@ export default class extends Controller {
 
   getBoardOpenLink(form) {
     return form?.querySelector?.('[data-portfolio-open-board-link]') ?? null;
+  }
+
+  setDeleteTriggerSubmittingState(triggerElement, isSubmitting) {
+    if (!triggerElement || typeof triggerElement !== 'object' || !('disabled' in triggerElement)) {
+      return;
+    }
+
+    triggerElement.disabled = isSubmitting === true;
   }
 }
 

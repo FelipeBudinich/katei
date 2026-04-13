@@ -860,7 +860,14 @@ test('GET /portfolio renders one workspace title action per workspace group for 
   assert.match(response.text, /Current role: Editor/);
   assert.match(response.text, /Workspace ID: workspace_portfolio_alpha/);
   assert.equal(countMatches(response.text, /data-portfolio-action="rename-workspace-title"/g), 1);
+  assert.equal(countMatches(response.text, /data-portfolio-action="delete-workspace"/g), 1);
+  assert.equal(countMatches(response.text, /data-portfolio-action="delete-board"/g), 2);
+  assert.match(response.text, /data-board-count="2"/);
   assert.match(response.text, /data-portfolio-target="dialog"/);
+  assert.match(response.text, /data-portfolio-target="confirmDialog"/);
+  assert.match(response.text, /data-portfolio-target="confirmTitle"/);
+  assert.match(response.text, /data-portfolio-target="confirmMessage"/);
+  assert.match(response.text, /data-portfolio-target="confirmButton"/);
   assert.equal(countMatches(response.text, /data-portfolio-board-role-form/g), 2);
 });
 
@@ -930,9 +937,12 @@ test('portfolio template hides workspace title editing controls for non-super-ad
   assert.match(html, /data-controller="portfolio"/);
   assert.match(html, /workspace_portfolio_alpha/);
   assert.doesNotMatch(html, /data-portfolio-action="rename-workspace-title"/);
+  assert.doesNotMatch(html, /data-portfolio-action="delete-workspace"/);
+  assert.doesNotMatch(html, /data-portfolio-action="delete-board"/);
   assert.doesNotMatch(html, /data-portfolio-board-role-form/);
   assert.doesNotMatch(html, /My role on this board/);
   assert.doesNotMatch(html, /data-portfolio-target="dialog"/);
+  assert.doesNotMatch(html, /data-portfolio-target="confirmDialog"/);
 });
 
 test('buildPortfolioPageModel falls back to workspaceId labels when workspaceTitle is absent', () => {
@@ -1043,6 +1053,96 @@ test('buildPortfolioPageModel falls back to workspaceId labels when workspaceTit
   assert.equal(viewModel.agingSections[0].workspaceGroups[0].workspaceLabel, 'workspace_portfolio_untitled');
   assert.equal(viewModel.agingSections[2].workspaceGroups[0].workspaceLabel, 'workspace_portfolio_untitled');
   assert.match(html, /workspace_portfolio_untitled/);
+});
+
+test('buildPortfolioPageModel keeps the workspace boardCount from portfolio summaries when directory rows are filtered', () => {
+  const viewModel = buildPortfolioPageModel({
+    viewer: {
+      sub: 'sub_123',
+      name: 'Tester',
+      email: 'tester@example.com',
+      isSuperAdmin: true
+    },
+    t: createTranslator('en'),
+    searchQuery: 'operations',
+    portfolio: {
+      totals: {
+        workspaces: 1,
+        boards: 2,
+        cards: 4,
+        cardsMissingRequiredLocales: 0,
+        openLocaleRequestCount: 0,
+        awaitingHumanVerificationCount: 0,
+        agentProposalCount: 0,
+        pendingCardReviewCount: 0
+      },
+      workspaces: [
+        {
+          workspaceId: 'workspace_portfolio_alpha',
+          workspaceTitle: 'Studio HQ',
+          boardCount: 2,
+          timestamps: {
+            createdAt: '2026-04-01T09:00:00.000Z',
+            updatedAt: '2026-04-03T12:00:00.000Z'
+          }
+        }
+      ],
+      boardDirectory: [
+        {
+          workspaceId: 'workspace_portfolio_alpha',
+          workspaceTitle: 'Studio HQ',
+          boardId: 'main',
+          boardTitle: 'Executive roadmap',
+          localePolicy: {
+            sourceLocale: 'en',
+            defaultLocale: 'ja',
+            supportedLocales: ['en', 'ja'],
+            requiredLocales: ['ja']
+          },
+          cardCounts: {
+            total: 3,
+            byStage: null
+          },
+          localizationSummary: {
+            cardsMissingRequiredLocales: 0,
+            openLocaleRequestCount: 0,
+            awaitingHumanVerificationCount: 0,
+            agentProposalCount: 0
+          }
+        },
+        {
+          workspaceId: 'workspace_portfolio_alpha',
+          workspaceTitle: 'Studio HQ',
+          boardId: 'ops',
+          boardTitle: 'Operations',
+          localePolicy: {
+            sourceLocale: 'en',
+            defaultLocale: 'en',
+            supportedLocales: ['en'],
+            requiredLocales: []
+          },
+          cardCounts: {
+            total: 1,
+            byStage: null
+          },
+          localizationSummary: {
+            cardsMissingRequiredLocales: 0,
+            openLocaleRequestCount: 0,
+            awaitingHumanVerificationCount: 0,
+            agentProposalCount: 0
+          }
+        }
+      ],
+      awaitingHumanVerificationItems: [],
+      agentProposalItems: [],
+      pendingCardReviewItems: [],
+      missingRequiredLocalizationItems: []
+    }
+  });
+
+  assert.equal(viewModel.boardDirectoryEntries.length, 1);
+  assert.equal(viewModel.boardDirectoryEntries[0].boardId, 'ops');
+  assert.equal(viewModel.boardDirectoryWorkspaceGroups[0].boardCount, 2);
 });
 
 test('buildPortfolioPageModel groups non-directory portfolio sections by workspace', () => {

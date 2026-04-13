@@ -130,6 +130,17 @@ const EN_MESSAGES = freezeCatalog({
       openBoardHelp: 'Assign yourself a role to open this board.',
       requiredError: 'Choose a role before saving.'
     },
+    deleteWorkspaceAction: 'Delete workspace',
+    deleteBoardAction: 'Delete board',
+    confirmations: {
+      deleteBoardTitle: 'Delete board?',
+      deleteBoardMessage:
+        'This removes "{board}" from "{workspace}". Users will be redirected to another available board or get a new home board on their next load.',
+      deleteBoardConfirm: 'Delete board',
+      deleteWorkspaceTitle: 'Delete workspace?',
+      deleteWorkspaceMessage: 'This permanently removes "{workspace}" and all of its boards.',
+      deleteWorkspaceConfirm: 'Delete workspace'
+    },
     pendingCardReviews: {
       heading: 'Pending card reviews',
       description: 'Cards that are currently waiting in an active workflow review stage are listed across boards here.',
@@ -783,6 +794,17 @@ const ES_CL_MESSAGES = freezeCatalog({
       savedStatus: '{board}: rol guardado como {role}.',
       openBoardHelp: 'Asígnate un rol para abrir este tablero.',
       requiredError: 'Elige un rol antes de guardar.'
+    },
+    deleteWorkspaceAction: 'Eliminar espacio',
+    deleteBoardAction: 'Eliminar tablero',
+    confirmations: {
+      deleteBoardTitle: '¿Eliminar tablero?',
+      deleteBoardMessage:
+        'Esto elimina "{board}" de "{workspace}". Las personas serán redirigidas a otro tablero disponible o recibirán un nuevo tablero inicial en su próxima carga.',
+      deleteBoardConfirm: 'Eliminar tablero',
+      deleteWorkspaceTitle: '¿Eliminar espacio?',
+      deleteWorkspaceMessage: 'Esto elimina permanentemente "{workspace}" y todos sus tableros.',
+      deleteWorkspaceConfirm: 'Eliminar espacio'
     },
     pendingCardReviews: {
       heading: 'Revisiones de tarjetas pendientes',
@@ -1438,6 +1460,17 @@ const JA_MESSAGES = freezeCatalog({
       savedStatus: '{board}: 権限を{role}に保存しました。',
       openBoardHelp: 'このボードを開くには自分に権限を割り当ててください。',
       requiredError: '保存する前に権限を選択してください。'
+    },
+    deleteWorkspaceAction: 'ワークスペースを削除',
+    deleteBoardAction: 'ボードを削除',
+    confirmations: {
+      deleteBoardTitle: 'ボードを削除しますか？',
+      deleteBoardMessage:
+        '"{workspace}" から "{board}" を削除します。次回の読み込み時に、利用可能な別のボードへ移動するか、新しいホームボードが作成されます。',
+      deleteBoardConfirm: 'ボードを削除',
+      deleteWorkspaceTitle: 'ワークスペースを削除しますか？',
+      deleteWorkspaceMessage: '"{workspace}" とそのすべてのボードを完全に削除します。',
+      deleteWorkspaceConfirm: 'ワークスペースを削除'
     },
     pendingCardReviews: {
       heading: '保留中のカードレビュー',

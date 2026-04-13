@@ -830,6 +830,154 @@ test('HttpWorkspaceRepository createWorkspace calls the dedicated create endpoin
   });
 });
 
+test('HttpWorkspaceRepository deleteWorkspace calls the dedicated delete endpoint without mutating active workspace state', async () => {
+  const repository = new HttpWorkspaceRepository({
+    fetchImpl: createFetchDouble([
+      createJsonResponse({
+        ok: true,
+        result: {
+          workspaceId: 'workspace_shared'
+        }
+      })
+    ]).fetch,
+    viewerSub: 'sub_123',
+    workspaceId: 'workspace_home',
+    storage: null,
+    document: null
+  });
+
+  repository.activeWorkspaceId = 'workspace_home';
+  repository.revision = 7;
+  repository.lastRevisionWorkspaceId = 'workspace_home';
+  repository.lastStateSource = 'bootstrap';
+  const fetchDouble = createFetchDouble([
+    createJsonResponse({
+      ok: true,
+      result: {
+        workspaceId: 'workspace_shared'
+      }
+    })
+  ]);
+  repository.fetchImpl = fetchDouble.fetch;
+
+  const payload = await repository.deleteWorkspace('workspace_shared');
+
+  assert.deepEqual(payload, {
+    ok: true,
+    result: {
+      workspaceId: 'workspace_shared'
+    }
+  });
+  assert.equal(repository.activeWorkspaceId, 'workspace_home');
+  assert.equal(repository.revision, 7);
+  assert.equal(repository.lastRevisionWorkspaceId, 'workspace_home');
+  assert.equal(fetchDouble.calls[0].url, '/api/workspace/delete');
+  assert.equal(fetchDouble.calls[0].options.method, 'POST');
+  assert.deepEqual(JSON.parse(fetchDouble.calls[0].options.body), {
+    workspaceId: 'workspace_shared'
+  });
+});
+
+test('HttpWorkspaceRepository deleteBoard calls the dedicated board delete endpoint without mutating active workspace state', async () => {
+  const repository = new HttpWorkspaceRepository({
+    fetchImpl: createFetchDouble([
+      createJsonResponse({
+        ok: true,
+        result: {
+          workspaceId: 'workspace_shared',
+          boardId: 'main'
+        }
+      })
+    ]).fetch,
+    viewerSub: 'sub_123',
+    workspaceId: 'workspace_home',
+    storage: null,
+    document: null
+  });
+
+  repository.activeWorkspaceId = 'workspace_home';
+  repository.revision = 7;
+  repository.lastRevisionWorkspaceId = 'workspace_home';
+  repository.lastStateSource = 'bootstrap';
+  const fetchDouble = createFetchDouble([
+    createJsonResponse({
+      ok: true,
+      result: {
+        workspaceId: 'workspace_shared',
+        boardId: 'main'
+      }
+    })
+  ]);
+  repository.fetchImpl = fetchDouble.fetch;
+
+  const payload = await repository.deleteBoard('workspace_shared', 'main');
+
+  assert.deepEqual(payload, {
+    ok: true,
+    result: {
+      workspaceId: 'workspace_shared',
+      boardId: 'main'
+    }
+  });
+  assert.equal(repository.activeWorkspaceId, 'workspace_home');
+  assert.equal(repository.revision, 7);
+  assert.equal(repository.lastRevisionWorkspaceId, 'workspace_home');
+  assert.equal(fetchDouble.calls[0].url, '/api/workspace/boards/delete');
+  assert.equal(fetchDouble.calls[0].options.method, 'POST');
+  assert.deepEqual(JSON.parse(fetchDouble.calls[0].options.body), {
+    workspaceId: 'workspace_shared',
+    boardId: 'main'
+  });
+});
+
+test('HttpWorkspaceRepository deleteWorkspace surfaces API errors through the shared error helper', async () => {
+  const fetchDouble = createFetchDouble([
+    createJsonResponse({
+      ok: false,
+      error: 'Workspace not found.',
+      errorCode: 'WORKSPACE_ACCESS_DENIED'
+    }, 404)
+  ]);
+  const repository = new HttpWorkspaceRepository({
+    fetchImpl: fetchDouble.fetch,
+    viewerSub: 'sub_123',
+    storage: null
+  });
+
+  await assert.rejects(
+    repository.deleteWorkspace('workspace_missing'),
+    {
+      message: 'Workspace not found.',
+      status: 404,
+      code: 'WORKSPACE_ACCESS_DENIED'
+    }
+  );
+});
+
+test('HttpWorkspaceRepository deleteBoard surfaces API errors through the shared error helper', async () => {
+  const fetchDouble = createFetchDouble([
+    createJsonResponse({
+      ok: false,
+      error: 'Board not found.',
+      errorCode: 'BOARD_NOT_FOUND'
+    }, 404)
+  ]);
+  const repository = new HttpWorkspaceRepository({
+    fetchImpl: fetchDouble.fetch,
+    viewerSub: 'sub_123',
+    storage: null
+  });
+
+  await assert.rejects(
+    repository.deleteBoard('workspace_shared', 'missing_board'),
+    {
+      message: 'Board not found.',
+      status: 404,
+      code: 'BOARD_NOT_FOUND'
+    }
+  );
+});
+
 test('HttpWorkspaceRepository generateCardLocalization sends expectedRevision and updates local meta state', async () => {
   const localizedWorkspace = createCard(createEmptyWorkspace(), 'main', {
     title: 'Command result',
