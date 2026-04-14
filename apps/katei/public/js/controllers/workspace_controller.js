@@ -2,6 +2,7 @@ import { Controller } from '../../vendor/stimulus/stimulus.js';
 import { getBoardCardContentVariant } from '../domain/workspace.js';
 import { createBrowserDateTimeFormatter, getBrowserTranslator } from '../i18n/browser.js';
 import { localizeErrorMessage } from '../i18n/errors.js';
+import { getPriorityDisplayLabel } from '../i18n/workspace_labels.js';
 import { logInviteAcceptDebug, logInviteDebug } from '../lib/invite_debug.js';
 import { markdownToPlainText, renderMarkdownInto } from '../lib/markdown.js';
 import { HttpWorkspaceRepository } from '../repositories/http_workspace_repository.js';
@@ -29,6 +30,7 @@ import {
   getBoardStageTitle,
   resolveBoardStageId,
   shouldShowCreateForStage,
+  shouldShowPriorityForStage,
   shouldShowPromptRunForStage
 } from './stage_ui.js';
 import {
@@ -52,7 +54,6 @@ export default class extends Controller {
     'desktopColumns',
     'announcer',
     'viewDialog',
-    'viewDialogHandle',
     'viewStatusSection',
     'viewStatusButton',
     'viewStatusMenu',
@@ -71,6 +72,8 @@ export default class extends Controller {
     'viewPromptRunButton',
     'viewCardTitle',
     'viewCardBody',
+    'viewCardPrioritySection',
+    'viewCardPriority',
     'viewCardUpdated',
     'confirmDialog',
     'confirmTitle',
@@ -1689,7 +1692,8 @@ export default class extends Controller {
       board,
       card,
       stageId,
-      localizedView
+      localizedView,
+      shouldShowPriority: shouldShowPriorityForStage(stageId)
     };
   }
 
@@ -1746,6 +1750,7 @@ export default class extends Controller {
         })
       : null;
     const boardId = normalizeOptionalWorkspaceId(board?.id);
+    const shouldShowPriority = shouldShowPriorityForStage(resolvedStageId);
     const statusOptions = getActionableStageMoveOptions(board, resolvedStageId);
     const shouldShowStatusSection = Boolean(
       canEditBoard
@@ -1952,11 +1957,8 @@ export default class extends Controller {
     } else {
       this.viewCardBodyTarget.textContent = this.t('workspace.view.noDetails');
     }
-
-    if (this.hasViewDialogHandleTarget) {
-      this.viewDialogHandleTarget.dataset.priority = normalizeViewDialogHandlePriority(card?.priority);
-    }
-
+    this.viewCardPrioritySectionTarget.hidden = !shouldShowPriority;
+    this.viewCardPriorityTarget.textContent = shouldShowPriority ? getPriorityDisplayLabel(card.priority, this.t) : '';
     this.viewCardUpdatedTarget.textContent = this.dateTimeFormatter.format(new Date(card.updatedAt));
   }
 
@@ -2646,18 +2648,4 @@ function normalizeOptionalWorkspaceId(value) {
 
 function normalizeOptionalString(value) {
   return typeof value === 'string' ? value.trim() : '';
-}
-
-function normalizeViewDialogHandlePriority(priority) {
-  const normalizedPriority = normalizeOptionalString(priority);
-
-  if (
-    normalizedPriority === 'urgent' ||
-    normalizedPriority === 'important' ||
-    normalizedPriority === 'normal'
-  ) {
-    return normalizedPriority;
-  }
-
-  return 'normal';
 }
