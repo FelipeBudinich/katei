@@ -225,6 +225,9 @@
   .end {
     inset-inline-end: var(--spacing);
   }
+  .col-start-2 {
+    grid-column-start: 2;
+  }
   .container {
     width: 100%;
     @media (width >= 40rem) {
@@ -370,6 +373,9 @@
       margin-block-start: calc(calc(var(--spacing) * 5) * var(--tw-space-y-reverse));
       margin-block-end: calc(calc(var(--spacing) * 5) * calc(1 - var(--tw-space-y-reverse)));
     }
+  }
+  .justify-self-end {
+    justify-self: flex-end;
   }
   .rounded-full {
     border-radius: calc(infinity * 1px);
