@@ -1492,7 +1492,7 @@ test('openView uses the dedicated view dialog and limits locales to present loca
     assert.equal(controller.viewDialogState.selectedLocale, 'es-CL');
     assert.equal(controller.viewCardTitleTarget.textContent, 'Titulo por defecto');
     assert.equal(controller.viewCardBodyTarget.innerHTML, '<p>Detalles por defecto</p>');
-    assert.equal(controller.viewCardPrioritySectionTarget.hidden, false);
+    assert.equal(controller.viewDialogHandleTarget.dataset.priority, 'important');
     assert.equal(controller.viewCardUpdatedTarget.textContent, 'Apr 1, 2026, 8:00 AM');
     assert.equal(controller.viewActionRegionTarget.hidden, true);
     assert.equal(controller.viewEditButtonTarget.hidden, true);
@@ -1875,8 +1875,39 @@ test('openView preserves an explicit requested locale from the trigger', () => {
     assert.equal(controller.viewDialogState.selectedLocale, 'es-CL');
     assert.equal(controller.viewCardTitleTarget.textContent, 'Titulo por defecto');
     assert.equal(controller.viewCardBodyTarget.innerHTML, '<p>Detalles por defecto</p>');
-    assert.equal(controller.viewCardPrioritySectionTarget.hidden, false);
+    assert.equal(controller.viewDialogHandleTarget.dataset.priority, 'important');
     assert.equal(controller.viewCardUpdatedTarget.textContent, 'Apr 1, 2026, 8:00 AM');
+  } finally {
+    restoreDom();
+  }
+});
+
+test('openView updates the dialog handle priority when switching between cards', () => {
+  const restoreDom = installViewDialogDomStubs();
+
+  try {
+    const { controller, board, card } = createViewDialogController();
+    const urgentCard = {
+      ...structuredClone(card),
+      id: 'card_urgent',
+      priority: 'urgent',
+      updatedAt: '2026-03-31T12:00:00.000Z'
+    };
+
+    board.cards[urgentCard.id] = urgentCard;
+    board.stages.review.cardIds.push(urgentCard.id);
+
+    WorkspaceController.prototype.openView.call(controller, {
+      currentTarget: createViewTriggerDouble(card.id, 'review')
+    });
+
+    assert.equal(controller.viewDialogHandleTarget.dataset.priority, 'important');
+
+    WorkspaceController.prototype.openView.call(controller, {
+      currentTarget: createViewTriggerDouble(urgentCard.id, 'review')
+    });
+
+    assert.equal(controller.viewDialogHandleTarget.dataset.priority, 'urgent');
   } finally {
     restoreDom();
   }
@@ -3836,8 +3867,8 @@ function createViewDialogController({
   controller.viewPromptRunButtonTarget = createButtonDouble();
   controller.viewCardTitleTarget = { textContent: '' };
   controller.viewCardBodyTarget = createContentRegionDouble();
-  controller.viewCardPrioritySectionTarget = { hidden: true };
-  controller.viewCardPriorityTarget = { textContent: '' };
+  controller.hasViewDialogHandleTarget = true;
+  controller.viewDialogHandleTarget = { dataset: {} };
   controller.viewCardUpdatedTarget = { textContent: '' };
   controller.viewDialogState = null;
   controller.viewTriggerElement = null;

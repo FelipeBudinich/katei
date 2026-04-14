@@ -1312,6 +1312,15 @@
   .dialog-handle {
     background-color: var(--color-bg-muted-strong);
   }
+  .dialog-handle[data-priority="urgent"] {
+    background-color: var(--ref-brand);
+  }
+  .dialog-handle[data-priority="important"] {
+    background-color: var(--ref-accent-yellow);
+  }
+  .dialog-handle[data-priority="normal"] {
+    background-color: var(--ref-accent-green);
+  }
   .count-chip {
     display: inline-grid;
     place-items: center;
