@@ -1492,7 +1492,7 @@ test('openView uses the dedicated view dialog and limits locales to present loca
     assert.equal(controller.viewDialogState.selectedLocale, 'es-CL');
     assert.equal(controller.viewCardTitleTarget.textContent, 'Titulo por defecto');
     assert.equal(controller.viewCardBodyTarget.innerHTML, '<p>Detalles por defecto</p>');
-    assert.equal(controller.viewCardPrioritySectionTarget.hidden, false);
+    assert.equal(controller.viewDialogHandleTarget.dataset.priority, 'important');
     assert.equal(controller.viewCardUpdatedTarget.textContent, 'Apr 1, 2026, 8:00 AM');
     assert.equal(controller.viewActionRegionTarget.hidden, true);
     assert.equal(controller.viewEditButtonTarget.hidden, true);
@@ -1875,7 +1875,7 @@ test('openView preserves an explicit requested locale from the trigger', () => {
     assert.equal(controller.viewDialogState.selectedLocale, 'es-CL');
     assert.equal(controller.viewCardTitleTarget.textContent, 'Titulo por defecto');
     assert.equal(controller.viewCardBodyTarget.innerHTML, '<p>Detalles por defecto</p>');
-    assert.equal(controller.viewCardPrioritySectionTarget.hidden, false);
+    assert.equal(controller.viewDialogHandleTarget.dataset.priority, 'important');
     assert.equal(controller.viewCardUpdatedTarget.textContent, 'Apr 1, 2026, 8:00 AM');
   } finally {
     restoreDom();
@@ -2495,6 +2495,43 @@ test('opening a done card before a doing card hides the delete button again', ()
     assert.equal(controller.viewDeleteButtonTarget.disabled, true);
     assert.equal(controller.viewDeleteButtonTarget.attributes['aria-disabled'], 'true');
     assert.deepEqual(controller.viewDeleteButtonTarget.dataset, {});
+  } finally {
+    restoreDom();
+  }
+});
+
+test('view dialog handle reflects card priority for done cards and refreshes between opens', () => {
+  const restoreDom = installViewDialogDomStubs();
+
+  try {
+    const defaultBoard = createEmptyWorkspace().boards.main;
+    const { controller, board, card } = createViewDialogController({
+      board: defaultBoard,
+      viewerRole: 'editor',
+      cardStageId: 'done',
+      priority: 'urgent'
+    });
+    const doingCard = {
+      ...structuredClone(card),
+      id: 'card_doing',
+      priority: 'normal',
+      updatedAt: '2026-03-31T12:00:00.000Z'
+    };
+
+    board.cards[doingCard.id] = doingCard;
+    board.stages.doing.cardIds = [doingCard.id];
+
+    WorkspaceController.prototype.openView.call(controller, {
+      currentTarget: createViewTriggerDouble(card.id, 'done')
+    });
+
+    assert.equal(controller.viewDialogHandleTarget.dataset.priority, 'urgent');
+
+    WorkspaceController.prototype.openView.call(controller, {
+      currentTarget: createViewTriggerDouble(doingCard.id, 'doing')
+    });
+
+    assert.equal(controller.viewDialogHandleTarget.dataset.priority, 'normal');
   } finally {
     restoreDom();
   }
@@ -3717,6 +3754,7 @@ function createViewDialogController({
   viewerRole = 'viewer',
   board = createBoardWithCustomStages(),
   cardStageId = 'review',
+  priority = 'important',
   contentByLocale = {
     en: {
       title: 'English source',
@@ -3749,7 +3787,7 @@ function createViewDialogController({
   const viewerActor = createActor('viewer_123', 'viewer@example.com', 'Viewer');
   const card = {
     id: 'card_localized',
-    priority: 'important',
+    priority,
     createdAt: '2026-03-31T09:00:00.000Z',
     updatedAt: '2026-03-31T11:00:00.000Z',
     contentByLocale,
@@ -3798,6 +3836,7 @@ function createViewDialogController({
     }
   };
   controller.viewDialogTarget = createDialogDouble();
+  controller.viewDialogHandleTarget = { dataset: {} };
   controller.hasViewStatusSectionTarget = true;
   controller.viewStatusSectionTarget = { hidden: true };
   controller.hasViewStatusButtonTarget = true;
@@ -3836,8 +3875,6 @@ function createViewDialogController({
   controller.viewPromptRunButtonTarget = createButtonDouble();
   controller.viewCardTitleTarget = { textContent: '' };
   controller.viewCardBodyTarget = createContentRegionDouble();
-  controller.viewCardPrioritySectionTarget = { hidden: true };
-  controller.viewCardPriorityTarget = { textContent: '' };
   controller.viewCardUpdatedTarget = { textContent: '' };
   controller.viewDialogState = null;
   controller.viewTriggerElement = null;
