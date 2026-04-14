@@ -1490,9 +1490,9 @@ test('openView uses the dedicated view dialog and limits locales to present loca
     assert.deepEqual(controller.viewStatusMenuTarget.children, []);
     assert.deepEqual(controller.viewStatusSelectTarget.options, []);
     assert.equal(controller.viewDialogState.selectedLocale, 'es-CL');
-    assert.equal(controller.viewDialogHandleTarget.dataset.priority, 'important');
     assert.equal(controller.viewCardTitleTarget.textContent, 'Titulo por defecto');
     assert.equal(controller.viewCardBodyTarget.innerHTML, '<p>Detalles por defecto</p>');
+    assert.equal(controller.viewCardPrioritySectionTarget.hidden, false);
     assert.equal(controller.viewCardUpdatedTarget.textContent, 'Apr 1, 2026, 8:00 AM');
     assert.equal(controller.viewActionRegionTarget.hidden, true);
     assert.equal(controller.viewEditButtonTarget.hidden, true);
@@ -1873,9 +1873,9 @@ test('openView preserves an explicit requested locale from the trigger', () => {
     );
     assert.equal(controller.viewLocaleSelectTarget.value, 'es-CL');
     assert.equal(controller.viewDialogState.selectedLocale, 'es-CL');
-    assert.equal(controller.viewDialogHandleTarget.dataset.priority, 'important');
     assert.equal(controller.viewCardTitleTarget.textContent, 'Titulo por defecto');
     assert.equal(controller.viewCardBodyTarget.innerHTML, '<p>Detalles por defecto</p>');
+    assert.equal(controller.viewCardPrioritySectionTarget.hidden, false);
     assert.equal(controller.viewCardUpdatedTarget.textContent, 'Apr 1, 2026, 8:00 AM');
   } finally {
     restoreDom();
@@ -1903,44 +1903,6 @@ test('changeViewLocale rerenders the localized reader content', () => {
     assert.equal(controller.viewLocaleSelectTarget.value, 'en');
     assert.equal(controller.viewCardTitleTarget.textContent, 'English source');
     assert.equal(controller.viewCardBodyTarget.innerHTML, '<p>English details</p>');
-  } finally {
-    restoreDom();
-  }
-});
-
-test('openView updates the dialog handle priority when opening cards with different priorities in sequence', () => {
-  const restoreDom = installViewDialogDomStubs();
-
-  try {
-    const { controller, board, card } = createViewDialogController({ viewerRole: 'editor' });
-    const urgentCard = {
-      ...structuredClone(card),
-      id: 'card_urgent',
-      priority: 'urgent',
-      updatedAt: '2026-03-31T12:00:00.000Z'
-    };
-    const normalCard = {
-      ...structuredClone(card),
-      id: 'card_normal',
-      priority: 'normal',
-      updatedAt: '2026-03-31T13:00:00.000Z'
-    };
-
-    board.cards[urgentCard.id] = urgentCard;
-    board.cards[normalCard.id] = normalCard;
-    board.stages.review.cardIds = [urgentCard.id, normalCard.id];
-
-    WorkspaceController.prototype.openView.call(controller, {
-      currentTarget: createViewTriggerDouble(urgentCard.id, 'review')
-    });
-
-    assert.equal(controller.viewDialogHandleTarget.dataset.priority, 'urgent');
-
-    WorkspaceController.prototype.openView.call(controller, {
-      currentTarget: createViewTriggerDouble(normalCard.id, 'review')
-    });
-
-    assert.equal(controller.viewDialogHandleTarget.dataset.priority, 'normal');
   } finally {
     restoreDom();
   }
@@ -3838,8 +3800,6 @@ function createViewDialogController({
   controller.viewDialogTarget = createDialogDouble();
   controller.hasViewStatusSectionTarget = true;
   controller.viewStatusSectionTarget = { hidden: true };
-  controller.hasViewDialogHandleTarget = true;
-  controller.viewDialogHandleTarget = { dataset: {} };
   controller.hasViewStatusButtonTarget = true;
   controller.viewStatusButtonTarget = createButtonDouble();
   controller.hasViewStatusMenuTarget = true;
@@ -3876,6 +3836,8 @@ function createViewDialogController({
   controller.viewPromptRunButtonTarget = createButtonDouble();
   controller.viewCardTitleTarget = { textContent: '' };
   controller.viewCardBodyTarget = createContentRegionDouble();
+  controller.viewCardPrioritySectionTarget = { hidden: true };
+  controller.viewCardPriorityTarget = { textContent: '' };
   controller.viewCardUpdatedTarget = { textContent: '' };
   controller.viewDialogState = null;
   controller.viewTriggerElement = null;

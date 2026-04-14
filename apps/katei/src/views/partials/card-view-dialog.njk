@@ -4,13 +4,16 @@
   data-action="click->workspace#handleViewDialogClick"
 >
   <div class="sheet-panel">
-    <div
-      class="dialog-handle mx-auto h-1.5 w-16 rounded-full lg:hidden"
-      data-workspace-target="viewDialogHandle"
-    ></div>
+    <div class="dialog-handle mx-auto h-1.5 w-16 rounded-full lg:hidden"></div>
 
     <div class="dialog-header-row mt-4">
-      <div class="col-start-2 flex items-center gap-2 justify-self-end">
+      <div class="min-w-0 space-y-2">
+        <div class="space-y-2" data-workspace-target="viewCardPrioritySection">
+          <dd class="text-sm leading-6 text-strong" data-workspace-target="viewCardPriority"></dd>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
         <button
           type="button"
           class="touch-button-danger"
