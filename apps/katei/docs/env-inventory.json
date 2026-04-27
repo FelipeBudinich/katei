@@ -13,6 +13,7 @@
     "roots": {
       "app": [
         "apps/katei",
+        "apps/katei/scripts",
         "apps/katei/src",
         "apps/katei/src/ai",
         "apps/katei/src/auth",
@@ -43,9 +44,9 @@
     ]
   },
   "summary": {
-    "totalVariables": 21,
+    "totalVariables": 22,
     "totalDefinitions": 18,
-    "totalUsages": 35,
+    "totalUsages": 39,
     "secretLikeCount": 4,
     "publicLikeCount": 0,
     "dynamicAccessCount": 0
@@ -87,6 +88,28 @@
           "line": 11,
           "scope": "app",
           "snippet": "process.env.NODE_ENV === 'production' || process.env.DYNO != null;"
+        }
+      ]
+    },
+    {
+      "name": "GITHUB_SHA",
+      "secretLike": false,
+      "publicLike": false,
+      "definitions": [],
+      "usages": [
+        {
+          "kind": "read",
+          "file": "apps/katei/scripts/build_pwa_assets.mjs",
+          "line": 22,
+          "scope": "app",
+          "snippet": "GITHUB_SHA: process.env.GITHUB_SHA"
+        },
+        {
+          "kind": "default",
+          "file": "apps/katei/scripts/build_pwa_assets.mjs",
+          "line": 28,
+          "scope": "app",
+          "snippet": "return env.PWA_BUILD_ID || env.GITHUB_SHA || `dev-${packageVersion}`;"
         }
       ]
     },
@@ -177,7 +200,7 @@
         {
           "kind": "ci",
           "file": ".github/workflows/deploy-katei-heroku.yml",
-          "line": 82,
+          "line": 83,
           "scope": "root",
           "snippet": "git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""
         }
@@ -229,7 +252,7 @@
         {
           "kind": "ci",
           "file": ".github/workflows/deploy-katei-heroku.yml",
-          "line": 82,
+          "line": 83,
           "scope": "root",
           "snippet": "git remote add heroku \"https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git\""
         }
@@ -525,7 +548,22 @@
       "secretLike": false,
       "publicLike": false,
       "definitions": [],
-      "usages": []
+      "usages": [
+        {
+          "kind": "read",
+          "file": "apps/katei/scripts/build_pwa_assets.mjs",
+          "line": 21,
+          "scope": "app",
+          "snippet": "PWA_BUILD_ID: process.env.PWA_BUILD_ID,"
+        },
+        {
+          "kind": "default",
+          "file": "apps/katei/scripts/build_pwa_assets.mjs",
+          "line": 28,
+          "scope": "app",
+          "snippet": "return env.PWA_BUILD_ID || env.GITHUB_SHA || `dev-${packageVersion}`;"
+        }
+      ]
     },
     {
       "name": "RUNNER_TEMP",
@@ -564,14 +602,14 @@
         {
           "kind": "ci",
           "file": ".github/workflows/deploy-katei-heroku.yml",
-          "line": 80,
+          "line": 81,
           "scope": "root",
           "snippet": "cd \"$RUNNER_TEMP/katei-deploy\""
         },
         {
           "kind": "ci",
           "file": ".github/workflows/deploy-katei-heroku.yml",
-          "line": 87,
+          "line": 88,
           "scope": "root",
           "snippet": "cd \"$RUNNER_TEMP/katei-deploy\""
         }

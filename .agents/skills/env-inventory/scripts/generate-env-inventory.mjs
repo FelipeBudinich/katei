@@ -43,6 +43,7 @@ const ROOT_CONTEXT_CANDIDATES = [
   "infra",
   "terraform",
 ];
+const APP_SOURCE_DIRECTORIES = ["src", "config", "scripts"];
 const ROOT_FILE_PATTERNS = [/^\.env/i, /^Dockerfile/i, /^docker-compose.*\.(yml|yaml)$/i];
 const DOC_EXTENSIONS = new Set([".md", ".mdx", ".txt", ".rst", ".adoc"]);
 const YAML_EXTENSIONS = new Set([".yml", ".yaml"]);
@@ -1154,8 +1155,9 @@ async function collectCandidateFiles(repoRoot, app, config) {
     }, config, repoRoot);
   };
 
-  await addDirectory(path.join(app.rootPath, "src"), "app", (absolutePath) => isSourceFile(absolutePath));
-  await addDirectory(path.join(app.rootPath, "config"), "app", (absolutePath) => isSourceFile(absolutePath));
+  for (const directoryName of APP_SOURCE_DIRECTORIES) {
+    await addDirectory(path.join(app.rootPath, directoryName), "app", (absolutePath) => isSourceFile(absolutePath));
+  }
   await addDirectory(path.join(app.rootPath, "doc"), "app", (absolutePath, relativePath) => !relativePath.endsWith(".json"));
 
   const appEntries = await fs.readdir(app.rootPath, { withFileTypes: true });
@@ -1217,16 +1219,13 @@ async function collectSourceGraphForApp(repoRoot, appProject, workspaceProjects,
     }
   };
 
-  await walkDirectory(path.join(appProject.rootPath, "src"), async (absolutePath) => {
-    if (isSourceFile(absolutePath)) {
-      await enqueue(absolutePath, appProject);
-    }
-  }, config, repoRoot);
-  await walkDirectory(path.join(appProject.rootPath, "config"), async (absolutePath) => {
-    if (isSourceFile(absolutePath)) {
-      await enqueue(absolutePath, appProject);
-    }
-  }, config, repoRoot);
+  for (const directoryName of APP_SOURCE_DIRECTORIES) {
+    await walkDirectory(path.join(appProject.rootPath, directoryName), async (absolutePath) => {
+      if (isSourceFile(absolutePath)) {
+        await enqueue(absolutePath, appProject);
+      }
+    }, config, repoRoot);
+  }
 
   const reachablePackages = new Set();
 
